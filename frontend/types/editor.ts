@@ -42,6 +42,13 @@ export type ThemeConfig = {
   languageConstraints: string[];
   evaluationPolicy: Record<string, unknown>;
   assetSourcePolicy: Record<string, unknown>;
+  strategyProfile: {
+    hookTheme: string;
+    payoffTheme: string;
+    visualPattern: string;
+    pacingPattern: string;
+    evaluationFocus: string[];
+  };
 };
 
 export type ThemePreset = {

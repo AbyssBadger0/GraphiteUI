@@ -66,6 +66,13 @@ export const THEME_PRESETS: ThemePreset[] = [
       languageConstraints: ["ui_en_only"],
       evaluationPolicy: { scoreThreshold: 7.8, hookPriority: "very_high", payoffPriority: "high" },
       assetSourcePolicy: { adLibrary: true, rss: true },
+      strategyProfile: {
+        hookTheme: "资源危机与战局失控",
+        payoffTheme: "联盟推进、战力成长与结果反转",
+        visualPattern: "警报色、大地图轨迹、爆字反馈",
+        pacingPattern: "前三秒警报切入，中段连续决策，尾段规模反推",
+        evaluationFocus: ["前三秒高压钩子", "成长反馈清晰", "联盟规模感"],
+      },
     },
   },
   {
@@ -90,6 +97,13 @@ export const THEME_PRESETS: ThemePreset[] = [
       languageConstraints: ["ui_en_only"],
       evaluationPolicy: { scoreThreshold: 7.6, fantasyClarity: "high", rewardVisibility: "high" },
       assetSourcePolicy: { adLibrary: true, rss: false },
+      strategyProfile: {
+        hookTheme: "英雄觉醒与强敌压境",
+        payoffTheme: "职业成长、掉落回报与 Boss 压制",
+        visualPattern: "技能爆发、装备光效、Boss 定格",
+        pacingPattern: "先压迫后觉醒，再用掉落和 Boss 结果收束",
+        evaluationFocus: ["职业幻想清晰", "战斗爆发镜头", "掉落与成长回报"],
+      },
     },
   },
   {
@@ -114,6 +128,13 @@ export const THEME_PRESETS: ThemePreset[] = [
       languageConstraints: ["ui_en_only"],
       evaluationPolicy: { scoreThreshold: 7.9, dangerVisibility: "very_high", scarcityPressure: "high" },
       assetSourcePolicy: { adLibrary: true, rss: true },
+      strategyProfile: {
+        hookTheme: "资源匮乏与生存崩盘边缘",
+        payoffTheme: "极限翻盘、补给回收与据点重建",
+        visualPattern: "低资源警报、混乱尸潮、临界反杀",
+        pacingPattern: "先资源崩盘，再强压追逐，最后临界反杀",
+        evaluationFocus: ["匮乏压迫感", "混乱威胁可见", "最后翻盘够爽"],
+      },
     },
   },
 ];

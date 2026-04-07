@@ -15,6 +15,32 @@ def theme_profile(theme_config: dict[str, Any]) -> dict[str, str]:
     tone = compact_text(theme_config.get("tone"), "urgent")
     platform = compact_text(theme_config.get("platform"), "digital")
     creative_style = compact_text(theme_config.get("creative_style"), compact_text(theme_config.get("creativeStyle"), "high_intensity"))
+    strategy_profile = theme_config.get("strategy_profile") or theme_config.get("strategyProfile") or {}
+
+    if strategy_profile:
+        return {
+            "genre": genre,
+            "tone": tone,
+            "platform": platform,
+            "creative_style": creative_style,
+            "hook_theme": compact_text(strategy_profile.get("hook_theme"), compact_text(strategy_profile.get("hookTheme"), "资源危机与战局失控")),
+            "payoff_theme": compact_text(
+                strategy_profile.get("payoff_theme"),
+                compact_text(strategy_profile.get("payoffTheme"), "联盟推进、战力成长与结果反转"),
+            ),
+            "visual_pattern": compact_text(
+                strategy_profile.get("visual_pattern"),
+                compact_text(strategy_profile.get("visualPattern"), "警报色、大地图轨迹、爆字反馈"),
+            ),
+            "pacing_pattern": compact_text(
+                strategy_profile.get("pacing_pattern"),
+                compact_text(strategy_profile.get("pacingPattern"), "前三秒警报切入，中段连续决策，尾段规模反推"),
+            ),
+            "evaluation_focus": " / ".join(
+                compact_text(item) for item in ensure_list(strategy_profile.get("evaluation_focus") or strategy_profile.get("evaluationFocus")) if compact_text(item)
+            )
+            or "前三秒高压钩子 / 爽点闭环 / 结果落点",
+        }
 
     if genre.upper() == "RPG":
         return {
@@ -25,6 +51,8 @@ def theme_profile(theme_config: dict[str, Any]) -> dict[str, str]:
             "hook_theme": "英雄觉醒与强敌压境",
             "payoff_theme": "职业成长、掉落回报与 Boss 压制",
             "visual_pattern": "技能爆发、装备光效、Boss 定格",
+            "pacing_pattern": "先压迫后觉醒，再用掉落和 Boss 结果收束",
+            "evaluation_focus": "职业幻想清晰 / 战斗爆发镜头 / 掉落与成长回报",
         }
     if genre.lower() == "survival":
         return {
@@ -35,6 +63,8 @@ def theme_profile(theme_config: dict[str, Any]) -> dict[str, str]:
             "hook_theme": "资源匮乏与生存崩盘边缘",
             "payoff_theme": "极限翻盘、补给回收与据点重建",
             "visual_pattern": "低资源警报、混乱尸潮、临界反杀",
+            "pacing_pattern": "先资源崩盘，再强压追逐，最后临界反杀",
+            "evaluation_focus": "匮乏压迫感 / 混乱威胁可见 / 最后翻盘够爽",
         }
     return {
         "genre": genre,
@@ -44,6 +74,8 @@ def theme_profile(theme_config: dict[str, Any]) -> dict[str, str]:
         "hook_theme": "资源危机与战局失控",
         "payoff_theme": "联盟推进、战力成长与结果反转",
         "visual_pattern": "警报色、大地图轨迹、爆字反馈",
+        "pacing_pattern": "前三秒警报切入，中段连续决策，尾段规模反推",
+        "evaluation_focus": "前三秒高压钩子 / 成长反馈清晰 / 联盟规模感",
     }
 
 
@@ -304,6 +336,8 @@ def build_creative_brief(state: dict[str, Any], params: dict[str, Any] | None = 
             f"- 风格：{profile['creative_style']}",
             f"- 语气：{profile['tone']}",
             f"- 创意方向：围绕 {profile['hook_theme']} 和 {profile['payoff_theme']} 构建高压叙事。",
+            f"- 节奏策略：{profile['pacing_pattern']}",
+            f"- 评审重点：{profile['evaluation_focus']}",
             "- 结构要求：15 秒内完成危机、决策、爽点和结果落点。",
             f"- 模式参考：{pattern_summary[:220]}",
             f"- 新闻辅助：{news_context[:220]}",
@@ -329,6 +363,7 @@ def generate_creative_variants(state: dict[str, Any], params: dict[str, Any] | N
                 "hook": f"前3秒直接抛出 {profile['hook_theme']}",
                 "core_conflict": f"在多线压力下完成推进与反转。第 {revision_round + 1} 轮侧重：{feedback}",
                 "selling_points": [profile["hook_theme"], profile["payoff_theme"], profile["visual_pattern"]],
+                "evaluation_focus": profile["evaluation_focus"],
                 "why_it_might_work": "强钩子 + 爽点闭环 + 英文 UI 适合买量投放",
                 "risk": "如果节奏不够快，容易只剩概念没有爽点",
                 "shot_list": normalize_shot_list([]),
@@ -368,6 +403,7 @@ def review_creative_variants(state: dict[str, Any], params: dict[str, Any] | Non
     threshold = float((params or {}).get("pass_threshold", 7.8))
     revision_round = int(state.get("revision_round", 0))
     task_input = compact_text(state.get("task_input")).lower()
+    profile = theme_profile(state.get("theme_config") or {})
     review_results = []
     best_variant: dict[str, Any] = {}
     best_score = -1.0
@@ -378,9 +414,9 @@ def review_creative_variants(state: dict[str, Any], params: dict[str, Any] | Non
         review = {
             "variant_id": variant.get("variant_id", f"V{idx}"),
             "score": round(base_score, 1),
-            "strengths": ["前3秒钩子明确", "节奏推进稳定", "英文 UI 约束清楚"],
-            "risks": [] if base_score >= threshold else ["爽点偏弱，建议强化机制反馈"],
-            "improvements": ["强化数值爆发镜头", "把规模感再提前 1 个镜头"],
+            "strengths": ["前3秒钩子明确", f"评审重点覆盖 {profile['evaluation_focus']}", "英文 UI 约束清楚"],
+            "risks": [] if base_score >= threshold else [f"当前未充分放大 {profile['payoff_theme']}"],
+            "improvements": [f"强化 {profile['visual_pattern']}", f"把 {profile['hook_theme']} 再提前半个镜头"],
         }
         review_results.append(review)
         if review["score"] > best_score:

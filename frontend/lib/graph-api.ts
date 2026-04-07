@@ -25,6 +25,7 @@ export type BackendGraphPayload = {
     language_constraints: string[];
     evaluation_policy: Record<string, unknown>;
     asset_source_policy: Record<string, unknown>;
+    strategy_profile: Record<string, unknown>;
   };
   state_schema: Array<{
     key: string;
@@ -78,6 +79,7 @@ function toBackendThemeConfig(themeConfig: ThemeConfig): BackendGraphPayload["th
     language_constraints: themeConfig.languageConstraints,
     evaluation_policy: themeConfig.evaluationPolicy,
     asset_source_policy: themeConfig.assetSourcePolicy,
+    strategy_profile: themeConfig.strategyProfile,
   };
 }
 
@@ -102,6 +104,46 @@ function fromBackendThemeConfig(themeConfig: BackendGraphDocument["theme_config"
       themeConfig.asset_source_policy && typeof themeConfig.asset_source_policy === "object"
         ? themeConfig.asset_source_policy
         : {},
+    strategyProfile:
+      themeConfig.strategy_profile && typeof themeConfig.strategy_profile === "object"
+        ? {
+            hookTheme:
+              typeof themeConfig.strategy_profile.hookTheme === "string"
+                ? themeConfig.strategy_profile.hookTheme
+                : typeof themeConfig.strategy_profile.hook_theme === "string"
+                  ? String(themeConfig.strategy_profile.hook_theme)
+                  : "",
+            payoffTheme:
+              typeof themeConfig.strategy_profile.payoffTheme === "string"
+                ? themeConfig.strategy_profile.payoffTheme
+                : typeof themeConfig.strategy_profile.payoff_theme === "string"
+                  ? String(themeConfig.strategy_profile.payoff_theme)
+                  : "",
+            visualPattern:
+              typeof themeConfig.strategy_profile.visualPattern === "string"
+                ? themeConfig.strategy_profile.visualPattern
+                : typeof themeConfig.strategy_profile.visual_pattern === "string"
+                  ? String(themeConfig.strategy_profile.visual_pattern)
+                  : "",
+            pacingPattern:
+              typeof themeConfig.strategy_profile.pacingPattern === "string"
+                ? themeConfig.strategy_profile.pacingPattern
+                : typeof themeConfig.strategy_profile.pacing_pattern === "string"
+                  ? String(themeConfig.strategy_profile.pacing_pattern)
+                  : "",
+            evaluationFocus: Array.isArray(themeConfig.strategy_profile.evaluationFocus)
+              ? themeConfig.strategy_profile.evaluationFocus.filter((value): value is string => typeof value === "string")
+              : Array.isArray(themeConfig.strategy_profile.evaluation_focus)
+                ? themeConfig.strategy_profile.evaluation_focus.filter((value): value is string => typeof value === "string")
+                : [],
+          }
+        : {
+            hookTheme: "",
+            payoffTheme: "",
+            visualPattern: "",
+            pacingPattern: "",
+            evaluationFocus: [],
+          },
   };
 }
 

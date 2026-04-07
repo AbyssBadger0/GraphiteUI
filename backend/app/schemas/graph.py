@@ -83,6 +83,7 @@ class ThemeConfig(BaseModel):
     language_constraints: list[str] = Field(default_factory=list)
     evaluation_policy: dict[str, Any] = Field(default_factory=dict)
     asset_source_policy: dict[str, Any] = Field(default_factory=dict)
+    strategy_profile: dict[str, Any] = Field(default_factory=dict)
 
 
 class StateField(BaseModel):

@@ -325,6 +325,10 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
           <div className="preset-banner">
             <strong>{selectedThemePreset.label}</strong>
             <span>{selectedThemePreset.description}</span>
+            <span>Hook: {themeConfig.strategyProfile.hookTheme}</span>
+            <span>Payoff: {themeConfig.strategyProfile.payoffTheme}</span>
+            <span>Visual: {themeConfig.strategyProfile.visualPattern}</span>
+            <span>Focus: {themeConfig.strategyProfile.evaluationFocus.join(" / ") || "None"}</span>
           </div>
         ) : null}
       </section>

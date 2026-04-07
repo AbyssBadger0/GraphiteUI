@@ -184,7 +184,7 @@ export function fromBackendGraphDocument(document: BackendGraphDocument): GraphD
     stateSchema: Array.isArray(document.state_schema) ? document.state_schema.map(fromBackendStateField) : [],
     nodes: document.nodes.map((node) => ({
       id: node.id,
-      type: "default",
+      type: "workflow",
       className: "graph-node status-idle",
       position: {
         x: node.position.x,

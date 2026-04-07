@@ -28,6 +28,14 @@ type ValidationIssue = {
   message: string;
 };
 
+function recomputeStateBindings(fields: StateField[], nodes: GraphCanvasNode[]): StateField[] {
+  return fields.map((field) => ({
+    ...field,
+    sourceNodes: nodes.filter((node) => node.data.writes.includes(field.key)).map((node) => node.id),
+    targetNodes: nodes.filter((node) => node.data.reads.includes(field.key)).map((node) => node.id),
+  }));
+}
+
 type EditorState = {
   graphId: string;
   graphName: string;
@@ -217,14 +225,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   updateStateField: (key, patch) => {
-    set((state) => ({
-      stateSchema: state.stateSchema.map((field) => (field.key === key ? { ...field, ...patch } : field)),
-    }));
+    set((state) => {
+      const nextStateSchema = state.stateSchema.map((field) => (field.key === key ? { ...field, ...patch } : field));
+      return {
+        stateSchema: recomputeStateBindings(nextStateSchema, state.nodes),
+      };
+    });
   },
 
   addStateField: (field) => {
     set((state) => ({
-      stateSchema: [...state.stateSchema, defaultStateField(field)],
+      stateSchema: recomputeStateBindings([...state.stateSchema, defaultStateField(field)], state.nodes),
     }));
   },
 
@@ -306,7 +317,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const nodeId = `${kind}_${count}`;
       const nextNode: GraphCanvasNode = {
         id: nodeId,
-        type: "default",
+        type: "workflow",
         className: "graph-node status-idle",
         position: {
           x: 160 + (state.nodes.length % 3) * 240,
@@ -324,6 +335,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       };
       return {
         nodes: [...state.nodes, nextNode],
+        stateSchema: recomputeStateBindings(state.stateSchema, [...state.nodes, nextNode]),
         selectedNodeId: nodeId,
         selectedEdgeId: null,
         configDraft: buildDraftFromNode(nextNode),
@@ -343,22 +355,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectEdge: (edgeId) => set({ selectedEdgeId: edgeId, selectedNodeId: null, configDraft: "" }),
 
   updateSelectedNodeLabel: (label) => {
-    set((state) => ({
-      nodes: state.nodes.map((node) => (node.id === state.selectedNodeId ? { ...node, data: { ...node.data, label } } : node)),
-    }));
+    set((state) => {
+      const nodes = state.nodes.map((node) => (node.id === state.selectedNodeId ? { ...node, data: { ...node.data, label } } : node));
+      return {
+        nodes,
+        stateSchema: recomputeStateBindings(state.stateSchema, nodes),
+      };
+    });
   },
 
   updateSelectedNodeDescription: (description) => {
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
+    set((state) => {
+      const nodes = state.nodes.map((node) =>
         node.id === state.selectedNodeId ? { ...node, data: { ...node.data, description } } : node,
-      ),
-    }));
+      );
+      return {
+        nodes,
+        stateSchema: recomputeStateBindings(state.stateSchema, nodes),
+      };
+    });
   },
 
   toggleSelectedNodeRead: (key) => {
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
+    set((state) => {
+      const nodes = state.nodes.map((node) =>
         node.id === state.selectedNodeId
           ? {
               ...node,
@@ -368,13 +388,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               },
             }
           : node,
-      ),
-    }));
+      );
+      return {
+        nodes,
+        stateSchema: recomputeStateBindings(state.stateSchema, nodes),
+      };
+    });
   },
 
   toggleSelectedNodeWrite: (key) => {
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
+    set((state) => {
+      const nodes = state.nodes.map((node) =>
         node.id === state.selectedNodeId
           ? {
               ...node,
@@ -386,8 +410,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               },
             }
           : node,
-      ),
-    }));
+      );
+      return {
+        nodes,
+        stateSchema: recomputeStateBindings(state.stateSchema, nodes),
+      };
+    });
   },
 
   updateSelectedNodeParam: (paramKey, value) => {
@@ -398,7 +426,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           : node,
       );
       const updatedNode = nodes.find((node) => node.id === state.selectedNodeId) ?? null;
-      return { nodes, configDraft: buildDraftFromNode(updatedNode) };
+      return {
+        nodes,
+        stateSchema: recomputeStateBindings(state.stateSchema, nodes),
+        configDraft: buildDraftFromNode(updatedNode),
+      };
     });
   },
 
@@ -408,7 +440,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         node.id === state.selectedNodeId ? { ...node, data: { ...node.data, params } } : node,
       );
       const updatedNode = nodes.find((node) => node.id === state.selectedNodeId) ?? null;
-      return { nodes, configDraft: buildDraftFromNode(updatedNode) };
+      return {
+        nodes,
+        stateSchema: recomputeStateBindings(state.stateSchema, nodes),
+        configDraft: buildDraftFromNode(updatedNode),
+      };
     });
   },
 
@@ -490,6 +526,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                 },
               }
             : node,
+        ),
+        stateSchema: recomputeStateBindings(
+          state.stateSchema,
+          state.nodes.map((node) =>
+            node.id === state.selectedNodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    ...parsed,
+                    label: typeof parsed.label === "string" ? parsed.label : node.data.label,
+                    description: typeof parsed.description === "string" ? parsed.description : node.data.description,
+                    reads: Array.isArray(parsed.reads)
+                      ? parsed.reads.filter((value): value is string => typeof value === "string")
+                      : node.data.reads,
+                    writes: Array.isArray(parsed.writes)
+                      ? parsed.writes.filter((value): value is string => typeof value === "string")
+                      : node.data.writes,
+                    params: parsed.params && typeof parsed.params === "object" ? parsed.params : node.data.params,
+                  },
+                }
+              : node,
+          ),
         ),
       }));
     } catch {

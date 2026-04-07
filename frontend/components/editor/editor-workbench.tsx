@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Background,
@@ -14,17 +14,25 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
+import { NodeParamsForm } from "@/components/editor/node-params-form";
 import { StatePanel } from "@/components/editor/state-panel";
+import { WorkflowNode } from "@/components/editor/workflow-node";
 import { useLanguage } from "@/components/providers/language-provider";
 import { apiGet, apiPost } from "@/lib/api";
 import { NODE_PRESETS } from "@/lib/editor-presets";
 import { fromBackendGraphDocument, toBackendGraphPayload, type BackendGraphDocument } from "@/lib/graph-api";
 import { useEditorStore } from "@/stores/editor-store";
-import type { GraphCanvasNode, GraphDocument, RunDetailPayload } from "@/types/editor";
+import type { GraphCanvasNode, GraphDocument, RunDetailPayload, StateFieldRole, StateFieldType } from "@/types/editor";
+
+const nodeTypes = {
+  workflow: WorkflowNode,
+};
 
 function EditorWorkbenchInner({ graphId }: { graphId: string }) {
   const { t } = useLanguage();
   const router = useRouter();
+  const [newReadKey, setNewReadKey] = useState("");
+  const [newWriteKey, setNewWriteKey] = useState("");
   const {
     initGraph,
     hydrateGraph,
@@ -64,6 +72,7 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
     updateSelectedNodeDescription,
     toggleSelectedNodeRead,
     toggleSelectedNodeWrite,
+    updateSelectedNodeParam,
     replaceSelectedNodeParams,
     updateSelectedEdgeFlowKeys,
     updateSelectedEdgeKind,
@@ -110,6 +119,11 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
   const selectedEdge = useMemo(() => edges.find((edge) => edge.id === selectedEdgeId) ?? null, [edges, selectedEdgeId]);
   const selectedNodeExecution = selectedNode ? nodeExecutionMap[selectedNode.id] ?? null : null;
 
+  useEffect(() => {
+    setNewReadKey("");
+    setNewWriteKey("");
+  }, [selectedNodeId]);
+
   const graphDocument: GraphDocument = useMemo(
     () => ({
       graphId: activeGraphId,
@@ -126,6 +140,36 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
 
   const onNodeClick: NodeMouseHandler<GraphCanvasNode> = (_, node) => selectNode(node.id);
   const onEdgeClick: EdgeMouseHandler = (_, edge) => selectEdge(edge.id);
+
+  function handleQuickAddState(
+    nextKey: string,
+    bindMode: "read" | "write",
+    type: StateFieldType = "string",
+    role: StateFieldRole = bindMode === "read" ? "input" : "artifact",
+  ) {
+    const key = nextKey.trim();
+    if (!key || !selectedNode) return;
+    const exists = stateSchema.some((field) => field.key === key);
+    if (!exists) {
+      addStateField({
+        key,
+        type,
+        role,
+        title: key,
+        description: "",
+      });
+    }
+    const alreadyBound = bindMode === "read" ? selectedNode.data.reads.includes(key) : selectedNode.data.writes.includes(key);
+    if (!alreadyBound) {
+      if (bindMode === "read") {
+        toggleSelectedNodeRead(key);
+      } else {
+        toggleSelectedNodeWrite(key);
+      }
+    }
+    if (bindMode === "read") setNewReadKey("");
+    if (bindMode === "write") setNewWriteKey("");
+  }
 
   async function handleValidateBackend() {
     try {
@@ -315,6 +359,7 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
             nodes={nodes}
             edges={edges}
             fitView
+            nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -353,6 +398,17 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
 
               <div className="field">
                 <span>Inputs</span>
+                <div className="inline-input-row">
+                  <input
+                    className="text-input"
+                    placeholder="new_input_key"
+                    value={newReadKey}
+                    onChange={(event) => setNewReadKey(event.target.value)}
+                  />
+                  <button className="button secondary small" onClick={() => handleQuickAddState(newReadKey, "read")} type="button">
+                    + Add
+                  </button>
+                </div>
                 <div className="toggle-grid">
                   {stateSchema.map((field) => (
                     <label className="toggle-card" key={`read-${field.key}`}>
@@ -369,6 +425,17 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
 
               <div className="field">
                 <span>Outputs</span>
+                <div className="inline-input-row">
+                  <input
+                    className="text-input"
+                    placeholder="new_output_key"
+                    value={newWriteKey}
+                    onChange={(event) => setNewWriteKey(event.target.value)}
+                  />
+                  <button className="button secondary small" onClick={() => handleQuickAddState(newWriteKey, "write")} type="button">
+                    + Add
+                  </button>
+                </div>
                 <div className="toggle-grid">
                   {stateSchema.map((field) => (
                     <label className="toggle-card" key={`write-${field.key}`}>
@@ -381,6 +448,11 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
                     </label>
                   ))}
                 </div>
+              </div>
+
+              <div className="field">
+                <span>Structured Params</span>
+                <NodeParamsForm node={selectedNode} onParamChange={updateSelectedNodeParam} />
               </div>
 
               <label className="field">

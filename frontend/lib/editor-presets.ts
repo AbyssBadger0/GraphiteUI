@@ -201,7 +201,7 @@ function createNode(
 ): GraphCanvasNode {
   return {
     id,
-    type: "default",
+    type: "workflow",
     className: "graph-node status-idle",
     position: { x, y },
     data: {

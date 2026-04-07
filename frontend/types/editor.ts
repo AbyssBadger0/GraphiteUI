@@ -31,6 +31,7 @@ export type StateFieldType = "string" | "number" | "boolean" | "object" | "array
 export type StateFieldRole = "input" | "intermediate" | "decision" | "artifact" | "final";
 
 export type ThemeConfig = {
+  themePreset: string;
   domain: string;
   genre: string;
   market: string;
@@ -41,6 +42,13 @@ export type ThemeConfig = {
   languageConstraints: string[];
   evaluationPolicy: Record<string, unknown>;
   assetSourcePolicy: Record<string, unknown>;
+};
+
+export type ThemePreset = {
+  id: string;
+  label: string;
+  description: string;
+  themeConfig: ThemeConfig;
 };
 
 export type StateField = {

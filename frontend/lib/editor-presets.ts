@@ -5,6 +5,7 @@ import type {
   GraphNodeType,
   StateField,
   ThemeConfig,
+  ThemePreset,
 } from "@/types/editor";
 
 type NodePreset = {
@@ -42,19 +43,69 @@ export const NODE_PRESETS: NodePreset[] = [
   { kind: "transform", label: "Transform", description: "Convert one state structure into another." },
 ];
 
+export const THEME_PRESETS: ThemePreset[] = [
+  {
+    id: "slg_launch",
+    label: "SLG Launch",
+    description: "High-pressure strategy war ads with rapid escalation and alliance scale.",
+    themeConfig: {
+      themePreset: "slg_launch",
+      domain: "game_ads",
+      genre: "SLG",
+      market: "US",
+      platform: "facebook",
+      language: "zh",
+      creativeStyle: "high_pressure_growth_loop",
+      tone: "urgent",
+      languageConstraints: ["ui_en_only"],
+      evaluationPolicy: { scoreThreshold: 7.8, hookPriority: "very_high", payoffPriority: "high" },
+      assetSourcePolicy: { adLibrary: true, rss: true },
+    },
+  },
+  {
+    id: "rpg_fantasy",
+    label: "RPG Fantasy",
+    description: "Hero-led fantasy progression with class fantasy, bosses, and loot payoff.",
+    themeConfig: {
+      themePreset: "rpg_fantasy",
+      domain: "game_ads",
+      genre: "RPG",
+      market: "JP",
+      platform: "youtube_shorts",
+      language: "zh",
+      creativeStyle: "hero_power_fantasy",
+      tone: "epic",
+      languageConstraints: ["ui_en_only"],
+      evaluationPolicy: { scoreThreshold: 7.6, fantasyClarity: "high", rewardVisibility: "high" },
+      assetSourcePolicy: { adLibrary: true, rss: false },
+    },
+  },
+  {
+    id: "survival_chaos",
+    label: "Survival Chaos",
+    description: "Overwhelming threat, scrappy resource recovery, and last-second reversals.",
+    themeConfig: {
+      themePreset: "survival_chaos",
+      domain: "game_ads",
+      genre: "Survival",
+      market: "US",
+      platform: "tiktok",
+      language: "zh",
+      creativeStyle: "chaotic_resource_panic",
+      tone: "grim",
+      languageConstraints: ["ui_en_only"],
+      evaluationPolicy: { scoreThreshold: 7.9, dangerVisibility: "very_high", scarcityPressure: "high" },
+      assetSourcePolicy: { adLibrary: true, rss: true },
+    },
+  },
+];
+
+export function getThemePresetById(themePresetId: string): ThemePreset | undefined {
+  return THEME_PRESETS.find((preset) => preset.id === themePresetId);
+}
+
 function defaultThemeConfig(): ThemeConfig {
-  return {
-    domain: "game_ads",
-    genre: "SLG",
-    market: "US",
-    platform: "facebook",
-    language: "zh",
-    creativeStyle: "high_pressure_growth_loop",
-    tone: "urgent",
-    languageConstraints: ["ui_en_only"],
-    evaluationPolicy: { scoreThreshold: 7.8 },
-    assetSourcePolicy: { adLibrary: true, rss: true },
-  };
+  return THEME_PRESETS[0].themeConfig;
 }
 
 function defaultStateSchema(): StateField[] {
@@ -235,12 +286,13 @@ function createEdge(
   };
 }
 
-function createCreativeFactoryTemplate(graphId: string): GraphDocument {
+function createCreativeFactoryTemplate(graphId: string, themePresetId?: string): GraphDocument {
+  const themePreset = getThemePresetById(themePresetId ?? "") ?? THEME_PRESETS[0];
   return {
     graphId,
-    name: "Creative Factory",
+    name: `Creative Factory · ${themePreset.label}`,
     templateId: "creative_factory",
-    themeConfig: defaultThemeConfig(),
+    themeConfig: themePreset.themeConfig,
     stateSchema: defaultStateSchema(),
     nodes: [
       createNode("start_1", "start", "Start", 40, 220, "Define initial context and expose root state.", [], ["theme_config"]),
@@ -252,18 +304,18 @@ function createCreativeFactoryTemplate(graphId: string): GraphDocument {
       }),
       createNode("normalize_assets_1", "normalize_assets", "Normalize Assets", 460, 260, "Normalize raw assets into analysis-ready records.", ["market_inputs"], ["market_inputs"]),
       createNode("select_assets_1", "select_assets", "Select Assets", 680, 260, "Select top benchmark videos.", ["market_inputs"], ["selected_video_items"], {
-        top_n: 2,
+        top_n: themePreset.id === "rpg_fantasy" ? 3 : 2,
       }),
       createNode("analyze_assets_1", "analyze_assets", "Analyze Assets", 900, 260, "Analyze selected benchmark assets.", ["selected_video_items"], ["video_analysis_results"]),
       createNode("extract_patterns_1", "extract_patterns", "Extract Patterns", 1120, 260, "Summarize reusable patterns from analyses.", ["video_analysis_results"], ["pattern_summary"]),
       createNode("build_brief_1", "build_brief", "Build Brief", 1340, 260, "Build a structured brief.", ["theme_config", "market_inputs", "pattern_summary"], ["creative_brief"]),
       createNode("generate_variants_1", "generate_variants", "Generate Variants", 1580, 260, "Generate creative variants.", ["theme_config", "creative_brief"], ["script_variants"], {
-        variantCount: 3,
+        variantCount: themePreset.id === "survival_chaos" ? 4 : 3,
       }),
       createNode("generate_storyboards_1", "generate_storyboards", "Storyboards", 1800, 180, "Create storyboard packages for each variant.", ["script_variants"], ["storyboard_packages"]),
       createNode("generate_video_prompts_1", "generate_video_prompts", "Video Prompts", 1800, 340, "Create video prompt packages from storyboards.", ["script_variants", "storyboard_packages"], ["video_prompt_packages"]),
       createNode("review_variants_1", "review_variants", "Review", 2020, 260, "Review generated variants.", ["creative_brief", "script_variants"], ["best_variant", "evaluation_result"], {
-        scoreThreshold: 7.8,
+        scoreThreshold: (themePreset.themeConfig.evaluationPolicy.scoreThreshold as number | undefined) ?? 7.8,
       }),
       createNode("condition_1", "condition", "Condition", 2240, 260, "Route pass/revise/fail.", ["evaluation_result"], [], {
         decision_key: "evaluation_result.decision",
@@ -297,10 +349,9 @@ function createCreativeFactoryTemplate(graphId: string): GraphDocument {
   };
 }
 
-export function createStarterGraphDocument(graphId: string): GraphDocument {
+export function createStarterGraphDocument(graphId: string, themePresetId?: string): GraphDocument {
   if (graphId === "creative-factory" || graphId === "slg-creative-factory" || graphId === "template-creative-factory") {
-    return createCreativeFactoryTemplate(graphId);
+    return createCreativeFactoryTemplate(graphId, themePresetId);
   }
-
-  return createCreativeFactoryTemplate(graphId);
+  return createCreativeFactoryTemplate(graphId, themePresetId);
 }

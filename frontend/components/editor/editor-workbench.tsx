@@ -20,7 +20,7 @@ import { StatePanel } from "@/components/editor/state-panel";
 import { WorkflowNode } from "@/components/editor/workflow-node";
 import { useLanguage } from "@/components/providers/language-provider";
 import { apiGet, apiPost } from "@/lib/api";
-import { NODE_PRESETS } from "@/lib/editor-presets";
+import { NODE_PRESETS, THEME_PRESETS } from "@/lib/editor-presets";
 import { fromBackendGraphDocument, toBackendGraphPayload, type BackendGraphDocument } from "@/lib/graph-api";
 import { useEditorStore } from "@/stores/editor-store";
 import type { GraphCanvasNode, GraphDocument, RunDetailPayload, StateFieldRole, StateFieldType } from "@/types/editor";
@@ -44,6 +44,7 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
     updateGraphIdentity,
     updateGraphName,
     updateThemeConfig,
+    applyThemePreset,
     updateStateField,
     addStateField,
     removeStateField,
@@ -268,6 +269,20 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
           <label className="field">
             <span>{t("editor.graph_name")}</span>
             <input className="text-input" value={graphName} onChange={(event) => updateGraphName(event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Theme Preset</span>
+            <select
+              className="text-input"
+              value={themeConfig.themePreset}
+              onChange={(event) => applyThemePreset(event.target.value)}
+            >
+              {THEME_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="field">
             <span>Domain</span>

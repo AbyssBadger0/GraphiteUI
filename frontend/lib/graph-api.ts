@@ -14,6 +14,7 @@ export type BackendGraphPayload = {
   name: string;
   template_id: string;
   theme_config: {
+    theme_preset: string;
     domain: string;
     genre: string;
     market: string;
@@ -66,6 +67,7 @@ export type BackendGraphDocument = BackendGraphPayload & {
 
 function toBackendThemeConfig(themeConfig: ThemeConfig): BackendGraphPayload["theme_config"] {
   return {
+    theme_preset: themeConfig.themePreset,
     domain: themeConfig.domain,
     genre: themeConfig.genre,
     market: themeConfig.market,
@@ -81,6 +83,7 @@ function toBackendThemeConfig(themeConfig: ThemeConfig): BackendGraphPayload["th
 
 function fromBackendThemeConfig(themeConfig: BackendGraphDocument["theme_config"]): ThemeConfig {
   return {
+    themePreset: themeConfig.theme_preset ?? "",
     domain: themeConfig.domain ?? "",
     genre: themeConfig.genre ?? "",
     market: themeConfig.market ?? "",

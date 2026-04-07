@@ -72,6 +72,7 @@ class Position(BaseModel):
 
 
 class ThemeConfig(BaseModel):
+    theme_preset: str = ""
     domain: str = ""
     genre: str = ""
     market: str = ""

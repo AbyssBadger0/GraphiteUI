@@ -158,6 +158,7 @@
 - 标准协议
 - `State Panel`
 - `theme_config`
+- `theme preset`
 - `Condition Node`
 - `Node Handler Registry`
 - `Tool Registry` 基础下沉
@@ -185,7 +186,7 @@
 
 ## P1 高价值后续项
 
-- 主题模板系统
+- 主题模板系统继续扩展
 - 节点顺序调整与插入体验
 - 更强的 Run 轮询和调试能力
 - 更彻底的工具分层与跨主题复用

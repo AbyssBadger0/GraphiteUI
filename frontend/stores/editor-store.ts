@@ -10,7 +10,7 @@ import {
 } from "@xyflow/react";
 import { create } from "zustand";
 
-import { createStarterGraphDocument, NODE_PRESETS } from "@/lib/editor-presets";
+import { createStarterGraphDocument, getThemePresetById, NODE_PRESETS } from "@/lib/editor-presets";
 import type {
   EdgeKind,
   GraphCanvasEdge,
@@ -60,6 +60,7 @@ type EditorState = {
   updateGraphIdentity: (graphId: string, graphName?: string) => void;
   updateGraphName: (graphName: string) => void;
   updateThemeConfig: (patch: Partial<ThemeConfig>) => void;
+  applyThemePreset: (themePresetId: string) => void;
   updateStateField: (key: string, patch: Partial<StateField>) => void;
   addStateField: (field?: Partial<StateField>) => void;
   removeStateField: (key: string) => void;
@@ -222,6 +223,53 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({
       themeConfig: { ...state.themeConfig, ...patch },
     }));
+  },
+
+  applyThemePreset: (themePresetId) => {
+    const preset = getThemePresetById(themePresetId);
+    if (!preset) return;
+    set((state) => {
+      const starter = createStarterGraphDocument(state.graphId || "creative-factory", themePresetId);
+      return {
+        graphName: starter.name,
+        themeConfig: preset.themeConfig,
+        nodes: state.nodes.map((node) => {
+          if (node.id === "select_assets_1") {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                params: { ...node.data.params, top_n: starter.nodes.find((item) => item.id === node.id)?.data.params.top_n ?? node.data.params.top_n },
+              },
+            };
+          }
+          if (node.id === "generate_variants_1") {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                params: { ...node.data.params, variantCount: starter.nodes.find((item) => item.id === node.id)?.data.params.variantCount ?? node.data.params.variantCount },
+              },
+            };
+          }
+          if (node.id === "review_variants_1") {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                params: {
+                  ...node.data.params,
+                  scoreThreshold:
+                    starter.nodes.find((item) => item.id === node.id)?.data.params.scoreThreshold ?? node.data.params.scoreThreshold,
+                },
+              },
+            };
+          }
+          return node;
+        }),
+        runtimeLabel: `Applied theme preset ${preset.label}`,
+      };
+    });
   },
 
   updateStateField: (key, patch) => {

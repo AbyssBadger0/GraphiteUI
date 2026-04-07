@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 
 from app.compiler.validator import validate_graph
+from app.runtime.executor import execute_graph
 from app.schemas.graph import (
     GraphDocument,
     GraphPayload,
@@ -61,3 +62,18 @@ def validate_graph_endpoint(payload: dict[str, Any]) -> GraphValidationResponse:
             ],
         )
     return validate_graph(graph)
+
+
+@router.post("/run")
+def run_graph_endpoint(payload: GraphPayload) -> dict[str, str]:
+    graph = GraphDocument(
+        **payload.model_dump(exclude={"graph_id"}),
+        graph_id=payload.graph_id or "temp",
+    )
+    validation = validate_graph(graph)
+    if not validation.valid:
+        raise HTTPException(status_code=422, detail=validation.model_dump())
+
+    executed_graph = save_graph(payload)
+    run_result = execute_graph(executed_graph)
+    return {"run_id": run_result["run_id"], "status": run_result["status"]}

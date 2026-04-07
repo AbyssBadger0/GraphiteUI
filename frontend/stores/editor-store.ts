@@ -3,7 +3,7 @@
 import { addEdge, applyEdgeChanges, applyNodeChanges, type Connection, type EdgeChange, type NodeChange } from "@xyflow/react";
 import { create } from "zustand";
 
-import { createStarterGraph, NODE_PRESETS } from "@/lib/editor-presets";
+import { createStarterGraphDocument, NODE_PRESETS } from "@/lib/editor-presets";
 import type {
   GraphCanvasEdge,
   GraphCanvasNode,
@@ -101,26 +101,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
 
-    const starterNodes = createStarterGraph(graphId);
-    const starterEdges: GraphCanvasEdge[] = [
-      { id: "edge_input_planner", source: "input_1", target: "planner_1" },
-      { id: "edge_planner_eval", source: "planner_1", target: "evaluator_1" },
-      {
-        id: "edge_eval_finalizer",
-        source: "evaluator_1",
-        target: "finalizer_1",
-        label: "pass",
-      },
-    ];
+    const starterGraph = createStarterGraphDocument(graphId);
     set({
       graphId,
-      graphName: graphId === "demo-graph" ? "Demo Graph" : initialGraphName,
-      nodes: starterNodes,
-      edges: starterEdges,
+      graphName: starterGraph.name,
+      nodes: starterGraph.nodes,
+      edges: starterGraph.edges,
       selectedNodeId: null,
       selectedEdgeId: null,
       validationIssues: [],
-      runtimeLabel: "Starter graph ready",
+      runtimeLabel: graphId === "slg-creative-factory" ? "SLG creative factory template ready" : "Starter graph ready",
       configDraft: "",
       validationPassed: null,
       currentRunId: null,

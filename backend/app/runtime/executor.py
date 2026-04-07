@@ -33,6 +33,22 @@ def execute_graph(graph: GraphDocument) -> dict:
         "skill_outputs": result.get("skill_outputs", []),
         "evaluation": result.get("evaluation_result", {}),
         "final_result": result.get("final_result", ""),
+        "rss_items": result.get("rss_items", []),
+        "clean_news_items": result.get("clean_news_items", []),
+        "ad_items": result.get("ad_items", []),
+        "normalized_video_items": result.get("normalized_video_items", []),
+        "selected_video_items": result.get("selected_video_items", []),
+        "video_analysis_results": result.get("video_analysis_results", []),
+        "pattern_summary": result.get("pattern_summary", ""),
+        "news_context": result.get("news_context", ""),
+        "creative_brief": result.get("creative_brief", ""),
+        "script_variants": result.get("script_variants", []),
+        "storyboard_packages": result.get("storyboard_packages", []),
+        "video_prompt_packages": result.get("video_prompt_packages", []),
+        "review_results": result.get("review_results", []),
+        "best_variant": result.get("best_variant", {}),
+        "image_generation_todo": result.get("image_generation_todo", {}),
+        "video_generation_todo": result.get("video_generation_todo", {}),
     }
     evaluation = result.get("evaluation_result", {})
     result["final_score"] = evaluation.get("score")
@@ -40,6 +56,15 @@ def execute_graph(graph: GraphDocument) -> dict:
         result.get("started_at"),
         result.get("completed_at"),
     )
+    result["state_snapshot"] = {
+        key: value
+        for key, value in result.items()
+        if key
+        not in {
+            "node_executions",
+            "node_status_map",
+        }
+    }
     save_run(result)
     return result
 

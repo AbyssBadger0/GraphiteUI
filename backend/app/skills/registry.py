@@ -4,6 +4,22 @@ from collections.abc import Callable
 from typing import Any
 
 from app.knowledge.loader import search_knowledge
+from app.skills.slg_creative_factory import (
+    slg_analyze_videos,
+    slg_build_brief,
+    slg_clean_news,
+    slg_extract_patterns,
+    slg_fetch_ads,
+    slg_fetch_rss,
+    slg_generate_storyboards,
+    slg_generate_variants,
+    slg_generate_video_prompts,
+    slg_normalize_assets,
+    slg_prepare_image_todo,
+    slg_prepare_video_todo,
+    slg_review_variants,
+    slg_select_top_videos,
+)
 
 
 SkillFunc = Callable[..., dict[str, Any]]
@@ -15,6 +31,20 @@ def get_skill_registry() -> dict[str, SkillFunc]:
         "analyze_assets": analyze_assets,
         "generate_draft": generate_draft,
         "evaluate_output": evaluate_output,
+        "slg_fetch_rss": slg_fetch_rss,
+        "slg_clean_news": slg_clean_news,
+        "slg_fetch_ads": slg_fetch_ads,
+        "slg_normalize_assets": slg_normalize_assets,
+        "slg_select_top_videos": slg_select_top_videos,
+        "slg_analyze_videos": slg_analyze_videos,
+        "slg_extract_patterns": slg_extract_patterns,
+        "slg_build_brief": slg_build_brief,
+        "slg_generate_variants": slg_generate_variants,
+        "slg_generate_storyboards": slg_generate_storyboards,
+        "slg_generate_video_prompts": slg_generate_video_prompts,
+        "slg_review_variants": slg_review_variants,
+        "slg_prepare_image_todo": slg_prepare_image_todo,
+        "slg_prepare_video_todo": slg_prepare_video_todo,
     }
 
 
@@ -52,4 +82,3 @@ def evaluate_output(content: str) -> dict[str, Any]:
         "issues": [] if content else ["Content is empty."],
         "suggestions": ["Tighten the opening hook.", "Clarify the target audience."],
     }
-

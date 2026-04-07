@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.skills.registry import get_skill_registry
+
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -20,5 +22,5 @@ def get_settings_endpoint() -> dict:
             "default_score_threshold": 7.8,
             "routes": ["pass", "revise", "fail"],
         },
+        "skills": sorted(get_skill_registry().keys()),
     }
-

@@ -50,15 +50,17 @@ http://localhost:8765
 
 ## 3. 建议使用的示例图
 
-当前仓库提供两份示例图：
+当前仓库提供三份示例图：
 
 - [graph_minimal_pass.json](/home/abyss/GraphiteUI/examples/graph_minimal_pass.json)
 - [graph_revise.json](/home/abyss/GraphiteUI/examples/graph_revise.json)
+- [slg_creative_factory_graph.json](/home/abyss/GraphiteUI/examples/slg_creative_factory_graph.json)
 
 用途：
 
 - `graph_minimal_pass.json`：验证正常路径
 - `graph_revise.json`：验证 revise 路由
+- `slg_creative_factory_graph.json`：验证多节点 skill 编排、创意生成与 TODO 产物链路
 
 ---
 
@@ -120,6 +122,11 @@ http://localhost:8765
 - `Validate Graph` 成功返回
 - `Save Graph` 成功
 - 保存后刷新仍能打开 graph
+
+补充演示入口：
+
+- 打开 `http://localhost:3477/editor/slg-creative-factory`
+- 该模板已预置 `SLG creative factory` 所需的 skill 节点链路
 
 ### AC-GRAPH-4 / AC-RUNTIME-1
 

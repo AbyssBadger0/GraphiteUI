@@ -17,6 +17,7 @@ type SettingsPayload = {
     default_score_threshold: number;
     routes: string[];
   };
+  skills: string[];
 };
 
 export function SettingsPanelClient() {
@@ -68,6 +69,16 @@ export function SettingsPanelClient() {
         <h2>Evaluator</h2>
         <p className="muted">Threshold: {settings.evaluator.default_score_threshold}</p>
         <p className="muted">Routes: {settings.evaluator.routes.join(", ")}</p>
+      </article>
+      <article className="card span-12">
+        <h2>Skills</h2>
+        <div className="status-row">
+          {settings.skills.map((skill) => (
+            <span className="pill" key={skill}>
+              {skill}
+            </span>
+          ))}
+        </div>
       </article>
     </section>
   );

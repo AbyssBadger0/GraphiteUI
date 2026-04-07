@@ -375,21 +375,27 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
               ) : null}
 
               {selectedNode.data.kind === "skill_executor" ? (
-                <label className="field">
-                  <span>Selected Skills</span>
-                  <input
-                    className="text-input"
-                    value={(selectedNode.data.config.selectedSkills ?? ["search_docs"]).join(", ")}
-                    onChange={(event) =>
-                      updateNodeConfig({
-                        selectedSkills: event.target.value
-                          .split(",")
-                          .map((item) => item.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                </label>
+                <>
+                  <label className="field">
+                    <span>Selected Skills</span>
+                    <input
+                      className="text-input"
+                      value={(selectedNode.data.config.selectedSkills ?? ["search_docs"]).join(", ")}
+                      onChange={(event) =>
+                        updateNodeConfig({
+                          selectedSkills: event.target.value
+                            .split(",")
+                            .map((item) => item.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                    />
+                  </label>
+                  <p className="muted">
+                    Examples: `search_docs`, `generate_draft`, `slg_fetch_rss`, `slg_build_brief`,
+                    `slg_generate_variants`, `slg_review_variants`
+                  </p>
+                </>
               ) : null}
 
               {selectedNode.data.kind === "evaluator" ? (

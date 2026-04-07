@@ -26,6 +26,23 @@ class RunState(TypedDict, total=False):
     skill_outputs: list[dict[str, Any]]
     evaluation_result: dict[str, Any]
     final_result: str
+    rss_items: list[dict[str, Any]]
+    clean_news_items: list[dict[str, Any]]
+    ad_items: list[dict[str, Any]]
+    normalized_video_items: list[dict[str, Any]]
+    selected_video_items: list[dict[str, Any]]
+    video_analysis_results: list[dict[str, Any]]
+    news_context: str
+    pattern_summary: str
+    creative_brief: str
+    script_variants: list[dict[str, Any]]
+    storyboard_packages: list[dict[str, Any]]
+    video_prompt_packages: list[dict[str, Any]]
+    review_results: list[dict[str, Any]]
+    best_variant: dict[str, Any]
+    image_generation_todo: dict[str, Any]
+    video_generation_todo: dict[str, Any]
+    revision_feedback: list[str]
     node_status_map: dict[str, NodeStatus]
     node_executions: list[dict[str, Any]]
     warnings: list[str]
@@ -55,6 +72,23 @@ def create_initial_run_state(graph_id: str, graph_name: str, max_revision_round:
         skill_outputs=[],
         evaluation_result={},
         final_result="",
+        rss_items=[],
+        clean_news_items=[],
+        ad_items=[],
+        normalized_video_items=[],
+        selected_video_items=[],
+        video_analysis_results=[],
+        news_context="",
+        pattern_summary="",
+        creative_brief="",
+        script_variants=[],
+        storyboard_packages=[],
+        video_prompt_packages=[],
+        review_results=[],
+        best_variant={},
+        image_generation_todo={},
+        video_generation_todo={},
+        revision_feedback=[],
         node_status_map={},
         node_executions=[],
         warnings=[],
@@ -62,4 +96,3 @@ def create_initial_run_state(graph_id: str, graph_name: str, max_revision_round:
         started_at=utc_now_iso(),
         completed_at=None,
     )
-

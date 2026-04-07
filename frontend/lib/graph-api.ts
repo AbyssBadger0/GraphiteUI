@@ -204,6 +204,7 @@ export function fromBackendGraphDocument(document: BackendGraphDocument): GraphD
       id: edge.id,
       source: edge.source,
       target: edge.target,
+      type: "workflow",
       label: edge.branch_label ?? (edge.flow_keys?.length ? edge.flow_keys.slice(0, 2).join(", ") : undefined),
       animated: false,
       data: {

@@ -343,6 +343,21 @@ button {
   position: relative;
 }
 
+.workflow-node.kind-start {
+  border-color: rgba(31, 111, 80, 0.35);
+  background: linear-gradient(180deg, rgba(237, 253, 245, 0.98), rgba(231, 247, 238, 0.9));
+}
+
+.workflow-node.kind-end {
+  border-color: rgba(159, 18, 57, 0.28);
+  background: linear-gradient(180deg, rgba(255, 244, 247, 0.98), rgba(250, 234, 239, 0.9));
+}
+
+.workflow-node.kind-condition {
+  border-color: rgba(154, 52, 18, 0.36);
+  background: linear-gradient(180deg, rgba(255, 246, 238, 0.98), rgba(249, 232, 215, 0.92));
+}
+
 .workflow-node.is-selected {
   box-shadow: 0 0 0 2px rgba(154, 52, 18, 0.28), 0 16px 34px var(--shadow);
 }
@@ -423,6 +438,26 @@ button {
 
 .workflow-handle-out {
   right: -7px;
+}
+
+.workflow-edge-label {
+  border: 1px solid rgba(138, 109, 59, 0.35);
+  background: rgba(255, 250, 241, 0.96);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+  line-height: 1;
+  box-shadow: 0 6px 20px rgba(60, 41, 20, 0.08);
+  white-space: nowrap;
+}
+
+.workflow-edge-label.is-branch {
+  border-color: rgba(154, 52, 18, 0.35);
+  color: var(--accent-strong);
+  background: rgba(255, 242, 234, 0.96);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .state-panel-header {

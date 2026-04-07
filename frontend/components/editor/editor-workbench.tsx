@@ -15,6 +15,7 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { NodeParamsForm } from "@/components/editor/node-params-form";
+import { WorkflowEdge } from "@/components/editor/workflow-edge";
 import { StatePanel } from "@/components/editor/state-panel";
 import { WorkflowNode } from "@/components/editor/workflow-node";
 import { useLanguage } from "@/components/providers/language-provider";
@@ -26,6 +27,10 @@ import type { GraphCanvasNode, GraphDocument, RunDetailPayload, StateFieldRole, 
 
 const nodeTypes = {
   workflow: WorkflowNode,
+};
+
+const edgeTypes = {
+  workflow: WorkflowEdge,
 };
 
 function EditorWorkbenchInner({ graphId }: { graphId: string }) {
@@ -359,6 +364,7 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
             nodes={nodes}
             edges={edges}
             fitView
+            edgeTypes={edgeTypes}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}

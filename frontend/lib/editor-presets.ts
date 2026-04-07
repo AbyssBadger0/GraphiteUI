@@ -228,6 +228,7 @@ function createEdge(
     id,
     source,
     target,
+    type: "workflow",
     animated: false,
     label: branchLabel ?? (flowKeys.length ? flowKeys.slice(0, 2).join(", ") : undefined),
     data: { flowKeys, edgeKind, branchLabel },

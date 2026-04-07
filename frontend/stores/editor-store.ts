@@ -301,6 +301,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         {
           ...connection,
           id: `edge_${connection.source}_${connection.target}_${state.edges.length + 1}`,
+          type: "workflow",
           animated: false,
           data: { flowKeys: [], edgeKind: "normal" },
         },

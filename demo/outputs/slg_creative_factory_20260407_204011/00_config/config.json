@@ -1,0 +1,39 @@
+{
+  "local_base_url": "http://127.0.0.1:8888/v1",
+  "local_api_key": "sk-local-litellm",
+  "local_text_model": "lm-local",
+  "local_video_model": "lm-local",
+  "project_name": "slg_creative_factory",
+  "genre": "SLG",
+  "country": "US",
+  "days_back": 7,
+  "script_variants_count": 1,
+  "top_fetch_per_term": 1,
+  "top_n_video_analysis": 1,
+  "max_revision_rounds": 1,
+  "min_pass_score": 7.8,
+  "video_fps_for_understanding": 0,
+  "news_items_per_feed": 0,
+  "request_timeout": 60,
+  "max_scroll_rounds": 8,
+  "scroll_pause_seconds": 2,
+  "page_load_wait_seconds": 12,
+  "vision_prompt_max_chars": 120000,
+  "news_prompt_max_chars": 60000,
+  "pattern_prompt_max_chars": 160000,
+  "brief_prompt_max_chars": 140000,
+  "variants_prompt_max_chars": 180000,
+  "storyboard_images_per_variant": 6,
+  "video_prompt_versions_per_variant": 2,
+  "target_feeds": {
+    "PocketGamer.biz": "https://www.pocketgamer.biz/rss/",
+    "GameDeveloper": "https://www.gamedeveloper.com/rss.xml",
+    "GamesIndustry.biz": "https://www.gamesindustry.biz/feed"
+  },
+  "search_terms": [
+    "SLG"
+  ],
+  "enable_rss_fetch": true,
+  "enable_fb_ads_fetch": true,
+  "save_mermaid": true
+}

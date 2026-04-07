@@ -1,0 +1,36 @@
+{
+  "hook_type": "模拟交互式钩子 (Simulated Interaction Hook)",
+  "opening_summary": "通过“手指点击”模拟上帝视角的操作，从基础的土地建设、农作物种植、资源采集（鱼）开始，展示极低的操作门槛。",
+  "core_conflict": "从“和平建设/资源积累”向“大规模战争/领地争夺”的阶梯式转变。",
+  "selling_points": [
+    "极简的操作感（点击即建设/采集）",
+    "从微观到宏观的成长快感（农田 $\\rightarrow$ 村庄 $\\rightarrow$ 城堡 $\\rightarrow$ 军队）",
+    "视觉上的规模感升级（从一只鱼到千军万马）"
+  ],
+  "narrative_structure": [
+    "阶段1：微观交互（点击土地、作物、资源，建立即时反馈）",
+    "阶段2：中观建设（展示村庄形态、建筑布局，建立经营感）",
+    "阶段3：宏观对抗（展示大规模城墙、阵营对战，建立战争冲突感）"
+  ],
+  "visual_patterns": [
+    "上帝视角/等距视角 (Isometric View)",
+    "模拟手指点击动作 (Hand/Touch Overlay)",
+    "镜头拉远/尺度递增 (Scale Escalation)"
+  ],
+  "ui_or_feedback_patterns": [
+    "点击反馈（点击目标物产生交互效果）",
+    "视觉规模反馈（通过镜头拉远展现从个体到军队的跨度）"
+  ],
+  "emotion_curve": "好奇/解压 (点击资源) $\\rightarrow$ 满足 (建设城市) $\\rightarrow$ 亢奋/紧张 (大规模战争)",
+  "slg_relevance": "高度契合SLG的核心循环：采集 $\\rightarrow$ 建设 $\\rightarrow$ 扩张 $\\rightarrow$ 战争，并将其通过“点击”这一动作进行了极度简化和视觉化。",
+  "reusable_formula": "“微观点击养成 $\\rightarrow$ 规模递增建设 $\\rightarrow$ 宏观阵营对决”的递进式成长模型。",
+  "risks": [
+    "玩法误导风险：若实际游戏操作复杂度远高于点击，可能导致高流失率",
+    "素材同质化：点击式交互在休闲/模拟经营类广告中极度泛滥，需靠视觉质量支撑"
+  ],
+  "one_sentence_takeaway": "利用“上帝视角点击”作为交互钩子，通过从微观资源采集到宏观战争对抗的视觉尺度跨越，快速展示SLG的成长与对抗闭环。",
+  "item_id": "SLG_1",
+  "keyword": "SLG",
+  "source_type": "video",
+  "local_video_path": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/03_raw_ads/videos/SLG/SLG_Top1_20260407_204030.mp4"
+}

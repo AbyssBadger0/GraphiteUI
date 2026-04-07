@@ -1,0 +1,37 @@
+{
+  "variants": [
+    {
+      "variant_id": "V1",
+      "scores": {
+        "hook_strength": 8.5,
+        "slg_relevance": 9.5,
+        "competitor_pattern_fit": 9.0,
+        "scene_generatability": 7.0,
+        "prompt_completeness": 9.5,
+        "ui_english_compliance": 10.0,
+        "differentiation": 8.0,
+        "production_value": 8.5
+      },
+      "total_score": 8.63,
+      "pass": true,
+      "strengths": [
+        "完美执行了 Brief 中的‘尺度跨越’逻辑，从微观点击到宏观战争的转化非常丝滑。",
+        "镜头语言描述极其专业，明确了 Isometric View 和 Zoom-out 的运动轨迹。",
+        "严格遵守了英文约束，UI 和配音设计符合海外投放标准。",
+        "节奏感设计合理，通过数值反馈、建筑进化、规模扩张三个阶段完成了情绪递进。"
+      ],
+      "issues": [
+        "生成风险点：AI 视频模型目前处理‘极速连续拉远 (Continuous Zoom-out)’时极易出现画面逻辑崩坏或物体形变。",
+        "战斗复杂度过高：11-13s 的大规模骑兵冲锋与箭雨对当前 AI 生成的物理一致性要求极高，容易产生‘果冻效应’。"
+      ],
+      "improvement": "建议将‘极速拉远’拆解为‘中景拉远’+‘远景切入’两个镜头，以降低 AI 生成时的逻辑断裂风险。"
+    }
+  ],
+  "best_variant_id": "V1",
+  "needs_revision": false,
+  "global_feedback": [
+    "脚本逻辑非常成熟，完全理解 SLG 玩家从‘解压点击’到‘统治欲爆发’的心理路径。",
+    "提示词工程做得很好，不仅提供了画面描述，还包含了交互反馈（Floating numbers）和镜头运动指令。",
+    "整体可以直接进入制作阶段，但需重点关注 AI 生成过程中‘尺度跨越’时的画面稳定性。"
+  ]
+}

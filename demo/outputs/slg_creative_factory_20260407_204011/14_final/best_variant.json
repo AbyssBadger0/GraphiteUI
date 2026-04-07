@@ -1,0 +1,118 @@
+{
+  "variant_id": "V1",
+  "strategy_name": "成长闭环流 (Growth Loop Strategy)",
+  "positioning": "利用极简点击交互降低门槛，通过视觉尺度的指数级扩张展示SLG的成长成就感。",
+  "visual_style_cn": "等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。",
+  "hook": "模拟手指点击金矿，伴随即时的数值跳动反馈，营造解压感。",
+  "core_conflict": "从微小的资源积累到宏大的帝国扩张与征服。",
+  "selling_points": [
+    "极简点击交互",
+    "建筑形态质变",
+    "视觉尺度跨越"
+  ],
+  "why_it_might_work": "通过低门槛的点击动作吸引泛用户，随后利用宏大的战争画面和尺度拉远，快速转化核心策略玩家，符合用户“从无到有”的心理预期。",
+  "risk": "如果后期战争画面与前期点击感的视觉落差过大，可能导致用户认为玩法误导。",
+  "shot_list": [
+    {
+      "shot_id": "S1",
+      "time_range": "1~3s",
+      "scene_purpose": "展示极低的操作门槛与即时反馈（Hook）",
+      "visual_description_cn": "等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。",
+      "camera_language_cn": "特写镜头，固定视角。",
+      "character_action_cn": "虚拟手指进行快速点击动作。",
+      "ui_text_en": [
+        "+10 Gold"
+      ],
+      "voiceover_en": "Start with nothing...",
+      "sfx_music_cn": "清脆的点击声，伴随轻快的叮当声。",
+      "transition_cn": "镜头快速向后拉远。"
+    },
+    {
+      "shot_id": "S2",
+      "time_range": "3~5s",
+      "scene_purpose": "展示中观层面的建筑升级与成长感",
+      "visual_description_cn": "镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。",
+      "camera_language_cn": "中景，平滑拉远。",
+      "character_action_cn": "点击升级按钮。",
+      "ui_text_en": [
+        "UPGRADE",
+        "Lv.1 -> Lv.2"
+      ],
+      "voiceover_en": "...build your strength.",
+      "sfx_music_cn": "建筑升级的重音，木头变石头的质感音效。",
+      "transition_cn": "镜头持续向后拉远，展示更多建筑。"
+    },
+    {
+      "shot_id": "S3",
+      "time_range": "5~8s",
+      "scene_purpose": "展示规模感从点到面的演变",
+      "visual_description_cn": "镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。",
+      "camera_language_cn": "大远景，快速Zoom-out。",
+      "character_action_cn": "村庄内的村民在忙碌移动。",
+      "ui_text_en": [
+        "Wood: 500",
+        "Gold: 1200"
+      ],
+      "voiceover_en": "Expand your territory...",
+      "sfx_music_cn": "音乐节奏转为宏大，加入低沉的鼓点。",
+      "transition_cn": "镜头继续向后拉远，直至看到整个版图。"
+    },
+    {
+      "shot_id": "S4",
+      "time_range": "8~11s",
+      "scene_purpose": "展示宏观层面的帝国规模与统治欲",
+      "visual_description_cn": "视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。",
+      "camera_language_cn": "俯瞰视角，极速拉远。",
+      "character_action_cn": "庞大的军队进行列阵动作。",
+      "ui_text_en": [
+        "EMPIRE ESTABLISHED"
+      ],
+      "voiceover_en": "...and rule the world!",
+      "sfx_music_cn": "雄壮的管弦乐，战鼓声渐强。",
+      "transition_cn": "镜头切入激烈的战斗瞬间。"
+    },
+    {
+      "shot_id": "S5",
+      "time_range": "11~13s",
+      "scene_purpose": "展示核心冲突与战争爽点",
+      "visual_description_cn": "大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。",
+      "camera_language_cn": "动态追踪镜头，跟随冲锋的骑兵。",
+      "character_action_cn": "骑兵冲锋，士兵挥剑对决。",
+      "ui_text_en": [
+        "VICTORY"
+      ],
+      "voiceover_en": "Your conquest begins now!",
+      "sfx_music_cn": "金属碰撞声，马蹄声，激昂的战斗音效。",
+      "transition_cn": "淡出至品牌Logo。"
+    }
+  ],
+  "script_15s": "1~3s: 等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。；角色动作：虚拟手指进行快速点击动作。；镜头：特写镜头，固定视角。；英文UI：+10 Gold；英文配音：\"Start with nothing...\"；音效/音乐：清脆的点击声，伴随轻快的叮当声。。\n3~5s: 镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。；角色动作：点击升级按钮。；镜头：中景，平滑拉远。；英文UI：UPGRADE / Lv.1 -> Lv.2；英文配音：\"...build your strength.\"；音效/音乐：建筑升级的重音，木头变石头的质感音效。。\n5~8s: 镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。；角色动作：村庄内的村民在忙碌移动。；镜头：大远景，快速Zoom-out。；英文UI：Wood: 500 / Gold: 1200；英文配音：\"Expand your territory...\"；音效/音乐：音乐节奏转为宏大，加入低沉的鼓点。。\n8~11s: 视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。；角色动作：庞大的军队进行列阵动作。；镜头：俯瞰视角，极速拉远。；英文UI：EMPIRE ESTABLISHED；英文配音：\"...and rule the world!\"；音效/音乐：雄壮的管弦乐，战鼓声渐强。。\n11~13s: 大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。；角色动作：骑兵冲锋，士兵挥剑对决。；镜头：动态追踪镜头，跟随冲锋的骑兵。；英文UI：VICTORY；英文配音：\"Your conquest begins now!\"；音效/音乐：金属碰撞声，马蹄声，激昂的战斗音效。。",
+  "full_voiceover_en": "Start with nothing... ...build your strength. Expand your territory... ...and rule the world! Your conquest begins now!",
+  "english_only_issues": [],
+  "review": {
+    "variant_id": "V1",
+    "scores": {
+      "hook_strength": 8.5,
+      "slg_relevance": 9.5,
+      "competitor_pattern_fit": 9.0,
+      "scene_generatability": 7.0,
+      "prompt_completeness": 9.5,
+      "ui_english_compliance": 10.0,
+      "differentiation": 8.0,
+      "production_value": 8.5
+    },
+    "total_score": 8.63,
+    "pass": true,
+    "strengths": [
+      "完美执行了 Brief 中的‘尺度跨越’逻辑，从微观点击到宏观战争的转化非常丝滑。",
+      "镜头语言描述极其专业，明确了 Isometric View 和 Zoom-out 的运动轨迹。",
+      "严格遵守了英文约束，UI 和配音设计符合海外投放标准。",
+      "节奏感设计合理，通过数值反馈、建筑进化、规模扩张三个阶段完成了情绪递进。"
+    ],
+    "issues": [
+      "生成风险点：AI 视频模型目前处理‘极速连续拉远 (Continuous Zoom-out)’时极易出现画面逻辑崩坏或物体形变。",
+      "战斗复杂度过高：11-13s 的大规模骑兵冲锋与箭雨对当前 AI 生成的物理一致性要求极高，容易产生‘果冻效应’。"
+    ],
+    "improvement": "建议将‘极速拉远’拆解为‘中景拉远’+‘远景切入’两个镜头，以降低 AI 生成时的逻辑断裂风险。"
+  }
+}

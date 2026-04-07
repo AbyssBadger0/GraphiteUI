@@ -1,0 +1,559 @@
+{
+  "run_id": "slg_creative_factory_20260407_204011",
+  "date_str": "20260407",
+  "run_dir": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011",
+  "config": {
+    "local_base_url": "http://127.0.0.1:8888/v1",
+    "local_api_key": "sk-local-litellm",
+    "local_text_model": "lm-local",
+    "local_video_model": "lm-local",
+    "project_name": "slg_creative_factory",
+    "genre": "SLG",
+    "country": "US",
+    "days_back": 7,
+    "script_variants_count": 1,
+    "top_fetch_per_term": 1,
+    "top_n_video_analysis": 1,
+    "max_revision_rounds": 1,
+    "min_pass_score": 7.8,
+    "video_fps_for_understanding": 0,
+    "news_items_per_feed": 0,
+    "request_timeout": 60,
+    "max_scroll_rounds": 8,
+    "scroll_pause_seconds": 2,
+    "page_load_wait_seconds": 12,
+    "vision_prompt_max_chars": 120000,
+    "news_prompt_max_chars": 60000,
+    "pattern_prompt_max_chars": 160000,
+    "brief_prompt_max_chars": 140000,
+    "variants_prompt_max_chars": 180000,
+    "storyboard_images_per_variant": 6,
+    "video_prompt_versions_per_variant": 2,
+    "target_feeds": {
+      "PocketGamer.biz": "https://www.pocketgamer.biz/rss/",
+      "GameDeveloper": "https://www.gamedeveloper.com/rss.xml",
+      "GamesIndustry.biz": "https://www.gamesindustry.biz/feed"
+    },
+    "search_terms": [
+      "SLG"
+    ],
+    "enable_rss_fetch": true,
+    "enable_fb_ads_fetch": true,
+    "save_mermaid": true
+  },
+  "rss_items": [],
+  "clean_news_items": [],
+  "ad_items": [
+    {
+      "source": "Facebook Ad Library",
+      "keyword": "SLG",
+      "folder": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/03_raw_ads/videos/SLG",
+      "title": "[SLG] 高曝光素材 Top1",
+      "link": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&is_targeted_country=false&media_type=all&q=SLG&search_type=keyword_unordered&sort_data[direction]=desc&sort_data[mode]=total_impressions&start_date[min]=2026-03-31&start_date[max]=2026-04-07",
+      "published": "2026-04-07",
+      "fetch_time": "2026-04-07 20:40:34",
+      "full_text_md": "",
+      "outbound_links": [],
+      "top_video_urls": [
+        "https://video-arn2-1.xx.fbcdn.net/o1/v/t2/f2/m412/AQOwQA6a08fe3jSEpAlJB7jGEJaVurhOOuDSVGEWncRaaFGH0YhQy6lIYwrufega0ETHleSyn4WYtrO5f-HWyVG5JYZdz08HX7-MfL5azA.mp4?_nc_cat=103&_nc_sid=8bf8fe&_nc_ht=video-arn2-1.xx.fbcdn.net&_nc_ohc=Nex5U5IzbgYQ7kNvwE1I_QK&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6ODUzNjkxMDM3MjgyODc4LCJhc3NldF9hZ2VfZGF5cyI6MTE2LCJ2aV91c2VjYXNlX2lkIjoxMDEzOSwiZHVyYXRpb25fcyI6NzcsInVybGdlbl9zb3VyY2UiOiJ3d3cifQ%3D%3D&ccb=17-1&_nc_gid=Sj_FWjsA-r6Dhqh7DakkUg&_nc_ss=7a389&_nc_zt=28&oh=00_Af3oT_k2ZGJnEUvh6UyHoSmC2aYrOH52pH5SBR3IlEI74A&oe=69DABA7B"
+      ],
+      "local_videos": [
+        "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/03_raw_ads/videos/SLG/SLG_Top1_20260407_204030.mp4"
+      ],
+      "rank_basis": "facebook_total_impressions_desc"
+    }
+  ],
+  "normalized_video_items": [
+    {
+      "item_id": "SLG_1",
+      "keyword": "SLG",
+      "source": "Facebook Ad Library",
+      "title": "[SLG] 高曝光素材 Top1",
+      "ad_library_link": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&is_targeted_country=false&media_type=all&q=SLG&search_type=keyword_unordered&sort_data[direction]=desc&sort_data[mode]=total_impressions&start_date[min]=2026-03-31&start_date[max]=2026-04-07",
+      "video_rank": 1,
+      "local_video_path": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/03_raw_ads/videos/SLG/SLG_Top1_20260407_204030.mp4",
+      "remote_video_url": "https://video-arn2-1.xx.fbcdn.net/o1/v/t2/f2/m412/AQOwQA6a08fe3jSEpAlJB7jGEJaVurhOOuDSVGEWncRaaFGH0YhQy6lIYwrufega0ETHleSyn4WYtrO5f-HWyVG5JYZdz08HX7-MfL5azA.mp4?_nc_cat=103&_nc_sid=8bf8fe&_nc_ht=video-arn2-1.xx.fbcdn.net&_nc_ohc=Nex5U5IzbgYQ7kNvwE1I_QK&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6ODUzNjkxMDM3MjgyODc4LCJhc3NldF9hZ2VfZGF5cyI6MTE2LCJ2aV91c2VjYXNlX2lkIjoxMDEzOSwiZHVyYXRpb25fcyI6NzcsInVybGdlbl9zb3VyY2UiOiJ3d3cifQ%3D%3D&ccb=17-1&_nc_gid=Sj_FWjsA-r6Dhqh7DakkUg&_nc_ss=7a389&_nc_zt=28&oh=00_Af3oT_k2ZGJnEUvh6UyHoSmC2aYrOH52pH5SBR3IlEI74A&oe=69DABA7B",
+      "page_text": "",
+      "outbound_links": [],
+      "rank_basis": "facebook_total_impressions_desc",
+      "fetch_time": "2026-04-07 20:40:34",
+      "content_type": "video"
+    }
+  ],
+  "selected_video_items": [
+    {
+      "item_id": "SLG_1",
+      "keyword": "SLG",
+      "source": "Facebook Ad Library",
+      "title": "[SLG] 高曝光素材 Top1",
+      "ad_library_link": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&is_targeted_country=false&media_type=all&q=SLG&search_type=keyword_unordered&sort_data[direction]=desc&sort_data[mode]=total_impressions&start_date[min]=2026-03-31&start_date[max]=2026-04-07",
+      "video_rank": 1,
+      "local_video_path": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/03_raw_ads/videos/SLG/SLG_Top1_20260407_204030.mp4",
+      "remote_video_url": "https://video-arn2-1.xx.fbcdn.net/o1/v/t2/f2/m412/AQOwQA6a08fe3jSEpAlJB7jGEJaVurhOOuDSVGEWncRaaFGH0YhQy6lIYwrufega0ETHleSyn4WYtrO5f-HWyVG5JYZdz08HX7-MfL5azA.mp4?_nc_cat=103&_nc_sid=8bf8fe&_nc_ht=video-arn2-1.xx.fbcdn.net&_nc_ohc=Nex5U5IzbgYQ7kNvwE1I_QK&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6ODUzNjkxMDM3MjgyODc4LCJhc3NldF9hZ2VfZGF5cyI6MTE2LCJ2aV91c2VjYXNlX2lkIjoxMDEzOSwiZHVyYXRpb25fcyI6NzcsInVybGdlbl9zb3VyY2UiOiJ3d3cifQ%3D%3D&ccb=17-1&_nc_gid=Sj_FWjsA-r6Dhqh7DakkUg&_nc_ss=7a389&_nc_zt=28&oh=00_Af3oT_k2ZGJnEUvh6UyHoSmC2aYrOH52pH5SBR3IlEI74A&oe=69DABA7B",
+      "page_text": "",
+      "outbound_links": [],
+      "rank_basis": "facebook_total_impressions_desc",
+      "fetch_time": "2026-04-07 20:40:34",
+      "content_type": "video"
+    }
+  ],
+  "video_analysis_results": [
+    {
+      "hook_type": "模拟交互式钩子 (Simulated Interaction Hook)",
+      "opening_summary": "通过“手指点击”模拟上帝视角的操作，从基础的土地建设、农作物种植、资源采集（鱼）开始，展示极低的操作门槛。",
+      "core_conflict": "从“和平建设/资源积累”向“大规模战争/领地争夺”的阶梯式转变。",
+      "selling_points": [
+        "极简的操作感（点击即建设/采集）",
+        "从微观到宏观的成长快感（农田 $\\rightarrow$ 村庄 $\\rightarrow$ 城堡 $\\rightarrow$ 军队）",
+        "视觉上的规模感升级（从一只鱼到千军万马）"
+      ],
+      "narrative_structure": [
+        "阶段1：微观交互（点击土地、作物、资源，建立即时反馈）",
+        "阶段2：中观建设（展示村庄形态、建筑布局，建立经营感）",
+        "阶段3：宏观对抗（展示大规模城墙、阵营对战，建立战争冲突感）"
+      ],
+      "visual_patterns": [
+        "上帝视角/等距视角 (Isometric View)",
+        "模拟手指点击动作 (Hand/Touch Overlay)",
+        "镜头拉远/尺度递增 (Scale Escalation)"
+      ],
+      "ui_or_feedback_patterns": [
+        "点击反馈（点击目标物产生交互效果）",
+        "视觉规模反馈（通过镜头拉远展现从个体到军队的跨度）"
+      ],
+      "emotion_curve": "好奇/解压 (点击资源) $\\rightarrow$ 满足 (建设城市) $\\rightarrow$ 亢奋/紧张 (大规模战争)",
+      "slg_relevance": "高度契合SLG的核心循环：采集 $\\rightarrow$ 建设 $\\rightarrow$ 扩张 $\\rightarrow$ 战争，并将其通过“点击”这一动作进行了极度简化和视觉化。",
+      "reusable_formula": "“微观点击养成 $\\rightarrow$ 规模递增建设 $\\rightarrow$ 宏观阵营对决”的递进式成长模型。",
+      "risks": [
+        "玩法误导风险：若实际游戏操作复杂度远高于点击，可能导致高流失率",
+        "素材同质化：点击式交互在休闲/模拟经营类广告中极度泛滥，需靠视觉质量支撑"
+      ],
+      "one_sentence_takeaway": "利用“上帝视角点击”作为交互钩子，通过从微观资源采集到宏观战争对抗的视觉尺度跨越，快速展示SLG的成长与对抗闭环。",
+      "item_id": "SLG_1",
+      "keyword": "SLG",
+      "source_type": "video",
+      "local_video_path": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/03_raw_ads/videos/SLG/SLG_Top1_20260407_204030.mp4"
+    }
+  ],
+  "news_context": "## 新闻辅助上下文\n\n今日未抓到足够有效的辅助新闻，后续 brief 仅依赖竞品视频模式。",
+  "pattern_summary": "# SLG 创意模式总结报告\n\n**致：** 脚本创作团队 / 制作团队\n**由：** SLG 买量创意总监\n**核心目标：** 将竞品中“低门槛交互”与“宏观战争规模”的转化逻辑，转化为可直接套用的脚本生产公式。\n\n---\n\n### 1. 高频钩子类型 (Hook Types)\n*不再单纯依赖剧情，而是通过“模拟交互”降低用户的认知负担。*\n\n*   **模拟交互钩子 (Simulated Interaction)：** \n    *   **表现形式：** 在画面上叠加“虚拟手指”或“点击光圈”。\n    *   **核心逻辑：** 通过点击土地、点击资源（如鱼、木材）、点击建筑，让用户产生“这游戏操作很简单”的错觉，建立即时反馈。\n*   **尺度跨越钩子 (Scale Escalation)：** \n    *   **表现形式：** 镜头从一个士兵的特写 $\\rightarrow$ 一支小队 $\\rightarrow$ 一个营地 $\\rightarrow$ 满屏的千军万马。\n    *   **核心逻辑：** 利用视觉上的“从小到大”产生强烈的成长爽感。\n*   **上帝视角钩子 (God View)：** \n    *   **表现形式：** 采用等距视角 (Isometric View)，展示全局掌控感。\n    *   **核心逻辑：** 满足用户对“统帅/统治者”身份的心理预期。\n\n### 2. 高频叙事模板 (Narrative Templates)\n*脚本编写应遵循以下逻辑路径，严禁无意义的剧情堆砌。*\n\n*   **模板 A：递进式成长模版 (The Progression Model)**\n    *   **路径：** `微观交互（点资源/种地）` $\\rightarrow$ `中观建设（建村庄/升建筑）` $\\rightarrow$ `宏观对抗（大规模阵营战）`。\n    *   **情绪曲线：** 好奇/解压 $\\rightarrow$ 满足 $\\rightarrow$ 亢奋。\n*   **模板 B：资源/领地争夺模版 (The Conflict Model)**\n    *   **路径：** `发现高价值资源/领地` $\\rightarrow$ `遭遇敌对势力拦截` $\\rightarrow$ `通过升级/动员军队实现反杀`。\n    *   **情绪曲线：** 紧张/焦虑 $\\rightarrow$ 爆发/释放。\n\n### 3. 高频卖点承载方式 (Selling Point Delivery)\n*不要用文字说“升级快”，要用视觉表现“升级快”。*\n\n*   **极简操作感：** 所有的复杂指令（如行军、集结）在广告中必须简化为“一次点击”。\n*   **成长视觉化：** 建筑等级的提升不应只看数字，应通过“建筑外观从木质变为石质”来体现。\n*   **规模感具象化：** 强调“数量”的对比。例如：1个采集者 vs 100个士兵，利用视觉密度展现战争的残酷与宏大。\n\n### 4. 高频 UI/数值反馈方式 (UI & Feedback Patterns)\n*这是提升广告“爽感”的关键细节。*\n\n*   **即时点击反馈：** 点击目标物时，必须伴随数值跳动（如 $+100$ 资源）或轻微的震动/特效。\n*   **动态进度条：** 建筑升级、资源采集时，进度条的快速推进是缓解用户焦虑、建立预期的高效手段。\n*   **镜头运动反馈：** \n    *   **Zoom-out (拉远)：** 用于展示规模升级。\n    *   **Zoom-in (拉近)：** 用于展示战斗细节或关键决策点。\n\n### 5. 对 SLG 最值得复用的 3 类骨架 (Core Frameworks)\n*脚本创作时的直接模版。*\n\n| 骨架名称 | 结构逻辑 | 适用场景 |\n| :--- | :--- | :--- |\n| **【成长闭环型】** | 点击采集 $\\rightarrow$ 建筑升级 $\\rightarrow$ 镜头拉远展示帝国 $\\rightarrow$ 战争爆发 | 适合展示游戏的全生命周期，吸引泛用户。 |\n| **【降维打击型】** | 弱小领地被围攻 $\\rightarrow$ 模拟点击快速升级 $\\rightarrow$ 瞬间召唤大军碾压 | 适合激发玩家的“复仇欲”和“胜负欲”。 |\n| **【经营养成型】** | 模拟点击经营（农田/矿山） $\\rightarrow$ 资源积累 $\\rightarrow$ 转化为军事力量 | 适合吸引模拟经营类、休闲类玩家向 SLG 转化。 |\n\n### 6. 不建议照搬的风险点 (Risks to Avoid)\n*   **玩法误导风险 (Misleading Gameplay)：** \n    *   **警告：** 如果广告展示的是“点一下就建设”，但实际游戏是“复杂的数值策略/长线等待”，会导致极高的下载后流失率。\n    *   **对策：** 广告应展示“简单的操作感”，但要通过“宏观战争”暗示游戏的深度。\n*   **素材同质化风险 (Homogenization)：** \n    *   **警告：** “手指点击”已是红海，若视觉质量（美术、特效）低下，会被用户判定为“低质小游戏”直接划走。\n    *   **对策：** 必须保证点击后的视觉反馈（特效、音效、建筑变化）具有高品质感。\n*   **节奏断层风险 (Rhythm Disconnect)：** \n    *   **警告：** 从微观点击切换到宏观战争时，如果镜头切换太突兀，用户会产生“这不是同一个游戏”的割裂感。\n    *   **对策：** 使用“镜头连续拉远”作为过渡手段，实现逻辑上的平滑衔接。",
+  "creative_brief": "# 创意 Brief：SLG 递进式成长与宏观战争转化模型\n\n**致：** 脚本创作组 / 视频制作组\n**版本：** 1.0\n**核心逻辑：** 利用“模拟低门槛交互”吸引泛用户，通过“视觉尺度跨越”转化核心 SLG 用户。\n\n---\n\n### 1. 创意目标 (Creative Goal)\n通过降低用户的认知负担（将复杂的策略简化为“点击”动作），建立“易上手”的初步印象；随后利用视觉规模的剧烈扩张（从个体到帝国）激发用户的成就感与统治欲，实现从休闲/模拟经营玩家向 SLG 核心玩家的转化。\n\n### 2. 主要参考竞品模式 (Main Competitor Pattern)\n*   **核心公式：** `微观交互（点击/采集）` $\\rightarrow$ `中观建设（建筑升级/形态演变）` $\\rightarrow$ `宏观对抗（大规模阵营战/尺度拉远）`。\n*   **视觉逻辑：** 采用等距视角 (Isometric View)，利用镜头连续拉远 (Continuous Zoom-out) 实现从“点”到“面”的无缝衔接。\n\n### 3. 建议的题材方向 (Suggested Themes)\n*   **方向 A：文明崛起流 (Civilization Rise)** —— 从荒野中的一间草屋、一个采集者开始，逐步演变为拥有城墙、要塞和千军万马的帝国。\n*   **方向 B：复仇/反击流 (Revenge & Counter-attack)** —— 初始展示一个弱小的领地被敌军围攻，通过快速点击升级建筑和动员军队，实现瞬间反杀。\n*   **方向 C：资源争夺流 (Resource Conquest)** —— 围绕高价值资源（如金矿、森林、水源）展开，从个体采集演变为大规模阵营争夺。\n\n### 4. 核心冲突设计 (Core Conflict Design)\n*   **资源匮乏 vs. 扩张需求：** 想要升级更高级的建筑 $\\rightarrow$ 必须点击采集更多资源 $\\rightarrow$ 吸引了敌对势力的注意。\n*   **个体弱小 vs. 规模碾压：** 玩家初期的微小单位 $\\rightarrow$ 遭遇大规模敌军 $\\rightarrow$ 通过“点击升级”瞬间召唤大军实现降维打击。\n*   **建设和平 vs. 战争入侵：** 宁静的村庄建设画面 $\\rightarrow$ 突如其来的战争阴云/敌军冲锋。\n\n### 5. 建议的前 3 秒 Hook 类型 (Suggested 3s Hooks)\n*   **类型 1：模拟交互钩子 (Simulated Interaction)**\n    *   画面叠加虚拟手指，快速点击土地、树木或资源点，伴随 $+100$ 的数值跳动，给用户“极度解压/简单”的初印象。\n*   **类型 2：尺度跨越钩子 (Scale Escalation)**\n    *   镜头从一个士兵的盔甲特写，极速拉远至满屏的战争阵列，利用视觉冲击力抓住眼球。\n*   **类型 3：危机降临钩子 (Crisis Hook)**\n    *   展示一个正在建设的村庄被巨大的敌军阴影笼罩，或城墙被撞击的瞬间，激发用户的保护欲/胜负欲。\n\n### 6. 建议保留的 SLG 卖点表达 (Selling Points)\n*   **极简操作感：** 所有的复杂策略动作必须简化为“一次点击”的视觉反馈。\n*   **视觉化成长：** 严禁只用数字表示升级，必须展示建筑外观的质变（例如：木质 $\\rightarrow$ 石质 $\\rightarrow$ 带有防御塔的城堡）。\n*   **规模感具象化：** 强调“数量”的绝对对比（例如：1 个采集者 vs 100 个士兵，或 1 个小村庄 vs 1 个庞大帝国）。\n\n### 7. 建议采用的镜头/节奏 (Camera & Rhythm)\n*   **节奏控制：** \n    *   **前期（微观）：** 节奏轻快、解压，配合点击声和数值跳动。\n    *   **后期（宏观）：** 节奏紧凑、宏大，配合战争鼓点和震撼的音效。\n*   **镜头运动：** \n    *   **Zoom-out (拉远)：** 作为连接微观与宏观的唯一逻辑手段，严禁使用生硬的切镜头。\n    *   **Zoom-in (拉近)：** 用于展示关键决策点（如点击升级按钮）或战斗细节（如箭雨落下）。\n\n### 8. 必须规避的内容 (Must-Avoid)\n*   **玩法误导过度：** 不要让用户觉得这只是个纯粹的“点点点”小游戏，必须在视频中段通过战争画面暗示游戏的策略深度。\n*   **节奏断层：** 严禁从“点击种地”直接切到“大规模战争”而没有任何过渡，这会导致用户产生“货不对板”的割裂感。\n*   **低质感视觉：** 严禁使用廉价的 2D 贴图或低质量特效，点击反馈必须有“高级感”的震动或光效。\n\n### 9. 适合扩展成多个脚本版本的方向 (Expansion Directions)\n*   **版本 1【成长闭环版】：** 侧重于“采集 $\\rightarrow$ 建设 $\\rightarrow$ 扩张”的长线爽感，吸引泛用户。\n*   **版本 2【降维打击版】：** 侧重于“被围攻 $\\rightarrow$ 快速升级 $\\rightarrow$ 碾压反杀”，吸引竞技/复仇心理强的用户。\n*   **版本 3【经营养成版】：** 侧重于“资源积累 $\\rightarrow$ 转化为军事力量”的过程，吸引模拟经营类玩家。\n\n### 10. 后续图片分镜与视频提示词约束 (Constraints for AI/Production)\n*   **UI/文本要求：** 画面中出现的所有 UI 元素（按钮、进度条、数值）、文本提示（Level Up, Victory, Attack）**必须为英文**。\n*   **配音 (VO) 要求：** 所有旁白、角色对话**必须为英文**。\n*   **视觉风格：** 统一采用 **Isometric View (等距视角)**，追求 **High-fidelity (高保真)** 的材质感（石材、金属、植被的质感要真实）。\n*   **交互反馈：** 提示词中需明确包含 `Visual feedback on click`, `Floating numbers`, `Smooth camera zoom-out` 等动作描述。",
+  "script_variants": [
+    {
+      "variant_id": "V1",
+      "strategy_name": "成长闭环流 (Growth Loop Strategy)",
+      "positioning": "利用极简点击交互降低门槛，通过视觉尺度的指数级扩张展示SLG的成长成就感。",
+      "visual_style_cn": "等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。",
+      "hook": "模拟手指点击金矿，伴随即时的数值跳动反馈，营造解压感。",
+      "core_conflict": "从微小的资源积累到宏大的帝国扩张与征服。",
+      "selling_points": [
+        "极简点击交互",
+        "建筑形态质变",
+        "视觉尺度跨越"
+      ],
+      "why_it_might_work": "通过低门槛的点击动作吸引泛用户，随后利用宏大的战争画面和尺度拉远，快速转化核心策略玩家，符合用户“从无到有”的心理预期。",
+      "risk": "如果后期战争画面与前期点击感的视觉落差过大，可能导致用户认为玩法误导。",
+      "shot_list": [
+        {
+          "shot_id": "S1",
+          "time_range": "1~3s",
+          "scene_purpose": "展示极低的操作门槛与即时反馈（Hook）",
+          "visual_description_cn": "等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。",
+          "camera_language_cn": "特写镜头，固定视角。",
+          "character_action_cn": "虚拟手指进行快速点击动作。",
+          "ui_text_en": [
+            "+10 Gold"
+          ],
+          "voiceover_en": "Start with nothing...",
+          "sfx_music_cn": "清脆的点击声，伴随轻快的叮当声。",
+          "transition_cn": "镜头快速向后拉远。"
+        },
+        {
+          "shot_id": "S2",
+          "time_range": "3~5s",
+          "scene_purpose": "展示中观层面的建筑升级与成长感",
+          "visual_description_cn": "镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。",
+          "camera_language_cn": "中景，平滑拉远。",
+          "character_action_cn": "点击升级按钮。",
+          "ui_text_en": [
+            "UPGRADE",
+            "Lv.1 -> Lv.2"
+          ],
+          "voiceover_en": "...build your strength.",
+          "sfx_music_cn": "建筑升级的重音，木头变石头的质感音效。",
+          "transition_cn": "镜头持续向后拉远，展示更多建筑。"
+        },
+        {
+          "shot_id": "S3",
+          "time_range": "5~8s",
+          "scene_purpose": "展示规模感从点到面的演变",
+          "visual_description_cn": "镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。",
+          "camera_language_cn": "大远景，快速Zoom-out。",
+          "character_action_cn": "村庄内的村民在忙碌移动。",
+          "ui_text_en": [
+            "Wood: 500",
+            "Gold: 1200"
+          ],
+          "voiceover_en": "Expand your territory...",
+          "sfx_music_cn": "音乐节奏转为宏大，加入低沉的鼓点。",
+          "transition_cn": "镜头继续向后拉远，直至看到整个版图。"
+        },
+        {
+          "shot_id": "S4",
+          "time_range": "8~11s",
+          "scene_purpose": "展示宏观层面的帝国规模与统治欲",
+          "visual_description_cn": "视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。",
+          "camera_language_cn": "俯瞰视角，极速拉远。",
+          "character_action_cn": "庞大的军队进行列阵动作。",
+          "ui_text_en": [
+            "EMPIRE ESTABLISHED"
+          ],
+          "voiceover_en": "...and rule the world!",
+          "sfx_music_cn": "雄壮的管弦乐，战鼓声渐强。",
+          "transition_cn": "镜头切入激烈的战斗瞬间。"
+        },
+        {
+          "shot_id": "S5",
+          "time_range": "11~13s",
+          "scene_purpose": "展示核心冲突与战争爽点",
+          "visual_description_cn": "大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。",
+          "camera_language_cn": "动态追踪镜头，跟随冲锋的骑兵。",
+          "character_action_cn": "骑兵冲锋，士兵挥剑对决。",
+          "ui_text_en": [
+            "VICTORY"
+          ],
+          "voiceover_en": "Your conquest begins now!",
+          "sfx_music_cn": "金属碰撞声，马蹄声，激昂的战斗音效。",
+          "transition_cn": "淡出至品牌Logo。"
+        }
+      ],
+      "script_15s": "1~3s: 等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。；角色动作：虚拟手指进行快速点击动作。；镜头：特写镜头，固定视角。；英文UI：+10 Gold；英文配音：\"Start with nothing...\"；音效/音乐：清脆的点击声，伴随轻快的叮当声。。\n3~5s: 镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。；角色动作：点击升级按钮。；镜头：中景，平滑拉远。；英文UI：UPGRADE / Lv.1 -> Lv.2；英文配音：\"...build your strength.\"；音效/音乐：建筑升级的重音，木头变石头的质感音效。。\n5~8s: 镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。；角色动作：村庄内的村民在忙碌移动。；镜头：大远景，快速Zoom-out。；英文UI：Wood: 500 / Gold: 1200；英文配音：\"Expand your territory...\"；音效/音乐：音乐节奏转为宏大，加入低沉的鼓点。。\n8~11s: 视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。；角色动作：庞大的军队进行列阵动作。；镜头：俯瞰视角，极速拉远。；英文UI：EMPIRE ESTABLISHED；英文配音：\"...and rule the world!\"；音效/音乐：雄壮的管弦乐，战鼓声渐强。。\n11~13s: 大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。；角色动作：骑兵冲锋，士兵挥剑对决。；镜头：动态追踪镜头，跟随冲锋的骑兵。；英文UI：VICTORY；英文配音：\"Your conquest begins now!\"；音效/音乐：金属碰撞声，马蹄声，激昂的战斗音效。。",
+      "full_voiceover_en": "Start with nothing... ...build your strength. Expand your territory... ...and rule the world! Your conquest begins now!",
+      "english_only_issues": []
+    }
+  ],
+  "storyboard_packages": [
+    {
+      "variant_id": "V1",
+      "strategy_name": "成长闭环流 (Growth Loop Strategy)",
+      "storyboard_images": [
+        {
+          "image_id": "图片1",
+          "shot_id": "S1",
+          "time_range": "1~3s",
+          "scene_purpose": "展示极低的操作门槛与即时反馈（Hook）",
+          "visual_description_cn": "等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。",
+          "camera_language_cn": "特写镜头，固定视角。",
+          "character_action_cn": "虚拟手指进行快速点击动作。",
+          "transition_cn": "镜头快速向后拉远。",
+          "ui_text_en": [
+            "+10 Gold"
+          ],
+          "voiceover_en": "Start with nothing...",
+          "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示极低的操作门槛与即时反馈（Hook）。画面内容：等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。。角色动作：虚拟手指进行快速点击动作。。镜头语言：特写镜头，固定视角。。转场意图：镜头快速向后拉远。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：+10 Gold。若需要配音参考，请只保留英文配音：\"Start with nothing...\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+        },
+        {
+          "image_id": "图片2",
+          "shot_id": "S2",
+          "time_range": "3~5s",
+          "scene_purpose": "展示中观层面的建筑升级与成长感",
+          "visual_description_cn": "镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。",
+          "camera_language_cn": "中景，平滑拉远。",
+          "character_action_cn": "点击升级按钮。",
+          "transition_cn": "镜头持续向后拉远，展示更多建筑。",
+          "ui_text_en": [
+            "UPGRADE",
+            "Lv.1 -> Lv.2"
+          ],
+          "voiceover_en": "...build your strength.",
+          "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示中观层面的建筑升级与成长感。画面内容：镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。。角色动作：点击升级按钮。。镜头语言：中景，平滑拉远。。转场意图：镜头持续向后拉远，展示更多建筑。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：UPGRADE / Lv.1 -> Lv.2。若需要配音参考，请只保留英文配音：\"...build your strength.\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+        },
+        {
+          "image_id": "图片3",
+          "shot_id": "S3",
+          "time_range": "5~8s",
+          "scene_purpose": "展示规模感从点到面的演变",
+          "visual_description_cn": "镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。",
+          "camera_language_cn": "大远景，快速Zoom-out。",
+          "character_action_cn": "村庄内的村民在忙碌移动。",
+          "transition_cn": "镜头继续向后拉远，直至看到整个版图。",
+          "ui_text_en": [
+            "Wood: 500",
+            "Gold: 1200"
+          ],
+          "voiceover_en": "Expand your territory...",
+          "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示规模感从点到面的演变。画面内容：镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。。角色动作：村庄内的村民在忙碌移动。。镜头语言：大远景，快速Zoom-out。。转场意图：镜头继续向后拉远，直至看到整个版图。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：Wood: 500 / Gold: 1200。若需要配音参考，请只保留英文配音：\"Expand your territory...\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+        },
+        {
+          "image_id": "图片4",
+          "shot_id": "S4",
+          "time_range": "8~11s",
+          "scene_purpose": "展示宏观层面的帝国规模与统治欲",
+          "visual_description_cn": "视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。",
+          "camera_language_cn": "俯瞰视角，极速拉远。",
+          "character_action_cn": "庞大的军队进行列阵动作。",
+          "transition_cn": "镜头切入激烈的战斗瞬间。",
+          "ui_text_en": [
+            "EMPIRE ESTABLISHED"
+          ],
+          "voiceover_en": "...and rule the world!",
+          "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示宏观层面的帝国规模与统治欲。画面内容：视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。。角色动作：庞大的军队进行列阵动作。。镜头语言：俯瞰视角，极速拉远。。转场意图：镜头切入激烈的战斗瞬间。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：EMPIRE ESTABLISHED。若需要配音参考，请只保留英文配音：\"...and rule the world!\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+        },
+        {
+          "image_id": "图片5",
+          "shot_id": "S5",
+          "time_range": "11~13s",
+          "scene_purpose": "展示核心冲突与战争爽点",
+          "visual_description_cn": "大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。",
+          "camera_language_cn": "动态追踪镜头，跟随冲锋的骑兵。",
+          "character_action_cn": "骑兵冲锋，士兵挥剑对决。",
+          "transition_cn": "淡出至品牌Logo。",
+          "ui_text_en": [
+            "VICTORY"
+          ],
+          "voiceover_en": "Your conquest begins now!",
+          "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示核心冲突与战争爽点。画面内容：大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。。角色动作：骑兵冲锋，士兵挥剑对决。。镜头语言：动态追踪镜头，跟随冲锋的骑兵。。转场意图：淡出至品牌Logo。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：VICTORY。若需要配音参考，请只保留英文配音：\"Your conquest begins now!\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+        }
+      ],
+      "storyboard_markdown": "# V1｜成长闭环流 (Growth Loop Strategy) 图片分镜脚本\n\n- 核心定位：利用极简点击交互降低门槛，通过视觉尺度的指数级扩张展示SLG的成长成就感。\n- 视觉风格：等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。\n- 前3秒钩子：模拟手指点击金矿，伴随即时的数值跳动反馈，营造解压感。\n- 核心冲突：从微小的资源积累到宏大的帝国扩张与征服。\n- 卖点：极简点击交互 / 建筑形态质变 / 视觉尺度跨越\n\n## 结构化分镜\n\n### @图片1 ｜ 1~3s ｜ 展示极低的操作门槛与即时反馈（Hook）\n- 画面描述：等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。\n- 角色动作：虚拟手指进行快速点击动作。\n- 镜头语言：特写镜头，固定视角。\n- 转场设计：镜头快速向后拉远。\n- 英文 UI / 文本：+10 Gold\n- 英文配音：\"Start with nothing...\"\n\n**图片生成提示词（中文提示词，UI/配音仅英文）**\n\n```text\n一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示极低的操作门槛与即时反馈（Hook）。画面内容：等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。。角色动作：虚拟手指进行快速点击动作。。镜头语言：特写镜头，固定视角。。转场意图：镜头快速向后拉远。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：+10 Gold。若需要配音参考，请只保留英文配音：\"Start with nothing...\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。\n```\n\n### @图片2 ｜ 3~5s ｜ 展示中观层面的建筑升级与成长感\n- 画面描述：镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。\n- 角色动作：点击升级按钮。\n- 镜头语言：中景，平滑拉远。\n- 转场设计：镜头持续向后拉远，展示更多建筑。\n- 英文 UI / 文本：UPGRADE / Lv.1 -> Lv.2\n- 英文配音：\"...build your strength.\"\n\n**图片生成提示词（中文提示词，UI/配音仅英文）**\n\n```text\n一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示中观层面的建筑升级与成长感。画面内容：镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。。角色动作：点击升级按钮。。镜头语言：中景，平滑拉远。。转场意图：镜头持续向后拉远，展示更多建筑。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：UPGRADE / Lv.1 -> Lv.2。若需要配音参考，请只保留英文配音：\"...build your strength.\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。\n```\n\n### @图片3 ｜ 5~8s ｜ 展示规模感从点到面的演变\n- 画面描述：镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。\n- 角色动作：村庄内的村民在忙碌移动。\n- 镜头语言：大远景，快速Zoom-out。\n- 转场设计：镜头继续向后拉远，直至看到整个版图。\n- 英文 UI / 文本：Wood: 500 / Gold: 1200\n- 英文配音：\"Expand your territory...\"\n\n**图片生成提示词（中文提示词，UI/配音仅英文）**\n\n```text\n一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示规模感从点到面的演变。画面内容：镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。。角色动作：村庄内的村民在忙碌移动。。镜头语言：大远景，快速Zoom-out。。转场意图：镜头继续向后拉远，直至看到整个版图。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：Wood: 500 / Gold: 1200。若需要配音参考，请只保留英文配音：\"Expand your territory...\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。\n```\n\n### @图片4 ｜ 8~11s ｜ 展示宏观层面的帝国规模与统治欲\n- 画面描述：视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。\n- 角色动作：庞大的军队进行列阵动作。\n- 镜头语言：俯瞰视角，极速拉远。\n- 转场设计：镜头切入激烈的战斗瞬间。\n- 英文 UI / 文本：EMPIRE ESTABLISHED\n- 英文配音：\"...and rule the world!\"\n\n**图片生成提示词（中文提示词，UI/配音仅英文）**\n\n```text\n一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示宏观层面的帝国规模与统治欲。画面内容：视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。。角色动作：庞大的军队进行列阵动作。。镜头语言：俯瞰视角，极速拉远。。转场意图：镜头切入激烈的战斗瞬间。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：EMPIRE ESTABLISHED。若需要配音参考，请只保留英文配音：\"...and rule the world!\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。\n```\n\n### @图片5 ｜ 11~13s ｜ 展示核心冲突与战争爽点\n- 画面描述：大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。\n- 角色动作：骑兵冲锋，士兵挥剑对决。\n- 镜头语言：动态追踪镜头，跟随冲锋的骑兵。\n- 转场设计：淡出至品牌Logo。\n- 英文 UI / 文本：VICTORY\n- 英文配音：\"Your conquest begins now!\"\n\n**图片生成提示词（中文提示词，UI/配音仅英文）**\n\n```text\n一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示核心冲突与战争爽点。画面内容：大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。。角色动作：骑兵冲锋，士兵挥剑对决。。镜头语言：动态追踪镜头，跟随冲锋的骑兵。。转场意图：淡出至品牌Logo。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：VICTORY。若需要配音参考，请只保留英文配音：\"Your conquest begins now!\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。\n```\n"
+    }
+  ],
+  "video_prompt_packages": [
+    {
+      "variant_id": "V1",
+      "strategy_name": "成长闭环流 (Growth Loop Strategy)",
+      "video_prompt_v1_text_15s_cn": "一个等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。风格的SLG游戏录屏视频，限制为15s内，整体节奏快速、信息密度高、所有UI/字幕/数值必须为英文，所有配音必须为英文。1~3s: 等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。；角色动作：虚拟手指进行快速点击动作。；镜头运动：特写镜头，固定视角。；英文UI示例：+10 Gold；英文配音：\"Start with nothing...\"；转场：镜头快速向后拉远。。3~5s: 镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。；角色动作：点击升级按钮。；镜头运动：中景，平滑拉远。；英文UI示例：UPGRADE / Lv.1 -> Lv.2；英文配音：\"...build your strength.\"；转场：镜头持续向后拉远，展示更多建筑。。5~8s: 镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。；角色动作：村庄内的村民在忙碌移动。；镜头运动：大远景，快速Zoom-out。；英文UI示例：Wood: 500 / Gold: 1200；英文配音：\"Expand your territory...\"；转场：镜头继续向后拉远，直至看到整个版图。。8~11s: 视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。；角色动作：庞大的军队进行列阵动作。；镜头运动：俯瞰视角，极速拉远。；英文UI示例：EMPIRE ESTABLISHED；英文配音：\"...and rule the world!\"；转场：镜头切入激烈的战斗瞬间。。11~13s: 大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。；角色动作：骑兵冲锋，士兵挥剑对决。；镜头运动：动态追踪镜头，跟随冲锋的骑兵。；英文UI示例：VICTORY；英文配音：\"Your conquest begins now!\"；转场：淡出至品牌Logo。。结尾停在结果反馈或局势反转，不出现中文，不出现硬 CTA，不出现下载口播。",
+      "video_prompt_v2_storyboard_cn": "一个等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。风格的SLG游戏录屏视频生成提示词，基于图片分镜进行镜头延展，提示词本身用中文描述，但所有画面 UI、字幕、数字、战报和配音必须为英文。@图片1作为起始图，重点表现等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。，先用特写镜头，固定视角。建立危机感，保留英文UI \"+10 Gold\"，英文配音为 \"Start with nothing...\"。随后从@图片1自然过渡到@图片2，通过镜头持续向后拉远，展示更多建筑。完成镜头连接，在@图片2里突出镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。，角色动作是点击升级按钮。，镜头语言保持中景，平滑拉远。，继续保留英文UI \"UPGRADE / Lv.1 -> Lv.2\"，英文配音为 \"...build your strength.\"。随后从@图片2自然过渡到@图片3，通过镜头继续向后拉远，直至看到整个版图。完成镜头连接，在@图片3里突出镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。，角色动作是村庄内的村民在忙碌移动。，镜头语言保持大远景，快速Zoom-out。，继续保留英文UI \"Wood: 500 / Gold: 1200\"，英文配音为 \"Expand your territory...\"。随后从@图片3自然过渡到@图片4，通过镜头切入激烈的战斗瞬间。完成镜头连接，在@图片4里突出视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。，角色动作是庞大的军队进行列阵动作。，镜头语言保持俯瞰视角，极速拉远。，继续保留英文UI \"EMPIRE ESTABLISHED\"，英文配音为 \"...and rule the world!\"。随后从@图片4自然过渡到@图片5，通过淡出至品牌Logo。完成镜头连接，在@图片5里突出大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。，角色动作是骑兵冲锋，士兵挥剑对决。，镜头语言保持动态追踪镜头，跟随冲锋的骑兵。，继续保留英文UI \"VICTORY\"，英文配音为 \"Your conquest begins now!\"。整体要求：镜头衔接流畅，保留真实 SLG 录屏质感，英文 UI 清晰可读，英文配音节奏与画面同步，不要中文，不要真人口播。",
+      "video_prompts_markdown": "# V1｜成长闭环流 (Growth Loop Strategy) 视频生成提示词\n\n## 版本1｜纯文本视频提示词（15s内）\n\n```text\n一个等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。风格的SLG游戏录屏视频，限制为15s内，整体节奏快速、信息密度高、所有UI/字幕/数值必须为英文，所有配音必须为英文。1~3s: 等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。；角色动作：虚拟手指进行快速点击动作。；镜头运动：特写镜头，固定视角。；英文UI示例：+10 Gold；英文配音：\"Start with nothing...\"；转场：镜头快速向后拉远。。3~5s: 镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。；角色动作：点击升级按钮。；镜头运动：中景，平滑拉远。；英文UI示例：UPGRADE / Lv.1 -> Lv.2；英文配音：\"...build your strength.\"；转场：镜头持续向后拉远，展示更多建筑。。5~8s: 镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。；角色动作：村庄内的村民在忙碌移动。；镜头运动：大远景，快速Zoom-out。；英文UI示例：Wood: 500 / Gold: 1200；英文配音：\"Expand your territory...\"；转场：镜头继续向后拉远，直至看到整个版图。。8~11s: 视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。；角色动作：庞大的军队进行列阵动作。；镜头运动：俯瞰视角，极速拉远。；英文UI示例：EMPIRE ESTABLISHED；英文配音：\"...and rule the world!\"；转场：镜头切入激烈的战斗瞬间。。11~13s: 大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。；角色动作：骑兵冲锋，士兵挥剑对决。；镜头运动：动态追踪镜头，跟随冲锋的骑兵。；英文UI示例：VICTORY；英文配音：\"Your conquest begins now!\"；转场：淡出至品牌Logo。。结尾停在结果反馈或局势反转，不出现中文，不出现硬 CTA，不出现下载口播。\n```\n\n## 版本2｜配合图片分镜的视频提示词\n\n```text\n一个等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。风格的SLG游戏录屏视频生成提示词，基于图片分镜进行镜头延展，提示词本身用中文描述，但所有画面 UI、字幕、数字、战报和配音必须为英文。@图片1作为起始图，重点表现等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。，先用特写镜头，固定视角。建立危机感，保留英文UI \"+10 Gold\"，英文配音为 \"Start with nothing...\"。随后从@图片1自然过渡到@图片2，通过镜头持续向后拉远，展示更多建筑。完成镜头连接，在@图片2里突出镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。，角色动作是点击升级按钮。，镜头语言保持中景，平滑拉远。，继续保留英文UI \"UPGRADE / Lv.1 -> Lv.2\"，英文配音为 \"...build your strength.\"。随后从@图片2自然过渡到@图片3，通过镜头继续向后拉远，直至看到整个版图。完成镜头连接，在@图片3里突出镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。，角色动作是村庄内的村民在忙碌移动。，镜头语言保持大远景，快速Zoom-out。，继续保留英文UI \"Wood: 500 / Gold: 1200\"，英文配音为 \"Expand your territory...\"。随后从@图片3自然过渡到@图片4，通过镜头切入激烈的战斗瞬间。完成镜头连接，在@图片4里突出视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。，角色动作是庞大的军队进行列阵动作。，镜头语言保持俯瞰视角，极速拉远。，继续保留英文UI \"EMPIRE ESTABLISHED\"，英文配音为 \"...and rule the world!\"。随后从@图片4自然过渡到@图片5，通过淡出至品牌Logo。完成镜头连接，在@图片5里突出大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。，角色动作是骑兵冲锋，士兵挥剑对决。，镜头语言保持动态追踪镜头，跟随冲锋的骑兵。，继续保留英文UI \"VICTORY\"，英文配音为 \"Your conquest begins now!\"。整体要求：镜头衔接流畅，保留真实 SLG 录屏质感，英文 UI 清晰可读，英文配音节奏与画面同步，不要中文，不要真人口播。\n```\n"
+    }
+  ],
+  "review_results": [
+    {
+      "variant_id": "V1",
+      "scores": {
+        "hook_strength": 8.5,
+        "slg_relevance": 9.5,
+        "competitor_pattern_fit": 9.0,
+        "scene_generatability": 7.0,
+        "prompt_completeness": 9.5,
+        "ui_english_compliance": 10.0,
+        "differentiation": 8.0,
+        "production_value": 8.5
+      },
+      "total_score": 8.63,
+      "pass": true,
+      "strengths": [
+        "完美执行了 Brief 中的‘尺度跨越’逻辑，从微观点击到宏观战争的转化非常丝滑。",
+        "镜头语言描述极其专业，明确了 Isometric View 和 Zoom-out 的运动轨迹。",
+        "严格遵守了英文约束，UI 和配音设计符合海外投放标准。",
+        "节奏感设计合理，通过数值反馈、建筑进化、规模扩张三个阶段完成了情绪递进。"
+      ],
+      "issues": [
+        "生成风险点：AI 视频模型目前处理‘极速连续拉远 (Continuous Zoom-out)’时极易出现画面逻辑崩坏或物体形变。",
+        "战斗复杂度过高：11-13s 的大规模骑兵冲锋与箭雨对当前 AI 生成的物理一致性要求极高，容易产生‘果冻效应’。"
+      ],
+      "improvement": "建议将‘极速拉远’拆解为‘中景拉远’+‘远景切入’两个镜头，以降低 AI 生成时的逻辑断裂风险。"
+    }
+  ],
+  "best_variant": {
+    "variant_id": "V1",
+    "strategy_name": "成长闭环流 (Growth Loop Strategy)",
+    "positioning": "利用极简点击交互降低门槛，通过视觉尺度的指数级扩张展示SLG的成长成就感。",
+    "visual_style_cn": "等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。",
+    "hook": "模拟手指点击金矿，伴随即时的数值跳动反馈，营造解压感。",
+    "core_conflict": "从微小的资源积累到宏大的帝国扩张与征服。",
+    "selling_points": [
+      "极简点击交互",
+      "建筑形态质变",
+      "视觉尺度跨越"
+    ],
+    "why_it_might_work": "通过低门槛的点击动作吸引泛用户，随后利用宏大的战争画面和尺度拉远，快速转化核心策略玩家，符合用户“从无到有”的心理预期。",
+    "risk": "如果后期战争画面与前期点击感的视觉落差过大，可能导致用户认为玩法误导。",
+    "shot_list": [
+      {
+        "shot_id": "S1",
+        "time_range": "1~3s",
+        "scene_purpose": "展示极低的操作门槛与即时反馈（Hook）",
+        "visual_description_cn": "等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。",
+        "camera_language_cn": "特写镜头，固定视角。",
+        "character_action_cn": "虚拟手指进行快速点击动作。",
+        "ui_text_en": [
+          "+10 Gold"
+        ],
+        "voiceover_en": "Start with nothing...",
+        "sfx_music_cn": "清脆的点击声，伴随轻快的叮当声。",
+        "transition_cn": "镜头快速向后拉远。"
+      },
+      {
+        "shot_id": "S2",
+        "time_range": "3~5s",
+        "scene_purpose": "展示中观层面的建筑升级与成长感",
+        "visual_description_cn": "镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。",
+        "camera_language_cn": "中景，平滑拉远。",
+        "character_action_cn": "点击升级按钮。",
+        "ui_text_en": [
+          "UPGRADE",
+          "Lv.1 -> Lv.2"
+        ],
+        "voiceover_en": "...build your strength.",
+        "sfx_music_cn": "建筑升级的重音，木头变石头的质感音效。",
+        "transition_cn": "镜头持续向后拉远，展示更多建筑。"
+      },
+      {
+        "shot_id": "S3",
+        "time_range": "5~8s",
+        "scene_purpose": "展示规模感从点到面的演变",
+        "visual_description_cn": "镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。",
+        "camera_language_cn": "大远景，快速Zoom-out。",
+        "character_action_cn": "村庄内的村民在忙碌移动。",
+        "ui_text_en": [
+          "Wood: 500",
+          "Gold: 1200"
+        ],
+        "voiceover_en": "Expand your territory...",
+        "sfx_music_cn": "音乐节奏转为宏大，加入低沉的鼓点。",
+        "transition_cn": "镜头继续向后拉远，直至看到整个版图。"
+      },
+      {
+        "shot_id": "S4",
+        "time_range": "8~11s",
+        "scene_purpose": "展示宏观层面的帝国规模与统治欲",
+        "visual_description_cn": "视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。",
+        "camera_language_cn": "俯瞰视角，极速拉远。",
+        "character_action_cn": "庞大的军队进行列阵动作。",
+        "ui_text_en": [
+          "EMPIRE ESTABLISHED"
+        ],
+        "voiceover_en": "...and rule the world!",
+        "sfx_music_cn": "雄壮的管弦乐，战鼓声渐强。",
+        "transition_cn": "镜头切入激烈的战斗瞬间。"
+      },
+      {
+        "shot_id": "S5",
+        "time_range": "11~13s",
+        "scene_purpose": "展示核心冲突与战争爽点",
+        "visual_description_cn": "大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。",
+        "camera_language_cn": "动态追踪镜头，跟随冲锋的骑兵。",
+        "character_action_cn": "骑兵冲锋，士兵挥剑对决。",
+        "ui_text_en": [
+          "VICTORY"
+        ],
+        "voiceover_en": "Your conquest begins now!",
+        "sfx_music_cn": "金属碰撞声，马蹄声，激昂的战斗音效。",
+        "transition_cn": "淡出至品牌Logo。"
+      }
+    ],
+    "script_15s": "1~3s: 等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。；角色动作：虚拟手指进行快速点击动作。；镜头：特写镜头，固定视角。；英文UI：+10 Gold；英文配音：\"Start with nothing...\"；音效/音乐：清脆的点击声，伴随轻快的叮当声。。\n3~5s: 镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。；角色动作：点击升级按钮。；镜头：中景，平滑拉远。；英文UI：UPGRADE / Lv.1 -> Lv.2；英文配音：\"...build your strength.\"；音效/音乐：建筑升级的重音，木头变石头的质感音效。。\n5~8s: 镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。；角色动作：村庄内的村民在忙碌移动。；镜头：大远景，快速Zoom-out。；英文UI：Wood: 500 / Gold: 1200；英文配音：\"Expand your territory...\"；音效/音乐：音乐节奏转为宏大，加入低沉的鼓点。。\n8~11s: 视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。；角色动作：庞大的军队进行列阵动作。；镜头：俯瞰视角，极速拉远。；英文UI：EMPIRE ESTABLISHED；英文配音：\"...and rule the world!\"；音效/音乐：雄壮的管弦乐，战鼓声渐强。。\n11~13s: 大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。；角色动作：骑兵冲锋，士兵挥剑对决。；镜头：动态追踪镜头，跟随冲锋的骑兵。；英文UI：VICTORY；英文配音：\"Your conquest begins now!\"；音效/音乐：金属碰撞声，马蹄声，激昂的战斗音效。。",
+    "full_voiceover_en": "Start with nothing... ...build your strength. Expand your territory... ...and rule the world! Your conquest begins now!",
+    "english_only_issues": [],
+    "review": {
+      "variant_id": "V1",
+      "scores": {
+        "hook_strength": 8.5,
+        "slg_relevance": 9.5,
+        "competitor_pattern_fit": 9.0,
+        "scene_generatability": 7.0,
+        "prompt_completeness": 9.5,
+        "ui_english_compliance": 10.0,
+        "differentiation": 8.0,
+        "production_value": 8.5
+      },
+      "total_score": 8.63,
+      "pass": true,
+      "strengths": [
+        "完美执行了 Brief 中的‘尺度跨越’逻辑，从微观点击到宏观战争的转化非常丝滑。",
+        "镜头语言描述极其专业，明确了 Isometric View 和 Zoom-out 的运动轨迹。",
+        "严格遵守了英文约束，UI 和配音设计符合海外投放标准。",
+        "节奏感设计合理，通过数值反馈、建筑进化、规模扩张三个阶段完成了情绪递进。"
+      ],
+      "issues": [
+        "生成风险点：AI 视频模型目前处理‘极速连续拉远 (Continuous Zoom-out)’时极易出现画面逻辑崩坏或物体形变。",
+        "战斗复杂度过高：11-13s 的大规模骑兵冲锋与箭雨对当前 AI 生成的物理一致性要求极高，容易产生‘果冻效应’。"
+      ],
+      "improvement": "建议将‘极速拉远’拆解为‘中景拉远’+‘远景切入’两个镜头，以降低 AI 生成时的逻辑断裂风险。"
+    }
+  },
+  "image_generation_todo": {
+    "node_name": "TODO_generate_storyboard_images",
+    "status": "TODO",
+    "description": "此节点未来接入图片模型，按创意版本批量生成 @图片1、@图片2 ... 关键帧。当前仅产出待执行清单与提示词。",
+    "items": [
+      {
+        "variant_id": "V1",
+        "strategy_name": "成长闭环流 (Growth Loop Strategy)",
+        "target_images": [
+          {
+            "image_id": "图片1",
+            "time_range": "1~3s",
+            "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示极低的操作门槛与即时反馈（Hook）。画面内容：等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。。角色动作：虚拟手指进行快速点击动作。。镜头语言：特写镜头，固定视角。。转场意图：镜头快速向后拉远。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：+10 Gold。若需要配音参考，请只保留英文配音：\"Start with nothing...\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+          },
+          {
+            "image_id": "图片2",
+            "time_range": "3~5s",
+            "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示中观层面的建筑升级与成长感。画面内容：镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。。角色动作：点击升级按钮。。镜头语言：中景，平滑拉远。。转场意图：镜头持续向后拉远，展示更多建筑。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：UPGRADE / Lv.1 -> Lv.2。若需要配音参考，请只保留英文配音：\"...build your strength.\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+          },
+          {
+            "image_id": "图片3",
+            "time_range": "5~8s",
+            "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示规模感从点到面的演变。画面内容：镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。。角色动作：村庄内的村民在忙碌移动。。镜头语言：大远景，快速Zoom-out。。转场意图：镜头继续向后拉远，直至看到整个版图。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：Wood: 500 / Gold: 1200。若需要配音参考，请只保留英文配音：\"Expand your territory...\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+          },
+          {
+            "image_id": "图片4",
+            "time_range": "8~11s",
+            "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示宏观层面的帝国规模与统治欲。画面内容：视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。。角色动作：庞大的军队进行列阵动作。。镜头语言：俯瞰视角，极速拉远。。转场意图：镜头切入激烈的战斗瞬间。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：EMPIRE ESTABLISHED。若需要配音参考，请只保留英文配音：\"...and rule the world!\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+          },
+          {
+            "image_id": "图片5",
+            "time_range": "11~13s",
+            "image_prompt_cn": "一张用于 SLG 广告图片分镜的关键帧，整体风格为等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。。当前画面目的：展示核心冲突与战争爽点。画面内容：大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。。角色动作：骑兵冲锋，士兵挥剑对决。。镜头语言：动态追踪镜头，跟随冲锋的骑兵。。转场意图：淡出至品牌Logo。。画面内所有 UI、按钮、数字、战报、浮层、字幕必须只使用英文，示例英文 UI：VICTORY。若需要配音参考，请只保留英文配音：\"Your conquest begins now!\"。不要出现中文 UI，不要出现中文字幕，不要水印，不要模糊。"
+          }
+        ]
+      }
+    ]
+  },
+  "video_generation_todo": {
+    "node_name": "TODO_generate_videos",
+    "status": "TODO",
+    "description": "此节点未来接入视频模型，消费纯文本 15s 提示词或图片分镜式提示词进行视频生成。当前仅产出待执行清单与提示词。",
+    "items": [
+      {
+        "variant_id": "V1",
+        "strategy_name": "成长闭环流 (Growth Loop Strategy)",
+        "video_prompt_v1_text_15s_cn": "一个等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。风格的SLG游戏录屏视频，限制为15s内，整体节奏快速、信息密度高、所有UI/字幕/数值必须为英文，所有配音必须为英文。1~3s: 等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。；角色动作：虚拟手指进行快速点击动作。；镜头运动：特写镜头，固定视角。；英文UI示例：+10 Gold；英文配音：\"Start with nothing...\"；转场：镜头快速向后拉远。。3~5s: 镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。；角色动作：点击升级按钮。；镜头运动：中景，平滑拉远。；英文UI示例：UPGRADE / Lv.1 -> Lv.2；英文配音：\"...build your strength.\"；转场：镜头持续向后拉远，展示更多建筑。。5~8s: 镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。；角色动作：村庄内的村民在忙碌移动。；镜头运动：大远景，快速Zoom-out。；英文UI示例：Wood: 500 / Gold: 1200；英文配音：\"Expand your territory...\"；转场：镜头继续向后拉远，直至看到整个版图。。8~11s: 视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。；角色动作：庞大的军队进行列阵动作。；镜头运动：俯瞰视角，极速拉远。；英文UI示例：EMPIRE ESTABLISHED；英文配音：\"...and rule the world!\"；转场：镜头切入激烈的战斗瞬间。。11~13s: 大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。；角色动作：骑兵冲锋，士兵挥剑对决。；镜头运动：动态追踪镜头，跟随冲锋的骑兵。；英文UI示例：VICTORY；英文配音：\"Your conquest begins now!\"；转场：淡出至品牌Logo。。结尾停在结果反馈或局势反转，不出现中文，不出现硬 CTA，不出现下载口播。",
+        "video_prompt_v2_storyboard_cn": "一个等距视角 (Isometric)，高保真写实材质，强调建筑从木质到石质的质感演变，光影效果强烈。风格的SLG游戏录屏视频生成提示词，基于图片分镜进行镜头延展，提示词本身用中文描述，但所有画面 UI、字幕、数字、战报和配音必须为英文。@图片1作为起始图，重点表现等距视角。画面中心是一个散发微光的金矿石，一只半透明的虚拟手指点击金矿，金矿产生闪烁效果并溅出金币粒子。，先用特写镜头，固定视角。建立危机感，保留英文UI \"+10 Gold\"，英文配音为 \"Start with nothing...\"。随后从@图片1自然过渡到@图片2，通过镜头持续向后拉远，展示更多建筑。完成镜头连接，在@图片2里突出镜头拉远，显示出一间简陋的木屋。手指点击木屋上方的升级按钮，木屋在强光中迅速进化为坚固的石质防御塔。，角色动作是点击升级按钮。，镜头语言保持中景，平滑拉远。，继续保留英文UI \"UPGRADE / Lv.1 -> Lv.2\"，英文配音为 \"...build your strength.\"。随后从@图片2自然过渡到@图片3，通过镜头继续向后拉远，直至看到整个版图。完成镜头连接，在@图片3里突出镜头极速拉远，原本的石质建筑变成了城堡的核心，周围环绕着农田、仓库和围墙，形成一个完整的村庄雏形。，角色动作是村庄内的村民在忙碌移动。，镜头语言保持大远景，快速Zoom-out。，继续保留英文UI \"Wood: 500 / Gold: 1200\"，英文配音为 \"Expand your territory...\"。随后从@图片3自然过渡到@图片4，通过镜头切入激烈的战斗瞬间。完成镜头连接，在@图片4里突出视角变为俯瞰全图。镜头拉远至看到整个帝国版图，成千上万的士兵正在城墙下集结，旗帜在风中猎猎作响。，角色动作是庞大的军队进行列阵动作。，镜头语言保持俯瞰视角，极速拉远。，继续保留英文UI \"EMPIRE ESTABLISHED\"，英文配音为 \"...and rule the world!\"。随后从@图片4自然过渡到@图片5，通过淡出至品牌Logo。完成镜头连接，在@图片5里突出大规模战场。骑兵冲锋，箭雨从天而降，城墙下发生激烈的碰撞，火光与尘埃四溅。，角色动作是骑兵冲锋，士兵挥剑对决。，镜头语言保持动态追踪镜头，跟随冲锋的骑兵。，继续保留英文UI \"VICTORY\"，英文配音为 \"Your conquest begins now!\"。整体要求：镜头衔接流畅，保留真实 SLG 录屏质感，英文 UI 清晰可读，英文配音节奏与画面同步，不要中文，不要真人口播。"
+      }
+    ]
+  },
+  "revision_round": 0,
+  "needs_revision": false,
+  "revision_feedback": [
+    "脚本逻辑非常成熟，完全理解 SLG 玩家从‘解压点击’到‘统治欲爆发’的心理路径。",
+    "提示词工程做得很好，不仅提供了画面描述，还包含了交互反馈（Floating numbers）和镜头运动指令。",
+    "整体可以直接进入制作阶段，但需重点关注 AI 生成过程中‘尺度跨越’时的画面稳定性。"
+  ],
+  "step_files": {
+    "config": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/00_config/config.json",
+    "readme": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/00_config/README.txt",
+    "rss_raw": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/01_raw_news/rss_raw.json",
+    "news_cleaned": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/02_clean_news/news_cleaned.json",
+    "ads_raw": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/03_raw_ads/ads_raw.json",
+    "normalized_video_items": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/04_normalized/normalized_video_items.json",
+    "selected_video_items": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/05_selected_videos/selected_video_items.json",
+    "video_analysis_results": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/06_video_analysis/video_analysis_results.json",
+    "pattern_summary": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/07_patterns/pattern_summary.md",
+    "news_context": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/08_news_context/news_context.md",
+    "creative_brief": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/09_brief/creative_brief.md",
+    "script_variants_round_1": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/10_script_variants/script_variants_round_1.json",
+    "storyboard_packages_round_1": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/11_storyboards/storyboard_packages_round_1.json",
+    "storyboards_showcase_round_1": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/11_storyboards/storyboards_showcase_round_1.md",
+    "video_prompt_packages_round_1": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/12_video_prompts/video_prompt_packages_round_1.json",
+    "video_prompts_showcase_round_1": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/12_video_prompts/video_prompts_showcase_round_1.md",
+    "review_round_1": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/13_review/review_round_1.json",
+    "todo_image_generation_json": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/99_todo/todo_image_generation.json",
+    "todo_image_generation_md": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/99_todo/todo_image_generation.md",
+    "todo_video_generation_json": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/99_todo/todo_video_generation.json",
+    "todo_video_generation_md": "/home/abyss/GraphiteUI/outputs/slg_creative_factory_20260407_204011/99_todo/todo_video_generation.md"
+  },
+  "warnings": [],
+  "errors": []
+}

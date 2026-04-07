@@ -160,6 +160,7 @@
 - `theme_config`
 - `Condition Node`
 - `Node Handler Registry`
+- `Tool Registry` 基础下沉
 - 自定义节点语义
 - creative factory 模板
 
@@ -184,10 +185,10 @@
 
 ## P1 高价值后续项
 
-- Tool Registry 下沉，弱化 demo 时代的 `slg_*` 命名
 - 主题模板系统
 - 节点顺序调整与插入体验
 - 更强的 Run 轮询和调试能力
+- 更彻底的工具分层与跨主题复用
 
 ## P2 后续增强
 

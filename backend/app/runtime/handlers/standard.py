@@ -5,22 +5,10 @@ from typing import Any
 from app.memory.store import save_memory
 from app.runtime.state import RunState, utc_now_iso
 from app.schemas.graph import NodeType
-from app.skills.slg_creative_factory import (
-    slg_analyze_videos,
-    slg_build_brief,
-    slg_clean_news,
-    slg_extract_patterns,
-    slg_fetch_ads,
-    slg_fetch_rss,
-    slg_generate_storyboards,
-    slg_generate_variants,
-    slg_generate_video_prompts,
-    slg_normalize_assets,
-    slg_prepare_image_todo,
-    slg_prepare_video_todo,
-    slg_review_variants,
-    slg_select_top_videos,
-)
+from app.tools.registry import get_tool_registry
+
+
+TOOLS = get_tool_registry()
 
 
 def handle_start(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
@@ -34,9 +22,8 @@ def handle_start(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
 
 
 def handle_research(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    rss_result = slg_fetch_rss(state, params)
-    clean_result = slg_clean_news({**state, **rss_result.get("state_updates", {})}, params)
-    clean_news_items = clean_result.get("state_updates", {}).get("clean_news_items", [])
+    rss_updates = TOOLS["fetch_market_news_context"](state, params)
+    clean_updates = TOOLS["clean_market_news"]({**state, **rss_updates}, params)
     market_inputs = [
         {
             "kind": "rss_item",
@@ -44,93 +31,73 @@ def handle_research(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
             "summary": item.get("summary", ""),
             "creative_hint": item.get("creative_hint", ""),
         }
-        for item in clean_news_items
+        for item in clean_updates.get("clean_news_items", [])
     ]
-    return {
-        **rss_result.get("state_updates", {}),
-        **clean_result.get("state_updates", {}),
-        "market_inputs": market_inputs,
-    }
+    return {**rss_updates, **clean_updates, "market_inputs": market_inputs}
 
 
 def handle_collect_assets(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    asset_result = slg_fetch_ads(state, params)
-    ad_items = asset_result.get("state_updates", {}).get("ad_items", [])
+    asset_updates = TOOLS["fetch_benchmark_assets"](state, params)
+    ad_items = asset_updates.get("ad_items", [])
     market_inputs = [
         *state.get("market_inputs", []),
         *[
-            {
-                "kind": "ad_asset",
-                "item_id": item.get("item_id", ""),
-                "creative_theme": item.get("creative_theme", ""),
-                "hook": item.get("hook", ""),
-            }
+            {"kind": "ad_asset", "item_id": item.get("item_id", ""), "creative_theme": item.get("creative_theme", ""), "hook": item.get("hook", "")}
             for item in ad_items
         ],
     ]
-    return {
-        **asset_result.get("state_updates", {}),
-        "market_inputs": market_inputs,
-    }
+    return {**asset_updates, "market_inputs": market_inputs}
 
 
 def handle_normalize_assets(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    normalized_result = slg_normalize_assets(state, params)
-    normalized_items = normalized_result.get("state_updates", {}).get("normalized_video_items", [])
+    normalized_updates = TOOLS["normalize_asset_records"](state, params)
+    normalized_items = normalized_updates.get("normalized_video_items", [])
     market_inputs = [
         *state.get("market_inputs", []),
         *[
-            {
-                "kind": "normalized_asset",
-                "item_id": item.get("item_id", ""),
-                "hook": item.get("hook", ""),
-                "creative_theme": item.get("creative_theme", ""),
-            }
+            {"kind": "normalized_asset", "item_id": item.get("item_id", ""), "hook": item.get("hook", ""), "creative_theme": item.get("creative_theme", "")}
             for item in normalized_items
         ],
     ]
-    return {
-        **normalized_result.get("state_updates", {}),
-        "market_inputs": market_inputs,
-    }
+    return {**normalized_updates, "market_inputs": market_inputs}
 
 
 def handle_select_assets(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    return slg_select_top_videos(state, params).get("state_updates", {})
+    return TOOLS["select_top_video_assets"](state, params)
 
 
 def handle_analyze_assets(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    return slg_analyze_videos(state, params).get("state_updates", {})
+    return TOOLS["analyze_video_assets"](state, params)
 
 
 def handle_extract_patterns(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    return slg_extract_patterns(state, params).get("state_updates", {})
+    return TOOLS["extract_creative_patterns"](state, params)
 
 
 def handle_build_brief(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    return slg_build_brief(state, params).get("state_updates", {})
+    return TOOLS["build_creative_brief"](state, params)
 
 
 def handle_generate_variants(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
     remapped_params = dict(params)
     if "variantCount" in remapped_params and "variant_count" not in remapped_params:
         remapped_params["variant_count"] = remapped_params["variantCount"]
-    return slg_generate_variants(state, remapped_params).get("state_updates", {})
+    return TOOLS["generate_creative_variants"](state, remapped_params)
 
 
 def handle_generate_storyboards(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    return slg_generate_storyboards(state, params).get("state_updates", {})
+    return TOOLS["generate_storyboard_packages"](state, params)
 
 
 def handle_generate_video_prompts(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    return slg_generate_video_prompts(state, params).get("state_updates", {})
+    return TOOLS["generate_video_prompt_packages"](state, params)
 
 
 def handle_review_variants(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
     remapped_params = dict(params)
     if "scoreThreshold" in remapped_params and "pass_threshold" not in remapped_params:
         remapped_params["pass_threshold"] = remapped_params["scoreThreshold"]
-    return slg_review_variants(state, remapped_params).get("state_updates", {})
+    return TOOLS["review_creative_variants"](state, remapped_params)
 
 
 def handle_condition(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
@@ -139,11 +106,11 @@ def handle_condition(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
 
 
 def handle_prepare_image_todo(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    return slg_prepare_image_todo(state, params).get("state_updates", {})
+    return TOOLS["prepare_image_generation_todo"](state, params)
 
 
 def handle_prepare_video_todo(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
-    return slg_prepare_video_todo(state, params).get("state_updates", {})
+    return TOOLS["prepare_video_generation_todo"](state, params)
 
 
 def handle_finalize(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
@@ -171,12 +138,7 @@ def handle_finalize(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
             },
         }
     )
-    return {
-        "status": "completed",
-        "final_package": final_package,
-        "final_result": result,
-        "completed_at": utc_now_iso(),
-    }
+    return {"status": "completed", "final_package": final_package, "final_result": result, "completed_at": utc_now_iso()}
 
 
 def handle_end(state: RunState, params: dict[str, Any]) -> dict[str, Any]:

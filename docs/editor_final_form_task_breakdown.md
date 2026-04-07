@@ -40,6 +40,7 @@
 - `Task 2.1` Graph Parser：`已完成`
 - `Task 2.2` Validator：`已完成`
 - `Task 2.3` Node Handler Registry：`已完成`
+- `Task 2.4` Tool Registry 下沉：`已完成基础版本`
 - `Task 2.5` Condition Node 编译与执行：`已完成`
 - `Task 3.1` 前端类型系统升级：`已完成`
 - `Task 3.2` State Panel：`已完成`
@@ -48,10 +49,10 @@
 
 当前最值得继续推进的任务：
 
-- `Task 2.4` Tool Registry 下沉
 - `Task 3.4` Edge bus / flow 可视化增强
 - `Task 3.5` Start / End 特殊节点语义强化
 - `Task 4.2` 主题模板系统抽象
+- `Task 4.3` 更多主题模板与参数策略抽象
 
 ---
 

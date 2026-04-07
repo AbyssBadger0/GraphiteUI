@@ -44,8 +44,20 @@ export function toBackendGraphPayload(
       config: {
         description: node.data.description,
         status: node.data.status ?? "idle",
-        ...(node.data.kind === "input" ? { task_input: node.data.description } : {}),
-        ...(node.data.kind === "evaluator" ? { decision: "pass" } : {}),
+        ...(node.data.kind === "input" ? { task_input: node.data.config.taskInput ?? "" } : {}),
+        ...(node.data.kind === "knowledge" ? { query: node.data.config.query ?? "" } : {}),
+        ...(node.data.kind === "memory" ? { memory_type: node.data.config.memoryType ?? "" } : {}),
+        ...(node.data.kind === "planner" ? { planner_mode: node.data.config.plannerMode ?? "default" } : {}),
+        ...(node.data.kind === "skill_executor"
+          ? { selected_skills: node.data.config.selectedSkills ?? ["search_docs"] }
+          : {}),
+        ...(node.data.kind === "evaluator"
+          ? {
+              decision: node.data.config.evaluatorDecision ?? "pass",
+              score: node.data.config.score ?? 8.5,
+            }
+          : {}),
+        ...(node.data.kind === "finalizer" ? { final_message: node.data.config.finalMessage ?? "" } : {}),
       },
     })),
     edges: edges.map((edge) => {
@@ -94,6 +106,21 @@ export function fromBackendGraphDocument(document: BackendGraphDocument): {
           node.config.status === "failed"
             ? node.config.status
             : "idle",
+        config: {
+          taskInput: typeof node.config.task_input === "string" ? node.config.task_input : undefined,
+          query: typeof node.config.query === "string" ? node.config.query : undefined,
+          memoryType: typeof node.config.memory_type === "string" ? node.config.memory_type : undefined,
+          plannerMode: typeof node.config.planner_mode === "string" ? node.config.planner_mode : undefined,
+          selectedSkills: Array.isArray(node.config.selected_skills)
+            ? node.config.selected_skills.filter((value): value is string => typeof value === "string")
+            : undefined,
+          evaluatorDecision:
+            node.config.decision === "pass" || node.config.decision === "revise" || node.config.decision === "fail"
+              ? node.config.decision
+              : undefined,
+          score: typeof node.config.score === "number" ? node.config.score : undefined,
+          finalMessage: typeof node.config.final_message === "string" ? node.config.final_message : undefined,
+        },
       },
     })),
     edges: document.edges.map((edge) => ({

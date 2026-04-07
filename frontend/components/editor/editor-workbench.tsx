@@ -18,7 +18,7 @@ import { apiGet, apiPost } from "@/lib/api";
 import { fromBackendGraphDocument, toBackendGraphPayload, type BackendGraphDocument } from "@/lib/graph-api";
 import { NODE_PRESETS } from "@/lib/editor-presets";
 import { useEditorStore } from "@/stores/editor-store";
-import type { GraphCanvasNode } from "@/types/editor";
+import type { GraphCanvasNode, GraphNodeConfig } from "@/types/editor";
 
 function EditorWorkbenchInner({ graphId }: { graphId: string }) {
   const {
@@ -45,6 +45,7 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
     selectEdge,
     updateSelectedNodeLabel,
     updateSelectedNodeDescription,
+    updateSelectedNodeConfig,
     updateSelectedNodeConfigDraft,
     saveGraphLocally,
     validateGraph,
@@ -106,6 +107,10 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
   const onEdgeClick: EdgeMouseHandler = (_, edge) => {
     selectEdge(edge.id);
   };
+
+  function updateNodeConfig(config: Partial<GraphNodeConfig>) {
+    updateSelectedNodeConfig(config);
+  }
 
   async function handleValidateBackend() {
     try {
@@ -291,8 +296,121 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
                 />
               </label>
 
+              {selectedNode.data.kind === "input" ? (
+                <label className="field">
+                  <span>Task Input</span>
+                  <textarea
+                    className="text-area"
+                    rows={4}
+                    value={selectedNode.data.config.taskInput ?? ""}
+                    onChange={(event) => updateNodeConfig({ taskInput: event.target.value })}
+                  />
+                </label>
+              ) : null}
+
+              {selectedNode.data.kind === "knowledge" ? (
+                <label className="field">
+                  <span>Knowledge Query</span>
+                  <input
+                    className="text-input"
+                    value={selectedNode.data.config.query ?? ""}
+                    onChange={(event) => updateNodeConfig({ query: event.target.value })}
+                  />
+                </label>
+              ) : null}
+
+              {selectedNode.data.kind === "memory" ? (
+                <label className="field">
+                  <span>Memory Type</span>
+                  <select
+                    className="text-input"
+                    value={selectedNode.data.config.memoryType ?? "success_pattern"}
+                    onChange={(event) => updateNodeConfig({ memoryType: event.target.value })}
+                  >
+                    <option value="success_pattern">success_pattern</option>
+                    <option value="failure_reason">failure_reason</option>
+                  </select>
+                </label>
+              ) : null}
+
+              {selectedNode.data.kind === "planner" ? (
+                <label className="field">
+                  <span>Planner Mode</span>
+                  <select
+                    className="text-input"
+                    value={selectedNode.data.config.plannerMode ?? "default"}
+                    onChange={(event) => updateNodeConfig({ plannerMode: event.target.value })}
+                  >
+                    <option value="default">default</option>
+                    <option value="fast">fast</option>
+                    <option value="careful">careful</option>
+                  </select>
+                </label>
+              ) : null}
+
+              {selectedNode.data.kind === "skill_executor" ? (
+                <label className="field">
+                  <span>Selected Skills</span>
+                  <input
+                    className="text-input"
+                    value={(selectedNode.data.config.selectedSkills ?? ["search_docs"]).join(", ")}
+                    onChange={(event) =>
+                      updateNodeConfig({
+                        selectedSkills: event.target.value
+                          .split(",")
+                          .map((item) => item.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                  />
+                </label>
+              ) : null}
+
+              {selectedNode.data.kind === "evaluator" ? (
+                <>
+                  <label className="field">
+                    <span>Decision</span>
+                    <select
+                      className="text-input"
+                      value={selectedNode.data.config.evaluatorDecision ?? "pass"}
+                      onChange={(event) =>
+                        updateNodeConfig({
+                          evaluatorDecision: event.target.value as "pass" | "revise" | "fail",
+                        })
+                      }
+                    >
+                      <option value="pass">pass</option>
+                      <option value="revise">revise</option>
+                      <option value="fail">fail</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>Score</span>
+                    <input
+                      className="text-input"
+                      type="number"
+                      step="0.1"
+                      value={selectedNode.data.config.score ?? 8.5}
+                      onChange={(event) => updateNodeConfig({ score: Number(event.target.value) })}
+                    />
+                  </label>
+                </>
+              ) : null}
+
+              {selectedNode.data.kind === "finalizer" ? (
+                <label className="field">
+                  <span>Final Message</span>
+                  <textarea
+                    className="text-area"
+                    rows={3}
+                    value={selectedNode.data.config.finalMessage ?? ""}
+                    onChange={(event) => updateNodeConfig({ finalMessage: event.target.value })}
+                  />
+                </label>
+              ) : null}
+
               <label className="field">
-                <span>Node Data JSON</span>
+                <span>Advanced Node Data JSON</span>
                 <textarea
                   className="text-area code-area"
                   rows={12}

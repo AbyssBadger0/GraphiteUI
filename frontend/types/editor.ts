@@ -9,11 +9,25 @@ export type GraphNodeType =
   | "evaluator"
   | "finalizer";
 
+export type EvaluatorDecision = "pass" | "revise" | "fail";
+
+export type GraphNodeConfig = {
+  taskInput?: string;
+  query?: string;
+  memoryType?: string;
+  plannerMode?: string;
+  selectedSkills?: string[];
+  evaluatorDecision?: EvaluatorDecision;
+  score?: number;
+  finalMessage?: string;
+};
+
 export type GraphNodeData = {
   label: string;
   kind: GraphNodeType;
   description: string;
   status?: "idle" | "running" | "success" | "failed";
+  config: GraphNodeConfig;
 };
 
 export type GraphCanvasNode = Node<GraphNodeData>;
@@ -26,4 +40,3 @@ export type GraphDocument = {
   edges: GraphCanvasEdge[];
   updatedAt: string;
 };
-

@@ -4,7 +4,7 @@ import { addEdge, applyEdgeChanges, applyNodeChanges, type Connection, type Edge
 import { create } from "zustand";
 
 import { createStarterGraph, NODE_PRESETS } from "@/lib/editor-presets";
-import type { GraphCanvasEdge, GraphCanvasNode, GraphDocument, GraphNodeType } from "@/types/editor";
+import type { GraphCanvasEdge, GraphCanvasNode, GraphDocument, GraphNodeConfig, GraphNodeType } from "@/types/editor";
 
 type ValidationIssue = {
   code: string;
@@ -35,6 +35,7 @@ type EditorState = {
   selectEdge: (edgeId: string | null) => void;
   updateSelectedNodeLabel: (label: string) => void;
   updateSelectedNodeDescription: (description: string) => void;
+  updateSelectedNodeConfig: (config: Partial<GraphNodeConfig>) => void;
   updateSelectedNodeConfigDraft: (draft: string) => void;
   saveGraphLocally: () => void;
   validateGraph: () => void;
@@ -174,13 +175,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           kind: preset.kind,
           description: preset.description,
           status: "idle",
+          config:
+            preset.kind === "input"
+              ? { taskInput: "Describe the workflow task here." }
+              : preset.kind === "knowledge"
+                ? { query: "" }
+                : preset.kind === "memory"
+                  ? { memoryType: "success_pattern" }
+                  : preset.kind === "planner"
+                    ? { plannerMode: "default" }
+                    : preset.kind === "skill_executor"
+                      ? { selectedSkills: ["search_docs"] }
+                      : preset.kind === "evaluator"
+                        ? { evaluatorDecision: "pass", score: 8.5 }
+                        : { finalMessage: "Finalize workflow output." },
         },
       };
       return {
         nodes: [...state.nodes, nextNode],
         selectedNodeId: nodeId,
         selectedEdgeId: null,
-        configDraft: JSON.stringify({}, null, 2),
+        configDraft: JSON.stringify(nextNode.data, null, 2),
       };
     });
   },
@@ -219,6 +234,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }));
   },
 
+  updateSelectedNodeConfig: (config) => {
+    set((state) => {
+      const nodes = state.nodes.map((node) =>
+        node.id === state.selectedNodeId
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                config: {
+                  ...node.data.config,
+                  ...config,
+                },
+              },
+            }
+          : node,
+      );
+      const updatedNode = nodes.find((node) => node.id === state.selectedNodeId);
+      return {
+        nodes,
+        configDraft: updatedNode ? JSON.stringify(updatedNode.data, null, 2) : state.configDraft,
+      };
+    });
+  },
+
   updateSelectedNodeConfigDraft: (draft) => {
     set({ configDraft: draft });
     try {
@@ -236,6 +275,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                     typeof parsed.description === "string"
                       ? parsed.description
                       : node.data.description,
+                  config:
+                    parsed.config && typeof parsed.config === "object"
+                      ? {
+                          ...node.data.config,
+                          ...parsed.config,
+                        }
+                      : node.data.config,
                 },
               }
             : node,

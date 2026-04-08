@@ -1,32 +1,75 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
-
-BASE_DIR = Path(__file__).resolve().parents[2]
-RUN_DATA_DIR = BASE_DIR / "data" / "runs"
+from app.core.storage.database import get_connection, row_payload
 
 
 def save_run(run_state: dict[str, Any]) -> None:
-    RUN_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    run_id = run_state["run_id"]
-    run_path = RUN_DATA_DIR / f"{run_id}.json"
-    run_path.write_text(json.dumps(run_state, ensure_ascii=False, indent=2), encoding="utf-8")
+    with get_connection() as connection:
+        connection.execute(
+            """
+            INSERT INTO runs (
+                run_id,
+                graph_id,
+                graph_name,
+                status,
+                current_node_id,
+                revision_round,
+                started_at,
+                completed_at,
+                duration_ms,
+                final_score,
+                payload_json,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(run_id) DO UPDATE SET
+                graph_id = excluded.graph_id,
+                graph_name = excluded.graph_name,
+                status = excluded.status,
+                current_node_id = excluded.current_node_id,
+                revision_round = excluded.revision_round,
+                started_at = excluded.started_at,
+                completed_at = excluded.completed_at,
+                duration_ms = excluded.duration_ms,
+                final_score = excluded.final_score,
+                payload_json = excluded.payload_json,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (
+                run_state["run_id"],
+                run_state.get("graph_id", ""),
+                run_state.get("graph_name", ""),
+                run_state.get("status", "unknown"),
+                run_state.get("current_node_id"),
+                int(run_state.get("revision_round", 0) or 0),
+                run_state.get("started_at", ""),
+                run_state.get("completed_at"),
+                run_state.get("duration_ms"),
+                run_state.get("final_score"),
+                json.dumps(run_state, ensure_ascii=False),
+            ),
+        )
+        connection.commit()
 
 
 def load_run(run_id: str) -> dict[str, Any]:
-    run_path = RUN_DATA_DIR / f"{run_id}.json"
-    if not run_path.exists():
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT payload_json FROM runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+    payload = row_payload(row)
+    if payload is None:
         raise FileNotFoundError(f"Run '{run_id}' does not exist.")
-    return json.loads(run_path.read_text(encoding="utf-8"))
+    return payload
 
 
 def list_runs() -> list[dict[str, Any]]:
-    RUN_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    runs: list[dict[str, Any]] = []
-    for path in sorted(RUN_DATA_DIR.glob("run_*.json"), reverse=True):
-        runs.append(json.loads(path.read_text(encoding="utf-8")))
-    return runs
-
+    with get_connection() as connection:
+        rows = connection.execute(
+            "SELECT payload_json FROM runs ORDER BY started_at DESC, run_id DESC"
+        ).fetchall()
+    return [payload for row in rows if (payload := row_payload(row)) is not None]

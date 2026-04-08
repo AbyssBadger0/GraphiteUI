@@ -70,6 +70,9 @@ backend/.venv/
 backend/*.db
 backend/*.sqlite
 backend/*.sqlite3
+backend/data/*.db
+backend/data/*.sqlite
+backend/data/*.sqlite3
 backend/data/graphs/*.json
 backend/data/memories/runtime/
 backend/data/runs/

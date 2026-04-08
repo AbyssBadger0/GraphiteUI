@@ -151,8 +151,6 @@
 
 仍待增强：
 
-- Runs 搜索 / 筛选
-- Knowledge / Memories 搜索与详情
 - 更强的运行轮询与调试体验
 
 ---
@@ -175,6 +173,7 @@
 - preset 驱动的节点默认参数覆盖
 - preset 驱动的主题策略画像：`hook / payoff / visual / pacing / evaluation focus`
 - 后端 `core/` 目录重组
+- `graphs / runs` SQLite 持久化
 
 仍在推进中的能力：
 
@@ -206,8 +205,6 @@
 
 ## P2 后续增强
 
-- SQLite 持久化替代 JSON
-- Runs / Knowledge / Memories 搜索筛选增强
 - 更精细的 state diff 与调试可视化
 
 ---

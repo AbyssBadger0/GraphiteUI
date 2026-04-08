@@ -1,43 +1,61 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from uuid import uuid4
 
 from app.core.schemas.graph import GraphDocument, GraphPayload
-
-
-BASE_DIR = Path(__file__).resolve().parents[2]
-GRAPH_DATA_DIR = BASE_DIR / "data" / "graphs"
+from app.core.storage.database import get_connection, row_payload
 
 
 def save_graph(graph_payload: GraphPayload) -> GraphDocument:
-    GRAPH_DATA_DIR.mkdir(parents=True, exist_ok=True)
     graph_id = graph_payload.graph_id or _generate_graph_id()
     graph = GraphDocument(
         **graph_payload.model_dump(exclude={"graph_id"}),
         graph_id=graph_id,
     )
-    graph_path = GRAPH_DATA_DIR / f"{graph_id}.json"
-    graph_path.write_text(
-        json.dumps(graph.model_dump(mode="json"), ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    with get_connection() as connection:
+        connection.execute(
+            """
+            INSERT INTO graphs (graph_id, name, template_id, payload_json, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(graph_id) DO UPDATE SET
+                name = excluded.name,
+                template_id = excluded.template_id,
+                payload_json = excluded.payload_json,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (
+                graph.graph_id,
+                graph.name,
+                graph.template_id,
+                graph.model_dump_json(),
+            ),
+        )
+        connection.commit()
     return graph
 
 
 def load_graph(graph_id: str) -> GraphDocument:
-    graph_path = GRAPH_DATA_DIR / f"{graph_id}.json"
-    if not graph_path.exists():
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT payload_json FROM graphs WHERE graph_id = ?",
+            (graph_id,),
+        ).fetchone()
+    payload = row_payload(row)
+    if payload is None:
         raise FileNotFoundError(f"Graph '{graph_id}' does not exist.")
-    return GraphDocument.model_validate_json(graph_path.read_text(encoding="utf-8"))
+    return GraphDocument.model_validate(payload)
 
 
 def list_graphs() -> list[GraphDocument]:
-    GRAPH_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with get_connection() as connection:
+        rows = connection.execute(
+            "SELECT payload_json FROM graphs ORDER BY updated_at DESC, graph_id DESC"
+        ).fetchall()
     graphs: list[GraphDocument] = []
-    for path in sorted(GRAPH_DATA_DIR.glob("graph_*.json"), reverse=True):
-        graphs.append(GraphDocument.model_validate_json(path.read_text(encoding="utf-8")))
+    for row in rows:
+        payload = row_payload(row)
+        if payload is not None:
+            graphs.append(GraphDocument.model_validate(payload))
     return graphs
 
 

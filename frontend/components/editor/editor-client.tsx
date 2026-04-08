@@ -127,6 +127,11 @@ type FlowNodeData = {
   params: Record<string, unknown>;
   stateColors: StateColorMap;
   paramBindings: Record<string, string>;
+  isConnecting: boolean;
+  outputPreview: {
+    kind: "plain" | "markdown" | "json";
+    text: string;
+  } | null;
 };
 
 type FlowNode = Node<FlowNodeData>;
@@ -306,6 +311,8 @@ function graphNodeToFlowNode(node: GraphNodePayload, graph: GraphPayload): FlowN
       params: derivedParams,
       stateColors: {},
       paramBindings: persistedParamBindings,
+      isConnecting: false,
+      outputPreview: null,
     },
     draggable: true,
     sourcePosition: Position.Right,
@@ -359,19 +366,30 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
   const writes = getVisualOutputKeys(data.nodeType, data.writes, data.stateColors, data.params);
   const nameBinding = data.paramBindings.name;
   const localName = String(data.params.name ?? "");
+  const showNameSocket = data.isConnecting || Boolean(nameBinding);
+  const isNameDisabled = Boolean(nameBinding);
+  const inputKey = String(data.params.input_key ?? writes[0] ?? "");
+  const outputSourceKey = String(data.params.source_state_key ?? reads[0] ?? "");
 
   return (
     <div
       className={cn(
-        "rounded-[18px] border bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,237,219,0.96)_100%)] shadow-[0_18px_36px_rgba(60,41,20,0.1)]",
+        "min-w-[260px] rounded-[18px] border bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,237,219,0.96)_100%)] shadow-[0_18px_36px_rgba(60,41,20,0.1)]",
         selected ? "border-[var(--accent)]" : "border-[rgba(154,52,18,0.25)]",
       )}
     >
-      <div className="grid min-h-[118px] grid-cols-[minmax(0,1fr)_176px_minmax(0,1fr)] items-stretch">
-        <div className="border-r border-[rgba(154,52,18,0.08)] px-3 py-3">
-          <div className="mb-2 text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Inputs</div>
-          <div className="flex flex-col gap-1.5">
-            {reads.length > 0 ? reads.map((key) => (
+      <div className="flex items-center justify-between border-b border-[rgba(154,52,18,0.12)] px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[rgba(154,52,18,0.55)]" />
+          <div className="truncate text-sm font-semibold text-[var(--text)]">{data.label}</div>
+        </div>
+        <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{data.nodeType}</div>
+      </div>
+
+      <div className="grid gap-3 px-4 py-3">
+        {reads.length > 0 && data.nodeType !== "text_output" ? (
+          <div className="flex flex-wrap gap-1.5">
+            {reads.map((key) => (
               <StateChip
                 key={`read-${key}`}
                 nodeId={data.nodeId}
@@ -379,49 +397,117 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
                 color={data.stateColors[key] ?? DEFAULT_STATE_COLOR}
                 side="input"
               />
-            )) : <EmptyIoState side="input" />}
+            ))}
           </div>
-        </div>
-        <div className="flex flex-col items-center justify-center px-4 py-3 text-center">
-          <div className="text-[0.7rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{data.nodeType}</div>
-          <div className="mt-2 text-base font-semibold text-[var(--text)]">{data.label}</div>
-          <div className="mt-2 text-[0.8rem] leading-5 text-[var(--muted)]">{data.description}</div>
-          {data.nodeType === "hello_model" ? (
-            <div className="mt-3 flex w-full flex-col items-center gap-2">
-              <ParamInputField
-                nodeId={data.nodeId}
-                paramName="name"
-                value={localName}
-                binding={nameBinding}
-                onChange={(nextValue) => {
-                  reactFlow.setNodes((current) =>
-                    current.map((node) =>
-                      node.id === data.nodeId
-                        ? {
-                            ...node,
-                            data: {
-                              ...node.data,
-                              params: {
-                                ...node.data.params,
-                                name: nextValue,
-                              },
+        ) : null}
+
+        {data.nodeType === "text_input" ? (
+          <div className="grid gap-2">
+            <WidgetLabel label="Text" />
+            <textarea
+              value={String(data.params.default_value ?? "")}
+              onChange={(event) => {
+                event.stopPropagation();
+                reactFlow.setNodes((current) =>
+                  current.map((node) =>
+                    node.id === data.nodeId
+                      ? {
+                          ...node,
+                          data: {
+                            ...node.data,
+                            params: {
+                              ...node.data.params,
+                              default_value: event.target.value,
                             },
-                          }
-                        : node,
-                    ),
-                  );
-                }}
-              />
-              <div className="rounded-full border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-1 text-[0.68rem] text-[var(--muted)]">
-                {nameBinding ? `Connected state overrides this text field: ${nameBinding}` : "No connection: local text is used at runtime"}
-              </div>
+                          },
+                        }
+                      : node,
+                  ),
+                );
+              }}
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+              placeholder={String(data.params.placeholder ?? "Enter text")}
+              className="min-h-[110px] w-full resize-none rounded-[14px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.86)] px-3 py-3 text-sm leading-6 text-[var(--text)] outline-none placeholder:text-[var(--muted)]"
+              aria-label={`${data.nodeId}-text-input`}
+            />
+            <SocketRow
+              nodeId={data.nodeId}
+              label={inputKey || "output"}
+              color={data.stateColors[inputKey] ?? DEFAULT_STATE_COLOR}
+              side="output"
+            />
+          </div>
+        ) : null}
+
+        {data.nodeType === "hello_model" ? (
+          <div className="grid gap-3">
+            <div className="text-sm leading-6 text-[var(--muted)]">{data.description}</div>
+            <SocketField
+              nodeId={data.nodeId}
+              paramName="name"
+              label="Name"
+              value={localName}
+              binding={nameBinding}
+              showSocket={showNameSocket}
+              disabled={isNameDisabled}
+              onChange={(nextValue) => {
+                reactFlow.setNodes((current) =>
+                  current.map((node) =>
+                    node.id === data.nodeId
+                      ? {
+                          ...node,
+                          data: {
+                            ...node.data,
+                            params: {
+                              ...node.data.params,
+                              name: nextValue,
+                            },
+                          },
+                        }
+                      : node,
+                  ),
+                );
+              }}
+            />
+            <div
+              className={cn(
+                "rounded-[14px] border px-3 py-2 text-[0.72rem] leading-5",
+                nameBinding
+                  ? "border-[rgba(154,52,18,0.14)] bg-[rgba(241,234,225,0.9)] text-[var(--muted)]"
+                  : "border-[rgba(31,111,80,0.14)] bg-[rgba(241,250,245,0.88)] text-[var(--success)]",
+              )}
+            >
+              {nameBinding ? `已接入外部输入，运行时使用 ${nameBinding} 覆盖本地文本。` : "未接入外部输入，运行时使用本地文本。"}
             </div>
-          ) : null}
-        </div>
-        <div className="border-l border-[rgba(154,52,18,0.08)] px-3 py-3">
-          <div className="mb-2 text-right text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Outputs</div>
-          <div className="flex flex-col gap-1.5">
-            {writes.length > 0 ? writes.map((key) => (
+          </div>
+        ) : null}
+
+        {data.nodeType === "text_output" ? (
+          <div className="grid gap-2">
+            <SocketRow
+              nodeId={data.nodeId}
+              label={outputSourceKey || "input"}
+              color={data.stateColors[outputSourceKey] ?? DEFAULT_STATE_COLOR}
+              side="input"
+            />
+            <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.82)] p-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <WidgetLabel label="Preview" />
+                {data.outputPreview ? (
+                  <span className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">
+                    {data.outputPreview.kind}
+                  </span>
+                ) : null}
+              </div>
+              <OutputPreviewPanel preview={data.outputPreview} />
+            </div>
+          </div>
+        ) : null}
+
+        {writes.length > 0 && data.nodeType !== "text_input" ? (
+          <div className="flex flex-wrap justify-end gap-1.5">
+            {writes.map((key) => (
               <StateChip
                 key={`write-${key}`}
                 nodeId={data.nodeId}
@@ -429,10 +515,63 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
                 color={data.stateColors[key] ?? DEFAULT_STATE_COLOR}
                 side="output"
               />
-            )) : <EmptyIoState side="output" />}
+            ))}
           </div>
-        </div>
+        ) : null}
+
+        {reads.length === 0 && writes.length === 0 ? <EmptyIoState side="input" /> : null}
       </div>
+    </div>
+  );
+}
+
+function WidgetLabel({ label }: { label: string }) {
+  return <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{label}</div>;
+}
+
+function SocketRow({
+  nodeId,
+  label,
+  color,
+  side,
+}: {
+  nodeId: string;
+  label: string;
+  color: string;
+  side: "input" | "output";
+}) {
+  return (
+    <div
+      className={cn(
+        "relative inline-flex items-center gap-2 rounded-full border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.82)] px-3 py-1.5 text-[0.72rem] font-medium text-[var(--text)]",
+        side === "input" ? "self-start" : "self-end",
+      )}
+    >
+      {side === "input" ? (
+        <>
+          <Handle
+            id={buildHandleId("input", label)}
+            type="target"
+            position={Position.Left}
+            className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !border-[rgba(154,52,18,0.24)] !bg-white"
+            isConnectable
+          />
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+          <span>{label}</span>
+        </>
+      ) : (
+        <>
+          <span>{label}</span>
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+          <Handle
+            id={buildHandleId("output", label)}
+            type="source"
+            position={Position.Right}
+            className="!right-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !border-[rgba(154,52,18,0.24)] !bg-white"
+            isConnectable
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -484,41 +623,137 @@ function StateChip({
   );
 }
 
-function ParamInputField({
+function SocketField({
   nodeId,
   paramName,
+  label,
   value,
   binding,
+  showSocket,
+  disabled,
   onChange,
 }: {
   nodeId: string;
   paramName: string;
+  label: string;
   value: string;
   binding?: string;
+  showSocket: boolean;
+  disabled: boolean;
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="relative flex w-full max-w-[180px] items-center rounded-[14px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-2.5 py-2">
-      <Handle
-        id={buildParamHandleId(paramName)}
-        type="target"
-        position={Position.Left}
-        className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !border-[rgba(154,52,18,0.24)] !bg-white"
-        isConnectable
-      />
-      <input
-        value={value}
-        onChange={(event) => {
-          event.stopPropagation();
-          onChange(event.target.value);
-        }}
-        onClick={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-        placeholder={paramName}
-        className="w-full border-none bg-transparent text-center text-[0.8rem] text-[var(--text)] outline-none placeholder:text-[var(--muted)]"
-        aria-label={`${nodeId}-${paramName}`}
-      />
-      {binding ? <span className="ml-2 shrink-0 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--accent-strong)]">link</span> : null}
+    <div className="grid gap-1.5">
+      <WidgetLabel label={label} />
+      <div
+        className={cn(
+          "relative flex w-full items-center rounded-[14px] border px-2.5 py-2 transition-colors",
+          disabled
+            ? "border-[rgba(154,52,18,0.12)] bg-[rgba(238,232,225,0.92)] text-[rgba(31,41,55,0.55)]"
+            : "border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)]",
+        )}
+      >
+        {showSocket ? (
+          <Handle
+            id={buildParamHandleId(paramName)}
+            type="target"
+            position={Position.Left}
+            className={cn(
+              "!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !bg-white",
+              binding ? "!border-[rgba(31,111,80,0.5)] !shadow-[0_0_0_3px_rgba(31,111,80,0.12)]" : "!border-[rgba(217,119,6,0.55)] !shadow-[0_0_0_3px_rgba(217,119,6,0.12)]",
+            )}
+            isConnectable
+          />
+        ) : null}
+        <input
+          value={value}
+          disabled={disabled}
+          onChange={(event) => {
+            event.stopPropagation();
+            onChange(event.target.value);
+          }}
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+          placeholder={paramName}
+          className={cn(
+            "w-full border-none bg-transparent text-sm outline-none placeholder:text-[var(--muted)]",
+            disabled && "cursor-not-allowed text-[rgba(31,41,55,0.55)]",
+          )}
+          aria-label={`${nodeId}-${paramName}`}
+        />
+        {binding ? <span className="ml-2 shrink-0 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--accent-strong)]">override</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function OutputPreviewPanel({
+  preview,
+}: {
+  preview: FlowNodeData["outputPreview"];
+}) {
+  if (!preview?.text) {
+    return <div className="max-h-[180px] overflow-auto rounded-[12px] bg-[rgba(248,242,234,0.8)] px-3 py-3 text-sm text-[var(--muted)]">No output yet</div>;
+  }
+
+  if (preview.kind === "json") {
+    return (
+      <pre className="max-h-[180px] overflow-auto rounded-[12px] bg-[rgba(248,242,234,0.8)] px-3 py-3 font-mono text-[0.76rem] leading-6 text-[var(--text)]">
+        {preview.text}
+      </pre>
+    );
+  }
+
+  if (preview.kind === "markdown") {
+    return (
+      <div className="max-h-[180px] overflow-auto rounded-[12px] bg-[rgba(248,242,234,0.8)] px-3 py-3 text-sm leading-6 text-[var(--text)]">
+        <SimpleMarkdownPreview text={preview.text} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-h-[180px] overflow-auto whitespace-pre-wrap break-words rounded-[12px] bg-[rgba(248,242,234,0.8)] px-3 py-3 text-sm leading-6 text-[var(--text)]">
+      {preview.text}
+    </div>
+  );
+}
+
+function SimpleMarkdownPreview({ text }: { text: string }) {
+  return (
+    <div className="space-y-2">
+      {text.split(/\n{2,}/).map((block, index) => {
+        const trimmed = block.trim();
+        if (!trimmed) {
+          return null;
+        }
+        if (trimmed.startsWith("### ")) {
+          return <h3 key={index} className="text-sm font-semibold">{trimmed.slice(4)}</h3>;
+        }
+        if (trimmed.startsWith("## ")) {
+          return <h2 key={index} className="text-base font-semibold">{trimmed.slice(3)}</h2>;
+        }
+        if (trimmed.startsWith("# ")) {
+          return <h1 key={index} className="text-lg font-semibold">{trimmed.slice(2)}</h1>;
+        }
+        if (trimmed.startsWith("- ")) {
+          return (
+            <ul key={index} className="space-y-1 pl-4">
+              {trimmed.split("\n").map((line, lineIndex) => (
+                <li key={lineIndex} className="list-disc">{line.replace(/^- /, "")}</li>
+              ))}
+            </ul>
+          );
+        }
+        if (trimmed.startsWith("```") && trimmed.endsWith("```")) {
+          return (
+            <pre key={index} className="overflow-auto rounded-[10px] bg-[rgba(255,255,255,0.78)] px-3 py-2 font-mono text-[0.76rem] leading-6">
+              {trimmed.replace(/^```[\w-]*\n?/, "").replace(/\n?```$/, "")}
+            </pre>
+          );
+        }
+        return <p key={index} className="whitespace-pre-wrap break-words">{trimmed}</p>;
+      })}
     </div>
   );
 }
@@ -554,6 +789,62 @@ function buildParamHandleId(paramName: string) {
 
 function uniqueKeys(values: string[]) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function isLikelyMarkdown(value: string) {
+  return /(^|\n)(#{1,6}\s|-\s|>\s|\d+\.\s|```)/.test(value);
+}
+
+function detectOutputPreview(value: unknown, displayMode?: string): FlowNodeData["outputPreview"] {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (displayMode === "json") {
+    if (typeof value === "string") {
+      try {
+        return {
+          kind: "json",
+          text: JSON.stringify(JSON.parse(value), null, 2),
+        };
+      } catch {
+        return { kind: "json", text: value };
+      }
+    }
+    return { kind: "json", text: JSON.stringify(value, null, 2) };
+  }
+
+  if (displayMode === "markdown") {
+    return { kind: "markdown", text: typeof value === "string" ? value : JSON.stringify(value, null, 2) };
+  }
+
+  if (typeof value === "object") {
+    return { kind: "json", text: JSON.stringify(value, null, 2) };
+  }
+
+  const text = String(value);
+  const trimmed = text.trim();
+
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      return {
+        kind: "json",
+        text: JSON.stringify(JSON.parse(trimmed), null, 2),
+      };
+    } catch {
+      // fall through
+    }
+  }
+
+  if (displayMode === "plain") {
+    return { kind: "plain", text };
+  }
+
+  if (isLikelyMarkdown(text)) {
+    return { kind: "markdown", text };
+  }
+
+  return { kind: "plain", text };
 }
 
 function getStateKeyFromHandle(handleId?: string | null) {
@@ -735,6 +1026,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
   const [search, setSearch] = useState("");
   const [stateSearch, setStateSearch] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready");
   const [validationIssues, setValidationIssues] = useState<ApiIssue[]>([]);
   const [runDetail, setRunDetail] = useState<RunDetail | null>(null);
@@ -789,10 +1081,18 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
           ...node.data,
           stateColors,
           paramBindings: paramBindingsByNode[node.id] ?? {},
+          isConnecting,
+          outputPreview:
+            node.data.nodeType === "text_output"
+              ? detectOutputPreview(
+                  runDetail?.state_snapshot?.[String(node.data.params.source_state_key ?? "")] ?? runDetail?.final_result ?? "",
+                  String(node.data.params.display_mode ?? "auto"),
+                )
+              : null,
         },
       })),
     );
-  }, [paramBindingsByNode, stateColors, setNodes]);
+  }, [isConnecting, paramBindingsByNode, runDetail, stateColors, setNodes]);
 
   useEffect(() => {
     setEdges((current) =>
@@ -945,6 +1245,8 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
           params: { ...preset.params },
           stateColors,
           paramBindings: {},
+          isConnecting: false,
+          outputPreview: null,
         },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
@@ -1292,20 +1594,25 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
+              onConnectStart={() => setIsConnecting(true)}
+              onConnectEnd={() => setIsConnecting(false)}
               onConnect={(connection: Connection) => {
                 const sourceKey = getStateKeyFromHandle(connection.sourceHandle);
                 const targetKey = getStateKeyFromHandle(connection.targetHandle);
                 const targetParam = getParamNameFromHandle(connection.targetHandle);
 
                 if (!sourceKey) {
+                  setIsConnecting(false);
                   setStatusMessage("Connect from a state output handle.");
                   return;
                 }
                 if (!targetKey && !targetParam) {
+                  setIsConnecting(false);
                   setStatusMessage("Connect to a state input or parameter handle.");
                   return;
                 }
                 if (targetKey && sourceKey !== targetKey) {
+                  setIsConnecting(false);
                   setStatusMessage("Only matching state keys can be connected.");
                   return;
                 }
@@ -1330,6 +1637,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                   );
                   return exists ? current : current.concat(nextEdge);
                 });
+                setIsConnecting(false);
                 setStatusMessage(targetParam ? `Bound ${sourceKey} to ${targetParam}` : `Connected ${sourceKey}`);
               }}
               onSelectionChange={handleSelectionChange}

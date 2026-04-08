@@ -57,6 +57,7 @@
 - `development_plan.md`
 - `framework_rebuild_execution_backlog.md`
 - `acceptance_runbook.md`
+- `editor_interaction_spec.md`
 
 ---
 
@@ -69,6 +70,7 @@
 3. `docs/active/framework_rebuild_execution_backlog.md`
 4. `docs/active/development_plan.md`
 5. `docs/active/acceptance_runbook.md`
+6. `docs/active/editor_interaction_spec.md`
 
 如果你只是想理解项目历史，再去看：
 

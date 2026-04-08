@@ -211,6 +211,8 @@ GraphiteUI editor 的目标不是做通用流程图工具。
 - 若参数 socket 未连接，则使用本地 widget 值
 - 参数 widget 默认不必常驻显示输入 socket，但在拖线中的连线态应暴露可接入位置
 - 参数 socket 接入后，本地 widget 保留可见但切换为禁用态，用于表达“当前值被上游覆盖”
+- 前端节点外观应优先展示通用端口语义，例如 `text`，而不是直接暴露某个 graph 的具体 state key
+- 前端节点定义建议采用 `inputs / outputs / widgets` 的配置式结构，再在编译阶段映射到后端真实 `reads / writes / params`
 
 该规则属于 editor 交互模型，不改变后端 LangGraph 的基本运行语义。
 

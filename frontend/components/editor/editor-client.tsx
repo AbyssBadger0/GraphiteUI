@@ -136,6 +136,24 @@ type FlowNodeData = {
 
 type FlowNode = Node<FlowNodeData>;
 
+type PortType = "text" | "json" | "any";
+
+type NodeWidgetDefinition = {
+  key: string;
+  label: string;
+  widget: "text" | "textarea";
+  valueType: PortType;
+  bindable?: boolean;
+  rows?: number;
+  placeholder?: string;
+};
+
+type NodePortDefinition = {
+  key: string;
+  label: string;
+  valueType: PortType;
+};
+
 type NodePreset = {
   type: string;
   label: string;
@@ -143,6 +161,9 @@ type NodePreset = {
   reads: string[];
   writes: string[];
   params: Record<string, unknown>;
+  inputs?: NodePortDefinition[];
+  outputs?: NodePortDefinition[];
+  widgets?: NodeWidgetDefinition[];
 };
 
 const HELLO_WORLD_TEMPLATE_ID = "hello_world";
@@ -163,6 +184,9 @@ const NODE_PRESETS: Record<string, NodePreset> = {
       placeholder: "Enter a name",
       multiline: false,
     },
+    inputs: [],
+    outputs: [{ key: "text", label: "text", valueType: "text" }],
+    widgets: [{ key: "text", label: "Text", widget: "textarea", valueType: "text", bindable: true, rows: 5, placeholder: "Enter text" }],
   },
   hello_model: {
     type: "hello_model",
@@ -175,6 +199,13 @@ const NODE_PRESETS: Record<string, NodePreset> = {
       temperature: 0.2,
       max_tokens: 40,
     },
+    inputs: [],
+    outputs: [
+      { key: "greeting", label: "greeting", valueType: "text" },
+      { key: "final_result", label: "final_result", valueType: "text" },
+      { key: "llm_response", label: "llm_response", valueType: "text" },
+    ],
+    widgets: [{ key: "name", label: "Name", widget: "text", valueType: "text", bindable: true, placeholder: "Enter a name" }],
   },
   text_output: {
     type: "text_output",
@@ -189,6 +220,9 @@ const NODE_PRESETS: Record<string, NodePreset> = {
       persist_format: "txt",
       file_name_template: "result",
     },
+    inputs: [{ key: "text", label: "text", valueType: "text" }],
+    outputs: [],
+    widgets: [],
   },
 };
 
@@ -343,33 +377,97 @@ function getNodeStyle(nodeType: string) {
 
 function getVisualInputKeys(nodeType: string, reads: string[], stateColors: StateColorMap, params: Record<string, unknown>) {
   if (nodeType === "text_output") {
-    const sourceStateKey = String(params.source_state_key ?? "").trim();
-    return sourceStateKey ? [sourceStateKey] : reads;
+    return ["text"];
   }
-  if (nodeType === "hello_model") {
-    return reads.filter((key) => key !== "name");
-  }
+  if (nodeType === "hello_model") return [];
   return reads;
 }
 
 function getVisualOutputKeys(nodeType: string, writes: string[], stateColors: StateColorMap, params: Record<string, unknown>) {
   if (nodeType === "text_input") {
-    const inputKey = String(params.input_key ?? "").trim();
-    return inputKey ? [inputKey] : writes;
+    return ["text"];
   }
   return writes;
 }
 
+function getNodePreset(nodeType: string) {
+  return NODE_PRESETS[nodeType];
+}
+
+function getWidgetValue(node: FlowNodeData, widgetKey: string) {
+  if (node.nodeType === "text_input" && widgetKey === "text") {
+    return String(node.params.default_value ?? "");
+  }
+  return String(node.params[widgetKey] ?? "");
+}
+
+function updateWidgetValue(node: FlowNodeData, widgetKey: string, nextValue: string) {
+  if (node.nodeType === "text_input" && widgetKey === "text") {
+    return {
+      ...node,
+      params: {
+        ...node.params,
+        default_value: nextValue,
+      },
+    };
+  }
+  return {
+    ...node,
+    params: {
+      ...node.params,
+      [widgetKey]: nextValue,
+    },
+  };
+}
+
+function resolveOutputStateKey(node: FlowNodeData, portKey: string) {
+  if (node.nodeType === "text_input" && portKey === "text") {
+    return String(node.params.input_key ?? "").trim() || node.writes[0] || "";
+  }
+  return portKey;
+}
+
+function resolveInputStateKey(node: FlowNodeData, portKey: string) {
+  if (node.nodeType === "text_output" && portKey === "text") {
+    return String(node.params.source_state_key ?? "").trim() || node.reads[0] || "";
+  }
+  return portKey;
+}
+
+function resolveHandlePortType(node: FlowNodeData, handleId?: string | null): PortType | null {
+  const preset = getNodePreset(node.nodeType);
+  const stateKey = getStateKeyFromHandle(handleId);
+  if (stateKey) {
+    const inputPort = preset?.inputs?.find((item) => item.key === stateKey);
+    if (inputPort) return inputPort.valueType;
+    const outputPort = preset?.outputs?.find((item) => item.key === stateKey);
+    if (outputPort) return outputPort.valueType;
+    return "text";
+  }
+  const paramName = getParamNameFromHandle(handleId);
+  if (paramName) {
+    return preset?.widgets?.find((item) => item.key === paramName)?.valueType ?? "text";
+  }
+  return null;
+}
+
+function resolveActualFlowKeyFromNode(node: FlowNodeData, handleId?: string | null) {
+  const stateKey = getStateKeyFromHandle(handleId);
+  if (!stateKey) {
+    return null;
+  }
+  if (handleId?.startsWith("output:")) {
+    return resolveOutputStateKey(node, stateKey);
+  }
+  return resolveInputStateKey(node, stateKey);
+}
+
 function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
   const reactFlow = useReactFlow<FlowNode, Edge>();
+  const preset = getNodePreset(data.nodeType);
   const reads = getVisualInputKeys(data.nodeType, data.reads, data.stateColors, data.params);
   const writes = getVisualOutputKeys(data.nodeType, data.writes, data.stateColors, data.params);
-  const nameBinding = data.paramBindings.name;
-  const localName = String(data.params.name ?? "");
-  const showNameSocket = data.isConnecting || Boolean(nameBinding);
-  const isNameDisabled = Boolean(nameBinding);
-  const inputKey = String(data.params.input_key ?? writes[0] ?? "");
-  const outputSourceKey = String(data.params.source_state_key ?? reads[0] ?? "");
+  const outputSourceKey = String(data.params.source_state_key ?? data.reads[0] ?? "");
 
   return (
     <div
@@ -401,85 +499,63 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
           </div>
         ) : null}
 
-        {data.nodeType === "text_input" ? (
-          <div className="grid gap-2">
-            <WidgetLabel label="Text" />
-            <textarea
-              value={String(data.params.default_value ?? "")}
-              onChange={(event) => {
-                event.stopPropagation();
-                reactFlow.setNodes((current) =>
-                  current.map((node) =>
-                    node.id === data.nodeId
-                      ? {
-                          ...node,
-                          data: {
-                            ...node.data,
-                            params: {
-                              ...node.data.params,
-                              default_value: event.target.value,
-                            },
-                          },
-                        }
-                      : node,
-                  ),
-                );
-              }}
-              onClick={(event) => event.stopPropagation()}
-              onPointerDown={(event) => event.stopPropagation()}
-              placeholder={String(data.params.placeholder ?? "Enter text")}
-              className="min-h-[110px] w-full resize-none rounded-[14px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.86)] px-3 py-3 text-sm leading-6 text-[var(--text)] outline-none placeholder:text-[var(--muted)]"
-              aria-label={`${data.nodeId}-text-input`}
-            />
-            <SocketRow
-              nodeId={data.nodeId}
-              label={inputKey || "output"}
-              color={data.stateColors[inputKey] ?? DEFAULT_STATE_COLOR}
-              side="output"
-            />
-          </div>
-        ) : null}
-
-        {data.nodeType === "hello_model" ? (
+        {preset?.widgets?.length ? (
           <div className="grid gap-3">
-            <div className="text-sm leading-6 text-[var(--muted)]">{data.description}</div>
-            <SocketField
-              nodeId={data.nodeId}
-              paramName="name"
-              label="Name"
-              value={localName}
-              binding={nameBinding}
-              showSocket={showNameSocket}
-              disabled={isNameDisabled}
-              onChange={(nextValue) => {
-                reactFlow.setNodes((current) =>
-                  current.map((node) =>
-                    node.id === data.nodeId
-                      ? {
-                          ...node,
-                          data: {
-                            ...node.data,
-                            params: {
-                              ...node.data.params,
-                              name: nextValue,
-                            },
-                          },
-                        }
-                      : node,
-                  ),
-                );
-              }}
-            />
-            <div
-              className={cn(
-                "rounded-[14px] border px-3 py-2 text-[0.72rem] leading-5",
-                nameBinding
-                  ? "border-[rgba(154,52,18,0.14)] bg-[rgba(241,234,225,0.9)] text-[var(--muted)]"
-                  : "border-[rgba(31,111,80,0.14)] bg-[rgba(241,250,245,0.88)] text-[var(--success)]",
-              )}
-            >
-              {nameBinding ? `已接入外部输入，运行时使用 ${nameBinding} 覆盖本地文本。` : "未接入外部输入，运行时使用本地文本。"}
-            </div>
+            {data.nodeType !== "text_input" ? (
+              <div className="text-sm leading-6 text-[var(--muted)]">{data.description}</div>
+            ) : null}
+            {preset.widgets.map((widget) => {
+              const binding = data.paramBindings[widget.key];
+              const showSocket = Boolean(widget.bindable) && (data.isConnecting || Boolean(binding));
+              const disabled = Boolean(binding);
+              return (
+                <SocketField
+                  key={widget.key}
+                  nodeId={data.nodeId}
+                  paramName={widget.key}
+                  label={widget.label}
+                  value={getWidgetValue(data, widget.key)}
+                  binding={binding}
+                  showSocket={showSocket}
+                  disabled={disabled}
+                  widgetType={widget.widget}
+                  rows={widget.rows}
+                  placeholder={widget.placeholder ?? String(data.params.placeholder ?? "")}
+                  onChange={(nextValue) => {
+                    reactFlow.setNodes((current) =>
+                      current.map((node) =>
+                        node.id === data.nodeId
+                          ? {
+                              ...node,
+                              data: updateWidgetValue(node.data, widget.key, nextValue),
+                            }
+                          : node,
+                      ),
+                    );
+                  }}
+                />
+              );
+            })}
+            {preset.widgets.some((widget) => Boolean(data.paramBindings[widget.key])) ? (
+              <div className="rounded-[14px] border border-[rgba(154,52,18,0.14)] bg-[rgba(241,234,225,0.9)] px-3 py-2 text-[0.72rem] leading-5 text-[var(--muted)]">
+                {preset.widgets
+                  .filter((widget) => Boolean(data.paramBindings[widget.key]))
+                  .map((widget) => `${widget.label} 已由 ${data.paramBindings[widget.key]} 覆盖`)
+                  .join(" · ")}
+              </div>
+            ) : (
+              <div className="rounded-[14px] border border-[rgba(31,111,80,0.14)] bg-[rgba(241,250,245,0.88)] px-3 py-2 text-[0.72rem] leading-5 text-[var(--success)]">
+                未接入外部输入，运行时使用本地文本。
+              </div>
+            )}
+            {data.nodeType === "text_input" ? (
+              <SocketRow
+                nodeId={data.nodeId}
+                label="text"
+                color={data.stateColors[resolveOutputStateKey(data, "text")] ?? DEFAULT_STATE_COLOR}
+                side="output"
+              />
+            ) : null}
           </div>
         ) : null}
 
@@ -487,7 +563,7 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
           <div className="grid gap-2">
             <SocketRow
               nodeId={data.nodeId}
-              label={outputSourceKey || "input"}
+              label="text"
               color={data.stateColors[outputSourceKey] ?? DEFAULT_STATE_COLOR}
               side="input"
             />
@@ -631,6 +707,9 @@ function SocketField({
   binding,
   showSocket,
   disabled,
+  widgetType,
+  rows,
+  placeholder,
   onChange,
 }: {
   nodeId: string;
@@ -640,14 +719,22 @@ function SocketField({
   binding?: string;
   showSocket: boolean;
   disabled: boolean;
+  widgetType: "text" | "textarea";
+  rows?: number;
+  placeholder?: string;
   onChange: (value: string) => void;
 }) {
+  const baseInputClass = cn(
+    "w-full border-none bg-transparent text-sm outline-none placeholder:text-[var(--muted)]",
+    disabled && "cursor-not-allowed text-[rgba(31,41,55,0.55)]",
+  );
+
   return (
     <div className="grid gap-1.5">
       <WidgetLabel label={label} />
       <div
         className={cn(
-          "relative flex w-full items-center rounded-[14px] border px-2.5 py-2 transition-colors",
+          "relative rounded-[14px] border px-2.5 py-2 transition-colors",
           disabled
             ? "border-[rgba(154,52,18,0.12)] bg-[rgba(238,232,225,0.92)] text-[rgba(31,41,55,0.55)]"
             : "border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)]",
@@ -665,22 +752,36 @@ function SocketField({
             isConnectable
           />
         ) : null}
-        <input
-          value={value}
-          disabled={disabled}
-          onChange={(event) => {
-            event.stopPropagation();
-            onChange(event.target.value);
-          }}
-          onClick={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
-          placeholder={paramName}
-          className={cn(
-            "w-full border-none bg-transparent text-sm outline-none placeholder:text-[var(--muted)]",
-            disabled && "cursor-not-allowed text-[rgba(31,41,55,0.55)]",
-          )}
-          aria-label={`${nodeId}-${paramName}`}
-        />
+        {widgetType === "textarea" ? (
+          <textarea
+            value={value}
+            disabled={disabled}
+            rows={rows ?? 5}
+            onChange={(event) => {
+              event.stopPropagation();
+              onChange(event.target.value);
+            }}
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            placeholder={placeholder ?? paramName}
+            className={cn(baseInputClass, "min-h-[110px] resize-none px-1 py-1 leading-6")}
+            aria-label={`${nodeId}-${paramName}`}
+          />
+        ) : (
+          <input
+            value={value}
+            disabled={disabled}
+            onChange={(event) => {
+              event.stopPropagation();
+              onChange(event.target.value);
+            }}
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            placeholder={placeholder ?? paramName}
+            className={baseInputClass}
+            aria-label={`${nodeId}-${paramName}`}
+          />
+        )}
         {binding ? <span className="ml-2 shrink-0 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--accent-strong)]">override</span> : null}
       </div>
     </div>
@@ -871,6 +972,7 @@ function createVisualEdge(params: {
   source: string;
   target: string;
   flowKey: string | null;
+  actualFlowKey?: string | null;
   edgeKind?: "normal" | "branch";
   branchLabel?: "pass" | "revise" | "fail" | null;
   stateColors: StateColorMap;
@@ -881,7 +983,8 @@ function createVisualEdge(params: {
   const edgeKind = params.edgeKind ?? "normal";
   const branchLabel = params.branchLabel ?? null;
   const flowKeys = params.flowKey ? [params.flowKey] : [];
-  const color = params.flowKey ? params.stateColors[params.flowKey] ?? "#9a3412" : "#9a3412";
+  const colorKey = params.actualFlowKey ?? params.flowKey;
+  const color = colorKey ? params.stateColors[colorKey] ?? "#9a3412" : "#9a3412";
 
   return {
     id: params.id,
@@ -896,6 +999,7 @@ function createVisualEdge(params: {
       branch_label: branchLabel,
       logical_id: params.logicalId ?? params.id,
       flow_key: params.flowKey,
+      actual_flow_key: params.actualFlowKey ?? params.flowKey,
     },
     markerEnd: { type: MarkerType.ArrowClosed, color },
     style: {
@@ -919,6 +1023,9 @@ function createVisualEdge(params: {
 
 function explodeGraphEdges(graph: GraphPayload, colors: StateColorMap): Edge[] {
   return graph.edges.flatMap((edge) => {
+    const sourceNode = graph.nodes.find((node) => node.id === edge.source);
+    const targetNode = graph.nodes.find((node) => node.id === edge.target);
+
     if (edge.flow_keys.length === 0) {
       return [
         createVisualEdge({
@@ -926,6 +1033,7 @@ function explodeGraphEdges(graph: GraphPayload, colors: StateColorMap): Edge[] {
           source: edge.source,
           target: edge.target,
           flowKey: null,
+          actualFlowKey: null,
           edgeKind: edge.edge_kind,
           branchLabel: edge.branch_label ?? null,
           stateColors: colors,
@@ -939,10 +1047,13 @@ function explodeGraphEdges(graph: GraphPayload, colors: StateColorMap): Edge[] {
         id: `${edge.id}__${flowKey}__${index}`,
         source: edge.source,
         target: edge.target,
-        flowKey,
+        flowKey: sourceNode?.type === "start" || targetNode?.type === "end" ? "text" : flowKey,
+        actualFlowKey: flowKey,
         edgeKind: edge.edge_kind,
         branchLabel: edge.branch_label ?? null,
         stateColors: colors,
+        sourceHandle: sourceNode?.type === "start" ? buildHandleId("output", "text") : undefined,
+        targetHandle: targetNode?.type === "end" ? buildHandleId("input", "text") : undefined,
         logicalId: edge.id,
       }),
     );
@@ -951,7 +1062,7 @@ function explodeGraphEdges(graph: GraphPayload, colors: StateColorMap): Edge[] {
 
 function collectParamBindings(edges: Edge[]) {
   return edges.reduce<Record<string, Record<string, string>>>((accumulator, edge) => {
-    const sourceKey = getStateKeyFromHandle(edge.sourceHandle);
+    const sourceKey = ((edge.data?.actual_flow_key as string | undefined) ?? getStateKeyFromHandle(edge.sourceHandle)) || null;
     const paramName = getParamNameFromHandle(edge.targetHandle);
     if (!sourceKey || !paramName) {
       return accumulator;
@@ -973,7 +1084,7 @@ function collapseVisualEdges(edges: Edge[]): GraphEdgePayload[] {
   edges.forEach((edge, index) => {
     const edgeKind = (edge.data?.edge_kind as "normal" | "branch" | undefined) ?? "normal";
     const branchLabel = (edge.data?.branch_label as "pass" | "revise" | "fail" | null | undefined) ?? null;
-    const flowKey = (edge.data?.flow_key as string | null | undefined) ?? getStateKeyFromHandle(edge.sourceHandle);
+    const flowKey = (edge.data?.actual_flow_key as string | null | undefined) ?? getStateKeyFromHandle(edge.sourceHandle);
     const groupKey = [edge.source, edge.target, edgeKind, branchLabel ?? ""].join("::");
     const existing =
       grouped.get(groupKey) ??
@@ -1097,7 +1208,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
   useEffect(() => {
     setEdges((current) =>
       current.map((edge) => {
-        const flowKey = (edge.data?.flow_key as string | null | undefined) ?? null;
+        const flowKey = (edge.data?.actual_flow_key as string | null | undefined) ?? (edge.data?.flow_key as string | null | undefined) ?? null;
         const color = flowKey ? stateColors[flowKey] ?? "#9a3412" : "#9a3412";
         return {
           ...edge,
@@ -1143,9 +1254,14 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
       const runtimeType = editorNodeTypeToRuntimeNodeType(node.data.nodeType);
       const inputKey = String(node.data.params.input_key ?? "").trim();
       const sourceStateKey = String(node.data.params.source_state_key ?? "").trim();
-      const reads = node.data.nodeType === "text_output" ? uniqueKeys([sourceStateKey || node.data.reads[0] || ""]) : node.data.reads;
-      const writes = node.data.nodeType === "text_input" ? uniqueKeys([inputKey || node.data.writes[0] || ""]) : node.data.writes;
       const paramBindings = paramBindingsByNode[node.id] ?? {};
+      const reads =
+        node.data.nodeType === "text_output"
+          ? uniqueKeys([sourceStateKey || node.data.reads[0] || ""])
+          : node.data.nodeType === "text_input" && paramBindings.text
+            ? uniqueKeys([paramBindings.text])
+            : node.data.reads;
+      const writes = node.data.nodeType === "text_input" ? uniqueKeys([inputKey || node.data.writes[0] || ""]) : node.data.writes;
 
       let params = node.data.params;
       if (node.data.nodeType === "text_input") {
@@ -1597,11 +1713,15 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
               onConnectStart={() => setIsConnecting(true)}
               onConnectEnd={() => setIsConnecting(false)}
               onConnect={(connection: Connection) => {
+                const sourceNode = nodes.find((node) => node.id === connection.source)?.data;
+                const targetNode = nodes.find((node) => node.id === connection.target)?.data;
                 const sourceKey = getStateKeyFromHandle(connection.sourceHandle);
                 const targetKey = getStateKeyFromHandle(connection.targetHandle);
                 const targetParam = getParamNameFromHandle(connection.targetHandle);
+                const sourceType = sourceNode ? resolveHandlePortType(sourceNode, connection.sourceHandle) : null;
+                const targetType = targetNode ? resolveHandlePortType(targetNode, connection.targetHandle) : null;
 
-                if (!sourceKey) {
+                if (!sourceNode || !targetNode || !sourceKey) {
                   setIsConnecting(false);
                   setStatusMessage("Connect from a state output handle.");
                   return;
@@ -1611,11 +1731,14 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                   setStatusMessage("Connect to a state input or parameter handle.");
                   return;
                 }
-                if (targetKey && sourceKey !== targetKey) {
+                if (sourceType && targetType && sourceType !== "any" && targetType !== "any" && sourceType !== targetType) {
                   setIsConnecting(false);
-                  setStatusMessage("Only matching state keys can be connected.");
+                  setStatusMessage("Only compatible value types can be connected.");
                   return;
                 }
+
+                const actualFlowKey = resolveActualFlowKeyFromNode(sourceNode, connection.sourceHandle);
+                const actualTargetKey = targetKey ? resolveActualFlowKeyFromNode(targetNode, connection.targetHandle) : null;
 
                 const nextEdge = createVisualEdge({
                   id: `edge_${crypto.randomUUID().slice(0, 8)}`,
@@ -1624,21 +1747,45 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                   sourceHandle: connection.sourceHandle,
                   targetHandle: connection.targetHandle,
                   flowKey: sourceKey,
+                  actualFlowKey,
                   stateColors,
                 });
 
                 setEdges((current) => {
-                  const exists = current.some(
-                    (edge) =>
+                  const filtered = current.filter((edge) => {
+                    if (targetParam && edge.target === nextEdge.target && edge.targetHandle === nextEdge.targetHandle) {
+                      return false;
+                    }
+                    if (targetKey && edge.target === nextEdge.target && edge.targetHandle === nextEdge.targetHandle) {
+                      return false;
+                    }
+                    return !(
                       edge.source === nextEdge.source &&
                       edge.target === nextEdge.target &&
                       edge.sourceHandle === nextEdge.sourceHandle &&
-                      edge.targetHandle === nextEdge.targetHandle,
-                  );
-                  return exists ? current : current.concat(nextEdge);
+                      edge.targetHandle === nextEdge.targetHandle
+                    );
+                  });
+                  return filtered.concat(nextEdge);
                 });
+                if (targetNode.nodeType === "text_output" && actualFlowKey) {
+                  updateNodeData(targetNode.nodeId, (data) => ({
+                    ...data,
+                    reads: uniqueKeys([actualFlowKey]),
+                    params: {
+                      ...data.params,
+                      source_state_key: actualFlowKey,
+                    },
+                  }));
+                }
+                if (targetNode.nodeType !== "text_output" && targetKey && actualTargetKey && actualTargetKey !== actualFlowKey) {
+                  updateNodeData(targetNode.nodeId, (data) => ({
+                    ...data,
+                    reads: data.reads.map((item) => (item === actualTargetKey ? actualFlowKey ?? item : item)),
+                  }));
+                }
                 setIsConnecting(false);
-                setStatusMessage(targetParam ? `Bound ${sourceKey} to ${targetParam}` : `Connected ${sourceKey}`);
+                setStatusMessage(targetParam ? `Bound ${actualFlowKey ?? sourceKey} to ${targetParam}` : `Connected ${actualFlowKey ?? sourceKey}`);
               }}
               onSelectionChange={handleSelectionChange}
               onPaneClick={() => {

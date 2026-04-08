@@ -279,8 +279,23 @@ function getNodeStyle(nodeType: string) {
 }
 
 function FlowNodeCard({ data, selected }: { data: FlowNodeData; selected: boolean }) {
-  const reads = data.reads.length ? data.reads : ["none"];
-  const writes = data.writes.length ? data.writes : ["none"];
+  const allStateKeys = Object.keys(data.stateColors);
+  const reads =
+    data.nodeType === "end"
+      ? allStateKeys.length
+        ? allStateKeys
+        : ["none"]
+      : data.reads.length
+        ? data.reads
+        : ["none"];
+  const writes =
+    data.nodeType === "start"
+      ? allStateKeys.length
+        ? allStateKeys
+        : ["none"]
+      : data.writes.length
+        ? data.writes
+        : ["none"];
 
   return (
     <div
@@ -289,25 +304,37 @@ function FlowNodeCard({ data, selected }: { data: FlowNodeData; selected: boolea
         selected ? "border-[var(--accent)]" : "border-[rgba(154,52,18,0.25)]",
       )}
     >
-      <div className="border-b border-[rgba(154,52,18,0.12)] px-4 py-3">
-        <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{data.nodeType}</div>
-        <div className="mt-1 text-base font-semibold text-[var(--text)]">{data.label}</div>
-        <div className="mt-1 text-[0.8rem] leading-5 text-[var(--muted)]">{data.description}</div>
-      </div>
-      <div className="grid grid-cols-[1fr_1fr] gap-0 text-[0.78rem] text-[var(--muted)]">
-        <div className="border-r border-[rgba(154,52,18,0.08)] px-4 py-3">
+      <div className="grid min-h-[118px] grid-cols-[minmax(0,1fr)_176px_minmax(0,1fr)] items-stretch">
+        <div className="border-r border-[rgba(154,52,18,0.08)] px-3 py-3">
           <div className="mb-2 text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Inputs</div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-col gap-1.5">
             {reads.map((key) => (
-              <StateChip key={`read-${key}`} label={key} color={data.stateColors[key] ?? DEFAULT_STATE_COLOR} muted={key === "none"} />
+              <StateChip
+                key={`read-${key}`}
+                label={key}
+                color={data.stateColors[key] ?? DEFAULT_STATE_COLOR}
+                muted={key === "none"}
+                side="input"
+              />
             ))}
           </div>
         </div>
-        <div className="px-4 py-3">
-          <div className="mb-2 text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Outputs</div>
-          <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-col items-center justify-center px-4 py-3 text-center">
+          <div className="text-[0.7rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{data.nodeType}</div>
+          <div className="mt-2 text-base font-semibold text-[var(--text)]">{data.label}</div>
+          <div className="mt-2 text-[0.8rem] leading-5 text-[var(--muted)]">{data.description}</div>
+        </div>
+        <div className="border-l border-[rgba(154,52,18,0.08)] px-3 py-3">
+          <div className="mb-2 text-right text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Outputs</div>
+          <div className="flex flex-col gap-1.5">
             {writes.map((key) => (
-              <StateChip key={`write-${key}`} label={key} color={data.stateColors[key] ?? DEFAULT_STATE_COLOR} muted={key === "none"} />
+              <StateChip
+                key={`write-${key}`}
+                label={key}
+                color={data.stateColors[key] ?? DEFAULT_STATE_COLOR}
+                muted={key === "none"}
+                side="output"
+              />
             ))}
           </div>
         </div>
@@ -316,7 +343,17 @@ function FlowNodeCard({ data, selected }: { data: FlowNodeData; selected: boolea
   );
 }
 
-function StateChip({ label, color, muted = false }: { label: string; color: string; muted?: boolean }) {
+function StateChip({
+  label,
+  color,
+  muted = false,
+  side,
+}: {
+  label: string;
+  color: string;
+  muted?: boolean;
+  side: "input" | "output";
+}) {
   return (
     <span
       className={cn(
@@ -324,10 +361,22 @@ function StateChip({ label, color, muted = false }: { label: string; color: stri
         muted
           ? "border-[rgba(154,52,18,0.1)] bg-[rgba(255,255,255,0.74)] text-[var(--muted)]"
           : "border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.82)] text-[var(--text)]",
+        side === "input" ? "justify-start self-start" : "justify-end self-end",
       )}
     >
-      {!muted ? <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} /> : null}
-      <span>{label}</span>
+      {side === "input" ? (
+        <>
+          <span className={cn("h-2.5 w-2.5 rounded-full border border-[rgba(154,52,18,0.24)] bg-white", muted && "opacity-40")} />
+          {!muted ? <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} /> : null}
+          <span>{label}</span>
+        </>
+      ) : (
+        <>
+          <span>{label}</span>
+          {!muted ? <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} /> : null}
+          <span className={cn("h-2.5 w-2.5 rounded-full border border-[rgba(154,52,18,0.24)] bg-white", muted && "opacity-40")} />
+        </>
+      )}
     </span>
   );
 }

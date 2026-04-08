@@ -370,7 +370,7 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
           ) : null}
         </aside>
 
-        <div className="editor-canvas rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] p-0 shadow-[0_10px_30px_var(--shadow)]">
+        <div className="min-h-[620px] overflow-hidden rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] p-0 shadow-[0_10px_30px_var(--shadow)]">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -383,6 +383,10 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
             onNodeClick={onNodeClick}
             onEdgeClick={onEdgeClick}
             deleteKeyCode={["Backspace", "Delete"]}
+            style={{
+              background:
+                "radial-gradient(circle at 20% 20%, rgba(154, 52, 18, 0.08), transparent 18%), linear-gradient(180deg, rgba(255, 250, 241, 0.85), rgba(250, 245, 236, 0.95))",
+            }}
           >
             <MiniMap zoomable pannable />
             <Controls />

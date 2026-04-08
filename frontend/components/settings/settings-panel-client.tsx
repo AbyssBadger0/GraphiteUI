@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { InfoBlock } from "@/components/ui/info-block";
 import { apiGet } from "@/lib/api";
 import { useLanguage } from "@/components/providers/language-provider";
 
@@ -55,28 +57,32 @@ export function SettingsPanelClient() {
   }, []);
 
   if (error) {
-    return <Card>{t("common.failed")}: {error}</Card>;
+    return <EmptyState>{t("common.failed")}: {error}</EmptyState>;
   }
 
   if (!settings) {
-    return <Card>{t("common.loading")}</Card>;
+    return <EmptyState>{t("common.loading")}</EmptyState>;
   }
 
   return (
     <section className="grid grid-cols-12 gap-[18px] max-[960px]:grid-cols-1">
       <Card className="col-span-4 max-[960px]:col-span-1">
         <h2 className="mb-2.5">Model</h2>
-        <p className="text-[var(--muted)]">Text model: {settings.model.text_model}</p>
-        <p className="text-[var(--muted)]">Video model: {settings.model.video_model}</p>
+        <div className="grid gap-3">
+          <InfoBlock title="Text model">{settings.model.text_model}</InfoBlock>
+          <InfoBlock title="Video model">{settings.model.video_model}</InfoBlock>
+        </div>
       </Card>
       <Card className="col-span-4 max-[960px]:col-span-1">
         <h2 className="mb-2.5">Revision</h2>
-        <p className="text-[var(--muted)]">Max revision rounds: {settings.revision.max_revision_round}</p>
+        <InfoBlock title="Max revision rounds">{settings.revision.max_revision_round}</InfoBlock>
       </Card>
       <Card className="col-span-4 max-[960px]:col-span-1">
         <h2 className="mb-2.5">Evaluator</h2>
-        <p className="text-[var(--muted)]">Threshold: {settings.evaluator.default_score_threshold}</p>
-        <p className="text-[var(--muted)]">Routes: {settings.evaluator.routes.join(", ")}</p>
+        <div className="grid gap-3">
+          <InfoBlock title="Threshold">{settings.evaluator.default_score_threshold}</InfoBlock>
+          <InfoBlock title="Routes">{settings.evaluator.routes.join(", ")}</InfoBlock>
+        </div>
       </Card>
       <Card className="col-span-12">
         <h2 className="mb-2.5">Templates</h2>

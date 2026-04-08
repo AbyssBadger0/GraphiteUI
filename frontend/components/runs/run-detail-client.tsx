@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, SubtleCard } from "@/components/ui/card";
+import { InfoBlock } from "@/components/ui/info-block";
 import { apiGet } from "@/lib/api";
 import { useLanguage } from "@/components/providers/language-provider";
 
@@ -83,18 +84,9 @@ export function RunDetailClient({ runId }: { runId: string }) {
       <Card className="col-span-8 max-[960px]:col-span-1">
         <h2 className="mb-2.5">{t("run_detail.artifacts")}</h2>
         <div className="grid gap-3">
-          <SubtleCard>
-            <strong>{t("run_detail.knowledge")}</strong>
-            <div className="text-[var(--muted)]">{run.knowledge_summary || t("run_detail.no_knowledge")}</div>
-          </SubtleCard>
-          <SubtleCard>
-            <strong>{t("run_detail.memory")}</strong>
-            <div className="text-[var(--muted)]">{run.memory_summary || t("run_detail.no_memory")}</div>
-          </SubtleCard>
-          <SubtleCard>
-            <strong>{t("run_detail.final_result")}</strong>
-            <div className="text-[var(--muted)]">{run.final_result || t("run_detail.no_result")}</div>
-          </SubtleCard>
+          <InfoBlock title={t("run_detail.knowledge")}>{run.knowledge_summary || t("run_detail.no_knowledge")}</InfoBlock>
+          <InfoBlock title={t("run_detail.memory")}>{run.memory_summary || t("run_detail.no_memory")}</InfoBlock>
+          <InfoBlock title={t("run_detail.final_result")}>{run.final_result || t("run_detail.no_result")}</InfoBlock>
         </div>
       </Card>
 

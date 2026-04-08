@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, SubtleCard } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { MetricCard } from "@/components/ui/metric-card";
 import { apiGet } from "@/lib/api";
 import { useLanguage } from "@/components/providers/language-provider";
 
@@ -62,28 +64,30 @@ export function WorkspaceDashboardClient() {
 
   return (
     <section className="grid grid-cols-12 gap-[18px] max-[960px]:grid-cols-1">
-      <Card className="col-span-4 max-[960px]:col-span-1">
-        <div className="text-[var(--muted)]">Recent Graphs</div>
-        <div className="text-[var(--muted)]">{t("common.recent_graphs")}</div>
-        <div className="my-2 mb-0 text-[2rem]">{graphs.length}</div>
-        <p className="text-[var(--muted)]">Saved workflow definitions available from backend storage.</p>
-      </Card>
-      <Card className="col-span-4 max-[960px]:col-span-1">
-        <div className="text-[var(--muted)]">{t("common.running_jobs")}</div>
-        <div className="my-2 mb-0 text-[2rem]">{runningCount}</div>
-        <p className="text-[var(--muted)]">Live workflow runs currently moving through runtime.</p>
-      </Card>
-      <Card className="col-span-4 max-[960px]:col-span-1">
-        <div className="text-[var(--muted)]">{t("common.failed_runs")}</div>
-        <div className="my-2 mb-0 text-[2rem]">{failedCount}</div>
-        <p className="text-[var(--muted)]">Runs that need inspection or another validation pass.</p>
-      </Card>
+      <MetricCard
+        className="col-span-4 max-[960px]:col-span-1"
+        label={t("common.recent_graphs")}
+        value={graphs.length}
+        description="Saved workflow definitions available from backend storage."
+      />
+      <MetricCard
+        className="col-span-4 max-[960px]:col-span-1"
+        label={t("common.running_jobs")}
+        value={runningCount}
+        description="Live workflow runs currently moving through runtime."
+      />
+      <MetricCard
+        className="col-span-4 max-[960px]:col-span-1"
+        label={t("common.failed_runs")}
+        value={failedCount}
+        description="Runs that need inspection or another validation pass."
+      />
 
       <Card className="col-span-6 max-[960px]:col-span-1">
         <h2 className="mb-2.5">{t("common.recent_graphs")}</h2>
         <div className="grid gap-3">
           {graphs.length === 0 ? (
-            <SubtleCard>{t("common.no_data")}</SubtleCard>
+            <EmptyState>{t("common.no_data")}</EmptyState>
           ) : (
             graphs.slice(0, 6).map((graph) => (
               <Link className="block" href={`/editor/${graph.graph_id}`} key={graph.graph_id}>
@@ -104,7 +108,7 @@ export function WorkspaceDashboardClient() {
         <h2 className="mb-2.5">{t("common.recent_runs")}</h2>
         <div className="grid gap-3">
           {runs.length === 0 ? (
-            <SubtleCard>{t("common.no_data")}</SubtleCard>
+            <EmptyState>{t("common.no_data")}</EmptyState>
           ) : (
             runs.slice(0, 6).map((run) => (
               <Link className="block" href={`/runs/${run.run_id}`} key={run.run_id}>

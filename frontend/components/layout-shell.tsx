@@ -9,6 +9,7 @@ import { useLanguage } from "@/components/providers/language-provider";
 export function LayoutShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
+  const isEditorRoute = pathname.startsWith("/editor/");
   const navItems = [
     { href: "/", label: t("nav.home") },
     { href: "/workspace", label: t("nav.workspace") },
@@ -50,7 +51,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
       </aside>
-      <main className="p-8">{children}</main>
+      <main className={isEditorRoute ? "min-h-screen overflow-hidden" : "p-8"}>{children}</main>
     </div>
   );
 }

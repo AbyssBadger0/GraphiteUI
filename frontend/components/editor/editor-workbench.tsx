@@ -57,6 +57,7 @@ const edgeTypes = {
 };
 
 const STATE_PANEL_STORAGE_KEY = "graphiteui:editor:state-panel-collapsed";
+const THEME_PANEL_STORAGE_KEY = "graphiteui:editor:theme-panel-collapsed";
 
 function EditorWorkbenchInner({ graphId }: { graphId: string }) {
   const { t } = useLanguage();
@@ -65,6 +66,7 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
   const [newWriteKey, setNewWriteKey] = useState("");
   const [nodeSearch, setNodeSearch] = useState("");
   const [isStatePanelCollapsed, setIsStatePanelCollapsed] = useState(false);
+  const [isThemePanelCollapsed, setIsThemePanelCollapsed] = useState(false);
   const [latestRunDetail, setLatestRunDetail] = useState<RunDetailPayload | null>(null);
   const [selectedNodeDetail, setSelectedNodeDetail] = useState<NodeExecutionDetail | null>(null);
   const [templatePresets, setTemplatePresets] = useState<ThemePreset[]>(getTemplateThemePresets("creative_factory"));
@@ -129,12 +131,21 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
     if (persisted === "true") {
       setIsStatePanelCollapsed(true);
     }
+    const persistedTheme = window.localStorage.getItem(THEME_PANEL_STORAGE_KEY);
+    if (persistedTheme === "true") {
+      setIsThemePanelCollapsed(true);
+    }
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(STATE_PANEL_STORAGE_KEY, String(isStatePanelCollapsed));
   }, [isStatePanelCollapsed]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(THEME_PANEL_STORAGE_KEY, String(isThemePanelCollapsed));
+  }, [isThemePanelCollapsed]);
 
   useEffect(() => {
     let cancelled = false;
@@ -376,29 +387,23 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
   }
 
   return (
-    <div className="grid gap-6">
-      <section>
-        <div className="inline-flex rounded-full border border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.72)] px-2.5 py-1.5 text-[0.82rem] uppercase tracking-[0.06em] text-[var(--accent-strong)]">Editor</div>
-        <h1 className="mb-2.5 mt-3.5 text-[clamp(2rem,4vw,3.4rem)] leading-[1.05]">{graphName}</h1>
-        <p className="max-w-[68ch] text-[1.02rem] leading-[1.7] text-[var(--muted)]">{t("editor.desc")}</p>
-      </section>
-
-      <section className="relative min-h-[780px] overflow-hidden rounded-[26px] border border-[var(--line)] bg-[rgba(255,250,241,0.92)] shadow-[0_18px_48px_var(--shadow)]">
+    <div className="h-full">
+      <section className="relative h-screen overflow-hidden bg-[rgba(255,250,241,0.92)]">
         <div className="absolute left-4 right-4 top-4 z-20 flex flex-wrap items-start justify-between gap-3">
-          <SubtleCard className="max-w-[min(100%,34rem)] border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.88)] backdrop-blur">
-            <div className="flex flex-wrap items-center gap-2.5">
+          <SubtleCard className="max-w-[min(100%,40rem)] border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.84)] px-3 py-2.5 backdrop-blur">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge>{runtimeLabel}</Badge>
               <Badge>Template {templateId}</Badge>
               {currentRunId && currentRunStatus !== "completed" && currentRunStatus !== "failed" ? <Badge>Polling run</Badge> : null}
               {validationPassed !== null ? <Badge>{validationPassed ? "Schema valid" : "Needs fixes"}</Badge> : null}
               {lastSavedAt ? <Badge>Saved {new Date(lastSavedAt).toLocaleTimeString()}</Badge> : null}
             </div>
-            <div className="mt-2 flex flex-wrap gap-2.5">
-              <Button onClick={handleValidateBackend}>{t("editor.validate")}</Button>
-              <Button onClick={handleSaveBackend}>{t("editor.save")}</Button>
-              <Button onClick={handleRunBackend} variant="primary">{t("editor.run")}</Button>
-              <Button onClick={saveGraphLocally}>{t("editor.save_local")}</Button>
-              <Button onClick={simulateRun}>{t("editor.simulate")}</Button>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button size="sm" onClick={handleValidateBackend}>{t("editor.validate")}</Button>
+              <Button size="sm" onClick={handleSaveBackend}>{t("editor.save")}</Button>
+              <Button size="sm" onClick={handleRunBackend} variant="primary">{t("editor.run")}</Button>
+              <Button size="sm" onClick={saveGraphLocally}>{t("editor.save_local")}</Button>
+              <Button size="sm" onClick={simulateRun}>{t("editor.simulate")}</Button>
             </div>
           </SubtleCard>
         </div>
@@ -478,14 +483,35 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
         </div>
 
         <div className="absolute right-4 top-24 z-20 grid max-h-[calc(100vh-14rem)] w-[min(28rem,calc(100%-2rem))] gap-3 overflow-y-auto max-[960px]:left-4 max-[960px]:right-4 max-[960px]:top-[7.5rem] max-[960px]:w-auto">
-          <ThemeConfigPanel
-            graphName={graphName}
-            themeConfig={themeConfig}
-            presets={templatePresets}
-            onGraphNameChange={updateGraphName}
-            onThemeConfigChange={updateThemeConfig}
-            onApplyPreset={applyThemePreset}
-          />
+          {isThemePanelCollapsed ? (
+            <div className="flex justify-end">
+              <button
+                className="rounded-[18px] border border-[rgba(154,52,18,0.22)] bg-[rgba(255,255,255,0.9)] px-3 py-2 text-sm font-medium text-[var(--text)] shadow-[0_10px_28px_var(--shadow)] backdrop-blur transition hover:border-[rgba(154,52,18,0.45)]"
+                onClick={() => setIsThemePanelCollapsed(false)}
+                type="button"
+              >
+                Open Theme
+              </button>
+            </div>
+          ) : (
+            <SubtleCard className="grid gap-3 border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.88)] backdrop-blur">
+              <div className="flex items-center justify-between gap-3">
+                <div className="grid gap-1">
+                  <strong>Theme</strong>
+                  <span className="text-sm text-[var(--muted)]">{themeConfig.genre || selectedNode?.data.kind || "Config"}</span>
+                </div>
+                <Button size="sm" onClick={() => setIsThemePanelCollapsed(true)}>Collapse</Button>
+              </div>
+              <ThemeConfigPanel
+                graphName={graphName}
+                themeConfig={themeConfig}
+                presets={templatePresets}
+                onGraphNameChange={updateGraphName}
+                onThemeConfigChange={updateThemeConfig}
+                onApplyPreset={applyThemePreset}
+              />
+            </SubtleCard>
+          )}
 
           {currentRunId ? (
             <SubtleCard className="grid gap-2.5 border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.9)] backdrop-blur">

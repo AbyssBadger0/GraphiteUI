@@ -70,3 +70,12 @@
 - 为什么它和 LangGraph 兼容但不完全等同
 - 现在应该先做什么
 - 怎么验收第一阶段
+
+## 4. Current Focus
+
+当前 editor 文档聚焦这几个点：
+
+- `Text Input / Text Output` 边界节点
+- 逐项 state 连线
+- ComfyUI 风格的参数 socket 覆盖本地 widget
+- `hello_world` 的真实闭环验收

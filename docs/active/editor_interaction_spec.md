@@ -197,11 +197,35 @@
 
 - 表达图的真实输入
 - 例如文本框、文件、媒体输入或结构化参数
+- 第一阶段的 `Text Input` 节点应在节点本体内直接显示文本框
+- 文本框右侧是输出语义，文本框本身承担输入值编辑职责
 
 `Output Boundary`：
 
 - 表达图的真实输出
 - 例如文本、图片、视频、音频或结构化对象
+- 第一阶段的 `Text Output` 节点只有输入，没有输出
+- 输出节点本身就是终端，不再继续向下产出 state
+- 预览与保存由同一个输出节点承担
+
+## 6.4 Parameter Widgets
+
+当节点存在可编辑参数时，优先使用“widget + socket fallback”规则：
+
+- 参数字段可直接在节点本体或 inspector 中编辑
+- 参数字段左侧允许存在输入 socket
+- 未连接时使用 widget 当前值
+- 已连接时以上游值覆盖 widget 当前值
+
+第一阶段已落地的示例：
+
+- `hello_model.name`
+
+第一阶段对参数 widget 的最小要求：
+
+- 用户能看出该字段是否已被连接覆盖
+- 本地值仍应可见
+- 保存再打开后，参数绑定不丢失
 
 ## 7. Edge Presentation
 
@@ -352,14 +376,16 @@ state 的颜色来自 state 定义。
 1. 打开 `/editor/new`
 2. 定义输入 state `name`
 3. 定义输出 state `greeting / final_result`
-4. 创建 `hello_model`
-5. 连接逐项 state flow
-6. 配置名字参数
-7. Save
-8. Validate
-9. Run
-10. 点击 `hello_model` 查看节点结果
-11. 在最终结果中看到 greeting
+4. 创建 `Text Input`
+5. 创建 `hello_model`
+6. 创建 `Text Output`
+7. 连接逐项 state flow
+8. 在 `hello_model` 上配置本地名字，或把上游 state 连到名字参数 socket
+9. Save
+10. Validate
+11. Run
+12. 点击 `hello_model` 查看节点结果
+13. 在最终结果中看到 greeting
 
 ## 12. Non-Goals
 

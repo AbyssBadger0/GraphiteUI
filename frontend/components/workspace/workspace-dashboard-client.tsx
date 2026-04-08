@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Card, SubtleCard } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
 import { useLanguage } from "@/components/providers/language-provider";
 
@@ -55,68 +57,72 @@ export function WorkspaceDashboardClient() {
   const failedCount = useMemo(() => runs.filter((run) => run.status === "failed").length, [runs]);
 
   if (error) {
-    return <section className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] p-5 shadow-[0_10px_30px_var(--shadow)]">{t("common.failed")}: {error}</section>;
+    return <Card>{t("common.failed")}: {error}</Card>;
   }
 
   return (
     <section className="grid grid-cols-12 gap-[18px] max-[960px]:grid-cols-1">
-      <article className="col-span-4 rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] p-5 shadow-[0_10px_30px_var(--shadow)] max-[960px]:col-span-1">
+      <Card className="col-span-4 max-[960px]:col-span-1">
         <div className="text-[var(--muted)]">Recent Graphs</div>
         <div className="text-[var(--muted)]">{t("common.recent_graphs")}</div>
         <div className="my-2 mb-0 text-[2rem]">{graphs.length}</div>
         <p className="text-[var(--muted)]">Saved workflow definitions available from backend storage.</p>
-      </article>
-      <article className="col-span-4 rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] p-5 shadow-[0_10px_30px_var(--shadow)] max-[960px]:col-span-1">
+      </Card>
+      <Card className="col-span-4 max-[960px]:col-span-1">
         <div className="text-[var(--muted)]">{t("common.running_jobs")}</div>
         <div className="my-2 mb-0 text-[2rem]">{runningCount}</div>
         <p className="text-[var(--muted)]">Live workflow runs currently moving through runtime.</p>
-      </article>
-      <article className="col-span-4 rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] p-5 shadow-[0_10px_30px_var(--shadow)] max-[960px]:col-span-1">
+      </Card>
+      <Card className="col-span-4 max-[960px]:col-span-1">
         <div className="text-[var(--muted)]">{t("common.failed_runs")}</div>
         <div className="my-2 mb-0 text-[2rem]">{failedCount}</div>
         <p className="text-[var(--muted)]">Runs that need inspection or another validation pass.</p>
-      </article>
+      </Card>
 
-      <article className="col-span-6 rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] p-5 shadow-[0_10px_30px_var(--shadow)] max-[960px]:col-span-1">
+      <Card className="col-span-6 max-[960px]:col-span-1">
         <h2 className="mb-2.5">{t("common.recent_graphs")}</h2>
         <div className="grid gap-3">
           {graphs.length === 0 ? (
-            <div className="rounded-2xl border border-[rgba(212,198,170,0.9)] bg-[rgba(255,255,255,0.65)] p-3.5">{t("common.no_data")}</div>
+            <SubtleCard>{t("common.no_data")}</SubtleCard>
           ) : (
             graphs.slice(0, 6).map((graph) => (
-              <Link className="rounded-2xl border border-[rgba(212,198,170,0.9)] bg-[rgba(255,255,255,0.65)] p-3.5" href={`/editor/${graph.graph_id}`} key={graph.graph_id}>
+              <Link className="block" href={`/editor/${graph.graph_id}`} key={graph.graph_id}>
+                <SubtleCard>
                 <strong>{graph.name}</strong>
                 <div className="mt-2 flex flex-wrap gap-2.5">
-                  <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">nodes {graph.nodes.length}</span>
-                  <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">edges {graph.edges.length}</span>
+                  <Badge>nodes {graph.nodes.length}</Badge>
+                  <Badge>edges {graph.edges.length}</Badge>
                 </div>
+                </SubtleCard>
               </Link>
             ))
           )}
         </div>
-      </article>
+      </Card>
 
-      <article className="col-span-6 rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] p-5 shadow-[0_10px_30px_var(--shadow)] max-[960px]:col-span-1">
+      <Card className="col-span-6 max-[960px]:col-span-1">
         <h2 className="mb-2.5">{t("common.recent_runs")}</h2>
         <div className="grid gap-3">
           {runs.length === 0 ? (
-            <div className="rounded-2xl border border-[rgba(212,198,170,0.9)] bg-[rgba(255,255,255,0.65)] p-3.5">{t("common.no_data")}</div>
+            <SubtleCard>{t("common.no_data")}</SubtleCard>
           ) : (
             runs.slice(0, 6).map((run) => (
-              <Link className="rounded-2xl border border-[rgba(212,198,170,0.9)] bg-[rgba(255,255,255,0.65)] p-3.5" href={`/runs/${run.run_id}`} key={run.run_id}>
+              <Link className="block" href={`/runs/${run.run_id}`} key={run.run_id}>
+                <SubtleCard>
                 <strong>{run.run_id}</strong>
                 <div className="text-[var(--muted)]">{run.graph_name}</div>
                 <div className="mt-2 flex flex-wrap gap-2.5">
-                  <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">{run.status}</span>
-                  <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">revisions {run.revision_round}</span>
+                  <Badge>{run.status}</Badge>
+                  <Badge>revisions {run.revision_round}</Badge>
                 </div>
+                </SubtleCard>
               </Link>
             ))
           )}
         </div>
-      </article>
+      </Card>
 
-      <article className="col-span-12 rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] p-5 shadow-[0_10px_30px_var(--shadow)]">
+      <Card className="col-span-12">
         <h2 className="mb-2.5">{t("common.quick_actions")}</h2>
         <div className="mt-[22px] flex flex-wrap gap-3">
           <Link className="inline-flex items-center justify-center rounded-[14px] border border-[var(--accent)] bg-[var(--accent)] px-[18px] py-3 text-white transition-transform duration-150 hover:-translate-y-px" href="/editor/creative-factory">
@@ -129,7 +135,7 @@ export function WorkspaceDashboardClient() {
             Open Knowledge
           </Link>
         </div>
-      </article>
+      </Card>
     </section>
   );
 }

@@ -32,6 +32,12 @@ import {
 } from "@/lib/graph-api";
 import { getTemplateThemePresets } from "@/lib/templates";
 import { useEditorStore } from "@/stores/editor-store";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { SubtleCard } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import type { GraphCanvasNode, GraphDocument, RunDetailPayload, StateFieldRole, StateFieldType, TemplateDefinition, ThemePreset } from "@/types/editor";
 
 const nodeTypes = {
@@ -284,25 +290,15 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
 
       <section className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,250,241,0.86)] px-5 py-4 shadow-[0_10px_30px_var(--shadow)]">
         <div className="flex flex-wrap gap-2.5">
-          <button className="inline-flex items-center justify-center rounded-[14px] border border-[var(--accent)] bg-transparent px-[18px] py-3 text-[var(--accent-strong)] transition-transform duration-150 hover:-translate-y-px" onClick={handleValidateBackend} type="button">
-            {t("editor.validate")}
-          </button>
-          <button className="inline-flex items-center justify-center rounded-[14px] border border-[var(--accent)] bg-transparent px-[18px] py-3 text-[var(--accent-strong)] transition-transform duration-150 hover:-translate-y-px" onClick={handleSaveBackend} type="button">
-            {t("editor.save")}
-          </button>
-          <button className="inline-flex items-center justify-center rounded-[14px] border border-[var(--accent)] bg-[var(--accent)] px-[18px] py-3 text-white transition-transform duration-150 hover:-translate-y-px" onClick={handleRunBackend} type="button">
-            {t("editor.run")}
-          </button>
-          <button className="inline-flex items-center justify-center rounded-[14px] border border-[var(--accent)] bg-transparent px-[18px] py-3 text-[var(--accent-strong)] transition-transform duration-150 hover:-translate-y-px" onClick={saveGraphLocally} type="button">
-            {t("editor.save_local")}
-          </button>
-          <button className="inline-flex items-center justify-center rounded-[14px] border border-[var(--accent)] bg-transparent px-[18px] py-3 text-[var(--accent-strong)] transition-transform duration-150 hover:-translate-y-px" onClick={simulateRun} type="button">
-            {t("editor.simulate")}
-          </button>
-          <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">{runtimeLabel}</span>
-          <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Template {templateId}</span>
-          {validationPassed !== null ? <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">{validationPassed ? "Schema valid" : "Needs fixes"}</span> : null}
-          {lastSavedAt ? <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Saved {new Date(lastSavedAt).toLocaleTimeString()}</span> : null}
+          <Button onClick={handleValidateBackend}>{t("editor.validate")}</Button>
+          <Button onClick={handleSaveBackend}>{t("editor.save")}</Button>
+          <Button onClick={handleRunBackend} variant="primary">{t("editor.run")}</Button>
+          <Button onClick={saveGraphLocally}>{t("editor.save_local")}</Button>
+          <Button onClick={simulateRun}>{t("editor.simulate")}</Button>
+          <Badge>{runtimeLabel}</Badge>
+          <Badge>Template {templateId}</Badge>
+          {validationPassed !== null ? <Badge>{validationPassed ? "Schema valid" : "Needs fixes"}</Badge> : null}
+          {lastSavedAt ? <Badge>Saved {new Date(lastSavedAt).toLocaleTimeString()}</Badge> : null}
         </div>
       </section>
 
@@ -332,12 +328,12 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
           </div>
 
           <div className="flex flex-wrap gap-2.5">
-            <div className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Nodes {nodes.length}</div>
-            <div className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Edges {edges.length}</div>
-            <div className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">State {stateSchema.length}</div>
-            {currentRunStatus ? <div className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Run {currentRunStatus}</div> : null}
-            {currentNodeId ? <div className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Current {currentNodeId}</div> : null}
-            {selectedEdgeId ? <div className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Selected edge {selectedEdgeId}</div> : null}
+            <Badge>Nodes {nodes.length}</Badge>
+            <Badge>Edges {edges.length}</Badge>
+            <Badge>State {stateSchema.length}</Badge>
+            {currentRunStatus ? <Badge>Run {currentRunStatus}</Badge> : null}
+            {currentNodeId ? <Badge>Current {currentNodeId}</Badge> : null}
+            {selectedEdgeId ? <Badge>Selected edge {selectedEdgeId}</Badge> : null}
           </div>
 
           {validationIssues.length > 0 ? (
@@ -345,10 +341,10 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
               <h3 className="font-semibold">Validation Issues</h3>
               <div className="grid gap-3">
                 {validationIssues.map((issue) => (
-                  <div className="rounded-2xl border border-[rgba(212,198,170,0.9)] bg-[rgba(255,255,255,0.65)] p-3.5" key={`${issue.code}-${issue.message}`}>
+                  <SubtleCard key={`${issue.code}-${issue.message}`}>
                     <strong>{issue.code}</strong>
                     <div className="text-[var(--muted)]">{issue.message}</div>
-                  </div>
+                  </SubtleCard>
                 ))}
               </div>
             </div>
@@ -358,13 +354,11 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
             <div className="grid gap-2.5">
               <h3 className="font-semibold">{t("editor.latest_run")}</h3>
               <div className="grid gap-3">
-                <div className="rounded-2xl border border-[rgba(212,198,170,0.9)] bg-[rgba(255,255,255,0.65)] p-3.5">
+                <SubtleCard>
                   <strong>{currentRunId}</strong>
                   <div className="text-[var(--muted)]">Status: {currentRunStatus ?? "unknown"}</div>
-                </div>
-                <button className="inline-flex items-center justify-center rounded-[14px] border border-[var(--accent)] bg-transparent px-[18px] py-3 text-[var(--accent-strong)] transition-transform duration-150 hover:-translate-y-px" onClick={() => router.push(`/runs/${currentRunId}`)} type="button">
-                  {t("editor.open_run")}
-                </button>
+                </SubtleCard>
+                <Button onClick={() => router.push(`/runs/${currentRunId}`)}>{t("editor.open_run")}</Button>
               </div>
             </div>
           ) : null}
@@ -392,7 +386,7 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
             <Controls />
             <Background gap={18} size={1} />
             <Panel position="top-left">
-              <div className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Edges represent execution flow and carry major state keys.</div>
+              <Badge>Edges represent execution flow and carry major state keys.</Badge>
             </Panel>
           </ReactFlow>
         </div>
@@ -404,31 +398,19 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
             <div className="grid gap-3.5">
               <label className="grid gap-2 text-[0.94rem]">
                 <span>{t("editor.node_name")}</span>
-                <input className="w-full rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]" value={selectedNode.data.label} onChange={(event) => updateSelectedNodeLabel(event.target.value)} />
+                <Input value={selectedNode.data.label} onChange={(event) => updateSelectedNodeLabel(event.target.value)} />
               </label>
 
               <label className="grid gap-2 text-[0.94rem]">
                 <span>{t("editor.description")}</span>
-                <textarea
-                  className="w-full resize-y rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                  rows={3}
-                  value={selectedNode.data.description}
-                  onChange={(event) => updateSelectedNodeDescription(event.target.value)}
-                />
+                <Textarea rows={3} value={selectedNode.data.description} onChange={(event) => updateSelectedNodeDescription(event.target.value)} />
               </label>
 
               <div className="grid gap-2 text-[0.94rem]">
                 <span>Inputs</span>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2.5">
-                  <input
-                    className="w-full rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                    placeholder="new_input_key"
-                    value={newReadKey}
-                    onChange={(event) => setNewReadKey(event.target.value)}
-                  />
-                  <button className="inline-flex items-center justify-center rounded-xl border border-[var(--accent)] bg-transparent px-3 py-2.5 text-[var(--accent-strong)] transition-transform duration-150 hover:-translate-y-px" onClick={() => handleQuickAddState(newReadKey, "read")} type="button">
-                    + Add
-                  </button>
+                  <Input placeholder="new_input_key" value={newReadKey} onChange={(event) => setNewReadKey(event.target.value)} />
+                  <Button size="sm" onClick={() => handleQuickAddState(newReadKey, "read")}>+ Add</Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5 max-[960px]:grid-cols-1">
                   {stateSchema.map((field) => (
@@ -447,15 +429,8 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
               <div className="grid gap-2 text-[0.94rem]">
                 <span>Outputs</span>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2.5">
-                  <input
-                    className="w-full rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                    placeholder="new_output_key"
-                    value={newWriteKey}
-                    onChange={(event) => setNewWriteKey(event.target.value)}
-                  />
-                  <button className="inline-flex items-center justify-center rounded-xl border border-[var(--accent)] bg-transparent px-3 py-2.5 text-[var(--accent-strong)] transition-transform duration-150 hover:-translate-y-px" onClick={() => handleQuickAddState(newWriteKey, "write")} type="button">
-                    + Add
-                  </button>
+                  <Input placeholder="new_output_key" value={newWriteKey} onChange={(event) => setNewWriteKey(event.target.value)} />
+                  <Button size="sm" onClick={() => handleQuickAddState(newWriteKey, "write")}>+ Add</Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5 max-[960px]:grid-cols-1">
                   {stateSchema.map((field) => (
@@ -478,8 +453,8 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
 
               <label className="grid gap-2 text-[0.94rem]">
                 <span>Params JSON</span>
-                <textarea
-                  className="w-full resize-y rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 font-mono text-[0.88rem] text-[var(--text)]"
+                <Textarea
+                  className="font-mono text-[0.88rem]"
                   rows={8}
                   value={JSON.stringify(selectedNode.data.params, null, 2)}
                   onChange={(event) => {
@@ -494,8 +469,8 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
 
               <label className="grid gap-2 text-[0.94rem]">
                 <span>{t("editor.advanced")}</span>
-                <textarea
-                  className="w-full resize-y rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 font-mono text-[0.88rem] text-[var(--text)]"
+                <Textarea
+                  className="font-mono text-[0.88rem]"
                   rows={10}
                   value={configDraft}
                   onChange={(event) => updateSelectedNodeConfigDraft(event.target.value)}
@@ -503,26 +478,26 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
               </label>
 
               <div className="flex flex-wrap gap-2.5">
-                <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Type {selectedNode.data.kind}</span>
-                <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Reads {selectedNode.data.reads.length}</span>
-                <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Writes {selectedNode.data.writes.length}</span>
-                <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">Status {selectedNode.data.status ?? "idle"}</span>
+                <Badge>Type {selectedNode.data.kind}</Badge>
+                <Badge>Reads {selectedNode.data.reads.length}</Badge>
+                <Badge>Writes {selectedNode.data.writes.length}</Badge>
+                <Badge>Status {selectedNode.data.status ?? "idle"}</Badge>
               </div>
 
               {selectedNodeExecution ? (
                 <div className="grid gap-2.5">
                   <h3 className="font-semibold">{t("editor.latest_execution")}</h3>
                   <div className="grid gap-3">
-                    <div className="rounded-2xl border border-[rgba(212,198,170,0.9)] bg-[rgba(255,255,255,0.65)] p-3.5">
+                    <SubtleCard>
                       <strong>{selectedNodeExecution.status}</strong>
                       <div className="text-[var(--muted)]">{selectedNodeExecution.input_summary}</div>
-                    </div>
-                    <div className="rounded-2xl border border-[rgba(212,198,170,0.9)] bg-[rgba(255,255,255,0.65)] p-3.5">
+                    </SubtleCard>
+                    <SubtleCard>
                       <strong>Output</strong>
                       <div className="text-[var(--muted)]">{selectedNodeExecution.output_summary}</div>
-                    </div>
+                    </SubtleCard>
                     <div className="flex flex-wrap gap-2.5">
-                      <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[0.86rem] text-[var(--muted)]">{selectedNodeExecution.duration_ms}ms</span>
+                      <Badge>{selectedNodeExecution.duration_ms}ms</Badge>
                     </div>
                   </div>
                 </div>
@@ -534,29 +509,21 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
             <div className="grid gap-3.5">
               <div className="grid gap-2 text-[0.94rem]">
                 <span>Edge Kind</span>
-                <select
-                  className="w-full rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                  value={selectedEdge.data?.edgeKind ?? "normal"}
-                  onChange={(event) => updateSelectedEdgeKind(event.target.value as "normal" | "branch")}
-                >
+                <Select value={selectedEdge.data?.edgeKind ?? "normal"} onChange={(event) => updateSelectedEdgeKind(event.target.value as "normal" | "branch")}>
                   <option value="normal">normal</option>
                   <option value="branch">branch</option>
-                </select>
+                </Select>
               </div>
 
               {(selectedEdge.data?.edgeKind ?? "normal") === "branch" ? (
                 <div className="grid gap-2 text-[0.94rem]">
                   <span>Branch Label</span>
-                  <select
-                    className="w-full rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                    value={selectedEdge.data?.branchLabel ?? ""}
-                    onChange={(event) => updateSelectedEdgeBranchLabel(event.target.value as "pass" | "revise" | "fail" | "")}
-                  >
+                  <Select value={selectedEdge.data?.branchLabel ?? ""} onChange={(event) => updateSelectedEdgeBranchLabel(event.target.value as "pass" | "revise" | "fail" | "")}>
                     <option value="">select branch</option>
                     <option value="pass">pass</option>
                     <option value="revise">revise</option>
                     <option value="fail">fail</option>
-                  </select>
+                  </Select>
                 </div>
               ) : null}
 

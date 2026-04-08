@@ -148,7 +148,8 @@ backend/app/templates/creative_factory/
 - `backend/app/templates/creative_factory/themes.py` 已创建
 - `backend/app/templates/creative_factory/handlers.py` 已创建
 - 注册表已改为从新模板目录装配 `creative_factory`
-- 下一步需要决定默认 graph 结构是在后端模板层生成，还是继续只由前端模板层生成
+- `default_graph` 已开始由后端模板层返回，editor 模板路由优先使用后端模板图
+- 下一步需要继续减少前端 fallback 和后端模板图的双份维护
 
 ### A2.3 前端对应抽离
 
@@ -169,7 +170,8 @@ backend/app/templates/creative_factory/
 
 - `frontend/lib/templates/creative-factory.ts` 已创建
 - 默认 graph 构造和 theme preset 已从通用 preset 文件中抽离
-- 下一步需要继续把模板源和后端模板返回做统一，而不是双份维护
+- editor 模板路由已优先使用后端 `default_graph`
+- 下一步需要继续把前端 fallback 压缩到最小，而不是继续双份维护完整模板图
 
 完成标准：
 

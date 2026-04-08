@@ -24,6 +24,7 @@
 - 模板注册与模板查询 API 已落地
 - 前端模板源已开始独立化，`creative_factory` 默认图定义已从通用 preset 文件中抽离
 - 后端 `creative_factory` 模板已拆成 `template / state / themes / handlers` 模块
+- 后端模板 API 已开始直接返回 `default_graph`，editor 模板路由优先使用后端模板图初始化
 - 后端 `core/` 分层已落地，`schemas / compiler / runtime / storage` 已迁入 `backend/app/core/`
 - 编辑器中的 `State Panel`
 - 节点左入右出、自定义节点卡片
@@ -182,7 +183,7 @@
 - 节点顺序重排体验
 - Tool Registry / Handler Registry 继续细分
 - 模板系统与主题系统继续抽象
-- 前后端模板源继续收拢，减少 editor 本地硬编码
+- 前后端模板源继续收拢，减少本地 fallback 维护量
 
 ---
 

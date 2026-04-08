@@ -24,12 +24,17 @@ export function RunsListClient() {
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [graphNameQuery, setGraphNameQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     async function loadRuns() {
       try {
-        const payload = await apiGet<RunSummary[]>("/api/runs");
+        const params = new URLSearchParams();
+        if (graphNameQuery.trim()) params.set("graph_name", graphNameQuery.trim());
+        if (statusFilter) params.set("status", statusFilter);
+        const payload = await apiGet<RunSummary[]>(`/api/runs${params.toString() ? `?${params.toString()}` : ""}`);
         if (!cancelled) {
           setRuns(payload);
           setError(null);
@@ -48,7 +53,7 @@ export function RunsListClient() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [graphNameQuery, statusFilter]);
 
   const content = useMemo(() => {
     if (loading) {
@@ -74,5 +79,25 @@ export function RunsListClient() {
     ));
   }, [error, loading, runs]);
 
-  return <div className="list">{content}</div>;
+  return (
+    <div className="list">
+      <div className="list-item">
+        <div className="field">
+          <span>{t("runs.search")}</span>
+          <input className="text-input" value={graphNameQuery} onChange={(event) => setGraphNameQuery(event.target.value)} />
+        </div>
+        <div className="field">
+          <span>{t("runs.filter")}</span>
+          <select className="text-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <option value="">all</option>
+            <option value="pending">pending</option>
+            <option value="running">running</option>
+            <option value="completed">completed</option>
+            <option value="failed">failed</option>
+          </select>
+        </div>
+      </div>
+      {content}
+    </div>
+  );
 }

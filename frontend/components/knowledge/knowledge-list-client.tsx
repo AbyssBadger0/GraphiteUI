@@ -16,12 +16,16 @@ export function KnowledgeListClient() {
   const { t } = useLanguage();
   const [items, setItems] = useState<KnowledgeItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     async function loadItems() {
       try {
-        const payload = await apiGet<KnowledgeItem[]>("/api/knowledge");
+        const params = new URLSearchParams();
+        if (query.trim()) params.set("query", query.trim());
+        const payload = await apiGet<KnowledgeItem[]>(`/api/knowledge${params.toString() ? `?${params.toString()}` : ""}`);
         if (!cancelled) {
           setItems(payload);
           setError(null);
@@ -36,7 +40,7 @@ export function KnowledgeListClient() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [query]);
 
   if (error) {
     return <div className="list-item">{t("common.failed")}: {error}</div>;
@@ -48,12 +52,26 @@ export function KnowledgeListClient() {
 
   return (
     <div className="list">
+      <div className="list-item">
+        <div className="field">
+          <span>{t("common.search_docs")}</span>
+          <input className="text-input" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </div>
+      </div>
       {items.map((item) => (
-        <div className="list-item" key={`${item.source}-${item.title}`}>
+        <button
+          className="list-item"
+          key={`${item.source}-${item.title}`}
+          onClick={() =>
+            setExpandedKey((current) => (current === `${item.source}-${item.title}` ? null : `${item.source}-${item.title}`))
+          }
+          type="button"
+        >
           <strong>{item.title}</strong>
           <div className="muted">{item.source}</div>
           <p className="muted">{item.summary}</p>
-        </div>
+          {expandedKey === `${item.source}-${item.title}` ? <pre className="muted">{item.content}</pre> : null}
+        </button>
       ))}
     </div>
   );

@@ -9,18 +9,23 @@ type MemoryItem = {
   memory_id: string;
   memory_type: string;
   summary?: string;
+  details?: string;
 };
 
 export function MemoryListClient() {
   const { t } = useLanguage();
   const [items, setItems] = useState<MemoryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [memoryType, setMemoryType] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     async function loadItems() {
       try {
-        const payload = await apiGet<MemoryItem[]>("/api/memories");
+        const params = new URLSearchParams();
+        if (memoryType) params.set("memory_type", memoryType);
+        const payload = await apiGet<MemoryItem[]>(`/api/memories${params.toString() ? `?${params.toString()}` : ""}`);
         if (!cancelled) {
           setItems(payload);
           setError(null);
@@ -35,7 +40,7 @@ export function MemoryListClient() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [memoryType]);
 
   if (error) {
     return <div className="list-item">{t("common.failed")}: {error}</div>;
@@ -47,11 +52,23 @@ export function MemoryListClient() {
 
   return (
     <div className="list">
+      <div className="list-item">
+        <div className="field">
+          <span>{t("common.filter_memory")}</span>
+          <input className="text-input" value={memoryType} onChange={(event) => setMemoryType(event.target.value)} />
+        </div>
+      </div>
       {items.map((item) => (
-        <div className="list-item" key={item.memory_id}>
+        <button
+          className="list-item"
+          key={item.memory_id}
+          onClick={() => setExpandedId((current) => (current === item.memory_id ? null : item.memory_id))}
+          type="button"
+        >
           <strong>{item.memory_type}</strong>
           <div className="muted">{item.summary || "No summary provided."}</div>
-        </div>
+          {expandedId === item.memory_id && item.details ? <pre className="muted">{item.details}</pre> : null}
+        </button>
       ))}
     </div>
   );

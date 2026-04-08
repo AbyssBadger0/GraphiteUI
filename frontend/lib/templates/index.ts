@@ -1,17 +1,9 @@
 import type { GraphDocument, ThemePreset } from "@/types/editor";
 
 import {
-  createCreativeFactoryGraphDocument,
   CREATIVE_FACTORY_THEME_PRESETS,
   getCreativeFactoryThemePresetById,
 } from "@/lib/templates/creative-factory";
-
-export function createTemplateGraphDocument(templateId: string, graphId: string, themePresetId?: string): GraphDocument {
-  if (templateId === "creative_factory") {
-    return createCreativeFactoryGraphDocument(graphId, themePresetId);
-  }
-  return createCreativeFactoryGraphDocument(graphId, themePresetId);
-}
 
 export function createTemplateShellDocument(templateId: string, graphId: string, themePresetId?: string): GraphDocument {
   const preset = getTemplateThemePresetById(templateId, themePresetId ?? "") ?? getTemplateThemePresets(templateId)[0];

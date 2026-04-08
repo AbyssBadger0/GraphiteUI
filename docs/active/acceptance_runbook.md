@@ -66,10 +66,14 @@ http://127.0.0.1:8765
 这个入口已经预置：
 
 - `theme_config`
-- `state_schema`
+- 模板接口正常时返回的 `state_schema`
 - creative factory 标准节点链
 - condition 路由
 - 图片 / 视频 TODO 产物链
+
+补充说明：
+
+- 如果模板接口异常，editor 会退回最小 shell graph，而不是使用前端本地完整默认图
 
 ---
 

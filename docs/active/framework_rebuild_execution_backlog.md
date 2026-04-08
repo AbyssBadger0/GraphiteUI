@@ -83,7 +83,8 @@
 
 - editor 模板主路径已优先依赖后端 `default_graph`
 - store 初始化已改为轻量 shell，而非完整本地模板图
-- 本地完整模板图仍保留为模板接口失败时的兜底
+- 前端本地完整模板图已删除
+- 模板接口失败时只回退到最小 shell graph + 本地 theme presets
 
 ## Task T2A Editor 运行观测增强
 

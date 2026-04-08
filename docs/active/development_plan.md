@@ -104,14 +104,15 @@
   - `templates`
 - `creative_factory` 默认图已由后端模板层生成
 - editor 模板主路径已优先依赖后端 `default_graph`
-  - 前端本地完整模板图仅作为异常兜底
+  - 前端异常兜底已降级为最小 shell graph + 本地 theme presets
+  - 前端不再维护完整默认图副本
 
 ### 3.2 尚未完成
 
 - 模板注册表目前 **只有一个模板**
   - 还没有第二个模板用于验证框架通用性
 - 前端和后端的模板定义虽然已收拢很多，但仍不是完全单一来源
-  - 前端仍保留 fallback 模板逻辑，但已不再参与主路径
+  - 前端仍保留 fallback shell 与本地 preset 逻辑，但已不再维护完整图结构
 - `settings` 里仍保留 `skills` 字段
   - 说明 skill 层还没有完全退出主概念层
 - 前端已建立 primitives 与语义组件，但还没有形成完整设计系统

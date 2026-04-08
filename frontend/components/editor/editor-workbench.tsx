@@ -30,7 +30,7 @@ import {
   type BackendGraphDocument,
   type BackendTemplateDefinition,
 } from "@/lib/graph-api";
-import { createTemplateGraphDocument, getTemplateThemePresets } from "@/lib/templates";
+import { createTemplateShellDocument, getTemplateThemePresets } from "@/lib/templates";
 import { useEditorStore } from "@/stores/editor-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -158,8 +158,8 @@ function EditorWorkbenchInner({ graphId }: { graphId: string }) {
         if (!cancelled) {
           if (graphId === "creative-factory" || graphId.startsWith("template-")) {
             hydrateGraph(
-              createTemplateGraphDocument(templateId, graphId, themeConfig.themePreset),
-              "Loaded from local fallback template",
+              createTemplateShellDocument(templateId, graphId, themeConfig.themePreset),
+              "Loaded from local fallback shell",
             );
           }
           setTemplatePresets(getTemplateThemePresets(templateId));

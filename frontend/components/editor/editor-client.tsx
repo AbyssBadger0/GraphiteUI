@@ -624,7 +624,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                 pannable
                 zoomable
                 position="bottom-right"
-                className="!bottom-4 !right-4 !h-[168px] !w-[220px] !rounded-[22px] !border !border-[rgba(154,52,18,0.18)] !bg-[rgba(255,250,241,0.95)] !shadow-[0_16px_36px_rgba(60,41,20,0.14)]"
+                className="!bottom-4 !right-4 !h-[168px] !w-[220px] !overflow-hidden !rounded-[18px] !border-[rgba(154,52,18,0.16)] !bg-[rgba(255,250,241,0.94)] !shadow-[0_14px_30px_rgba(60,41,20,0.12)]"
                 maskColor="rgba(154,52,18,0.08)"
                 nodeColor="#d97706"
               />
@@ -643,9 +643,6 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
             </div>
           ) : null}
 
-          <div className="pointer-events-none absolute bottom-4 right-4 -translate-y-[188px] rounded-full border border-[rgba(154,52,18,0.18)] bg-[rgba(255,250,241,0.95)] px-3 py-1 text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)] shadow-[0_10px_24px_rgba(60,41,20,0.1)]">
-            Mini Map
-          </div>
         </div>
 
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] border-l border-[rgba(154,52,18,0.16)] bg-[rgba(255,248,240,0.76)] px-4 py-4">

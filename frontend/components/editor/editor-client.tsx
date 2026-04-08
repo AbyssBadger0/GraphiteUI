@@ -48,6 +48,9 @@ type StateField = {
   role: string;
   title: string;
   description: string;
+  example?: unknown;
+  source_nodes?: string[];
+  target_nodes?: string[];
 };
 
 type GraphNodePayload = {
@@ -105,6 +108,8 @@ type RunDetail = {
   errors: string[];
 };
 
+type StateColorMap = Record<string, string>;
+
 type EditorClientProps = {
   mode: "new" | "existing";
   initialGraph?: GraphPayload | null;
@@ -133,6 +138,10 @@ type NodePreset = {
 };
 
 const HELLO_WORLD_TEMPLATE_ID = "hello_world";
+const DEFAULT_STATE_COLOR = "#d97706";
+const STATE_COLOR_PALETTE = ["#d97706", "#0f766e", "#2563eb", "#b45309", "#be185d", "#6d28d9", "#15803d", "#475569"];
+const STATE_TYPE_OPTIONS = ["string", "number", "boolean", "object", "array", "markdown", "json", "file_list"] as const;
+const STATE_ROLE_OPTIONS = ["input", "intermediate", "decision", "artifact", "final"] as const;
 
 const NODE_PRESETS: Record<string, NodePreset> = {
   start: {
@@ -280,6 +289,17 @@ function FlowNodeCard({ data, selected }: { data: FlowNodeData; selected: boolea
   );
 }
 
+function getInitialStateColors(graph: GraphPayload): StateColorMap {
+  const colors = (graph.metadata?.state_colors as StateColorMap | undefined) ?? {};
+  const result: StateColorMap = {};
+
+  graph.state_schema.forEach((field, index) => {
+    result[field.key] = colors[field.key] ?? STATE_COLOR_PALETTE[index % STATE_COLOR_PALETTE.length] ?? DEFAULT_STATE_COLOR;
+  });
+
+  return result;
+}
+
 const nodeTypes = {
   default: FlowNodeCard,
 };
@@ -291,9 +311,13 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges.map(graphEdgeToFlowEdge));
   const [graphName, setGraphName] = useState(initialGraph.name);
   const [currentGraphId, setCurrentGraphId] = useState<string | null>(initialGraph.graph_id ?? graphId ?? null);
+  const [stateSchema, setStateSchema] = useState<StateField[]>(initialGraph.state_schema);
+  const [stateColors, setStateColors] = useState<StateColorMap>(() => getInitialStateColors(initialGraph));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [selectedStateKey, setSelectedStateKey] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [stateSearch, setStateSearch] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready");
   const [validationIssues, setValidationIssues] = useState<ApiIssue[]>([]);
@@ -301,6 +325,10 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
   const [isSaving, setIsSaving] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [newStateKey, setNewStateKey] = useState("");
+  const [newStateDescription, setNewStateDescription] = useState("");
+  const [newStateType, setNewStateType] = useState<(typeof STATE_TYPE_OPTIONS)[number]>("string");
+  const [newStateRole, setNewStateRole] = useState<(typeof STATE_ROLE_OPTIONS)[number]>("intermediate");
   const reactFlow = useReactFlow<FlowNode, Edge>();
 
   const selectedNode = useMemo(
@@ -311,6 +339,23 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
     () => edges.find((edge) => edge.id === selectedEdgeId) ?? null,
     [edges, selectedEdgeId],
   );
+  const selectedState = useMemo(
+    () => stateSchema.find((field) => field.key === selectedStateKey) ?? null,
+    [stateSchema, selectedStateKey],
+  );
+
+  const stateRelationships = useMemo(() => {
+    return stateSchema.reduce<Record<string, { readers: string[]; writers: string[] }>>((accumulator, field) => {
+      const readers = nodes
+        .filter((node) => node.data.reads.includes(field.key))
+        .map((node) => node.data.label || node.id);
+      const writers = nodes
+        .filter((node) => node.data.writes.includes(field.key))
+        .map((node) => node.data.label || node.id);
+      accumulator[field.key] = { readers, writers };
+      return accumulator;
+    }, {});
+  }, [nodes, stateSchema]);
 
   useEffect(() => {
     if (nodes.length > 0) {
@@ -330,14 +375,34 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
     });
   }, [search]);
 
+  const visibleStates = useMemo(() => {
+    const query = stateSearch.trim().toLowerCase();
+    return stateSchema.filter((field) => {
+      if (!query) {
+        return true;
+      }
+      return [field.key, field.type, field.role, field.description, field.title].some((value) =>
+        value.toLowerCase().includes(query),
+      );
+    });
+  }, [stateSchema, stateSearch]);
+
   function buildPayload(): GraphPayload {
+    const metadata = {
+      ...initialGraph.metadata,
+      state_colors: stateColors,
+    };
+
     return {
       graph_id: currentGraphId,
       name: graphName.trim() || "Untitled Graph",
       template_id: initialGraph.template_id,
       theme_config: initialGraph.theme_config,
-      state_schema: initialGraph.state_schema,
-      metadata: initialGraph.metadata,
+      state_schema: stateSchema.map((field) => ({
+        ...field,
+        title: field.title || field.key,
+      })),
+      metadata,
       nodes: nodes.map((node) => ({
         id: node.id,
         type: node.data.nodeType,
@@ -406,6 +471,93 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
     });
   }
 
+  function addStateField() {
+    const key = newStateKey.trim();
+    if (!key) {
+      setStatusMessage("State key is required");
+      return;
+    }
+    if (stateSchema.some((field) => field.key === key)) {
+      setStatusMessage(`State '${key}' already exists`);
+      return;
+    }
+
+    setStateSchema((current) =>
+      current.concat({
+        key,
+        type: newStateType,
+        role: newStateRole,
+        title: key,
+        description: newStateDescription.trim(),
+      }),
+    );
+    setStateColors((current) => ({
+      ...current,
+      [key]: STATE_COLOR_PALETTE[stateSchema.length % STATE_COLOR_PALETTE.length] ?? DEFAULT_STATE_COLOR,
+    }));
+    setSelectedStateKey(key);
+    setNewStateKey("");
+    setNewStateDescription("");
+    setNewStateType("string");
+    setNewStateRole("intermediate");
+    setStatusMessage(`Added state ${key}`);
+  }
+
+  function updateStateField(stateKey: string, partial: Partial<StateField>) {
+    let nextKey = stateKey;
+
+    setStateSchema((current) =>
+      current.map((field) => {
+        if (field.key !== stateKey) {
+          return field;
+        }
+
+        nextKey = (partial.key ?? field.key).trim();
+        return {
+          ...field,
+          ...partial,
+          key: nextKey,
+          title: partial.title ?? field.title ?? nextKey,
+        };
+      }),
+    );
+
+    if (partial.key && partial.key.trim() && partial.key.trim() !== stateKey) {
+      const trimmedKey = partial.key.trim();
+      setStateColors((current) => {
+        const nextColors = { ...current, [trimmedKey]: current[stateKey] ?? DEFAULT_STATE_COLOR };
+        delete nextColors[stateKey];
+        return nextColors;
+      });
+      setNodes((current) =>
+        current.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            reads: node.data.reads.map((item) => (item === stateKey ? trimmedKey : item)),
+            writes: node.data.writes.map((item) => (item === stateKey ? trimmedKey : item)),
+          },
+        })),
+      );
+      setEdges((current) =>
+        current.map((edge) => {
+          const flowKeys = ((edge.data?.flow_keys as string[] | undefined) ?? []).map((item) =>
+            item === stateKey ? trimmedKey : item,
+          );
+          return {
+            ...edge,
+            label: flowKeys.join(", "),
+            data: {
+              ...(edge.data ?? {}),
+              flow_keys: flowKeys,
+            },
+          };
+        }),
+      );
+      setSelectedStateKey(trimmedKey);
+    }
+  }
+
   function updateNodeData(nodeId: string, updater: (data: FlowNodeData) => FlowNodeData) {
     setNodes((current) =>
       current.map((node) =>
@@ -426,6 +578,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
   function handleSelectionChange({ nodes: selectedNodes, edges: selectedEdges }: OnSelectionChangeParams<FlowNode, Edge>) {
     setSelectedNodeId(selectedNodes[0]?.id ?? null);
     setSelectedEdgeId(selectedEdges[0]?.id ?? null);
+    setSelectedStateKey(null);
   }
 
   async function handleSave() {
@@ -524,37 +677,119 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
       </header>
 
       <div className="grid min-h-0 grid-cols-[280px_minmax(0,1fr)_320px]">
-        <aside className="grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] border-r border-[rgba(154,52,18,0.16)] bg-[rgba(255,248,240,0.76)] px-4 py-4">
-          <div>
-            <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Node Palette</div>
-            <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">Build Hello World</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Click to add nodes, or drag them onto the canvas. Connect them in order: start, hello_model, end.</p>
-          </div>
-          <Input
-            className="mt-4 h-10"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search node type or label"
-          />
-          <div className="mt-4 grid min-h-0 gap-3 overflow-y-auto pr-1">
-            {nodePalette.map((item) => (
-              <button
-                key={item.type}
-                type="button"
-                draggable
-                className="cursor-grab rounded-[20px] border border-[rgba(154,52,18,0.18)] bg-[rgba(255,250,241,0.92)] p-4 text-left shadow-[0_10px_24px_rgba(60,41,20,0.06)] transition-transform hover:-translate-y-px active:cursor-grabbing"
-                onClick={() => addNode(item.type)}
-                onDragStart={(event) => {
-                  event.dataTransfer.setData("application/graphiteui-node", item.type);
-                  event.dataTransfer.effectAllowed = "move";
-                }}
-              >
-                <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{item.type}</div>
-                <div className="mt-1 text-lg font-semibold text-[var(--text)]">{item.label}</div>
-                <div className="mt-2 text-sm leading-6 text-[var(--muted)]">{item.description}</div>
-              </button>
-            ))}
-          </div>
+        <aside className="grid min-h-0 grid-rows-[minmax(0,1.25fr)_minmax(0,1fr)] border-r border-[rgba(154,52,18,0.16)] bg-[rgba(255,248,240,0.76)] px-4 py-4">
+          <section className="grid min-h-0 grid-rows-[auto_auto_auto_minmax(0,1fr)]">
+            <div>
+              <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">State Panel</div>
+              <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">State Registry</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Define the shared state and inspect which nodes read or write each field.</p>
+            </div>
+            <Input
+              className="mt-4 h-10"
+              value={stateSearch}
+              onChange={(event) => setStateSearch(event.target.value)}
+              placeholder="Search state key or role"
+            />
+            <div className="mt-4 grid gap-2 rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.72)] p-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_100px_100px] gap-2">
+                <Input value={newStateKey} onChange={(event) => setNewStateKey(event.target.value)} placeholder="state key" />
+                <select
+                  className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                  value={newStateType}
+                  onChange={(event) => setNewStateType(event.target.value as (typeof STATE_TYPE_OPTIONS)[number])}
+                >
+                  {STATE_TYPE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                  value={newStateRole}
+                  onChange={(event) => setNewStateRole(event.target.value as (typeof STATE_ROLE_OPTIONS)[number])}
+                >
+                  {STATE_ROLE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Input value={newStateDescription} onChange={(event) => setNewStateDescription(event.target.value)} placeholder="short description" />
+              <Button size="sm" onClick={addStateField}>
+                Add State
+              </Button>
+            </div>
+            <div className="mt-4 grid min-h-0 gap-3 overflow-y-auto pr-1">
+              {visibleStates.map((field) => {
+                const relationships = stateRelationships[field.key] ?? { readers: [], writers: [] };
+                const isSelected = selectedStateKey === field.key;
+                return (
+                  <button
+                    key={field.key}
+                    type="button"
+                    className={cn(
+                      "rounded-[20px] border bg-[rgba(255,250,241,0.92)] p-4 text-left shadow-[0_10px_24px_rgba(60,41,20,0.06)] transition-transform hover:-translate-y-px",
+                      isSelected ? "border-[var(--accent)]" : "border-[rgba(154,52,18,0.18)]",
+                    )}
+                    onClick={() => {
+                      setSelectedStateKey(field.key);
+                      setSelectedNodeId(null);
+                      setSelectedEdgeId(null);
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: stateColors[field.key] ?? DEFAULT_STATE_COLOR }} />
+                          <span className="text-sm font-semibold text-[var(--text)]">{field.key}</span>
+                        </div>
+                        <div className="mt-1 text-xs uppercase tracking-[0.08em] text-[var(--muted)]">
+                          {field.type} / {field.role}
+                        </div>
+                      </div>
+                      <div className="text-xs text-[var(--muted)]">{relationships.writers.length}W · {relationships.readers.length}R</div>
+                    </div>
+                    {field.description ? <div className="mt-2 text-sm leading-6 text-[var(--muted)]">{field.description}</div> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="mt-4 grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] border-t border-[rgba(154,52,18,0.12)] pt-4">
+            <div>
+              <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Node Palette</div>
+              <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">Build Hello World</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Create nodes after defining the state shape. Connect start, hello_model and end.</p>
+            </div>
+            <Input
+              className="mt-4 h-10"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search node type or label"
+            />
+            <div className="mt-4 grid min-h-0 gap-3 overflow-y-auto pr-1">
+              {nodePalette.map((item) => (
+                <button
+                  key={item.type}
+                  type="button"
+                  draggable
+                  className="cursor-grab rounded-[20px] border border-[rgba(154,52,18,0.18)] bg-[rgba(255,250,241,0.92)] p-4 text-left shadow-[0_10px_24px_rgba(60,41,20,0.06)] transition-transform hover:-translate-y-px active:cursor-grabbing"
+                  onClick={() => addNode(item.type)}
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData("application/graphiteui-node", item.type);
+                    event.dataTransfer.effectAllowed = "move";
+                  }}
+                >
+                  <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{item.type}</div>
+                  <div className="mt-1 text-lg font-semibold text-[var(--text)]">{item.label}</div>
+                  <div className="mt-2 text-sm leading-6 text-[var(--muted)]">{item.description}</div>
+                </button>
+              ))}
+            </div>
+          </section>
         </aside>
 
         <div className="relative min-w-0 min-h-0" ref={wrapperRef}>
@@ -579,6 +814,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
               onPaneClick={() => {
                 setSelectedNodeId(null);
                 setSelectedEdgeId(null);
+                setSelectedStateKey(null);
               }}
               onDragOver={(event) => {
                 event.preventDefault();
@@ -632,12 +868,12 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
           </div>
 
           {nodes.length === 0 ? (
-            <div className="pointer-events-none absolute inset-0 grid place-items-center">
+              <div className="pointer-events-none absolute inset-0 grid place-items-center">
               <div className="rounded-[28px] border border-dashed border-[rgba(154,52,18,0.26)] bg-[rgba(255,250,241,0.72)] px-8 py-6 text-center shadow-[0_18px_40px_rgba(60,41,20,0.08)]">
                 <div className="text-[0.72rem] uppercase tracking-[0.16em] text-[var(--accent-strong)]">Empty Canvas</div>
                 <div className="mt-3 text-2xl font-semibold text-[var(--text)]">Drop your first node here</div>
                 <div className="mt-2 max-w-md text-sm leading-6 text-[var(--muted)]">
-                  Drag from the left palette or click a node card to create it in the visible area.
+                  Define state on the left, then drag from the node palette or click a node card to create it in the visible area.
                 </div>
               </div>
             </div>
@@ -649,12 +885,12 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
           <div>
             <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Inspector</div>
             <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">
-              {selectedNode ? selectedNode.data.label : selectedEdge ? "Edge" : "Graph"}
+              {selectedNode ? selectedNode.data.label : selectedEdge ? "Edge" : selectedState ? selectedState.key : "Graph"}
             </h2>
           </div>
 
           <div className="mt-4 min-h-0 space-y-4 overflow-y-auto pr-1">
-            {!selectedNode && !selectedEdge ? (
+            {!selectedNode && !selectedEdge && !selectedState ? (
               <div className="grid gap-4">
                 <section className="rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.76)] p-4">
                   <div className="text-sm font-semibold text-[var(--text)]">Graph Info</div>
@@ -662,14 +898,18 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                     <div>Template: {initialGraph.template_id}</div>
                     <div>Nodes: {nodes.length}</div>
                     <div>Edges: {edges.length}</div>
+                    <div>States: {stateSchema.length}</div>
                   </div>
                 </section>
                 <section className="rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.76)] p-4">
                   <div className="text-sm font-semibold text-[var(--text)]">State Schema</div>
                   <div className="mt-3 grid gap-2">
-                    {initialGraph.state_schema.map((field) => (
+                    {stateSchema.map((field) => (
                       <div key={field.key} className="rounded-2xl border border-[rgba(154,52,18,0.1)] bg-[rgba(255,250,241,0.82)] px-3 py-2.5">
-                        <div className="text-sm font-semibold text-[var(--text)]">{field.key}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: stateColors[field.key] ?? DEFAULT_STATE_COLOR }} />
+                          <div className="text-sm font-semibold text-[var(--text)]">{field.key}</div>
+                        </div>
                         <div className="text-xs uppercase tracking-[0.08em] text-[var(--muted)]">
                           {field.type} / {field.role}
                         </div>
@@ -742,6 +982,89 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                     }}
                   />
                 </label>
+              </div>
+            ) : null}
+
+            {selectedState ? (
+              <div className="grid gap-4">
+                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                  <span>State Key</span>
+                  <Input
+                    value={selectedState.key}
+                    onChange={(event) => updateStateField(selectedState.key, { key: event.target.value })}
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                  <span>Description</span>
+                  <Input
+                    value={selectedState.description}
+                    onChange={(event) => updateStateField(selectedState.key, { description: event.target.value })}
+                  />
+                </label>
+                <div className="grid grid-cols-[1fr_1fr] gap-3">
+                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                    <span>Type</span>
+                    <select
+                      className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                      value={selectedState.type}
+                      onChange={(event) => updateStateField(selectedState.key, { type: event.target.value })}
+                    >
+                      {STATE_TYPE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                    <span>Role</span>
+                    <select
+                      className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                      value={selectedState.role}
+                      onChange={(event) => updateStateField(selectedState.key, { role: event.target.value })}
+                    >
+                      {STATE_ROLE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="grid gap-2 rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.76)] p-4">
+                  <div className="text-sm font-semibold text-[var(--text)]">Color</div>
+                  <div className="flex flex-wrap gap-2">
+                    {STATE_COLOR_PALETTE.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className={cn(
+                          "h-7 w-7 rounded-full border-2 transition-transform hover:scale-105",
+                          (stateColors[selectedState.key] ?? DEFAULT_STATE_COLOR) === color
+                            ? "border-[var(--text)]"
+                            : "border-transparent",
+                        )}
+                        style={{ backgroundColor: color }}
+                        onClick={() =>
+                          setStateColors((current) => ({
+                            ...current,
+                            [selectedState.key]: color,
+                          }))
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-4 rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.76)] p-4 text-sm leading-6 text-[var(--muted)]">
+                  <div>
+                    <div className="font-semibold text-[var(--text)]">Writers</div>
+                    <div>{(stateRelationships[selectedState.key]?.writers ?? []).join(", ") || "No writers yet"}</div>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-[var(--text)]">Readers</div>
+                    <div>{(stateRelationships[selectedState.key]?.readers ?? []).join(", ") || "No readers yet"}</div>
+                  </div>
+                </div>
               </div>
             ) : null}
 

@@ -12,6 +12,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   Position,
+  useUpdateNodeInternals,
   useEdgesState,
   useNodesState,
   useReactFlow,
@@ -468,6 +469,7 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
   const reads = getVisualInputKeys(data.nodeType, data.reads, data.stateColors, data.params);
   const writes = getVisualOutputKeys(data.nodeType, data.writes, data.stateColors, data.params);
   const outputSourceKey = String(data.params.source_state_key ?? data.reads[0] ?? "");
+  const textBinding = data.paramBindings.text;
 
   return (
     <div
@@ -486,9 +488,9 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
 
       <div className="grid gap-3 px-4 py-3">
         {reads.length > 0 && data.nodeType !== "text_output" ? (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid gap-1">
             {reads.map((key) => (
-              <StateChip
+              <SidePortRow
                 key={`read-${key}`}
                 nodeId={data.nodeId}
                 label={key}
@@ -504,6 +506,14 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
             {data.nodeType !== "text_input" ? (
               <div className="text-sm leading-6 text-[var(--muted)]">{data.description}</div>
             ) : null}
+            {data.nodeType === "text_input" ? (
+              <PortLine
+                nodeId={data.nodeId}
+                label="text"
+                rightSocket
+                color={data.stateColors[resolveOutputStateKey(data, "text")] ?? DEFAULT_STATE_COLOR}
+              />
+            ) : null}
             {preset.widgets.map((widget) => {
               const binding = data.paramBindings[widget.key];
               const showSocket = Boolean(widget.bindable) && (data.isConnecting || Boolean(binding));
@@ -513,13 +523,14 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
                   key={widget.key}
                   nodeId={data.nodeId}
                   paramName={widget.key}
-                  label={widget.label}
+                  label={data.nodeType === "text_input" ? "" : widget.label}
                   value={getWidgetValue(data, widget.key)}
                   binding={binding}
                   showSocket={showSocket}
                   disabled={disabled}
                   widgetType={widget.widget}
                   rows={widget.rows}
+                  socketAnchor={data.nodeType === "text_input" ? "top-left" : "center-left"}
                   placeholder={widget.placeholder ?? String(data.params.placeholder ?? "")}
                   onChange={(nextValue) => {
                     reactFlow.setNodes((current) =>
@@ -536,36 +547,16 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
                 />
               );
             })}
-            {preset.widgets.some((widget) => Boolean(data.paramBindings[widget.key])) ? (
-              <div className="rounded-[14px] border border-[rgba(154,52,18,0.14)] bg-[rgba(241,234,225,0.9)] px-3 py-2 text-[0.72rem] leading-5 text-[var(--muted)]">
-                {preset.widgets
-                  .filter((widget) => Boolean(data.paramBindings[widget.key]))
-                  .map((widget) => `${widget.label} 已由 ${data.paramBindings[widget.key]} 覆盖`)
-                  .join(" · ")}
-              </div>
-            ) : (
-              <div className="rounded-[14px] border border-[rgba(31,111,80,0.14)] bg-[rgba(241,250,245,0.88)] px-3 py-2 text-[0.72rem] leading-5 text-[var(--success)]">
-                未接入外部输入，运行时使用本地文本。
-              </div>
-            )}
-            {data.nodeType === "text_input" ? (
-              <SocketRow
-                nodeId={data.nodeId}
-                label="text"
-                color={data.stateColors[resolveOutputStateKey(data, "text")] ?? DEFAULT_STATE_COLOR}
-                side="output"
-              />
-            ) : null}
           </div>
         ) : null}
 
         {data.nodeType === "text_output" ? (
           <div className="grid gap-2">
-            <SocketRow
+            <PortLine
               nodeId={data.nodeId}
               label="text"
+              leftInput
               color={data.stateColors[outputSourceKey] ?? DEFAULT_STATE_COLOR}
-              side="input"
             />
             <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.82)] p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
@@ -582,9 +573,9 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
         ) : null}
 
         {writes.length > 0 && data.nodeType !== "text_input" ? (
-          <div className="flex flex-wrap justify-end gap-1.5">
+          <div className="grid gap-1">
             {writes.map((key) => (
-              <StateChip
+              <SidePortRow
                 key={`write-${key}`}
                 nodeId={data.nodeId}
                 label={key}
@@ -605,7 +596,51 @@ function WidgetLabel({ label }: { label: string }) {
   return <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{label}</div>;
 }
 
-function SocketRow({
+function PortLine({
+  nodeId,
+  label,
+  color,
+  leftInput,
+  rightSocket,
+}: {
+  nodeId: string;
+  label: string;
+  color: string;
+  leftInput?: boolean;
+  rightSocket?: boolean;
+}) {
+  return (
+    <div className="relative flex h-6 items-center justify-between px-1 text-[0.82rem] uppercase tracking-[0.16em] text-[var(--accent-strong)]">
+      <div className="relative flex h-6 min-w-[18px] items-center justify-start">
+        {leftInput ? (
+          <Handle
+            id={buildHandleId("input", label)}
+            type="target"
+            position={Position.Left}
+            className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border-2 !border-[rgba(255,250,241,0.96)]"
+            style={{ backgroundColor: color }}
+            isConnectable
+          />
+        ) : null}
+      </div>
+      <div className={cn("flex-1 px-2", rightSocket ? "text-right" : "text-left")}>{label}</div>
+      <div className="relative flex h-6 min-w-[28px] items-center justify-end">
+        {rightSocket ? (
+          <Handle
+            id={buildHandleId("output", label)}
+            type="source"
+            position={Position.Right}
+            className="!right-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border-2 !border-[rgba(255,250,241,0.96)]"
+            style={{ backgroundColor: color }}
+            isConnectable
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SidePortRow({
   nodeId,
   label,
   color,
@@ -617,85 +652,33 @@ function SocketRow({
   side: "input" | "output";
 }) {
   return (
-    <div
-      className={cn(
-        "relative inline-flex items-center gap-2 rounded-full border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.82)] px-3 py-1.5 text-[0.72rem] font-medium text-[var(--text)]",
-        side === "input" ? "self-start" : "self-end",
-      )}
-    >
+    <div className={cn("relative flex h-6 items-center text-[0.92rem] text-[var(--text)]", side === "input" ? "justify-start" : "justify-end")}>
       {side === "input" ? (
         <>
           <Handle
             id={buildHandleId("input", label)}
             type="target"
             position={Position.Left}
-            className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !border-[rgba(154,52,18,0.24)] !bg-white"
+            className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border-2 !border-[rgba(255,250,241,0.96)]"
+            style={{ backgroundColor: color }}
             isConnectable
           />
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-          <span>{label}</span>
+          <span className="ml-2 truncate">{label}</span>
         </>
       ) : (
         <>
-          <span>{label}</span>
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+          <span className="truncate text-right">{label}</span>
           <Handle
             id={buildHandleId("output", label)}
             type="source"
             position={Position.Right}
-            className="!right-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !border-[rgba(154,52,18,0.24)] !bg-white"
+            className="!right-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border-2 !border-[rgba(255,250,241,0.96)]"
+            style={{ backgroundColor: color }}
             isConnectable
           />
         </>
       )}
     </div>
-  );
-}
-
-function StateChip({
-  nodeId,
-  label,
-  color,
-  side,
-}: {
-  nodeId: string;
-  label: string;
-  color: string;
-  side: "input" | "output";
-}) {
-  return (
-    <span
-      className={cn(
-        "relative inline-flex items-center gap-1 rounded-full border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.82)] px-2 py-1 text-[0.7rem] font-medium text-[var(--text)]",
-        side === "input" ? "justify-start self-start" : "justify-end self-end",
-      )}
-    >
-      {side === "input" ? (
-        <>
-          <Handle
-            id={buildHandleId("input", label)}
-            type="target"
-            position={Position.Left}
-            className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !border-[rgba(154,52,18,0.24)] !bg-white"
-            isConnectable
-          />
-          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
-          <span>{label}</span>
-        </>
-      ) : (
-        <>
-          <span>{label}</span>
-          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
-          <Handle
-            id={buildHandleId("output", label)}
-            type="source"
-            position={Position.Right}
-            className="!right-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !border-[rgba(154,52,18,0.24)] !bg-white"
-            isConnectable
-          />
-        </>
-      )}
-    </span>
   );
 }
 
@@ -709,6 +692,7 @@ function SocketField({
   disabled,
   widgetType,
   rows,
+  socketAnchor,
   placeholder,
   onChange,
 }: {
@@ -721,6 +705,7 @@ function SocketField({
   disabled: boolean;
   widgetType: "text" | "textarea";
   rows?: number;
+  socketAnchor?: "center-left" | "top-left";
   placeholder?: string;
   onChange: (value: string) => void;
 }) {
@@ -731,7 +716,7 @@ function SocketField({
 
   return (
     <div className="grid gap-1.5">
-      <WidgetLabel label={label} />
+      {label ? <WidgetLabel label={label} /> : null}
       <div
         className={cn(
           "relative rounded-[14px] border px-2.5 py-2 transition-colors",
@@ -746,9 +731,11 @@ function SocketField({
             type="target"
             position={Position.Left}
             className={cn(
-              "!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !bg-white",
+              "!left-[-7px] !m-0 !h-3 !w-3 !border-2 !border-[rgba(255,250,241,0.96)] !bg-white",
+              socketAnchor === "top-left" ? "!top-[16px]" : "!top-1/2 !-translate-y-1/2",
               binding ? "!border-[rgba(31,111,80,0.5)] !shadow-[0_0_0_3px_rgba(31,111,80,0.12)]" : "!border-[rgba(217,119,6,0.55)] !shadow-[0_0_0_3px_rgba(217,119,6,0.12)]",
             )}
+            style={{ backgroundColor: binding ? "#0f766e" : "#d97706" }}
             isConnectable
           />
         ) : null}
@@ -782,7 +769,11 @@ function SocketField({
             aria-label={`${nodeId}-${paramName}`}
           />
         )}
-        {binding ? <span className="ml-2 shrink-0 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--accent-strong)]">override</span> : null}
+        {binding ? (
+          <span className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 text-[0.72rem] uppercase tracking-[0.16em] text-[var(--accent-strong)]">
+            override
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -1148,6 +1139,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
   const [newStateDescription, setNewStateDescription] = useState("");
   const [newStateType, setNewStateType] = useState<(typeof STATE_TYPE_OPTIONS)[number]>("string");
   const reactFlow = useReactFlow<FlowNode, Edge>();
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const selectedNode = useMemo(
     () => nodes.find((node) => node.id === selectedNodeId) ?? null,
@@ -1204,6 +1196,12 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
       })),
     );
   }, [isConnecting, paramBindingsByNode, runDetail, stateColors, setNodes]);
+
+  useEffect(() => {
+    window.requestAnimationFrame(() => {
+      nodes.forEach((node) => updateNodeInternals(node.id));
+    });
+  }, [isConnecting, nodes, paramBindingsByNode, updateNodeInternals]);
 
   useEffect(() => {
     setEdges((current) =>

@@ -76,7 +76,7 @@ def _run_node_logic(state: RunState, node: GraphNode) -> dict[str, Any]:
     handler = registry.get(node.type)
     if handler is None:
         return {}
-    return handler(state, dict(node.params or node.config or {}))
+    return handler(state, _resolve_runtime_params(state, node))
 
 
 def _build_input_summary(state: RunState, node: GraphNode) -> str:
@@ -119,3 +119,17 @@ def _build_artifact_payload(body: dict[str, Any]) -> dict[str, Any]:
         for key, value in body.items()
         if key not in {"status", "current_node_id", "completed_at"}
     }
+
+
+def _resolve_runtime_params(state: RunState, node: GraphNode) -> dict[str, Any]:
+    raw_params = dict(node.params or node.config or {})
+    param_bindings = raw_params.pop("__param_bindings", {})
+
+    if isinstance(param_bindings, dict):
+        for param_name, state_key in param_bindings.items():
+            if not isinstance(param_name, str) or not isinstance(state_key, str):
+                continue
+            if state_key in state:
+                raw_params[param_name] = state.get(state_key)
+
+    return raw_params

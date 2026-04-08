@@ -53,7 +53,7 @@ def _chat_with_local_model(
 
 def generate_hello_greeting(state: dict[str, Any], params: dict[str, Any] | None = None) -> dict[str, Any]:
     params = params or {}
-    name = str(params.get("name") or state.get("name") or "World").strip() or "World"
+    name = str(state.get("name") or params.get("name") or "World").strip() or "World"
     system_prompt = "You are a precise assistant. Return only a short greeting in the format: Hello, <name>."
     user_prompt = f"Name: {name}"
     greeting = _chat_with_local_model(

@@ -126,6 +126,7 @@ type FlowNodeData = {
   writes: string[];
   params: Record<string, unknown>;
   stateColors: StateColorMap;
+  paramBindings: Record<string, string>;
 };
 
 type FlowNode = Node<FlowNodeData>;
@@ -260,13 +261,20 @@ function graphNodeToFlowNode(node: GraphNodePayload, graph: GraphPayload): FlowN
   const editorNodeType = runtimeNodeTypeToEditorNodeType(node.type);
   const preset = NODE_PRESETS[editorNodeType];
   const boundaryKeys = inferBoundaryKeys(node, graph);
+  const rawParams = (node.params ?? {}) as Record<string, unknown>;
+  const persistedParamBindings =
+    rawParams.__param_bindings && typeof rawParams.__param_bindings === "object"
+      ? (rawParams.__param_bindings as Record<string, string>)
+      : {};
+  const paramsWithoutBindings = { ...rawParams };
+  delete paramsWithoutBindings.__param_bindings;
   const derivedParams =
     editorNodeType === "text_input"
       ? {
           input_key: boundaryKeys.writes[0] ?? "",
-          default_value: String(node.params?.input_values && boundaryKeys.writes[0] ? (node.params.input_values as Record<string, unknown>)[boundaryKeys.writes[0]] ?? "" : ""),
-          placeholder: String(node.params?.placeholder ?? "Enter text"),
-          multiline: Boolean(node.params?.multiline),
+          default_value: String(rawParams.input_values && boundaryKeys.writes[0] ? (rawParams.input_values as Record<string, unknown>)[boundaryKeys.writes[0]] ?? "" : ""),
+          placeholder: String(rawParams.placeholder ?? "Enter text"),
+          multiline: Boolean(rawParams.multiline),
         }
       : editorNodeType === "text_output"
         ? {
@@ -275,15 +283,15 @@ function graphNodeToFlowNode(node: GraphNodePayload, graph: GraphPayload): FlowN
             persist_enabled: false,
             persist_format: "txt",
             file_name_template: boundaryKeys.reads[0] ?? "result",
-            ...(Array.isArray(node.params?.outputs) && node.params.outputs[0] && typeof node.params.outputs[0] === "object"
+            ...(Array.isArray(rawParams.outputs) && rawParams.outputs[0] && typeof rawParams.outputs[0] === "object"
               ? {
-                  ...(node.params.outputs[0] as Record<string, unknown>),
+                  ...(rawParams.outputs[0] as Record<string, unknown>),
                   source_state_key:
-                    String((node.params.outputs[0] as Record<string, unknown>).state_key ?? boundaryKeys.reads[0] ?? ""),
+                    String((rawParams.outputs[0] as Record<string, unknown>).state_key ?? boundaryKeys.reads[0] ?? ""),
                 }
               : {}),
           }
-        : node.params ?? {};
+        : paramsWithoutBindings;
   return {
     id: node.id,
     type: "default",
@@ -297,6 +305,7 @@ function graphNodeToFlowNode(node: GraphNodePayload, graph: GraphPayload): FlowN
       writes: boundaryKeys.writes,
       params: derivedParams,
       stateColors: {},
+      paramBindings: persistedParamBindings,
     },
     draggable: true,
     sourcePosition: Position.Right,
@@ -344,6 +353,8 @@ function getVisualOutputKeys(nodeType: string, writes: string[], stateColors: St
 function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
   const reads = getVisualInputKeys(data.nodeType, data.reads, data.stateColors, data.params);
   const writes = getVisualOutputKeys(data.nodeType, data.writes, data.stateColors, data.params);
+  const nameBinding = data.paramBindings.name;
+  const localName = String(data.params.name ?? "");
 
   return (
     <div
@@ -371,6 +382,14 @@ function FlowNodeCard({ data, selected }: NodeProps<FlowNode>) {
           <div className="text-[0.7rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{data.nodeType}</div>
           <div className="mt-2 text-base font-semibold text-[var(--text)]">{data.label}</div>
           <div className="mt-2 text-[0.8rem] leading-5 text-[var(--muted)]">{data.description}</div>
+          {data.nodeType === "hello_model" ? (
+            <div className="mt-3 flex flex-col items-center gap-2">
+              <ParamSocket name="name" binding={nameBinding} />
+              <div className="rounded-full border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-1 text-[0.68rem] text-[var(--muted)]">
+                {nameBinding ? `Using connected state ${nameBinding}` : `Local name: ${localName || "empty"}`}
+              </div>
+            </div>
+          ) : null}
         </div>
         <div className="border-l border-[rgba(154,52,18,0.08)] px-3 py-3">
           <div className="mb-2 text-right text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Outputs</div>
@@ -438,6 +457,28 @@ function StateChip({
   );
 }
 
+function ParamSocket({
+  name,
+  binding,
+}: {
+  name: string;
+  binding?: string;
+}) {
+  return (
+    <div className="relative flex items-center gap-2 rounded-full border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.82)] px-2.5 py-1 text-[0.68rem] font-medium text-[var(--text)]">
+      <Handle
+        id={buildParamHandleId(name)}
+        type="target"
+        position={Position.Left}
+        className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border !border-[rgba(154,52,18,0.24)] !bg-white"
+        isConnectable
+      />
+      <span className="uppercase tracking-[0.08em] text-[var(--accent-strong)]">{name}</span>
+      <span className="text-[var(--muted)]">{binding ? `bound:${binding}` : "local"}</span>
+    </div>
+  );
+}
+
 function EmptyIoState({ side }: { side: "input" | "output" }) {
   return (
     <span
@@ -463,6 +504,10 @@ function buildHandleId(side: "input" | "output", stateKey: string) {
   return `${side}:${stateKey}`;
 }
 
+function buildParamHandleId(paramName: string) {
+  return `param:${paramName}`;
+}
+
 function uniqueKeys(values: string[]) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -471,8 +516,19 @@ function getStateKeyFromHandle(handleId?: string | null) {
   if (!handleId) {
     return null;
   }
+  if (!handleId.startsWith("input:") && !handleId.startsWith("output:")) {
+    return null;
+  }
   const [, stateKey] = handleId.split(":");
   return stateKey || null;
+}
+
+function getParamNameFromHandle(handleId?: string | null) {
+  if (!handleId || !handleId.startsWith("param:")) {
+    return null;
+  }
+  const [, paramName] = handleId.split(":");
+  return paramName || null;
 }
 
 function createVisualEdge(params: {
@@ -558,6 +614,24 @@ function explodeGraphEdges(graph: GraphPayload, colors: StateColorMap): Edge[] {
   });
 }
 
+function collectParamBindings(edges: Edge[]) {
+  return edges.reduce<Record<string, Record<string, string>>>((accumulator, edge) => {
+    const sourceKey = getStateKeyFromHandle(edge.sourceHandle);
+    const paramName = getParamNameFromHandle(edge.targetHandle);
+    if (!sourceKey || !paramName) {
+      return accumulator;
+    }
+    const existing = accumulator[edge.target] ?? {};
+    return {
+      ...accumulator,
+      [edge.target]: {
+        ...existing,
+        [paramName]: sourceKey,
+      },
+    };
+  }, {});
+}
+
 function collapseVisualEdges(edges: Edge[]): GraphEdgePayload[] {
   const grouped = new Map<string, GraphEdgePayload>();
 
@@ -640,6 +714,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
     () => stateSchema.find((field) => field.key === selectedStateKey) ?? null,
     [stateSchema, selectedStateKey],
   );
+  const paramBindingsByNode = useMemo(() => collectParamBindings(edges), [edges]);
 
   const stateRelationships = useMemo(() => {
     return stateSchema.reduce<Record<string, { readers: string[]; writers: string[] }>>((accumulator, field) => {
@@ -669,10 +744,11 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
         data: {
           ...node.data,
           stateColors,
+          paramBindings: paramBindingsByNode[node.id] ?? {},
         },
       })),
     );
-  }, [stateColors, setNodes]);
+  }, [paramBindingsByNode, stateColors, setNodes]);
 
   useEffect(() => {
     setEdges((current) =>
@@ -725,6 +801,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
       const sourceStateKey = String(node.data.params.source_state_key ?? "").trim();
       const reads = node.data.nodeType === "text_output" ? uniqueKeys([sourceStateKey || node.data.reads[0] || ""]) : node.data.reads;
       const writes = node.data.nodeType === "text_input" ? uniqueKeys([inputKey || node.data.writes[0] || ""]) : node.data.writes;
+      const paramBindings = paramBindingsByNode[node.id] ?? {};
 
       let params = node.data.params;
       if (node.data.nodeType === "text_input") {
@@ -752,6 +829,12 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                 },
               ]
             : [],
+        };
+      }
+      if (Object.keys(paramBindings).length > 0) {
+        params = {
+          ...params,
+          __param_bindings: paramBindings,
         };
       }
 
@@ -817,6 +900,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
           writes: [...preset.writes],
           params: { ...preset.params },
           stateColors,
+          paramBindings: {},
         },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
@@ -894,6 +978,12 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
             ...node.data,
             reads: node.data.reads.map((item) => (item === stateKey ? trimmedKey : item)),
             writes: node.data.writes.map((item) => (item === stateKey ? trimmedKey : item)),
+            paramBindings: Object.fromEntries(
+              Object.entries(node.data.paramBindings).map(([paramName, bindingKey]) => [
+                paramName,
+                bindingKey === stateKey ? trimmedKey : bindingKey,
+              ]),
+            ),
           },
         })),
       );
@@ -902,8 +992,15 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
           const flowKeys = ((edge.data?.flow_keys as string[] | undefined) ?? []).map((item) =>
             item === stateKey ? trimmedKey : item,
           );
+          const sourceKey = getStateKeyFromHandle(edge.sourceHandle);
           return {
             ...edge,
+            sourceHandle: sourceKey === stateKey ? buildHandleId("output", trimmedKey) : edge.sourceHandle,
+            targetHandle: edge.targetHandle?.startsWith("param:")
+              ? edge.targetHandle
+              : getStateKeyFromHandle(edge.targetHandle) === stateKey
+                ? buildHandleId("input", trimmedKey)
+                : edge.targetHandle,
             label: buildEdgeLabel(
               flowKeys,
               ((edge.data?.edge_kind as "normal" | "branch" | undefined) ?? "normal"),
@@ -1154,12 +1251,17 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
               onConnect={(connection: Connection) => {
                 const sourceKey = getStateKeyFromHandle(connection.sourceHandle);
                 const targetKey = getStateKeyFromHandle(connection.targetHandle);
+                const targetParam = getParamNameFromHandle(connection.targetHandle);
 
-                if (!sourceKey || !targetKey) {
-                  setStatusMessage("Connect state handles directly.");
+                if (!sourceKey) {
+                  setStatusMessage("Connect from a state output handle.");
                   return;
                 }
-                if (sourceKey !== targetKey) {
+                if (!targetKey && !targetParam) {
+                  setStatusMessage("Connect to a state input or parameter handle.");
+                  return;
+                }
+                if (targetKey && sourceKey !== targetKey) {
                   setStatusMessage("Only matching state keys can be connected.");
                   return;
                 }
@@ -1184,7 +1286,7 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                   );
                   return exists ? current : current.concat(nextEdge);
                 });
-                setStatusMessage(`Connected ${sourceKey}`);
+                setStatusMessage(targetParam ? `Bound ${sourceKey} to ${targetParam}` : `Connected ${sourceKey}`);
               }}
               onSelectionChange={handleSelectionChange}
               onPaneClick={() => {
@@ -1362,6 +1464,31 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                         }
                       />
                     </label>
+                  </>
+                ) : null}
+                {selectedNode.data.nodeType === "hello_model" ? (
+                  <>
+                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                      <span>Name</span>
+                      <Input
+                        value={String(selectedNode.data.params.name ?? "")}
+                        disabled={Boolean(selectedNode.data.paramBindings.name)}
+                        onChange={(event) =>
+                          updateNodeData(selectedNode.id, (data) => ({
+                            ...data,
+                            params: {
+                              ...data.params,
+                              name: event.target.value,
+                            },
+                          }))
+                        }
+                      />
+                    </label>
+                    <div className="rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs leading-5 text-[var(--muted)]">
+                      {selectedNode.data.paramBindings.name
+                        ? `Connected state overrides local value: ${selectedNode.data.paramBindings.name}`
+                        : "If connected from a state line, the upstream value overrides this field."}
+                    </div>
                   </>
                 ) : null}
                 {selectedNode.data.nodeType === "text_output" ? (
@@ -1607,9 +1734,14 @@ function EditorCanvas({ initialGraph, mode, graphId }: { initialGraph: GraphPayl
                     onChange={(event) => {
                       const flowKeys = splitCommaValues(event.target.value);
                       const primaryKey = flowKeys[0] ?? null;
+                      const targetParam = getParamNameFromHandle(selectedEdge.targetHandle);
                       updateEdge(selectedEdge.id, {
                         sourceHandle: primaryKey ? buildHandleId("output", primaryKey) : selectedEdge.sourceHandle,
-                        targetHandle: primaryKey ? buildHandleId("input", primaryKey) : selectedEdge.targetHandle,
+                        targetHandle: targetParam
+                          ? selectedEdge.targetHandle
+                          : primaryKey
+                            ? buildHandleId("input", primaryKey)
+                            : selectedEdge.targetHandle,
                         label: buildEdgeLabel(flowKeys, "normal", null),
                         data: {
                           ...(selectedEdge.data ?? {}),

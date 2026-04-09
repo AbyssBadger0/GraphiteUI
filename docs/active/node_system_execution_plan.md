@@ -675,6 +675,15 @@ agent node 的 skill attachment 已经有可依赖的数据源。
 
 `preset` 从设计概念变成正式系统能力。
 
+### Status
+
+第一版 preset 持久化已接入：
+
+- 后端已新增 preset schema、SQLite 存储和 `/api/presets`
+- 前端 `Save As Preset` 已改为保存到正式后端
+- NodeSystemEditor 已会加载后端 preset 并纳入创建器
+- 当前先完成 list/get/create/update 基础链路，lineage 通过 `sourcePresetId` 保留
+
 ---
 
 ## Phase 9: Migrate Existing Demo Flow Into New Preset + Skill Model

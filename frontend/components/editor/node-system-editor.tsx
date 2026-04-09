@@ -23,7 +23,7 @@ import "@xyflow/react/dist/style.css";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { EMPTY_AGENT_PRESET, getNodePresetById, NODE_PRESETS_MOCK } from "@/lib/node-presets-mock";
 import {
@@ -114,6 +114,14 @@ type SkillDefinition = {
   outputSchema: SkillDefinitionField[];
   supportedValueTypes: string[];
   sideEffects: string[];
+};
+
+type PresetDocument = {
+  presetId: string;
+  sourcePresetId?: string | null;
+  definition: NodePresetDefinition;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 const HELLO_WORLD_TEMPLATE_ID = "hello_world";
@@ -907,7 +915,9 @@ function NodeSystemCanvas({ initialGraph }: { initialGraph: GraphPayload }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusMessage, setStatusMessage] = useState("Node system phase 4: skill definitions connected.");
-  const [localPresets, setLocalPresets] = useState<NodePresetDefinition[]>([]);
+  const [persistedPresets, setPersistedPresets] = useState<NodePresetDefinition[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(true);
+  const [presetsError, setPresetsError] = useState<string | null>(null);
   const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
   const [skillDefinitionsLoading, setSkillDefinitionsLoading] = useState(true);
   const [skillDefinitionsError, setSkillDefinitionsError] = useState<string | null>(null);
@@ -930,7 +940,7 @@ function NodeSystemCanvas({ initialGraph }: { initialGraph: GraphPayload }) {
   });
   const ignoreNextPaneClickRef = useRef(false);
 
-  const allPresets = useMemo(() => [...NODE_PRESETS_MOCK, ...localPresets], [localPresets]);
+  const allPresets = useMemo(() => [...NODE_PRESETS_MOCK, ...persistedPresets], [persistedPresets]);
   const getRecommendedPresets = useCallback(
     (sourceType: ValueType | null) => {
       if (!sourceType) {
@@ -998,6 +1008,33 @@ function NodeSystemCanvas({ initialGraph }: { initialGraph: GraphPayload }) {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadPersistedPresets() {
+      try {
+        setPresetsLoading(true);
+        setPresetsError(null);
+        const payload = await apiGet<PresetDocument[]>("/api/presets");
+        if (!active) return;
+        setPersistedPresets(payload.map((item) => item.definition));
+      } catch (error) {
+        if (!active) return;
+        setPresetsError(error instanceof Error ? error.message : "Unknown error");
+      } finally {
+        if (active) {
+          setPresetsLoading(false);
+        }
+      }
+    }
+
+    void loadPersistedPresets();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const openCreationMenuAtClientPoint = useCallback(
     (clientX: number, clientY: number, sourceValueType: ValueType | null = null) => {
       const position = reactFlow.screenToFlowPosition({ x: clientX, y: clientY });
@@ -1036,7 +1073,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
   }
 
   function addNodeFromPresetId(presetId: string, position: { x: number; y: number }, connectionSource?: { sourceNodeId?: string; sourceHandle?: string; sourceValueType?: ValueType | null }) {
-    const preset = getNodePresetById(presetId) ?? localPresets.find((item) => item.presetId === presetId);
+    const preset = getNodePresetById(presetId) ?? persistedPresets.find((item) => item.presetId === presetId);
     if (!preset) return;
 
     const nextNode = createNodeFromPreset(preset, position);
@@ -1110,7 +1147,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
     );
   }
 
-  function saveSelectedNodeAsPreset() {
+  async function saveSelectedNodeAsPreset() {
     if (!selectedNode) return;
     const slug = selectedNode.data.config.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "custom";
     const nextPreset = {
@@ -1118,8 +1155,17 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
       presetId: `preset.local.${slug}.${crypto.randomUUID().slice(0, 6)}`,
       label: `${selectedNode.data.config.label} Copy`,
     } satisfies NodePresetDefinition;
-    setLocalPresets((current) => current.concat(nextPreset));
-    setStatusMessage(`Saved preset ${nextPreset.presetId}`);
+    try {
+      await apiPost<{ presetId: string; updatedAt?: string | null }>("/api/presets", {
+        presetId: nextPreset.presetId,
+        sourcePresetId: selectedNode.data.config.presetId,
+        definition: nextPreset,
+      });
+      setPersistedPresets((current) => [nextPreset, ...current.filter((item) => item.presetId !== nextPreset.presetId)]);
+      setStatusMessage(`Saved preset ${nextPreset.presetId}`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Failed to save preset.");
+    }
   }
 
   return (
@@ -1388,6 +1434,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                     <div>Type-aware creation suggestions</div>
                     <div>Advanced JSON kept as fallback</div>
                     <div>Skill definitions connected</div>
+                    <div>Preset persistence {presetsLoading ? "loading" : presetsError ? "degraded" : "connected"}</div>
                     <div>Runtime migration pending</div>
                   </div>
                 </section>
@@ -1805,7 +1852,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                   </>
                 ) : null}
 
-                <Button variant="ghost" onClick={saveSelectedNodeAsPreset}>
+                <Button variant="ghost" onClick={() => void saveSelectedNodeAsPreset()}>
                   Save As Preset
                 </Button>
                 <Button

@@ -346,6 +346,14 @@
 
 节点结构编辑已经从开发者式 JSON 原型升级为面向用户的结构化交互。
 
+### Status
+
+前端原型已完成：
+
+- inspector 主路径已切换为结构化编辑
+- `inputs / outputs / skills / branches / rule / branch_mapping` 已支持表单式增删改
+- 原始 JSON 仅作为默认收起的高级调试兜底保留
+
 ---
 
 ## Phase 3: Add New Graph Payload Family Without Breaking Old Runtime

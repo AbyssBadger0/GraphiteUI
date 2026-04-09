@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -25,7 +25,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 import { EMPTY_AGENT_PRESET, getNodePresetById, NODE_PRESETS_MOCK } from "@/lib/node-presets-mock";
-import { isValueTypeCompatible, type AgentNode, type ConditionNode, type InputBoundaryNode, type NodePresetDefinition, type OutputBoundaryNode, type PortDefinition, type ValueType } from "@/lib/node-system-schema";
+import {
+  isValueTypeCompatible,
+  type AgentNode,
+  type BranchDefinition,
+  type ConditionNode,
+  type ConditionRule,
+  type InputBoundaryNode,
+  type NodePresetDefinition,
+  type OutputBoundaryNode,
+  type PortDefinition,
+  type SkillAttachment,
+  type ValueType,
+} from "@/lib/node-system-schema";
 
 type ThemeConfig = {
   theme_preset: string;
@@ -94,6 +106,9 @@ const TYPE_COLORS: Record<ValueType, string> = {
   video: "#be185d",
   any: "#64748b",
 };
+
+const VALUE_TYPE_OPTIONS: ValueType[] = ["text", "json", "image", "audio", "video", "any"];
+const RULE_OPERATOR_OPTIONS: ConditionRule["operator"][] = ["==", "!=", ">=", "<=", ">", "<", "exists"];
 
 function createEditorDefaults(templates: TemplateRecord[]): GraphPayload {
   const helloWorldTemplate = templates.find((item) => item.template_id === HELLO_WORLD_TEMPLATE_ID);
@@ -255,6 +270,423 @@ function JsonTextArea({
   );
 }
 
+function PanelSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.76)] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-[var(--text)]">{title}</div>
+          {description ? <div className="mt-1 text-sm leading-6 text-[var(--muted)]">{description}</div> : null}
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3">{children}</div>
+    </section>
+  );
+}
+
+function PortEditorList({
+  label,
+  ports,
+  side,
+  onChange,
+}: {
+  label: string;
+  ports: PortDefinition[];
+  side: "input" | "output";
+  onChange: (nextPorts: PortDefinition[]) => void;
+}) {
+  return (
+    <PanelSection title={label} description={side === "input" ? "通过表单维护输入端口。" : "通过表单维护输出端口。"}>
+      {ports.map((port, index) => (
+        <div key={`${port.key}-${index}`} className="grid gap-3 rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Key</span>
+              <Input
+                value={port.key}
+                onChange={(event) =>
+                  onChange(ports.map((item, portIndex) => (portIndex === index ? { ...item, key: event.target.value } : item)))
+                }
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Label</span>
+              <Input
+                value={port.label}
+                onChange={(event) =>
+                  onChange(ports.map((item, portIndex) => (portIndex === index ? { ...item, label: event.target.value } : item)))
+                }
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Value Type</span>
+              <select
+                className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                value={port.valueType}
+                onChange={(event) =>
+                  onChange(
+                    ports.map((item, portIndex) =>
+                      portIndex === index ? { ...item, valueType: event.target.value as ValueType } : item,
+                    ),
+                  )
+                }
+              >
+                {VALUE_TYPE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {side === "input" ? (
+              <label className="mt-7 flex items-center gap-2 text-sm text-[var(--muted)]">
+                <input
+                  checked={Boolean(port.required)}
+                  type="checkbox"
+                  onChange={(event) =>
+                    onChange(
+                      ports.map((item, portIndex) =>
+                        portIndex === index ? { ...item, required: event.target.checked } : item,
+                      ),
+                    )
+                  }
+                />
+                <span>Required</span>
+              </label>
+            ) : (
+              <div />
+            )}
+          </div>
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => onChange(ports.filter((_, portIndex) => portIndex !== index))}>
+              Remove
+            </Button>
+          </div>
+        </div>
+      ))}
+      <div className="flex justify-start">
+        <Button
+          variant="ghost"
+          onClick={() =>
+            onChange(
+              ports.concat({
+                key: side === "input" ? `input_${ports.length + 1}` : `output_${ports.length + 1}`,
+                label: side === "input" ? `Input ${ports.length + 1}` : `Output ${ports.length + 1}`,
+                valueType: "text",
+                ...(side === "input" ? { required: false } : {}),
+              }),
+            )
+          }
+        >
+          Add {side === "input" ? "Input" : "Output"}
+        </Button>
+      </div>
+    </PanelSection>
+  );
+}
+
+function MappingEditor({
+  title,
+  value,
+  onChange,
+  addLabel,
+}: {
+  title: string;
+  value: Record<string, string>;
+  onChange: (nextValue: Record<string, string>) => void;
+  addLabel: string;
+}) {
+  const entries = Object.entries(value);
+
+  return (
+    <PanelSection title={title}>
+      {entries.map(([entryKey, entryValue], index) => (
+        <div key={`${entryKey}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
+          <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+            <span>Key</span>
+            <Input
+              value={entryKey}
+              onChange={(event) => {
+                const nextEntries = [...entries];
+                nextEntries[index] = [event.target.value, entryValue];
+                onChange(Object.fromEntries(nextEntries));
+              }}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+            <span>Value</span>
+            <Input
+              value={entryValue}
+              onChange={(event) => {
+                const nextEntries = [...entries];
+                nextEntries[index] = [entryKey, event.target.value];
+                onChange(Object.fromEntries(nextEntries));
+              }}
+            />
+          </label>
+          <div className="flex items-end justify-end">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const nextEntries = entries.filter((_, entryIndex) => entryIndex !== index);
+                onChange(Object.fromEntries(nextEntries));
+              }}
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      ))}
+      <div className="flex justify-start">
+        <Button
+          variant="ghost"
+          onClick={() => {
+            const nextKey = `key_${entries.length + 1}`;
+            onChange({
+              ...value,
+              [nextKey]: "",
+            });
+          }}
+        >
+          {addLabel}
+        </Button>
+      </div>
+    </PanelSection>
+  );
+}
+
+function SkillEditorList({
+  skills,
+  onChange,
+}: {
+  skills: SkillAttachment[];
+  onChange: (nextSkills: SkillAttachment[]) => void;
+}) {
+  return (
+    <PanelSection title="Skills" description="以结构化方式编辑技能挂载与映射。">
+      {skills.map((skill, index) => (
+        <div key={`${skill.name}-${index}`} className="grid gap-3 rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Name</span>
+              <Input
+                value={skill.name}
+                onChange={(event) =>
+                  onChange(skills.map((item, skillIndex) => (skillIndex === index ? { ...item, name: event.target.value } : item)))
+                }
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Skill Key</span>
+              <Input
+                value={skill.skillKey}
+                onChange={(event) =>
+                  onChange(skills.map((item, skillIndex) => (skillIndex === index ? { ...item, skillKey: event.target.value } : item)))
+                }
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Usage</span>
+              <select
+                className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                value={skill.usage ?? "optional"}
+                onChange={(event) =>
+                  onChange(
+                    skills.map((item, skillIndex) =>
+                      skillIndex === index ? { ...item, usage: event.target.value as SkillAttachment["usage"] } : item,
+                    ),
+                  )
+                }
+              >
+                {["required", "optional"].map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <MappingEditor
+            title="Input Mapping"
+            value={skill.inputMapping}
+            addLabel="Add Input Mapping"
+            onChange={(nextValue) =>
+              onChange(skills.map((item, skillIndex) => (skillIndex === index ? { ...item, inputMapping: nextValue } : item)))
+            }
+          />
+          <MappingEditor
+            title="Context Binding"
+            value={skill.contextBinding}
+            addLabel="Add Context Binding"
+            onChange={(nextValue) =>
+              onChange(skills.map((item, skillIndex) => (skillIndex === index ? { ...item, contextBinding: nextValue } : item)))
+            }
+          />
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => onChange(skills.filter((_, skillIndex) => skillIndex !== index))}>
+              Remove Skill
+            </Button>
+          </div>
+        </div>
+      ))}
+      <div className="flex justify-start">
+        <Button
+          variant="ghost"
+          onClick={() =>
+            onChange(
+              skills.concat({
+                name: `skill_${skills.length + 1}`,
+                skillKey: "",
+                inputMapping: {},
+                contextBinding: {},
+                usage: "optional",
+              }),
+            )
+          }
+        >
+          Add Skill
+        </Button>
+      </div>
+    </PanelSection>
+  );
+}
+
+function BranchEditorList({
+  branches,
+  onChange,
+}: {
+  branches: BranchDefinition[];
+  onChange: (nextBranches: BranchDefinition[]) => void;
+}) {
+  return (
+    <PanelSection title="Branches" description="通过增删行维护条件分支定义。">
+      {branches.map((branch, index) => (
+        <div key={`${branch.key}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
+          <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+            <span>Key</span>
+            <Input
+              value={branch.key}
+              onChange={(event) =>
+                onChange(branches.map((item, branchIndex) => (branchIndex === index ? { ...item, key: event.target.value } : item)))
+              }
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+            <span>Label</span>
+            <Input
+              value={branch.label}
+              onChange={(event) =>
+                onChange(branches.map((item, branchIndex) => (branchIndex === index ? { ...item, label: event.target.value } : item)))
+              }
+            />
+          </label>
+          <div className="flex items-end justify-end">
+            <Button variant="ghost" onClick={() => onChange(branches.filter((_, branchIndex) => branchIndex !== index))}>
+              Remove
+            </Button>
+          </div>
+        </div>
+      ))}
+      <div className="flex justify-start">
+        <Button
+          variant="ghost"
+          onClick={() =>
+            onChange(
+              branches.concat({
+                key: `branch_${branches.length + 1}`,
+                label: `Branch ${branches.length + 1}`,
+              }),
+            )
+          }
+        >
+          Add Branch
+        </Button>
+      </div>
+    </PanelSection>
+  );
+}
+
+function RuleEditor({
+  rule,
+  onChange,
+}: {
+  rule: ConditionRule;
+  onChange: (nextRule: ConditionRule) => void;
+}) {
+  return (
+    <PanelSection title="Rule" description="配置条件节点的判断规则。">
+      <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+        <span>Source</span>
+        <Input value={rule.source} onChange={(event) => onChange({ ...rule, source: event.target.value })} />
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+          <span>Operator</span>
+          <select
+            className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+            value={rule.operator}
+            onChange={(event) => onChange({ ...rule, operator: event.target.value as ConditionRule["operator"] })}
+          >
+            {RULE_OPERATOR_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+          <span>Value</span>
+          <Input
+            value={String(rule.value)}
+            onChange={(event) => onChange({ ...rule, value: event.target.value })}
+            disabled={rule.operator === "exists"}
+          />
+        </label>
+      </div>
+    </PanelSection>
+  );
+}
+
+function AdvancedJsonSection({
+  sections,
+}: {
+  sections: Array<{
+    label: string;
+    value: unknown;
+    onChange: (nextValue: unknown) => void;
+    minHeight?: string;
+  }>;
+}) {
+  return (
+    <details className="rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.7)] p-4">
+      <summary className="cursor-pointer text-sm font-semibold text-[var(--text)]">Advanced JSON</summary>
+      <div className="mt-4 grid gap-3">
+        {sections.map((section) => (
+          <JsonTextArea
+            key={section.label}
+            label={section.label}
+            value={section.value}
+            onChange={section.onChange}
+            minHeight={section.minHeight}
+          />
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function PortRow({
   nodeId,
   port,
@@ -407,7 +839,7 @@ function NodeSystemCanvas({ initialGraph }: { initialGraph: GraphPayload }) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusMessage, setStatusMessage] = useState("Node system phase 1/2: preset-driven editor only.");
+  const [statusMessage, setStatusMessage] = useState("Node system phase 2.5: structured inspector editing.");
   const [localPresets, setLocalPresets] = useState<NodePresetDefinition[]>([]);
   const [creationMenu, setCreationMenu] = useState<{
     clientX: number;
@@ -855,8 +1287,9 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                   <div className="text-sm font-semibold text-[var(--text)]">Current Phase</div>
                   <div className="mt-3 text-sm leading-6 text-[var(--muted)]">
                     <div>Preset-driven node creation</div>
-                    <div>Editable node configs</div>
+                    <div>Structured inspector editing</div>
                     <div>Type-aware creation suggestions</div>
+                    <div>Advanced JSON kept as fallback</div>
                     <div>Runtime migration pending</div>
                   </div>
                 </section>
@@ -927,6 +1360,66 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                       <span>Placeholder</span>
                       <Input value={selectedNode.data.config.placeholder} onChange={(event) => updateSelectedNode((config) => ({ ...(config as InputBoundaryNode), placeholder: event.target.value }))} />
                     </label>
+                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                      <span>Input Mode</span>
+                      <select
+                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                        value={selectedNode.data.config.inputMode}
+                        onChange={(event) =>
+                          updateSelectedNode((config) => ({ ...(config as InputBoundaryNode), inputMode: event.target.value as InputBoundaryNode["inputMode"] }))
+                        }
+                      >
+                        {["inline", "reference"].map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <PanelSection title="Output Port" description="输入边界只暴露一个输出端口。">
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                          <span>Output Key</span>
+                          <Input
+                            value={selectedNode.data.config.output.key}
+                            onChange={(event) =>
+                              updateSelectedNode((config) => ({
+                                ...(config as InputBoundaryNode),
+                                output: {
+                                  ...(config as InputBoundaryNode).output,
+                                  key: event.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </label>
+                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                          <span>Output Label</span>
+                          <Input
+                            value={selectedNode.data.config.output.label}
+                            onChange={(event) =>
+                              updateSelectedNode((config) => ({
+                                ...(config as InputBoundaryNode),
+                                output: {
+                                  ...(config as InputBoundaryNode).output,
+                                  label: event.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </label>
+                      </div>
+                    </PanelSection>
+                    <AdvancedJsonSection
+                      sections={[
+                        {
+                          label: "Input Boundary JSON",
+                          value: selectedNode.data.config,
+                          onChange: (nextValue) => updateSelectedNode(() => nextValue as InputBoundaryNode),
+                          minHeight: "min-h-40",
+                        },
+                      ]}
+                    />
                   </>
                 ) : null}
 
@@ -948,24 +1441,216 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                         onChange={(event) => updateSelectedNode((config) => ({ ...(config as AgentNode), taskInstruction: event.target.value }))}
                       />
                     </label>
-                    <JsonTextArea label="Inputs JSON" value={selectedNode.data.config.inputs} onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), inputs: nextValue as PortDefinition[] }))} />
-                    <JsonTextArea label="Outputs JSON" value={selectedNode.data.config.outputs} onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputs: nextValue as PortDefinition[] }))} />
-                    <JsonTextArea label="Skills JSON" value={selectedNode.data.config.skills} onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), skills: nextValue as AgentNode["skills"] }))} />
-                    <JsonTextArea label="Output Binding JSON" value={selectedNode.data.config.outputBinding} onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputBinding: nextValue as Record<string, string> }))} minHeight="min-h-24" />
+                    <PortEditorList
+                      label="Inputs"
+                      side="input"
+                      ports={selectedNode.data.config.inputs}
+                      onChange={(nextPorts) => updateSelectedNode((config) => ({ ...(config as AgentNode), inputs: nextPorts }))}
+                    />
+                    <PortEditorList
+                      label="Outputs"
+                      side="output"
+                      ports={selectedNode.data.config.outputs}
+                      onChange={(nextPorts) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputs: nextPorts }))}
+                    />
+                    <SkillEditorList
+                      skills={selectedNode.data.config.skills}
+                      onChange={(nextSkills) => updateSelectedNode((config) => ({ ...(config as AgentNode), skills: nextSkills }))}
+                    />
+                    <MappingEditor
+                      title="Output Binding"
+                      value={selectedNode.data.config.outputBinding}
+                      addLabel="Add Output Binding"
+                      onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputBinding: nextValue }))}
+                    />
+                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                      <span>Response Mode</span>
+                      <select
+                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                        value={selectedNode.data.config.responseMode}
+                        onChange={(event) =>
+                          updateSelectedNode((config) => ({ ...(config as AgentNode), responseMode: event.target.value as AgentNode["responseMode"] }))
+                        }
+                      >
+                        {["json", "text"].map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <AdvancedJsonSection
+                      sections={[
+                        {
+                          label: "Inputs JSON",
+                          value: selectedNode.data.config.inputs,
+                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), inputs: nextValue as PortDefinition[] })),
+                        },
+                        {
+                          label: "Outputs JSON",
+                          value: selectedNode.data.config.outputs,
+                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputs: nextValue as PortDefinition[] })),
+                        },
+                        {
+                          label: "Skills JSON",
+                          value: selectedNode.data.config.skills,
+                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), skills: nextValue as AgentNode["skills"] })),
+                        },
+                        {
+                          label: "Output Binding JSON",
+                          value: selectedNode.data.config.outputBinding,
+                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputBinding: nextValue as Record<string, string> })),
+                          minHeight: "min-h-24",
+                        },
+                      ]}
+                    />
                   </>
                 ) : null}
 
                 {selectedNode.data.config.family === "condition" ? (
                   <>
-                    <JsonTextArea label="Inputs JSON" value={selectedNode.data.config.inputs} onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), inputs: nextValue as PortDefinition[] }))} />
-                    <JsonTextArea label="Branches JSON" value={selectedNode.data.config.branches} onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branches: nextValue as ConditionNode["branches"] }))} minHeight="min-h-24" />
-                    <JsonTextArea label="Rule JSON" value={selectedNode.data.config.rule} onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), rule: nextValue as ConditionNode["rule"] }))} minHeight="min-h-24" />
-                    <JsonTextArea label="Branch Mapping JSON" value={selectedNode.data.config.branchMapping} onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branchMapping: nextValue as Record<string, string> }))} minHeight="min-h-24" />
+                    <PortEditorList
+                      label="Inputs"
+                      side="input"
+                      ports={selectedNode.data.config.inputs}
+                      onChange={(nextPorts) => updateSelectedNode((config) => ({ ...(config as ConditionNode), inputs: nextPorts }))}
+                    />
+                    <BranchEditorList
+                      branches={selectedNode.data.config.branches}
+                      onChange={(nextBranches) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branches: nextBranches }))}
+                    />
+                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                      <span>Condition Mode</span>
+                      <select
+                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                        value={selectedNode.data.config.conditionMode}
+                        onChange={(event) =>
+                          updateSelectedNode((config) => ({ ...(config as ConditionNode), conditionMode: event.target.value as ConditionNode["conditionMode"] }))
+                        }
+                      >
+                        {["rule", "model"].map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <RuleEditor
+                      rule={selectedNode.data.config.rule}
+                      onChange={(nextRule) => updateSelectedNode((config) => ({ ...(config as ConditionNode), rule: nextRule }))}
+                    />
+                    <MappingEditor
+                      title="Branch Mapping"
+                      value={selectedNode.data.config.branchMapping}
+                      addLabel="Add Branch Mapping"
+                      onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branchMapping: nextValue }))}
+                    />
+                    <AdvancedJsonSection
+                      sections={[
+                        {
+                          label: "Inputs JSON",
+                          value: selectedNode.data.config.inputs,
+                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), inputs: nextValue as PortDefinition[] })),
+                        },
+                        {
+                          label: "Branches JSON",
+                          value: selectedNode.data.config.branches,
+                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branches: nextValue as ConditionNode["branches"] })),
+                          minHeight: "min-h-24",
+                        },
+                        {
+                          label: "Rule JSON",
+                          value: selectedNode.data.config.rule,
+                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), rule: nextValue as ConditionNode["rule"] })),
+                          minHeight: "min-h-24",
+                        },
+                        {
+                          label: "Branch Mapping JSON",
+                          value: selectedNode.data.config.branchMapping,
+                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branchMapping: nextValue as Record<string, string> })),
+                          minHeight: "min-h-24",
+                        },
+                      ]}
+                    />
                   </>
                 ) : null}
 
                 {selectedNode.data.config.family === "output" ? (
                   <>
+                    <PanelSection title="Input Port" description="输出边界只接收一个上游输入。">
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                          <span>Input Key</span>
+                          <Input
+                            value={selectedNode.data.config.input.key}
+                            onChange={(event) =>
+                              updateSelectedNode((config) => ({
+                                ...(config as OutputBoundaryNode),
+                                input: {
+                                  ...(config as OutputBoundaryNode).input,
+                                  key: event.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </label>
+                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                          <span>Input Label</span>
+                          <Input
+                            value={selectedNode.data.config.input.label}
+                            onChange={(event) =>
+                              updateSelectedNode((config) => ({
+                                ...(config as OutputBoundaryNode),
+                                input: {
+                                  ...(config as OutputBoundaryNode).input,
+                                  label: event.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                          <span>Value Type</span>
+                          <select
+                            className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                            value={selectedNode.data.config.input.valueType}
+                            onChange={(event) =>
+                              updateSelectedNode((config) => ({
+                                ...(config as OutputBoundaryNode),
+                                input: {
+                                  ...(config as OutputBoundaryNode).input,
+                                  valueType: event.target.value as ValueType,
+                                },
+                              }))
+                            }
+                          >
+                            {VALUE_TYPE_OPTIONS.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="mt-7 flex items-center gap-2 text-sm text-[var(--muted)]">
+                          <input
+                            checked={Boolean(selectedNode.data.config.input.required)}
+                            type="checkbox"
+                            onChange={(event) =>
+                              updateSelectedNode((config) => ({
+                                ...(config as OutputBoundaryNode),
+                                input: {
+                                  ...(config as OutputBoundaryNode).input,
+                                  required: event.target.checked,
+                                },
+                              }))
+                            }
+                          />
+                          <span>Required</span>
+                        </label>
+                      </div>
+                    </PanelSection>
                     <label className="grid gap-1.5 text-sm text-[var(--muted)]">
                       <span>Display Mode</span>
                       <select
@@ -1006,6 +1691,16 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                       <span>File Name Template</span>
                       <Input value={selectedNode.data.config.fileNameTemplate} onChange={(event) => updateSelectedNode((config) => ({ ...(config as OutputBoundaryNode), fileNameTemplate: event.target.value }))} />
                     </label>
+                    <AdvancedJsonSection
+                      sections={[
+                        {
+                          label: "Output Boundary JSON",
+                          value: selectedNode.data.config,
+                          onChange: (nextValue) => updateSelectedNode(() => nextValue as OutputBoundaryNode),
+                          minHeight: "min-h-40",
+                        },
+                      ]}
+                    />
                   </>
                 ) : null}
 

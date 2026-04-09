@@ -26,6 +26,7 @@ import "@xyflow/react/dist/style.css";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NodeSystemEditor } from "@/components/editor/node-system-editor";
 import { API_BASE_URL, apiPost, type ApiIssue } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import {
@@ -2197,11 +2198,5 @@ function splitCommaValues(value: string) {
 }
 
 export function EditorClient({ mode, initialGraph, graphId, templates }: EditorClientProps) {
-  const graph = initialGraph ?? createEditorDefaults(templates);
-
-  return (
-    <ReactFlowProvider>
-      <EditorCanvas initialGraph={graph} mode={mode} graphId={graphId} />
-    </ReactFlowProvider>
-  );
+  return <NodeSystemEditor mode={mode} initialGraph={initialGraph} graphId={graphId} templates={templates} />;
 }

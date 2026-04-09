@@ -227,6 +227,12 @@
 
 这一阶段可以先只做前端内存态，不要求后端保存 preset。
 
+说明：
+
+- inspector 中直接编辑 `inputs / outputs / skills / branches` 的 JSON 只是原型阶段手段
+- 这不是最终用户交互
+- 最终用户不应被要求手写整段 JSON 来维护节点结构
+
 ### Deliverables
 
 1. 节点创建器支持：
@@ -250,6 +256,95 @@
 ### Exit Criteria
 
 用户已经可以按新心智创建节点，而不是继续依赖旧业务节点清单。
+
+---
+
+## Phase 2.5: Replace Raw JSON Editing With Structured Node Editors
+
+### Goal
+
+把 inspector 从“原型期 JSON 直接编辑”升级为“点击、选择、增删行”的结构化编辑器。
+
+### Why Now
+
+如果继续让用户直接改整段 JSON：
+
+- 容易破坏节点结构
+- 难以发现类型错误
+- 对非开发者不友好
+- 不符合后续 preset/模板化的产品方向
+
+当前 JSON 编辑器应只视为开发期调试面板，而不是正式交互。
+
+### Changes
+
+1. 为 `Agent Node` 提供结构化编辑器
+
+- `inputs` 使用行式编辑器
+  - 添加输入
+  - 删除输入
+  - 编辑 `key / label / value_type / required`
+- `outputs` 使用行式编辑器
+  - 添加输出
+  - 删除输出
+  - 编辑 `key / label / value_type`
+- `skills` 使用行式编辑器
+  - 选择 `skill_key`
+  - 编辑 `name`
+  - 编辑 `usage`
+  - 分步编辑 `input_mapping / context_binding`
+
+2. 为 `Condition Node` 提供结构化编辑器
+
+- `inputs`
+- `branches`
+- `rule`
+- `branch_mapping`
+
+3. 为 `Input Boundary` 提供结构化编辑器
+
+- `label`
+- `value_type`
+- `default_value`
+- `placeholder`
+- `input_mode`
+
+4. 为 `Output Boundary` 提供结构化编辑器
+
+- `label`
+- `display_mode`
+- `persist_enabled`
+- `persist_format`
+- `file_name_template`
+
+5. 保留一个“高级 JSON”折叠区
+
+- 默认收起
+- 仅用于调试和快速粘贴
+- 不作为主要编辑入口
+
+### Deliverables
+
+1. `inputs / outputs / branches / skills` 不再要求用户直接编辑整段 JSON
+2. 新增统一的行式编辑组件
+3. `value_type` 改为下拉选择
+4. `required / persist_enabled` 改为开关或复选框
+5. Inspector 默认主路径为结构化编辑，不是原始 JSON
+
+### Verification
+
+1. 不手写 JSON 也能完成：
+   - 新增一个输入
+   - 新增一个输出
+   - 修改一个 skill
+   - 新增一个 branch
+2. 非法中间结构不会轻易破坏节点配置
+3. 用户可以通过点击和选择完成大部分节点编辑
+4. 原始 JSON 面板即使隐藏，也能作为调试兜底存在
+
+### Exit Criteria
+
+节点结构编辑已经从开发者式 JSON 原型升级为面向用户的结构化交互。
 
 ---
 

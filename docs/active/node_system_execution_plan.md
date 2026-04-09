@@ -463,6 +463,15 @@
 
 agent node 的 skill attachment 已经有可依赖的数据源。
 
+### Status
+
+基础定义链路已完成：
+
+- 后端新增了 `skill definition schema`
+- 已提供 `/api/skills/definitions`
+- 当前已有一批正式 machine-readable skill definitions 可供前端读取
+- 现阶段 definitions 先覆盖代表性 skills，后续再扩展到完整 skill 集
+
 ---
 
 ## Phase 5: Make Agent Node Executable Through Generic Runtime

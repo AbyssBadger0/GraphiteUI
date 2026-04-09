@@ -261,7 +261,7 @@ def _create_default_graph(theme_preset: dict[str, Any]) -> dict[str, Any]:
 def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str, Any]:
     return {
         "graph_family": "node_system",
-        "name": f"{theme_preset.get('graph_name') or 'Creative Factory'} Research",
+        "name": f"{theme_preset.get('graph_name') or 'Creative Factory'} Research Brief",
         "template_id": "creative_factory",
         "theme_config": theme_preset["theme_config"],
         "state_schema": get_creative_factory_state_schema(),
@@ -391,26 +391,81 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                 },
             },
             {
+                "id": "agent_brief_1",
+                "type": "default",
+                "position": {"x": 1460, "y": 220},
+                "data": {
+                    "nodeId": "agent_brief_1",
+                    "config": {
+                        "presetId": "preset.agent.build_creative_brief.v1",
+                        "label": "Build Creative Brief",
+                        "description": "Assemble a concise creative brief from task input and cleaned research context.",
+                        "family": "agent",
+                        "inputs": [
+                            {
+                                "key": "task_input",
+                                "label": "Task Input",
+                                "valueType": "text",
+                                "required": True,
+                            },
+                            {
+                                "key": "news_context",
+                                "label": "News Context",
+                                "valueType": "text",
+                                "required": True,
+                            },
+                        ],
+                        "outputs": [
+                            {
+                                "key": "creative_brief",
+                                "label": "Creative Brief",
+                                "valueType": "text",
+                            }
+                        ],
+                        "systemInstruction": "You are a creative strategy agent.",
+                        "taskInstruction": "Build a concise creative brief from the task and research context.",
+                        "skills": [
+                            {
+                                "name": "build_creative_brief",
+                                "skillKey": "build_creative_brief",
+                                "inputMapping": {
+                                    "task_input": "$inputs.task_input",
+                                    "news_context": "$inputs.news_context",
+                                    "theme_config": "$graph.theme_config",
+                                },
+                                "contextBinding": {},
+                                "usage": "required",
+                            }
+                        ],
+                        "responseMode": "json",
+                        "outputBinding": {
+                            "creative_brief": "$skills.build_creative_brief.creative_brief",
+                        },
+                    },
+                    "previewText": "",
+                },
+            },
+            {
                 "id": "output_1",
                 "type": "default",
-                "position": {"x": 1480, "y": 220},
+                "position": {"x": 1920, "y": 220},
                 "data": {
                     "nodeId": "output_1",
                     "config": {
-                        "presetId": "preset.output.news_context.v1",
-                        "label": "Research Context Output",
-                        "description": "Preview the normalized research context for downstream creative steps.",
+                        "presetId": "preset.output.creative_brief.v1",
+                        "label": "Creative Brief Output",
+                        "description": "Preview the generated creative brief for downstream creative steps.",
                         "family": "output",
                         "input": {
                             "key": "value",
-                            "label": "Research Context",
+                            "label": "Creative Brief",
                             "valueType": "text",
                             "required": True,
                         },
                         "displayMode": "auto",
                         "persistEnabled": False,
                         "persistFormat": "txt",
-                        "fileNameTemplate": "research_context",
+                        "fileNameTemplate": "creative_brief",
                     },
                     "previewText": "",
                 },
@@ -434,8 +489,22 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
             {
                 "id": "edge_3",
                 "source": "agent_clean_1",
-                "target": "output_1",
+                "target": "agent_brief_1",
                 "sourceHandle": "output:news_context",
+                "targetHandle": "input:news_context",
+            },
+            {
+                "id": "edge_4",
+                "source": "input_1",
+                "target": "agent_brief_1",
+                "sourceHandle": "output:task_input",
+                "targetHandle": "input:task_input",
+            },
+            {
+                "id": "edge_5",
+                "source": "agent_brief_1",
+                "target": "output_1",
+                "sourceHandle": "output:creative_brief",
                 "targetHandle": "input:value",
             },
         ],

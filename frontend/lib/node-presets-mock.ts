@@ -248,6 +248,53 @@ export const CLEAN_MARKET_NEWS_AGENT_PRESET = {
   },
 } satisfies NodePresetDefinition;
 
+export const BUILD_CREATIVE_BRIEF_AGENT_PRESET = {
+  presetId: "preset.agent.build_creative_brief.v1",
+  label: "Build Creative Brief",
+  description: "Assemble a concise creative brief from task input and research context.",
+  family: "agent",
+  inputs: [
+    {
+      key: "task_input",
+      label: "Task Input",
+      valueType: "text",
+      required: true,
+    },
+    {
+      key: "news_context",
+      label: "News Context",
+      valueType: "text",
+      required: true,
+    },
+  ],
+  outputs: [
+    {
+      key: "creative_brief",
+      label: "Creative Brief",
+      valueType: "text",
+    },
+  ],
+  systemInstruction: "You are a creative strategy agent.",
+  taskInstruction: "Build a concise creative brief from the task and research context.",
+  skills: [
+    {
+      name: "build_creative_brief",
+      skillKey: "build_creative_brief",
+      inputMapping: {
+        task_input: "$inputs.task_input",
+        news_context: "$inputs.news_context",
+        theme_config: "$graph.theme_config",
+      },
+      contextBinding: {},
+      usage: "required",
+    },
+  ],
+  responseMode: "json",
+  outputBinding: {
+    creative_brief: "$skills.build_creative_brief.creative_brief",
+  },
+} satisfies NodePresetDefinition;
+
 export const REVIEW_GATE_PRESET = {
   presetId: "preset.condition.review_gate.v1",
   label: "Review Gate",
@@ -294,6 +341,23 @@ export const NEWS_CONTEXT_OUTPUT_PRESET = {
   fileNameTemplate: "research_context",
 } satisfies NodePresetDefinition;
 
+export const CREATIVE_BRIEF_OUTPUT_PRESET = {
+  presetId: "preset.output.creative_brief.v1",
+  label: "Creative Brief Output",
+  description: "Preview and optionally persist generated creative brief text.",
+  family: "output",
+  input: {
+    key: "value",
+    label: "Creative Brief",
+    valueType: "text",
+    required: true,
+  },
+  displayMode: "auto",
+  persistEnabled: false,
+  persistFormat: "txt",
+  fileNameTemplate: "creative_brief",
+} satisfies NodePresetDefinition;
+
 export const NODE_PRESETS_MOCK = [
   EMPTY_AGENT_PRESET,
   NAME_INPUT_PRESET,
@@ -303,9 +367,11 @@ export const NODE_PRESETS_MOCK = [
   SUMMARY_AGENT_PRESET,
   FETCH_NEWS_AGENT_PRESET,
   CLEAN_MARKET_NEWS_AGENT_PRESET,
+  BUILD_CREATIVE_BRIEF_AGENT_PRESET,
   REVIEW_GATE_PRESET,
   GREETING_OUTPUT_PRESET,
   NEWS_CONTEXT_OUTPUT_PRESET,
+  CREATIVE_BRIEF_OUTPUT_PRESET,
   TEXT_OUTPUT_PRESET,
 ] satisfies NodePresetDefinition[];
 
@@ -315,7 +381,7 @@ export function getNodePresetById(presetId: string) {
 
 export function getSuggestedPresets(valueType?: ValueType | null) {
   if (!valueType) {
-    return [EMPTY_AGENT_PRESET, NAME_INPUT_PRESET, TASK_INPUT_PRESET, TEXT_INPUT_PRESET, HELLO_GREETING_AGENT_PRESET, SUMMARY_AGENT_PRESET, FETCH_NEWS_AGENT_PRESET, CLEAN_MARKET_NEWS_AGENT_PRESET, REVIEW_GATE_PRESET, GREETING_OUTPUT_PRESET, NEWS_CONTEXT_OUTPUT_PRESET, TEXT_OUTPUT_PRESET];
+    return [EMPTY_AGENT_PRESET, NAME_INPUT_PRESET, TASK_INPUT_PRESET, TEXT_INPUT_PRESET, HELLO_GREETING_AGENT_PRESET, SUMMARY_AGENT_PRESET, FETCH_NEWS_AGENT_PRESET, CLEAN_MARKET_NEWS_AGENT_PRESET, BUILD_CREATIVE_BRIEF_AGENT_PRESET, REVIEW_GATE_PRESET, GREETING_OUTPUT_PRESET, NEWS_CONTEXT_OUTPUT_PRESET, CREATIVE_BRIEF_OUTPUT_PRESET, TEXT_OUTPUT_PRESET];
   }
 
   const supportsType = (preset: NodePresetDefinition) => {

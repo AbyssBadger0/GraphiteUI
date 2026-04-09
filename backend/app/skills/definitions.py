@@ -143,16 +143,22 @@ SKILL_DEFINITIONS: list[SkillDefinition] = [
                 description="Creative task or campaign brief goal.",
             ),
             SkillIoField(
-                key="research_summary",
-                label="Research Summary",
+                key="news_context",
+                label="News Context",
                 valueType="text",
-                description="Normalized research summary for the brief.",
+                description="Normalized text research context used to shape the brief.",
             ),
             SkillIoField(
-                key="patterns",
-                label="Patterns",
+                key="theme_config",
+                label="Theme Config",
                 valueType="json",
-                description="Structured creative patterns used to build the brief.",
+                description="Theme configuration used to shape genre, tone, and evaluation focus.",
+            ),
+            SkillIoField(
+                key="pattern_summary",
+                label="Pattern Summary",
+                valueType="text",
+                description="Optional extracted pattern summary used by the brief builder.",
             ),
         ],
         outputSchema=[

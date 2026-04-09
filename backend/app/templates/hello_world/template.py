@@ -112,7 +112,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
             {
                 "id": "agent_1",
                 "type": "default",
-                "position": {"x": 360, "y": 200},
+                "position": {"x": 560, "y": 200},
                 "data": {
                     "nodeId": "agent_1",
                     "config": {
@@ -159,7 +159,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
             {
                 "id": "output_1",
                 "type": "default",
-                "position": {"x": 660, "y": 200},
+                "position": {"x": 1040, "y": 200},
                 "data": {
                     "nodeId": "output_1",
                     "config": {

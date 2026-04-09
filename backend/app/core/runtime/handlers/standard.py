@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
 from app.memory.store import save_memory
+from app.core.runtime.output_boundary_utils import save_output_value
 from app.core.runtime.state import RunState, utc_now_iso
 from app.core.schemas.graph import NodeType
 from app.tools.registry import get_tool_registry
@@ -176,7 +175,7 @@ def handle_end(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
 
         if persist_enabled and value not in (None, "", [], {}):
             saved_outputs.append(
-                _save_text_output(
+                save_output_value(
                     run_id=str(state.get("run_id", "")),
                     state_key=state_key,
                     value=value,
@@ -189,38 +188,6 @@ def handle_end(state: RunState, params: dict[str, Any]) -> dict[str, Any]:
         "output_previews": output_previews,
         "saved_outputs": saved_outputs,
     }
-
-
-def _save_text_output(
-    *,
-    run_id: str,
-    state_key: str,
-    value: Any,
-    persist_format: str,
-    file_name_template: str,
-) -> dict[str, Any]:
-    extension = persist_format if persist_format in {"txt", "md", "json"} else "txt"
-    output_root = Path(__file__).resolve().parents[4] / "backend" / "data" / "outputs" / run_id
-    output_root.mkdir(parents=True, exist_ok=True)
-
-    safe_file_name = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in file_name_template).strip("_") or state_key
-    file_path = output_root / f"{safe_file_name}.{extension}"
-    file_path.write_text(_serialize_output_value(value, extension), encoding="utf-8")
-
-    return {
-      "state_key": state_key,
-      "path": str(file_path.relative_to(output_root.parents[2])),
-      "format": extension,
-      "file_name": file_path.name,
-    }
-
-
-def _serialize_output_value(value: Any, extension: str) -> str:
-    if extension == "json":
-        return json.dumps(value, ensure_ascii=False, indent=2)
-    if isinstance(value, str):
-        return value
-    return json.dumps(value, ensure_ascii=False, indent=2)
 
 
 STANDARD_HANDLER_MAP = {

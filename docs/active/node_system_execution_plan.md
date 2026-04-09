@@ -629,6 +629,15 @@ agent node 的 skill attachment 已经有可依赖的数据源。
 
 “输出是否可见/可保存由 output boundary 决定”正式成立。
 
+### Status
+
+第一版输出边界收口已完成：
+
+- `Output Boundary` 已支持展示与可选持久化保存
+- `node_system` runtime 已把导出结果收口为 `exported_outputs`
+- run detail 已开始围绕 output boundary 展示导出内容
+- 中间节点当前不承担正式文件导出职责
+
 ---
 
 ## Phase 8: Introduce Preset Persistence

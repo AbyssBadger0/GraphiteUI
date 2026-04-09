@@ -6,6 +6,7 @@ import time
 from collections import defaultdict, deque
 from typing import Any
 
+from app.core.runtime.output_boundary_utils import save_output_value
 from app.core.runtime.state import create_initial_run_state, utc_now_iso
 from app.core.schemas.node_system import (
     AgentNodeConfig,
@@ -117,11 +118,32 @@ def execute_node_system_graph(graph: NodeSystemGraphDocument) -> dict[str, Any]:
         state["status"] = "completed"
     state["completed_at"] = utc_now_iso()
     state["duration_ms"] = max(int((time.perf_counter() - started_perf) * 1000), 0)
+    exported_outputs = [
+        {
+            "node_id": preview.get("node_id"),
+            "state_key": preview.get("state_key"),
+            "label": preview.get("label"),
+            "display_mode": preview.get("display_mode"),
+            "persist_enabled": preview.get("persist_enabled"),
+            "persist_format": preview.get("persist_format"),
+            "value": preview.get("value"),
+            "saved_file": next(
+                (
+                    item
+                    for item in state.get("saved_outputs", [])
+                    if item.get("state_key") == preview.get("state_key")
+                ),
+                None,
+            ),
+        }
+        for preview in state.get("output_previews", [])
+    ]
     state["artifacts"] = {
         "theme_config": state.get("theme_config", {}),
         "skill_outputs": state.get("skill_outputs", []),
         "output_previews": state.get("output_previews", []),
         "saved_outputs": state.get("saved_outputs", []),
+        "exported_outputs": exported_outputs,
         "node_outputs": node_outputs,
         "active_edge_ids": sorted(active_edge_ids),
     }
@@ -131,6 +153,7 @@ def execute_node_system_graph(graph: NodeSystemGraphDocument) -> dict[str, Any]:
         "skill_outputs": state.get("skill_outputs", []),
         "output_previews": state.get("output_previews", []),
         "saved_outputs": state.get("saved_outputs", []),
+        "exported_outputs": exported_outputs,
         "final_result": state.get("final_result", ""),
         "active_edge_ids": sorted(active_edge_ids),
     }
@@ -201,6 +224,7 @@ def _execute_node(node: NodeSystemGraphNode, input_values: dict[str, Any], state
     if isinstance(config, OutputBoundaryNodeConfig):
         value = input_values.get(config.input.key)
         preview = {
+            "node_id": node.id,
             "state_key": config.input.key,
             "label": config.label,
             "display_mode": config.display_mode.value,
@@ -208,9 +232,21 @@ def _execute_node(node: NodeSystemGraphNode, input_values: dict[str, Any], state
             "persist_format": config.persist_format.value,
             "value": value,
         }
+        saved_outputs: list[dict[str, Any]] = []
+        if config.persist_enabled and value not in (None, "", [], {}):
+            saved_outputs.append(
+                save_output_value(
+                    run_id=str(state.get("run_id", "")),
+                    state_key=config.input.key,
+                    value=value,
+                    persist_format=config.persist_format.value,
+                    file_name_template=config.file_name_template,
+                )
+            )
         return {
             "outputs": {config.input.key: value},
             "output_previews": [preview],
+            "saved_outputs": saved_outputs,
             "final_result": "" if value is None else str(value),
         }
     if isinstance(config, ConditionNodeConfig):

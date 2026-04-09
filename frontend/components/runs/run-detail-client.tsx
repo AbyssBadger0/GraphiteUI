@@ -27,6 +27,21 @@ type RunDetail = {
   }>;
 };
 
+type ExportedOutput = {
+  node_id?: string;
+  state_key?: string;
+  label?: string;
+  display_mode?: string;
+  persist_enabled?: boolean;
+  persist_format?: string;
+  value?: unknown;
+  saved_file?: {
+    file_name?: string;
+    format?: string;
+    path?: string;
+  } | null;
+};
+
 export function RunDetailClient({ runId }: { runId: string }) {
   const { t } = useLanguage();
   const [run, setRun] = useState<RunDetail | null>(null);
@@ -87,6 +102,25 @@ export function RunDetailClient({ runId }: { runId: string }) {
           <InfoBlock title={t("run_detail.knowledge")}>{run.knowledge_summary || t("run_detail.no_knowledge")}</InfoBlock>
           <InfoBlock title={t("run_detail.memory")}>{run.memory_summary || t("run_detail.no_memory")}</InfoBlock>
           <InfoBlock title={t("run_detail.final_result")}>{run.final_result || t("run_detail.no_result")}</InfoBlock>
+          {Array.isArray(run.artifacts.exported_outputs) && (run.artifacts.exported_outputs as ExportedOutput[]).length > 0 ? (
+            <InfoBlock title="Output Boundaries">
+              <div className="grid gap-3">
+                {(run.artifacts.exported_outputs as ExportedOutput[]).map((output, index) => (
+                  <div key={`${output.node_id ?? output.state_key ?? "output"}-${index}`} className="rounded-[14px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
+                    <div className="font-medium">{output.label ?? output.state_key ?? "Output"}</div>
+                    <div className="mt-1 text-[var(--muted)] whitespace-pre-wrap break-words">
+                      {typeof output.value === "string" ? output.value : JSON.stringify(output.value, null, 2)}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2.5">
+                      {output.display_mode ? <Badge>{output.display_mode}</Badge> : null}
+                      {output.persist_enabled ? <Badge>persist {output.persist_format ?? "txt"}</Badge> : <Badge>preview only</Badge>}
+                      {output.saved_file?.file_name ? <Badge>{output.saved_file.file_name}</Badge> : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </InfoBlock>
+          ) : null}
         </div>
       </Card>
 

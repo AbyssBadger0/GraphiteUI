@@ -20,6 +20,8 @@ def get_skill_registry() -> dict[str, SkillFunc]:
         "fetch_market_news_context": fetch_market_news_context_skill,
         "clean_market_news": clean_market_news_skill,
         "build_creative_brief": build_creative_brief_skill,
+        "generate_creative_variants": generate_creative_variants_skill,
+        "review_creative_variants": review_creative_variants_skill,
         "generate_hello_greeting": tools["generate_hello_greeting"],
         "fetch_benchmark_assets": tools["fetch_benchmark_assets"],
         "normalize_asset_records": tools["normalize_asset_records"],
@@ -102,4 +104,37 @@ def build_creative_brief_skill(**skill_inputs: Any) -> dict[str, Any]:
             "news_context": skill_inputs.get("news_context", ""),
         },
         None,
+    )
+
+
+def generate_creative_variants_skill(**skill_inputs: Any) -> dict[str, Any]:
+    tools = get_tool_registry()
+    return tools["generate_creative_variants"](
+        {
+            "task_input": skill_inputs.get("task_input", ""),
+            "theme_config": skill_inputs.get("theme_config") or {},
+            "creative_brief": skill_inputs.get("creative_brief", ""),
+            "revision_feedback": skill_inputs.get("revision_feedback") or [],
+            "revision_round": int(skill_inputs.get("revision_round", 0) or 0),
+        },
+        {
+            "variant_count": int(skill_inputs.get("variant_count", 2) or 2),
+        },
+    )
+
+
+def review_creative_variants_skill(**skill_inputs: Any) -> dict[str, Any]:
+    tools = get_tool_registry()
+    return tools["review_creative_variants"](
+        {
+            "task_input": skill_inputs.get("task_input", ""),
+            "theme_config": skill_inputs.get("theme_config") or {},
+            "script_variants": skill_inputs.get("script_variants") or [],
+            "creative_brief": skill_inputs.get("creative_brief", ""),
+            "revision_round": int(skill_inputs.get("revision_round", 0) or 0),
+            "max_revision_round": int(skill_inputs.get("max_revision_round", 1) or 1),
+        },
+        {
+            "pass_threshold": float(skill_inputs.get("pass_threshold", 7.8) or 7.8),
+        },
     )

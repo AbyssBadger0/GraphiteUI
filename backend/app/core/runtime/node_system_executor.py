@@ -254,7 +254,7 @@ def _execute_node(node: NodeSystemGraphNode, input_values: dict[str, Any], state
             "final_result": "" if value is None else str(value),
         }
     if isinstance(config, ConditionNodeConfig):
-        return _execute_condition_node(config, input_values)
+        return _execute_condition_node(config, input_values, graph_context)
     raise ValueError(f"Unsupported node family '{config.family}'.")
 
 
@@ -386,7 +386,11 @@ def _invoke_skill(skill_func: Any, skill_inputs: dict[str, Any]) -> dict[str, An
     return skill_func(**skill_inputs)
 
 
-def _execute_condition_node(config: ConditionNodeConfig, input_values: dict[str, Any]) -> dict[str, Any]:
+def _execute_condition_node(
+    config: ConditionNodeConfig,
+    input_values: dict[str, Any],
+    graph_context: dict[str, Any],
+) -> dict[str, Any]:
     if config.condition_mode.value != "rule":
         raise ValueError("Condition node currently only supports rule mode.")
 
@@ -396,6 +400,7 @@ def _execute_condition_node(config: ConditionNodeConfig, input_values: dict[str,
         response={},
         skills={},
         context={},
+        graph=graph_context,
     )
     condition_result = _evaluate_condition_rule(rule_value, config.rule.operator.value, config.rule.value)
     branch_key = _resolve_branch_key(config.branch_mapping, condition_result)

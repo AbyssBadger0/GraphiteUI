@@ -295,6 +295,78 @@ export const BUILD_CREATIVE_BRIEF_AGENT_PRESET = {
   },
 } satisfies NodePresetDefinition;
 
+export const GENERATE_CREATIVE_VARIANTS_AGENT_PRESET = {
+  presetId: "preset.agent.generate_creative_variants.v1",
+  label: "Generate Creative Variants",
+  description: "Generate structured creative variants from task input and creative brief.",
+  family: "agent",
+  inputs: [
+    { key: "task_input", label: "Task Input", valueType: "text", required: true },
+    { key: "creative_brief", label: "Creative Brief", valueType: "text", required: true },
+  ],
+  outputs: [
+    { key: "script_variants", label: "Script Variants", valueType: "json" },
+  ],
+  systemInstruction: "You are a creative variant generator.",
+  taskInstruction: "Generate structured creative variants from the task and brief.",
+  skills: [
+    {
+      name: "generate_creative_variants",
+      skillKey: "generate_creative_variants",
+      inputMapping: {
+        task_input: "$inputs.task_input",
+        creative_brief: "$inputs.creative_brief",
+        theme_config: "$graph.theme_config",
+      },
+      contextBinding: {},
+      usage: "required",
+    },
+  ],
+  responseMode: "json",
+  outputBinding: {
+    script_variants: "$skills.generate_creative_variants.script_variants",
+  },
+} satisfies NodePresetDefinition;
+
+export const REVIEW_VARIANTS_AGENT_PRESET = {
+  presetId: "preset.agent.review_creative_variants.v1",
+  label: "Review Creative Variants",
+  description: "Review generated variants and return an evaluation result for downstream routing.",
+  family: "agent",
+  inputs: [
+    { key: "task_input", label: "Task Input", valueType: "text", required: true },
+    { key: "creative_brief", label: "Creative Brief", valueType: "text", required: true },
+    { key: "script_variants", label: "Script Variants", valueType: "json", required: true },
+  ],
+  outputs: [
+    { key: "evaluation_result", label: "Evaluation Result", valueType: "json" },
+    { key: "best_variant", label: "Best Variant", valueType: "json" },
+    { key: "revision_feedback", label: "Revision Feedback", valueType: "json" },
+  ],
+  systemInstruction: "You are a creative review agent.",
+  taskInstruction: "Review generated variants and return pass or revise guidance.",
+  skills: [
+    {
+      name: "review_creative_variants",
+      skillKey: "review_creative_variants",
+      inputMapping: {
+        task_input: "$inputs.task_input",
+        creative_brief: "$inputs.creative_brief",
+        script_variants: "$inputs.script_variants",
+        theme_config: "$graph.theme_config",
+      },
+      contextBinding: {},
+      usage: "required",
+    },
+  ],
+  responseMode: "json",
+  outputBinding: {
+    evaluation_result: "$skills.review_creative_variants.evaluation_result",
+    best_variant: "$skills.review_creative_variants.best_variant",
+    revision_feedback: "$skills.review_creative_variants.revision_feedback",
+  },
+} satisfies NodePresetDefinition;
+
 export const REVIEW_GATE_PRESET = {
   presetId: "preset.condition.review_gate.v1",
   label: "Review Gate",
@@ -358,6 +430,23 @@ export const CREATIVE_BRIEF_OUTPUT_PRESET = {
   fileNameTemplate: "creative_brief",
 } satisfies NodePresetDefinition;
 
+export const DECISION_SIGNAL_OUTPUT_PRESET = {
+  presetId: "preset.output.decision_signal.v1",
+  label: "Decision Output",
+  description: "Preview a routed pass or revise branch signal.",
+  family: "output",
+  input: {
+    key: "value",
+    label: "Decision Signal",
+    valueType: "any",
+    required: true,
+  },
+  displayMode: "auto",
+  persistEnabled: false,
+  persistFormat: "txt",
+  fileNameTemplate: "decision_signal",
+} satisfies NodePresetDefinition;
+
 export const NODE_PRESETS_MOCK = [
   EMPTY_AGENT_PRESET,
   NAME_INPUT_PRESET,
@@ -368,10 +457,13 @@ export const NODE_PRESETS_MOCK = [
   FETCH_NEWS_AGENT_PRESET,
   CLEAN_MARKET_NEWS_AGENT_PRESET,
   BUILD_CREATIVE_BRIEF_AGENT_PRESET,
+  GENERATE_CREATIVE_VARIANTS_AGENT_PRESET,
+  REVIEW_VARIANTS_AGENT_PRESET,
   REVIEW_GATE_PRESET,
   GREETING_OUTPUT_PRESET,
   NEWS_CONTEXT_OUTPUT_PRESET,
   CREATIVE_BRIEF_OUTPUT_PRESET,
+  DECISION_SIGNAL_OUTPUT_PRESET,
   TEXT_OUTPUT_PRESET,
 ] satisfies NodePresetDefinition[];
 
@@ -381,7 +473,7 @@ export function getNodePresetById(presetId: string) {
 
 export function getSuggestedPresets(valueType?: ValueType | null) {
   if (!valueType) {
-    return [EMPTY_AGENT_PRESET, NAME_INPUT_PRESET, TASK_INPUT_PRESET, TEXT_INPUT_PRESET, HELLO_GREETING_AGENT_PRESET, SUMMARY_AGENT_PRESET, FETCH_NEWS_AGENT_PRESET, CLEAN_MARKET_NEWS_AGENT_PRESET, BUILD_CREATIVE_BRIEF_AGENT_PRESET, REVIEW_GATE_PRESET, GREETING_OUTPUT_PRESET, NEWS_CONTEXT_OUTPUT_PRESET, CREATIVE_BRIEF_OUTPUT_PRESET, TEXT_OUTPUT_PRESET];
+    return [EMPTY_AGENT_PRESET, NAME_INPUT_PRESET, TASK_INPUT_PRESET, TEXT_INPUT_PRESET, HELLO_GREETING_AGENT_PRESET, SUMMARY_AGENT_PRESET, FETCH_NEWS_AGENT_PRESET, CLEAN_MARKET_NEWS_AGENT_PRESET, BUILD_CREATIVE_BRIEF_AGENT_PRESET, GENERATE_CREATIVE_VARIANTS_AGENT_PRESET, REVIEW_VARIANTS_AGENT_PRESET, REVIEW_GATE_PRESET, GREETING_OUTPUT_PRESET, NEWS_CONTEXT_OUTPUT_PRESET, CREATIVE_BRIEF_OUTPUT_PRESET, DECISION_SIGNAL_OUTPUT_PRESET, TEXT_OUTPUT_PRESET];
   }
 
   const supportsType = (preset: NodePresetDefinition) => {

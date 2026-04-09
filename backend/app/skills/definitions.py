@@ -172,6 +172,42 @@ SKILL_DEFINITIONS: list[SkillDefinition] = [
         supportedValueTypes=["text", "json"],
         sideEffects=[SkillSideEffect.MODEL_CALL],
     ),
+    SkillDefinition(
+        skillKey="generate_creative_variants",
+        label="Generate Creative Variants",
+        description="Generate structured creative variants from the current task and brief.",
+        inputSchema=[
+            SkillIoField(key="task_input", label="Task Input", valueType="text", description="Creative task or campaign goal."),
+            SkillIoField(key="creative_brief", label="Creative Brief", valueType="text", required=True, description="Brief used to generate variants."),
+            SkillIoField(key="theme_config", label="Theme Config", valueType="json", description="Theme configuration used by the generator."),
+            SkillIoField(key="variant_count", label="Variant Count", valueType="json", description="How many variants to generate."),
+        ],
+        outputSchema=[
+            SkillIoField(key="script_variants", label="Script Variants", valueType="json", description="Generated creative variants."),
+        ],
+        supportedValueTypes=["text", "json"],
+        sideEffects=[SkillSideEffect.MODEL_CALL],
+    ),
+    SkillDefinition(
+        skillKey="review_creative_variants",
+        label="Review Creative Variants",
+        description="Review generated variants and return pass or revise guidance.",
+        inputSchema=[
+            SkillIoField(key="task_input", label="Task Input", valueType="text", description="Creative task or campaign goal."),
+            SkillIoField(key="creative_brief", label="Creative Brief", valueType="text", required=True, description="Brief used for evaluation."),
+            SkillIoField(key="script_variants", label="Script Variants", valueType="json", required=True, description="Variants to review."),
+            SkillIoField(key="theme_config", label="Theme Config", valueType="json", description="Theme configuration used by the reviewer."),
+            SkillIoField(key="pass_threshold", label="Pass Threshold", valueType="json", description="Score threshold for pass."),
+        ],
+        outputSchema=[
+            SkillIoField(key="review_results", label="Review Results", valueType="json", description="Per-variant review results."),
+            SkillIoField(key="best_variant", label="Best Variant", valueType="json", description="Best reviewed variant."),
+            SkillIoField(key="revision_feedback", label="Revision Feedback", valueType="json", description="Feedback for revise path."),
+            SkillIoField(key="evaluation_result", label="Evaluation Result", valueType="json", description="Decision payload used by condition nodes."),
+        ],
+        supportedValueTypes=["text", "json"],
+        sideEffects=[SkillSideEffect.MODEL_CALL],
+    ),
 ]
 
 

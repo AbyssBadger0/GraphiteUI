@@ -702,6 +702,8 @@ agent node 的 skill attachment 已经有可依赖的数据源。
 - `hello_world` 的模板图已通过 validate/run，最小闭环已可作为 node system smoke path
 - `creative_factory` 已补入 research/fetch 最小 node system 样板
 - `creative_factory` 已扩展到 `research -> brief` 第二阶段闭环
+- `creative_factory` 已扩展到 `review + condition` 第三阶段闭环
+- `creative_factory` 第三阶段模板已通过 validate/run，并能正确命中 `pass / revise` 分支
 - `/editor/new` 已支持按模板创建新节点系统图
 - 旧 `hello_model` 图仍作为兼容路径保留，尚未完全退出主验证链路
 

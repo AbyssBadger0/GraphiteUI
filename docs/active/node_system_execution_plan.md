@@ -404,6 +404,15 @@
 
 后端已经能“理解”新模型，但还不需要完整运行。
 
+### Status
+
+基础接入已完成：
+
+- 后端新增了 `node_system` graph schema
+- `/api/graphs/save` 与 `/api/graphs/validate` 已支持新旧 payload 双通道解析
+- 存储层已能保存和读取新 graph family
+- 运行时仍保持旧协议执行，`node_system` 仅完成“理解与保存”，尚未进入执行阶段
+
 ---
 
 ## Phase 4: Introduce Skill Registry Schema

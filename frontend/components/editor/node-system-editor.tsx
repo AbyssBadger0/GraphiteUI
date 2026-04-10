@@ -8,6 +8,7 @@ import {
   Handle,
   MiniMap,
   MarkerType,
+  NodeResizer,
   Position,
   ReactFlow,
   ReactFlowProvider,
@@ -97,6 +98,7 @@ type FlowNodeData = {
   config: NodePresetDefinition;
   previewText: string;
   onConfigChange?: (updater: (config: NodePresetDefinition) => NodePresetDefinition) => void;
+  onResizeEnd?: (width: number, height: number) => void;
 };
 
 type FlowNode = Node<FlowNodeData>;
@@ -203,6 +205,7 @@ function createEditorDefaults(templates: TemplateRecord[], defaultTemplateId?: s
 }
 
 function createFlowNodeFromGraphNode(node: any): FlowNode {
+  const hasExplicitSize = typeof node.style?.width === "number" && typeof node.style?.height === "number";
   return {
     id: node.id,
     type: node.type ?? "default",
@@ -214,12 +217,9 @@ function createFlowNodeFromGraphNode(node: any): FlowNode {
     },
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
-    style: {
-      background: "transparent",
-      border: "none",
-      padding: 0,
-      width: "auto",
-    },
+    style: hasExplicitSize
+      ? { background: "transparent", border: "none", padding: 0, width: node.style.width, height: node.style.height }
+      : { background: "transparent", border: "none", padding: 0, width: "auto" },
   } satisfies FlowNode;
 }
 
@@ -895,13 +895,22 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const outputs = listOutputPorts(config);
 
   return (
-    <div
-      data-node-card="true"
-      className={cn(
-        "min-w-[280px] rounded-[18px] border bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,237,219,0.96)_100%)] shadow-[0_18px_36px_rgba(60,41,20,0.1)]",
-        selected ? "border-[var(--accent)]" : "border-[rgba(154,52,18,0.25)]",
-      )}
-    >
+    <>
+      <NodeResizer
+        isVisible={selected}
+        minWidth={160}
+        minHeight={48}
+        handleStyle={{ width: 8, height: 8, borderRadius: 4, background: "var(--accent)", border: "none" }}
+        lineStyle={{ borderColor: "var(--accent)", borderWidth: 1 }}
+        onResizeEnd={(_event, params) => data.onResizeEnd?.(params.width, params.height)}
+      />
+      <div
+        data-node-card="true"
+        className={cn(
+          "h-full min-w-[160px] rounded-[18px] border bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,237,219,0.96)_100%)] shadow-[0_18px_36px_rgba(60,41,20,0.1)]",
+          selected ? "border-[var(--accent)]" : "border-[rgba(154,52,18,0.25)]",
+        )}
+      >
       <div className="flex items-center justify-between border-b border-[rgba(154,52,18,0.12)] px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full bg-[rgba(154,52,18,0.55)]" />
@@ -1002,6 +1011,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
 
       </div>
     </div>
+    </>
   );
 }
 
@@ -1389,6 +1399,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
         id: node.id,
         type: "default",
         position: node.position,
+        style: node.style,
         data: {
           nodeId: node.data.nodeId,
           config: node.data.config,
@@ -1521,6 +1532,15 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                               },
                             }
                           : candidate,
+                      ),
+                    );
+                  },
+                  onResizeEnd: (width: number, height: number) => {
+                    setNodes((current) =>
+                      current.map((n) =>
+                        n.id === node.id
+                          ? { ...n, style: { ...n.style, width, height } }
+                          : n,
                       ),
                     );
                   },

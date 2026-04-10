@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useLanguage } from "@/components/providers/language-provider";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, SubtleCard } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { apiGet } from "@/lib/api";
+import { apiDelete, apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/cn";
 
 type SkillField = {
@@ -35,6 +36,7 @@ type SkillDefinition = {
   sideEffects: string[];
   sourceFormat: "graphite_definition" | "claude_code" | "codex";
   runtimeRegistered: boolean;
+  status: "active" | "disabled" | "deleted";
   compatibility: SkillCompatibilityReport[];
 };
 
@@ -56,12 +58,13 @@ export function SkillsPageClient() {
   const [selectedSkillKey, setSelectedSkillKey] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     async function loadSkills() {
       try {
-        const payload = await apiGet<SkillDefinition[]>("/api/skills/definitions");
+        const payload = await apiGet<SkillDefinition[]>("/api/skills/definitions?include_disabled=true");
         if (!cancelled) {
           setSkills(payload);
           setSelectedSkillKey((current) => current ?? payload[0]?.skillKey ?? null);
@@ -78,6 +81,15 @@ export function SkillsPageClient() {
       cancelled = true;
     };
   }, []);
+
+  async function refreshSkills(preferredSkillKey?: string | null) {
+    const payload = await apiGet<SkillDefinition[]>("/api/skills/definitions?include_disabled=true");
+    setSkills(payload);
+    const nextKey = preferredSkillKey && payload.some((item) => item.skillKey === preferredSkillKey)
+      ? preferredSkillKey
+      : payload[0]?.skillKey ?? null;
+    setSelectedSkillKey(nextKey);
+  }
 
   const filteredSkills = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -103,6 +115,45 @@ export function SkillsPageClient() {
     0,
   ) ?? 0;
 
+  async function handleDisable(skillKey: string) {
+    setPendingActionKey(skillKey);
+    try {
+      await apiPost<SkillDefinition>(`/api/skills/${skillKey}/disable`, {});
+      await refreshSkills(skillKey);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Failed to disable skill.");
+    } finally {
+      setPendingActionKey(null);
+    }
+  }
+
+  async function handleEnable(skillKey: string) {
+    setPendingActionKey(skillKey);
+    try {
+      await apiPost<SkillDefinition>(`/api/skills/${skillKey}/enable`, {});
+      await refreshSkills(skillKey);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Failed to enable skill.");
+    } finally {
+      setPendingActionKey(null);
+    }
+  }
+
+  async function handleDelete(skillKey: string) {
+    if (!window.confirm(`确认删除 skill "${skillKey}" 吗？删除后它会从默认列表中移除。`)) {
+      return;
+    }
+    setPendingActionKey(skillKey);
+    try {
+      await apiDelete<{ skillKey: string; status: string }>(`/api/skills/${skillKey}`);
+      await refreshSkills(selectedSkillKey === skillKey ? null : selectedSkillKey);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Failed to delete skill.");
+    } finally {
+      setPendingActionKey(null);
+    }
+  }
+
   if (error) {
     return <EmptyState>{t("common.failed")}: {error}</EmptyState>;
   }
@@ -121,14 +172,14 @@ export function SkillsPageClient() {
           detail="具备后端实际可执行实现"
         />
         <MetricCard
+          title="已禁用"
+          value={String(skills.filter((skill) => skill.status === "disabled").length)}
+          detail="暂时不出现在默认可用 skill 列表里"
+        />
+        <MetricCard
           title="Claude 部分兼容"
           value={String(skills.filter((skill) => skill.compatibility.some((item) => item.target === "claude_code" && item.status === "partial")).length)}
           detail="已接近 Claude Code skill 语义"
-        />
-        <MetricCard
-          title="Codex 部分兼容"
-          value={String(skills.filter((skill) => skill.compatibility.some((item) => item.target === "codex" && item.status === "partial")).length)}
-          detail="已接近 Codex skill 语义"
         />
       </section>
 
@@ -171,6 +222,7 @@ export function SkillsPageClient() {
                   <div className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--muted)]">{skill.description}</div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Badge>{FORMAT_LABELS[skill.sourceFormat]}</Badge>
+                    <Badge>{skill.status === "active" ? "启用中" : "已禁用"}</Badge>
                     {skill.sideEffects.slice(0, 2).map((item) => (
                       <Badge key={item}>{item}</Badge>
                     ))}
@@ -192,6 +244,7 @@ export function SkillsPageClient() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge>{FORMAT_LABELS[selectedSkill.sourceFormat]}</Badge>
+                  <Badge>{selectedSkill.status === "active" ? "启用中" : "已禁用"}</Badge>
                   <Badge className={cn(selectedSkill.runtimeRegistered ? "text-[var(--success)]" : "text-[var(--danger)]")}>
                     {selectedSkill.runtimeRegistered ? "Runtime 已注册" : "Runtime 未注册"}
                   </Badge>
@@ -199,6 +252,36 @@ export function SkillsPageClient() {
               </div>
 
               <p className="text-[0.98rem] leading-7 text-[var(--muted)]">{selectedSkill.description}</p>
+
+              <div className="flex flex-wrap gap-3">
+                {selectedSkill.status === "active" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={pendingActionKey === selectedSkill.skillKey}
+                    onClick={() => handleDisable(selectedSkill.skillKey)}
+                  >
+                    禁用
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={pendingActionKey === selectedSkill.skillKey}
+                    onClick={() => handleEnable(selectedSkill.skillKey)}
+                  >
+                    启用
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={pendingActionKey === selectedSkill.skillKey}
+                  onClick={() => handleDelete(selectedSkill.skillKey)}
+                >
+                  删除
+                </Button>
+              </div>
 
               <div className="grid grid-cols-3 gap-4 max-[960px]:grid-cols-1">
                 <SubtleCard>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.core.schemas.skills import (
+    SkillCatalogStatus,
     SkillCompatibilityReport,
     SkillCompatibilityStatus,
     SkillCompatibilityTarget,
@@ -9,6 +10,7 @@ from app.core.schemas.skills import (
     SkillSideEffect,
     SkillSourceFormat,
 )
+from app.core.storage.skill_store import get_skill_status_map
 from app.skills.registry import get_skill_registry
 
 
@@ -296,10 +298,16 @@ SKILL_DEFINITIONS: list[SkillDefinition] = [
 ]
 
 
-def list_skill_definitions() -> list[SkillDefinition]:
-    registry_keys = set(get_skill_registry().keys())
+def list_skill_definitions(*, include_disabled: bool = False) -> list[SkillDefinition]:
+    registry_keys = set(get_skill_registry(include_disabled=include_disabled).keys())
+    status_map = get_skill_status_map()
     definitions: list[SkillDefinition] = []
     for definition in SKILL_DEFINITIONS:
+        status = status_map.get(definition.skill_key, SkillCatalogStatus.ACTIVE)
+        if status == SkillCatalogStatus.DELETED:
+            continue
+        if status == SkillCatalogStatus.DISABLED and not include_disabled:
+            continue
         runtime_registered = definition.skill_key in registry_keys
         definitions.append(
             definition.model_copy(
@@ -307,6 +315,7 @@ def list_skill_definitions() -> list[SkillDefinition]:
                 update={
                     "source_format": SkillSourceFormat.GRAPHITE,
                     "runtime_registered": runtime_registered,
+                    "status": status,
                     "compatibility": _build_compatibility_reports(definition),
                 },
             )
@@ -314,8 +323,8 @@ def list_skill_definitions() -> list[SkillDefinition]:
     return definitions
 
 
-def get_skill_definition_registry() -> dict[str, SkillDefinition]:
-    return {definition.skill_key: definition.model_copy(deep=True) for definition in SKILL_DEFINITIONS}
+def get_skill_definition_registry(*, include_disabled: bool = False) -> dict[str, SkillDefinition]:
+    return {definition.skill_key: definition for definition in list_skill_definitions(include_disabled=include_disabled)}
 
 
 def _build_compatibility_reports(definition: SkillDefinition) -> list[SkillCompatibilityReport]:

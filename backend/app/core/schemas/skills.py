@@ -39,6 +39,12 @@ class SkillCompatibilityReport(BaseModel):
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
 
 
+class SkillCatalogStatus(str, Enum):
+    ACTIVE = "active"
+    DISABLED = "disabled"
+    DELETED = "deleted"
+
+
 class SkillIoField(BaseModel):
     key: str = Field(..., min_length=1)
     label: str = Field(..., min_length=1)
@@ -59,6 +65,7 @@ class SkillDefinition(BaseModel):
     side_effects: list[SkillSideEffect] = Field(default_factory=list, alias="sideEffects")
     source_format: SkillSourceFormat = Field(default=SkillSourceFormat.GRAPHITE, alias="sourceFormat")
     runtime_registered: bool = Field(default=False, alias="runtimeRegistered")
+    status: SkillCatalogStatus = Field(default=SkillCatalogStatus.ACTIVE)
     compatibility: list[SkillCompatibilityReport] = Field(default_factory=list)
 
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)

@@ -945,49 +945,51 @@ function PortRow({
             style={{ backgroundColor: color }}
             isConnectable
           />
+          <span className="ml-2 truncate cursor-text" onDoubleClick={startEditing}>
+            {port.label}
+          </span>
           {isEditing ? (
-            <Input
-              className="ml-2 h-9"
-              value={draftLabel}
-              autoFocus
-              onChange={(event) => setDraftLabel(event.target.value)}
-              onBlur={commitEditing}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") commitEditing();
-                if (event.key === "Escape") {
-                  setDraftLabel(port.label);
-                  setIsEditing(false);
-                }
-              }}
-            />
-          ) : (
-            <span className="ml-2 truncate cursor-text" onDoubleClick={startEditing}>
-              {port.label}
-            </span>
-          )}
+            <div className="absolute left-5 top-full z-20 mt-2 w-[220px] rounded-[16px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.98)] p-2 shadow-[0_14px_32px_rgba(60,41,20,0.14)]">
+              <Input
+                className="h-9"
+                value={draftLabel}
+                autoFocus
+                onChange={(event) => setDraftLabel(event.target.value)}
+                onBlur={commitEditing}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") commitEditing();
+                  if (event.key === "Escape") {
+                    setDraftLabel(port.label);
+                    setIsEditing(false);
+                  }
+                }}
+              />
+            </div>
+          ) : null}
         </>
       ) : (
         <>
+          <span className="truncate text-right cursor-text" onDoubleClick={startEditing}>
+            {port.label}
+          </span>
           {isEditing ? (
-            <Input
-              className="h-9 text-right"
-              value={draftLabel}
-              autoFocus
-              onChange={(event) => setDraftLabel(event.target.value)}
-              onBlur={commitEditing}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") commitEditing();
-                if (event.key === "Escape") {
-                  setDraftLabel(port.label);
-                  setIsEditing(false);
-                }
-              }}
-            />
-          ) : (
-            <span className="truncate text-right cursor-text" onDoubleClick={startEditing}>
-              {port.label}
-            </span>
-          )}
+            <div className="absolute right-5 top-full z-20 mt-2 w-[220px] rounded-[16px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.98)] p-2 shadow-[0_14px_32px_rgba(60,41,20,0.14)]">
+              <Input
+                className="h-9 text-right"
+                value={draftLabel}
+                autoFocus
+                onChange={(event) => setDraftLabel(event.target.value)}
+                onBlur={commitEditing}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") commitEditing();
+                  if (event.key === "Escape") {
+                    setDraftLabel(port.label);
+                    setIsEditing(false);
+                  }
+                }}
+              />
+            </div>
+          ) : null}
           <Handle
             id={buildHandleId("output", port.key)}
             type="source"
@@ -1066,49 +1068,53 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
       >
         <div className="flex items-start justify-between gap-3 border-b border-[rgba(154,52,18,0.12)] px-4 py-3">
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="relative flex min-w-0 items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-[rgba(154,52,18,0.55)]" />
+              <div className="truncate text-sm font-semibold text-[var(--text)] cursor-text" onDoubleClick={() => setIsEditingLabel(true)}>
+                {config.label}
+              </div>
               {isEditingLabel ? (
-                <Input
-                  className="h-9"
-                  value={draftLabel}
-                  autoFocus
-                  onChange={(event) => setDraftLabel(event.target.value)}
-                  onBlur={commitLabelEdit}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") commitLabelEdit();
-                    if (event.key === "Escape") {
-                      setDraftLabel(config.label);
-                      setIsEditingLabel(false);
-                    }
-                  }}
-                />
-              ) : (
-                <div className="truncate text-sm font-semibold text-[var(--text)] cursor-text" onDoubleClick={() => setIsEditingLabel(true)}>
-                  {config.label}
+                <div className="absolute left-0 top-full z-20 mt-2 w-[260px] rounded-[16px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.98)] p-2 shadow-[0_14px_32px_rgba(60,41,20,0.14)]">
+                  <Input
+                    className="h-9"
+                    value={draftLabel}
+                    autoFocus
+                    onChange={(event) => setDraftLabel(event.target.value)}
+                    onBlur={commitLabelEdit}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") commitLabelEdit();
+                      if (event.key === "Escape") {
+                        setDraftLabel(config.label);
+                        setIsEditingLabel(false);
+                      }
+                    }}
+                  />
                 </div>
-              )}
+              ) : null}
             </div>
-            {isEditingDescription ? (
-              <Input
-                className="mt-1 h-9"
-                value={draftDescription}
-                autoFocus
-                onChange={(event) => setDraftDescription(event.target.value)}
-                onBlur={commitDescriptionEdit}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") commitDescriptionEdit();
-                  if (event.key === "Escape") {
-                    setDraftDescription(config.description);
-                    setIsEditingDescription(false);
-                  }
-                }}
-              />
-            ) : (
-              <div className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--muted)] cursor-text" onDoubleClick={() => setIsEditingDescription(true)}>
+            <div className="relative mt-1">
+              <div className="line-clamp-2 text-xs leading-5 text-[var(--muted)] cursor-text" onDoubleClick={() => setIsEditingDescription(true)}>
                 {config.description || summarizeNode(config)}
               </div>
-            )}
+              {isEditingDescription ? (
+                <div className="absolute left-0 top-full z-20 mt-2 w-[320px] rounded-[16px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.98)] p-2 shadow-[0_14px_32px_rgba(60,41,20,0.14)]">
+                  <Input
+                    className="h-9"
+                    value={draftDescription}
+                    autoFocus
+                    onChange={(event) => setDraftDescription(event.target.value)}
+                    onBlur={commitDescriptionEdit}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") commitDescriptionEdit();
+                      if (event.key === "Escape") {
+                        setDraftDescription(config.description);
+                        setIsEditingDescription(false);
+                      }
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{config.family}</div>

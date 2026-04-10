@@ -860,15 +860,39 @@ function PortRow({
   nodeId,
   port,
   side,
+  editable = false,
+  onRename,
 }: {
   nodeId: string;
   port: PortDefinition;
   side: "input" | "output";
+  editable?: boolean;
+  onRename?: (nextLabel: string) => void;
 }) {
   const color = TYPE_COLORS[port.valueType];
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftLabel, setDraftLabel] = useState(port.label);
+
+  useEffect(() => {
+    setDraftLabel(port.label);
+  }, [port.label]);
+
+  function startEditing() {
+    if (!editable) return;
+    setDraftLabel(port.label);
+    setIsEditing(true);
+  }
+
+  function commitEditing() {
+    const nextLabel = draftLabel.trim();
+    if (nextLabel && nextLabel !== port.label) {
+      onRename?.(nextLabel);
+    }
+    setIsEditing(false);
+  }
 
   return (
-    <div className={cn("relative flex h-6 items-center text-[0.9rem] text-[var(--text)]", side === "input" ? "justify-start" : "justify-end")}>
+    <div className={cn("group relative flex min-h-6 items-center text-[0.9rem] text-[var(--text)]", side === "input" ? "justify-start" : "justify-end")}>
       {side === "input" ? (
         <>
           <Handle
@@ -879,11 +903,73 @@ function PortRow({
             style={{ backgroundColor: color }}
             isConnectable
           />
-          <span className="ml-2 truncate">{port.label}</span>
+          {isEditing ? (
+            <Input
+              className="ml-2 h-9"
+              value={draftLabel}
+              autoFocus
+              onChange={(event) => setDraftLabel(event.target.value)}
+              onBlur={commitEditing}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") commitEditing();
+                if (event.key === "Escape") {
+                  setDraftLabel(port.label);
+                  setIsEditing(false);
+                }
+              }}
+            />
+          ) : (
+            <span className="ml-2 truncate cursor-text" onDoubleClick={startEditing}>
+              {port.label}
+            </span>
+          )}
+          {editable && !isEditing ? (
+            <button
+              type="button"
+              className="absolute left-5 top-full z-10 mt-1 hidden h-6 w-6 items-center justify-center rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.96)] text-[var(--accent-strong)] shadow-[0_8px_18px_rgba(60,41,20,0.08)] group-hover:flex"
+              onClick={startEditing}
+              aria-label="Rename port"
+            >
+              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
+                <path d="M3 11.5 11.8 2.7a1.5 1.5 0 0 1 2.1 2.1L5 13.6 2 14l.4-3Z" />
+              </svg>
+            </button>
+          ) : null}
         </>
       ) : (
         <>
-          <span className="truncate text-right">{port.label}</span>
+          {editable && !isEditing ? (
+            <button
+              type="button"
+              className="absolute right-5 top-full z-10 mt-1 hidden h-6 w-6 items-center justify-center rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.96)] text-[var(--accent-strong)] shadow-[0_8px_18px_rgba(60,41,20,0.08)] group-hover:flex"
+              onClick={startEditing}
+              aria-label="Rename port"
+            >
+              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
+                <path d="M3 11.5 11.8 2.7a1.5 1.5 0 0 1 2.1 2.1L5 13.6 2 14l.4-3Z" />
+              </svg>
+            </button>
+          ) : null}
+          {isEditing ? (
+            <Input
+              className="h-9 text-right"
+              value={draftLabel}
+              autoFocus
+              onChange={(event) => setDraftLabel(event.target.value)}
+              onBlur={commitEditing}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") commitEditing();
+                if (event.key === "Escape") {
+                  setDraftLabel(port.label);
+                  setIsEditing(false);
+                }
+              }}
+            />
+          ) : (
+            <span className="truncate text-right cursor-text" onDoubleClick={startEditing}>
+              {port.label}
+            </span>
+          )}
           <Handle
             id={buildHandleId("output", port.key)}
             type="source"
@@ -973,7 +1059,22 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
             <>
               <div className="grid gap-1">
                 {outputs.map((port) => (
-                  <PortRow key={`output-${port.key}`} nodeId={data.nodeId} port={port} side="output" />
+                  <PortRow
+                    key={`output-${port.key}`}
+                    nodeId={data.nodeId}
+                    port={port}
+                    side="output"
+                    editable
+                    onRename={(nextLabel) =>
+                      data.onConfigChange?.((currentConfig) => ({
+                        ...(currentConfig as InputBoundaryNode),
+                        output: {
+                          ...(currentConfig as InputBoundaryNode).output,
+                          label: nextLabel,
+                        },
+                      }))
+                    }
+                  />
                 ))}
               </div>
               {isExpanded ? (
@@ -1011,23 +1112,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                 </>
               ) : null}
               <div className="grid gap-2">
-                {isExpanded ? (
-                  <>
-                    <Input
-                      value={config.output.label}
-                      onChange={(event) =>
-                        data.onConfigChange?.((currentConfig) => ({
-                          ...(currentConfig as InputBoundaryNode),
-                          output: {
-                            ...(currentConfig as InputBoundaryNode).output,
-                            label: event.target.value,
-                          },
-                        }))
-                      }
-                      placeholder="Output label"
-                    />
-                  </>
-                ) : null}
                 <textarea
                   value={config.defaultValue}
                   rows={5}
@@ -1234,7 +1318,22 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
             <>
               <div className="grid gap-1">
                 {inputs.map((port) => (
-                  <PortRow key={`input-${port.key}`} nodeId={data.nodeId} port={port} side="input" />
+                  <PortRow
+                    key={`input-${port.key}`}
+                    nodeId={data.nodeId}
+                    port={port}
+                    side="input"
+                    editable
+                    onRename={(nextLabel) =>
+                      data.onConfigChange?.((currentConfig) => ({
+                        ...(currentConfig as OutputBoundaryNode),
+                        input: {
+                          ...(currentConfig as OutputBoundaryNode).input,
+                          label: nextLabel,
+                        },
+                      }))
+                    }
+                  />
                 ))}
               </div>
               {isExpanded ? (
@@ -1278,19 +1377,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     </label>
                   </div>
                   <div className="grid gap-2">
-                    <Input
-                      value={config.input.label}
-                      onChange={(event) =>
-                        data.onConfigChange?.((currentConfig) => ({
-                          ...(currentConfig as OutputBoundaryNode),
-                          input: {
-                            ...(currentConfig as OutputBoundaryNode).input,
-                            label: event.target.value,
-                          },
-                        }))
-                      }
-                      placeholder="Input label"
-                    />
                     <Input
                       value={config.fileNameTemplate}
                       onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), fileNameTemplate: event.target.value }))}

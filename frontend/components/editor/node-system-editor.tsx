@@ -1424,7 +1424,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                       </button>
                     ) : (
                       <div
-                        className="grid min-h-[120px] gap-3 rounded-[16px] border border-dashed border-[rgba(154,52,18,0.24)] bg-[rgba(255,255,255,0.82)] px-4 py-5 text-left"
+                        className="grid min-h-[120px] gap-3 text-left"
                         onDragOver={(event) => {
                           event.preventDefault();
                           event.dataTransfer.dropEffect = "copy";

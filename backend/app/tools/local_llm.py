@@ -54,8 +54,13 @@ def _chat_with_local_model(
 def generate_hello_greeting(state: dict[str, Any], params: dict[str, Any] | None = None) -> dict[str, Any]:
     params = params or {}
     name = str(state.get("name") or params.get("name") or "World").strip() or "World"
-    system_prompt = "You are a precise assistant. Return only a short greeting in the format: Hello, <name>."
-    user_prompt = f"Name: {name}"
+    system_prompt = (
+        "You are a product onboarding assistant for GraphiteUI. "
+        "Return only a short usage introduction in Chinese for a new user. "
+        "Keep it within 3 sentences, mention that the user can inspect nodes, edit configuration, save the graph, "
+        "and run the flow. Personalize it with the provided name when natural."
+    )
+    user_prompt = f"User name: {name}"
     model_name = str(params.get("model") or LOCAL_LLM_MODEL)
     try:
         greeting = _chat_with_local_model(
@@ -63,14 +68,17 @@ def generate_hello_greeting(state: dict[str, Any], params: dict[str, Any] | None
             user_prompt=user_prompt,
             model=model_name,
             temperature=float(params.get("temperature", 0.2)),
-            max_tokens=int(params.get("max_tokens", 40)),
+            max_tokens=int(params.get("max_tokens", 120)),
         )
         llm_response: dict[str, Any] = {
             "base_url": LOCAL_LLM_BASE_URL,
             "model": model_name,
         }
     except RuntimeError as exc:  # pragma: no cover - fallback path depends on local model availability
-        greeting = f"Hello, {name}."
+        greeting = (
+            f"{name}，欢迎使用 GraphiteUI。你可以先点选节点查看配置，再尝试修改参数、保存图，"
+            "最后运行整条流程观察输出结果。"
+        )
         llm_response = {
             "base_url": LOCAL_LLM_BASE_URL,
             "model": model_name,

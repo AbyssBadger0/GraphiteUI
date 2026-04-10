@@ -30,7 +30,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                     "config": {
                         "presetId": "preset.input.name.v1",
                         "label": "Name Input",
-                        "description": "Provide the name used to generate a greeting.",
+                        "description": "Provide the name used to personalize the usage introduction.",
                         "family": "input",
                         "valueType": "text",
                         "output": {
@@ -53,8 +53,8 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                     "nodeId": "agent_1",
                     "config": {
                         "presetId": "preset.agent.hello_greeting.v1",
-                        "label": "Hello Greeting",
-                        "description": "Generate a greeting from the provided name.",
+                        "label": "Usage Introduction",
+                        "description": "Generate a short onboarding introduction for the provided name.",
                         "family": "agent",
                         "inputs": [
                             {
@@ -67,12 +67,12 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                         "outputs": [
                             {
                                 "key": "greeting",
-                                "label": "Greeting",
+                                "label": "Usage Introduction",
                                 "valueType": "text",
                             }
                         ],
-                        "systemInstruction": "You are a precise assistant.",
-                        "taskInstruction": "Return a short greeting for the provided name.",
+                        "systemInstruction": "You are a GraphiteUI onboarding assistant.",
+                        "taskInstruction": "Return a short usage introduction for the provided name.",
                         "skills": [
                             {
                                 "name": "generate_greeting",
@@ -100,19 +100,19 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                     "nodeId": "output_1",
                     "config": {
                         "presetId": "preset.output.greeting.v1",
-                        "label": "Greeting Output",
-                        "description": "Preview and optionally persist the final greeting.",
+                        "label": "Usage Introduction Output",
+                        "description": "Preview and optionally persist the generated usage introduction.",
                         "family": "output",
                         "input": {
                             "key": "value",
-                            "label": "Greeting",
+                            "label": "Usage Introduction",
                             "valueType": "text",
                             "required": True,
                         },
                         "displayMode": "auto",
                         "persistEnabled": False,
                         "persistFormat": "txt",
-                        "fileNameTemplate": "greeting",
+                        "fileNameTemplate": "usage-introduction",
                     },
                     "previewText": "",
                 },
@@ -169,7 +169,7 @@ def get_hello_world_template() -> dict[str, Any]:
     return {
         "template_id": "hello_world",
         "label": "Hello World",
-        "description": "Send a name to the local language model and return a greeting.",
+        "description": "Send a name to the local language model and return a short usage introduction.",
         "default_graph_name": "Hello World",
         "default_theme_preset": theme_preset["id"],
         "supported_node_types": NODE_SYSTEM_SUPPORTED_NODE_TYPES,

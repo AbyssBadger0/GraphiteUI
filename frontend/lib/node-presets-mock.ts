@@ -110,8 +110,8 @@ export const SUMMARY_AGENT_PRESET = {
 
 export const HELLO_GREETING_AGENT_PRESET = {
   presetId: "preset.agent.hello_greeting.v1",
-  label: "Hello Greeting",
-  description: "Generate a short greeting by calling the hello greeting skill.",
+  label: "Usage Introduction",
+  description: "Generate a short onboarding introduction by calling the hello greeting skill.",
   family: "agent",
   inputs: [
     {
@@ -124,12 +124,12 @@ export const HELLO_GREETING_AGENT_PRESET = {
   outputs: [
     {
       key: "greeting",
-      label: "Greeting",
+      label: "Usage Introduction",
       valueType: "text",
     },
   ],
-  systemInstruction: "You are a precise assistant.",
-  taskInstruction: "Return a short greeting for the provided name.",
+  systemInstruction: "You are a GraphiteUI onboarding assistant.",
+  taskInstruction: "Return a short usage introduction for the provided name.",
   skills: [
     {
       name: "generate_greeting",
@@ -149,19 +149,19 @@ export const HELLO_GREETING_AGENT_PRESET = {
 
 export const GREETING_OUTPUT_PRESET = {
   presetId: "preset.output.greeting.v1",
-  label: "Greeting Output",
-  description: "Preview and optionally persist the generated greeting.",
+  label: "Usage Introduction Output",
+  description: "Preview and optionally persist the generated usage introduction.",
   family: "output",
   input: {
     key: "value",
-    label: "Greeting",
+    label: "Usage Introduction",
     valueType: "text",
     required: true,
   },
   displayMode: "auto",
   persistEnabled: false,
   persistFormat: "txt",
-  fileNameTemplate: "greeting",
+  fileNameTemplate: "usage-introduction",
 } satisfies NodePresetDefinition;
 
 export const FETCH_NEWS_AGENT_PRESET = {

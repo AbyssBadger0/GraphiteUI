@@ -2,8 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.templates.hello_world.handlers import get_hello_world_supported_node_types
 from app.templates.hello_world.state import get_hello_world_state_keys, get_hello_world_state_schema
+
+
+NODE_SYSTEM_SUPPORTED_NODE_TYPES = [
+    "input_boundary",
+    "agent_node",
+    "condition_node",
+    "output_boundary",
+]
 
 
 def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str, Any]:
@@ -165,7 +172,7 @@ def get_hello_world_template() -> dict[str, Any]:
         "description": "Send a name to the local language model and return a greeting.",
         "default_graph_name": "Hello World",
         "default_theme_preset": theme_preset["id"],
-        "supported_node_types": get_hello_world_supported_node_types(),
+        "supported_node_types": NODE_SYSTEM_SUPPORTED_NODE_TYPES,
         "state_keys": get_hello_world_state_keys(),
         "state_schema": get_hello_world_state_schema(),
         "theme_presets": [theme_preset],

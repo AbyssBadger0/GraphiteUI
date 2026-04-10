@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.templates.creative_factory.handlers import get_creative_factory_supported_node_types
 from app.templates.creative_factory.state import get_creative_factory_state_keys, get_creative_factory_state_schema
 from app.templates.creative_factory.themes import get_creative_factory_theme_presets
+
+
+NODE_SYSTEM_SUPPORTED_NODE_TYPES = [
+    "input_boundary",
+    "agent_node",
+    "condition_node",
+    "output_boundary",
+]
 
 
 def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str, Any]:
@@ -823,7 +830,7 @@ def get_creative_factory_template() -> dict[str, Any]:
         "description": "Research, analyze, generate, review, and export a creative package.",
         "default_graph_name": "Creative Factory",
         "default_theme_preset": default_theme_preset,
-        "supported_node_types": get_creative_factory_supported_node_types(),
+        "supported_node_types": NODE_SYSTEM_SUPPORTED_NODE_TYPES,
         "state_keys": get_creative_factory_state_keys(),
         "state_schema": get_creative_factory_state_schema(),
         "theme_presets": theme_presets,

@@ -326,6 +326,20 @@ function renderUploadedAssetPreview(asset: UploadedAssetEnvelope) {
   );
 }
 
+function openUploadedAsset(asset: UploadedAssetEnvelope) {
+  if (typeof window === "undefined") return;
+
+  if (asset.encoding === "data_url") {
+    window.open(asset.content, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  const blob = new Blob([asset.content], { type: asset.mimeType || "text/plain" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener,noreferrer");
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 async function fileToEnvelope(file: File): Promise<UploadedAssetEnvelope> {
   const detectedType = detectInputValueTypeFromFileName(file.name);
   const encoding = detectedType === "file" ? "text" : "data_url";
@@ -1405,9 +1419,23 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                         }}
                       >
                         {renderUploadedAssetPreview(uploadedAsset)}
-                        <div className="flex justify-start">
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="ghost" onClick={() => openUploadedAsset(uploadedAsset)}>
+                            打开本地文件
+                          </Button>
                           <Button variant="ghost" onClick={() => uploadInputRef.current?.click()}>
-                            Replace File
+                            替换文件
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() =>
+                              data.onConfigChange?.((currentConfig) => ({
+                                ...(currentConfig as InputBoundaryNode),
+                                defaultValue: "",
+                              }))
+                            }
+                          >
+                            取消上传
                           </Button>
                         </div>
                       </div>

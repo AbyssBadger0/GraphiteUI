@@ -10,59 +10,56 @@
 
 当前代码已具备的基础：
 
-- 前后端开发环境可启动
+- 前后端开发环境可启动（`./scripts/dev_up.sh`，前端 3477 / 后端 8765）
 - graph 保存、校验、运行接口可用
-- `hello_world` 模板存在
+- `hello_world` 与 `creative_factory` 两个模板存在，均由后端 `default_node_system_graph` 提供
 - `/editor`、`/editor/new`、`/editor/[graphId]` 路由已接回
 - 画布、缩放、平移、Mini Map、基础建点、基础连线已存在
 - 左侧已有 `State Panel + Node Palette`
 - state 支持新增、搜索、颜色配置、readers / writers 展示
 - 节点已切到单行横向布局
-- 前端已用 `Text Input / Text Output` 替代显式 `start / end`
+- 前端以 `Input Boundary / Agent Node / Condition Node / Output Boundary` 四类原型为主
 - 每个 state 项已支持独立连接线，并在保存时折叠回后端 `flow_keys`
-- `hello_model` 已支持参数级连接覆盖本地值
-- `Text Output` 已支持预览和可选保存
+- `Input Boundary` 节点本体内直接提供可编辑文本框
+- `Output Boundary` 支持运行后预览，正确展示提取后的文本字段（不显示原始 JSON）
+- 节点支持手动 resize，尺寸随 Save 持久化，minHeight 按节点类型约束防止内容截断
+- 模板新建时按实际渲染宽度自动对齐节点水平间距（gap=80px）
+- agent 节点执行后 LLM JSON 响应被正确解析，按 output key 分字段提取
 - Save / Validate / Run 已接通
+- preset 持久化已接通（前端可另存为 preset，后端 `/api/presets` 可用）
+- skill definitions API（`/api/skills/definitions`）已接通
 
 当前代码与新目标之间的主要差距：
 
-- `Text Input` 还没有在节点本体内直接提供可编辑文本框
-- `Text Output` 还需要更明确的“未连接 / 已连接 / 预览 / 保存”终端语义
 - 参数级 socket 目前只在 `hello_model.name` 上落地，尚未成为通用能力
-- 节点运行结果仍以 run 级结果为主，节点级结果视图还不完整
-- `condition` 节点仍未按新心智重建
-- `hello_world` 闭环还需要按边界节点语义再做一次收口验收
+- 节点运行结果视图仍需进一步完善（`Changed Outputs` 区块）
+- `condition` 节点的结构化编辑器仍需收口
+- `hello_world` 闭环验收需在最新代码上重新跑一遍
 
 ## 2.1 Current Progress
 
 当前阶段已经完成的里程碑：
 
-- `M1 State-Aware Shell` 已基本完成
-- `M2 Readable Processing Graph` 已完成大部分
+- `M1 State-Aware Shell` 已完成
+- `M2 Readable Processing Graph` 已完成
+- `M3 Observable Runtime` 已基本完成
+- `M4 Hello World Pass` 已基本通过（后端调用链路通，输出正确展示）
 
 已经稳定落地的部分：
 
-- state 是 editor 的一等对象
-- 输入输出按 state 项逐条连线
+- state 是 editor 的一等对象，输入输出按 state 项逐条连线
 - 前端边界模型与后端 `START / END` 存在可运行映射
-- `hello_model` 不再错误输出 `name`
-- `hello_model.name` 已具备 ComfyUI 风格的“连接覆盖本地值”能力
+- LLM JSON 响应解析层已修复，输出节点展示提取后的字段值
+- 节点可手动 resize 并持久化，各类型有合理的 minHeight 约束
+- 模板新建时节点自动按实际宽度排列，视觉间距一致
 
 ## 2.2 Current Focus
 
-当前开发聚焦，不再继续发散：
+当前开发聚焦：
 
-1. 收紧边界节点交互
-2. 把 ComfyUI 风格的“widget + socket fallback”推广成通用规则
-3. 补全节点内直接编辑体验
-4. 补强节点级运行结果可视化
-
-当前最优先的具体事项：
-
-- `Text Input` 节点内嵌文本框
-- `Text Output` 节点内嵌终端预览
-- 参数 socket 通用化
-- 节点结果 inspector 收口
+1. 参数 socket 通用化（推广到所有 agent 节点参数字段）
+2. 节点级运行结果视图补全（`Changed Outputs`）
+3. `hello_world` 完整闭环验收
 
 ## 3. Strategy
 

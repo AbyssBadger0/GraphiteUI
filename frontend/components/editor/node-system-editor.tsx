@@ -890,17 +890,26 @@ function PortRow({
   );
 }
 
+// 各节点类型的最小高度，防止缩放导致内容显示不全
+const NODE_MIN_HEIGHT: Record<string, number> = {
+  input: 240,     // header + port row + textarea(min-h-120) + hint text + padding
+  output: 180,    // header + port row + preview area + padding
+  agent: 120,     // header + port rows + description + padding
+  condition: 100, // header + port rows + rule summary + padding
+};
+
 function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const config = data.config;
   const inputs = listInputPorts(config);
   const outputs = listOutputPorts(config);
+  const minHeight = NODE_MIN_HEIGHT[config.family] ?? 80;
 
   return (
     <>
       <NodeResizer
         isVisible={selected}
         minWidth={160}
-        minHeight={48}
+        minHeight={minHeight}
         handleStyle={{ width: 8, height: 8, borderRadius: 4, background: "var(--accent)", border: "none" }}
         lineStyle={{ borderColor: "var(--accent)", borderWidth: 1 }}
         onResizeEnd={(_event, params) => data.onResizeEnd?.(params.width, params.height)}

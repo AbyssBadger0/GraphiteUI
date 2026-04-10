@@ -229,6 +229,47 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 - greeting 或最终结果能被明确读取
 - 前端边界模型不会阻碍后端 LangGraph 运行
 
+## AC-12 Node Resize
+
+步骤：
+
+1. 打开任意 graph
+2. 点击选中一个节点，确认出现 resize 手柄
+3. 对 Input Boundary 节点拖动手柄尝试向内缩小
+4. 点击 Save，刷新页面
+
+通过标准：
+
+- 选中时显示 resize 手柄（橙色圆点）
+- Input Boundary 不能缩小到文本框不可见（minHeight=240）
+- Output Boundary minHeight=180，Agent minHeight=120
+- 刷新后节点尺寸保持
+
+## AC-13 Template Auto Layout
+
+步骤：
+
+1. 打开 `/editor/template-hello-world` 或从模板新建 hello_world
+2. 观察节点加载完成后的排列
+
+通过标准：
+
+- 节点水平排列，相邻节点间距视觉均匀
+- 不出现节点重叠
+
+## AC-14 Output Node Displays Extracted Text
+
+步骤：
+
+1. 运行 hello_world 图
+2. 等待运行完成
+3. 观察 Output Boundary 节点的 Preview 区域
+
+通过标准：
+
+- 显示干净的问候文本
+- 不显示原始 JSON 结构或 ` ```json ``` ` 标记
+
 ## 5. Exit Criteria
 
 当前阶段可认为通过验收的条件：
@@ -239,3 +280,6 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 - 节点输入输出和逐项连线可读
 - 节点运行结果可在 editor 内查看
 - `hello_world` 可保存、校验、运行
+- 输出节点展示提取后的字段值，不展示原始 JSON
+- 节点 resize 正常，各类型 minHeight 防内容截断
+- 模板新建时节点间距自动对齐

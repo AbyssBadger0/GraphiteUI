@@ -222,7 +222,7 @@ function createFlowNodeFromGraphNode(node: any): FlowNode {
       nodeId: node.data?.nodeId ?? node.id,
       config: deepClonePreset(node.data?.config as NodePresetDefinition),
       previewText: node.data?.previewText ?? "",
-      isExpanded: (node.data?.config?.family ?? "") === "input" || (node.data?.config?.family ?? "") === "output" ? true : false,
+      isExpanded: false,
     },
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
@@ -911,8 +911,8 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const inputs = listInputPorts(config);
   const outputs = listOutputPorts(config);
   const minHeight = NODE_MIN_HEIGHT[config.family] ?? 80;
-  const isCollapsible = config.family === "agent" || config.family === "condition";
-  const isExpanded = config.family === "input" || config.family === "output" || Boolean(data.isExpanded);
+  const isCollapsible = true;
+  const isExpanded = Boolean(data.isExpanded);
 
   return (
     <>
@@ -971,78 +971,86 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
 
           {config.family === "input" ? (
             <>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                  <span>Value Type</span>
-                  <select
-                    className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                    value={config.valueType}
-                    onChange={(event) =>
-                      data.onConfigChange?.((currentConfig) => {
-                        const nextType = event.target.value as ValueType;
-                        const currentInput = currentConfig as InputBoundaryNode;
-                        return {
-                          ...currentInput,
-                          valueType: nextType,
-                          output: {
-                            ...currentInput.output,
-                            valueType: nextType,
-                          },
-                        };
-                      })
-                    }
-                  >
-                    {VALUE_TYPE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
+              {isExpanded ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                      <span>Value Type</span>
+                      <select
+                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                        value={config.valueType}
+                        onChange={(event) =>
+                          data.onConfigChange?.((currentConfig) => {
+                            const nextType = event.target.value as ValueType;
+                            const currentInput = currentConfig as InputBoundaryNode;
+                            return {
+                              ...currentInput,
+                              valueType: nextType,
+                              output: {
+                                ...currentInput.output,
+                                valueType: nextType,
+                              },
+                            };
+                          })
+                        }
+                      >
+                        {VALUE_TYPE_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                      <span>Input Mode</span>
+                      <select
+                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                        value={config.inputMode}
+                        onChange={(event) =>
+                          data.onConfigChange?.((currentConfig) => ({
+                            ...(currentConfig as InputBoundaryNode),
+                            inputMode: event.target.value as InputBoundaryNode["inputMode"],
+                          }))
+                        }
+                      >
+                        {["inline", "reference"].map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="grid gap-1">
+                    {outputs.map((port) => (
+                      <PortRow key={`output-${port.key}`} nodeId={data.nodeId} port={port} side="output" />
                     ))}
-                  </select>
-                </label>
-                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                  <span>Input Mode</span>
-                  <select
-                    className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                    value={config.inputMode}
-                    onChange={(event) =>
-                      data.onConfigChange?.((currentConfig) => ({
-                        ...(currentConfig as InputBoundaryNode),
-                        inputMode: event.target.value as InputBoundaryNode["inputMode"],
-                      }))
-                    }
-                  >
-                    {["inline", "reference"].map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="grid gap-1">
-                {outputs.map((port) => (
-                  <PortRow key={`output-${port.key}`} nodeId={data.nodeId} port={port} side="output" />
-                ))}
-              </div>
+                  </div>
+                </>
+              ) : null}
               <div className="grid gap-2">
-                <Input
-                  value={config.output.label}
-                  onChange={(event) =>
-                    data.onConfigChange?.((currentConfig) => ({
-                      ...(currentConfig as InputBoundaryNode),
-                      output: {
-                        ...(currentConfig as InputBoundaryNode).output,
-                        label: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Output label"
-                />
-                <Input
-                  value={config.placeholder}
-                  onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as InputBoundaryNode), placeholder: event.target.value }))}
-                  placeholder="Placeholder"
-                />
+                {isExpanded ? (
+                  <>
+                    <Input
+                      value={config.output.label}
+                      onChange={(event) =>
+                        data.onConfigChange?.((currentConfig) => ({
+                          ...(currentConfig as InputBoundaryNode),
+                          output: {
+                            ...(currentConfig as InputBoundaryNode).output,
+                            label: event.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Output label"
+                    />
+                    <Input
+                      value={config.placeholder}
+                      onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as InputBoundaryNode), placeholder: event.target.value }))}
+                      placeholder="Placeholder"
+                    />
+                  </>
+                ) : null}
                 <textarea
                   value={config.defaultValue}
                   rows={5}
@@ -1247,69 +1255,73 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
 
           {config.family === "output" ? (
             <>
-              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
-                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                  <span>Display Mode</span>
-                  <select
-                    className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                    value={config.displayMode}
-                    onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), displayMode: event.target.value as OutputBoundaryNode["displayMode"] }))}
-                  >
-                    {["auto", "plain", "markdown", "json"].map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
+              {isExpanded ? (
+                <>
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
+                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                      <span>Display Mode</span>
+                      <select
+                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                        value={config.displayMode}
+                        onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), displayMode: event.target.value as OutputBoundaryNode["displayMode"] }))}
+                      >
+                        {["auto", "plain", "markdown", "json"].map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="mt-7 flex items-center gap-2 text-sm text-[var(--muted)]">
+                      <input
+                        checked={config.persistEnabled}
+                        type="checkbox"
+                        onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), persistEnabled: event.target.checked }))}
+                      />
+                      <span>Persist</span>
+                    </label>
+                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                      <span>Persist Format</span>
+                      <select
+                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                        value={config.persistFormat}
+                        onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), persistFormat: event.target.value as OutputBoundaryNode["persistFormat"] }))}
+                      >
+                        {["txt", "md", "json"].map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="grid gap-2">
+                    <Input
+                      value={config.input.label}
+                      onChange={(event) =>
+                        data.onConfigChange?.((currentConfig) => ({
+                          ...(currentConfig as OutputBoundaryNode),
+                          input: {
+                            ...(currentConfig as OutputBoundaryNode).input,
+                            label: event.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Input label"
+                    />
+                    <Input
+                      value={config.fileNameTemplate}
+                      onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), fileNameTemplate: event.target.value }))}
+                      placeholder="File name template"
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    {inputs.map((port) => (
+                      <PortRow key={`input-${port.key}`} nodeId={data.nodeId} port={port} side="input" />
                     ))}
-                  </select>
-                </label>
-                <label className="mt-7 flex items-center gap-2 text-sm text-[var(--muted)]">
-                  <input
-                    checked={config.persistEnabled}
-                    type="checkbox"
-                    onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), persistEnabled: event.target.checked }))}
-                  />
-                  <span>Persist</span>
-                </label>
-                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                  <span>Persist Format</span>
-                  <select
-                    className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                    value={config.persistFormat}
-                    onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), persistFormat: event.target.value as OutputBoundaryNode["persistFormat"] }))}
-                  >
-                    {["txt", "md", "json"].map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="grid gap-2">
-                <Input
-                  value={config.input.label}
-                  onChange={(event) =>
-                    data.onConfigChange?.((currentConfig) => ({
-                      ...(currentConfig as OutputBoundaryNode),
-                      input: {
-                        ...(currentConfig as OutputBoundaryNode).input,
-                        label: event.target.value,
-                      },
-                    }))
-                  }
-                  placeholder="Input label"
-                />
-                <Input
-                  value={config.fileNameTemplate}
-                  onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), fileNameTemplate: event.target.value }))}
-                  placeholder="File name template"
-                />
-              </div>
-              <div className="grid gap-1">
-                {inputs.map((port) => (
-                  <PortRow key={`input-${port.key}`} nodeId={data.nodeId} port={port} side="input" />
-                ))}
-              </div>
+                  </div>
+                </>
+              ) : null}
               <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.82)] p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Preview</div>
@@ -1328,7 +1340,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
             </div>
           ) : null}
 
-          {selected ? (
+          {selected && config.family !== "input" && config.family !== "output" ? (
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="ghost" onClick={() => void data.onSavePreset?.()}>
                 Save As Preset
@@ -1632,7 +1644,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
         nodeId: id,
         config,
         previewText: "",
-        isExpanded: config.family === "input" || config.family === "output",
+        isExpanded: false,
       },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,

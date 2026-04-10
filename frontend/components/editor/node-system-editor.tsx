@@ -1226,6 +1226,7 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
     const initialEdges = Array.isArray(initialGraph.edges)
       ? initialGraph.edges.map((edge) => createFlowEdgeFromGraphEdge(edge, nodesById))
       : [];
+    autoLayoutDoneRef.current = false;
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [initialGraph.edges, initialGraph.nodes, setEdges, setNodes]);
@@ -1234,10 +1235,11 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
     if (!isNewFromTemplate) return;
     if (!nodesInitialized) return;
     if (autoLayoutDoneRef.current) return;
-    autoLayoutDoneRef.current = true;
 
     setNodes((current) => {
       if (current.length === 0) return current;
+      autoLayoutDoneRef.current = true;
+
       const sorted = [...current].sort((a, b) => a.position.x - b.position.x);
       const GAP = 80;
       let nextX = sorted[0].position.x;

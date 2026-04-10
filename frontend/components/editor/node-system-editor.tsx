@@ -227,6 +227,28 @@ const INPUT_VALUE_TYPE_OPTIONS: Array<{ value: ValueType; label: string; icon: R
   },
 ];
 
+function UploadedAssetActionButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full border border-[rgba(154,52,18,0.18)] bg-[rgba(255,252,247,0.92)] text-[var(--text)] shadow-[0_10px_24px_rgba(154,52,18,0.14)] backdrop-blur transition hover:-translate-y-0.5 hover:border-[rgba(154,52,18,0.28)] hover:text-[var(--accent)]"
+    >
+      {children}
+    </button>
+  );
+}
+
 type UploadedAssetEnvelope = {
   kind: "uploaded_file";
   name: string;
@@ -258,11 +280,16 @@ function tryParseUploadedAssetEnvelope(value: string): UploadedAssetEnvelope | n
   return null;
 }
 
-function renderUploadedAssetPreview(asset: UploadedAssetEnvelope) {
+function renderUploadedAssetPreview(asset: UploadedAssetEnvelope, actions?: ReactNode) {
   if (asset.detectedType === "image" && asset.encoding === "data_url") {
     return (
       <div className="grid gap-3">
-        <div className="overflow-hidden rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)]">
+        <div className="group/uploaded-asset relative overflow-hidden rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)]">
+          {actions ? (
+            <div className="pointer-events-none absolute right-3 top-3 z-10 flex translate-y-1 gap-2 opacity-0 transition duration-150 group-hover/uploaded-asset:translate-y-0 group-hover/uploaded-asset:opacity-100 group-focus-within/uploaded-asset:translate-y-0 group-focus-within/uploaded-asset:opacity-100">
+              {actions}
+            </div>
+          ) : null}
           <img src={asset.content} alt={asset.name} className="max-h-[240px] w-full object-contain bg-[rgba(248,242,234,0.8)]" />
         </div>
         <div className="text-xs leading-5 text-[var(--muted)]">{asset.name}</div>
@@ -273,7 +300,12 @@ function renderUploadedAssetPreview(asset: UploadedAssetEnvelope) {
   if (asset.detectedType === "audio" && asset.encoding === "data_url") {
     return (
       <div className="grid gap-3">
-        <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)] p-3">
+        <div className="group/uploaded-asset relative rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)] p-3">
+          {actions ? (
+            <div className="pointer-events-none absolute right-3 top-3 z-10 flex translate-y-1 gap-2 opacity-0 transition duration-150 group-hover/uploaded-asset:translate-y-0 group-hover/uploaded-asset:opacity-100 group-focus-within/uploaded-asset:translate-y-0 group-focus-within/uploaded-asset:opacity-100">
+              {actions}
+            </div>
+          ) : null}
           <audio controls className="w-full">
             <source src={asset.content} type={asset.mimeType} />
           </audio>
@@ -286,7 +318,12 @@ function renderUploadedAssetPreview(asset: UploadedAssetEnvelope) {
   if (asset.detectedType === "video" && asset.encoding === "data_url") {
     return (
       <div className="grid gap-3">
-        <div className="overflow-hidden rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)]">
+        <div className="group/uploaded-asset relative overflow-hidden rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)]">
+          {actions ? (
+            <div className="pointer-events-none absolute right-3 top-3 z-10 flex translate-y-1 gap-2 opacity-0 transition duration-150 group-hover/uploaded-asset:translate-y-0 group-hover/uploaded-asset:opacity-100 group-focus-within/uploaded-asset:translate-y-0 group-focus-within/uploaded-asset:opacity-100">
+              {actions}
+            </div>
+          ) : null}
           <video controls className="max-h-[240px] w-full bg-[rgba(248,242,234,0.8)]">
             <source src={asset.content} type={asset.mimeType} />
           </video>
@@ -299,7 +336,12 @@ function renderUploadedAssetPreview(asset: UploadedAssetEnvelope) {
   if (asset.detectedType === "file") {
     return (
       <div className="grid gap-3">
-        <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)] p-3">
+        <div className="group/uploaded-asset relative rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)] p-3">
+          {actions ? (
+            <div className="pointer-events-none absolute right-3 top-3 z-10 flex translate-y-1 gap-2 opacity-0 transition duration-150 group-hover/uploaded-asset:translate-y-0 group-hover/uploaded-asset:opacity-100 group-focus-within/uploaded-asset:translate-y-0 group-focus-within/uploaded-asset:opacity-100">
+              {actions}
+            </div>
+          ) : null}
           <div className="text-sm font-medium text-[var(--text)]">{asset.name}</div>
           <div className="mt-1 text-xs leading-5 text-[var(--muted)]">
             {asset.mimeType} · {Math.max(1, Math.round(asset.size / 1024))} KB
@@ -316,7 +358,12 @@ function renderUploadedAssetPreview(asset: UploadedAssetEnvelope) {
 
   return (
     <div className="grid gap-3">
-      <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)] p-3">
+      <div className="group/uploaded-asset relative rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.88)] p-3">
+        {actions ? (
+          <div className="pointer-events-none absolute right-3 top-3 z-10 flex translate-y-1 gap-2 opacity-0 transition duration-150 group-hover/uploaded-asset:translate-y-0 group-hover/uploaded-asset:opacity-100 group-focus-within/uploaded-asset:translate-y-0 group-focus-within/uploaded-asset:opacity-100">
+            {actions}
+          </div>
+        ) : null}
         <div className="text-sm font-medium text-[var(--text)]">{asset.name}</div>
         <div className="mt-1 text-xs leading-5 text-[var(--muted)]">
           {asset.detectedType} · {asset.mimeType} · {Math.max(1, Math.round(asset.size / 1024))} KB
@@ -1418,26 +1465,40 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                           void handleInputFileSelection(file);
                         }}
                       >
-                        {renderUploadedAssetPreview(uploadedAsset)}
-                        <div className="flex flex-wrap gap-2">
-                          <Button variant="ghost" onClick={() => openUploadedAsset(uploadedAsset)}>
-                            打开本地文件
-                          </Button>
-                          <Button variant="ghost" onClick={() => uploadInputRef.current?.click()}>
-                            替换文件
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            onClick={() =>
-                              data.onConfigChange?.((currentConfig) => ({
-                                ...(currentConfig as InputBoundaryNode),
-                                defaultValue: "",
-                              }))
-                            }
-                          >
-                            取消上传
-                          </Button>
-                        </div>
+                        {renderUploadedAssetPreview(
+                          uploadedAsset,
+                          <>
+                            <UploadedAssetActionButton label="打开本地文件" onClick={() => openUploadedAsset(uploadedAsset)}>
+                              <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.5">
+                                <path d="M6 4.5h-1A1.5 1.5 0 0 0 3.5 6v5A1.5 1.5 0 0 0 5 12.5h5A1.5 1.5 0 0 0 11.5 11v-1" />
+                                <path d="M8.5 3.5h4v4" />
+                                <path d="m12.5 3.5-5 5" />
+                              </svg>
+                            </UploadedAssetActionButton>
+                            <UploadedAssetActionButton label="替换文件" onClick={() => uploadInputRef.current?.click()}>
+                              <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.5">
+                                <path d="M11.5 6.5A3.5 3.5 0 0 0 5.7 4L4.5 5" />
+                                <path d="M4.5 2.8V5h2.2" />
+                                <path d="M4.5 9.5A3.5 3.5 0 0 0 10.3 12l1.2-1" />
+                                <path d="M9.3 11H11.5v2.2" />
+                              </svg>
+                            </UploadedAssetActionButton>
+                            <UploadedAssetActionButton
+                              label="取消上传"
+                              onClick={() =>
+                                data.onConfigChange?.((currentConfig) => ({
+                                  ...(currentConfig as InputBoundaryNode),
+                                  defaultValue: "",
+                                }))
+                              }
+                            >
+                              <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.5">
+                                <path d="m4.5 4.5 7 7" />
+                                <path d="m11.5 4.5-7 7" />
+                              </svg>
+                            </UploadedAssetActionButton>
+                          </>,
+                        )}
                       </div>
                     )}
                   </>

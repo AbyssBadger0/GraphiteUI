@@ -1306,6 +1306,14 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
               ? "border-[rgba(185,28,28,0.28)] bg-[rgb(185,28,28)] text-white"
               : "hover:border-[rgba(154,52,18,0.24)] hover:text-[var(--accent)]",
           )}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();

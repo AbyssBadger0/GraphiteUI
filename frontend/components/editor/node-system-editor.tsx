@@ -98,8 +98,15 @@ type FlowNodeData = {
   nodeId: string;
   config: NodePresetDefinition;
   previewText: string;
+  isExpanded?: boolean;
   onConfigChange?: (updater: (config: NodePresetDefinition) => NodePresetDefinition) => void;
   onResizeEnd?: (width: number, height: number) => void;
+  onToggleExpanded?: () => void;
+  onDelete?: () => void;
+  onSavePreset?: () => void;
+  skillDefinitions?: SkillDefinition[];
+  skillDefinitionsLoading?: boolean;
+  skillDefinitionsError?: string | null;
 };
 
 type FlowNode = Node<FlowNodeData>;
@@ -215,6 +222,7 @@ function createFlowNodeFromGraphNode(node: any): FlowNode {
       nodeId: node.data?.nodeId ?? node.id,
       config: deepClonePreset(node.data?.config as NodePresetDefinition),
       previewText: node.data?.previewText ?? "",
+      isExpanded: (node.data?.config?.family ?? "") === "input" || (node.data?.config?.family ?? "") === "output" ? true : false,
     },
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
@@ -903,6 +911,8 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const inputs = listInputPorts(config);
   const outputs = listOutputPorts(config);
   const minHeight = NODE_MIN_HEIGHT[config.family] ?? 80;
+  const isCollapsible = config.family === "agent" || config.family === "condition";
+  const isExpanded = config.family === "input" || config.family === "output" || Boolean(data.isExpanded);
 
   return (
     <>
@@ -921,106 +931,415 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           selected ? "border-[var(--accent)]" : "border-[rgba(154,52,18,0.25)]",
         )}
       >
-      <div className="flex items-center justify-between border-b border-[rgba(154,52,18,0.12)] px-4 py-2.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-[rgba(154,52,18,0.55)]" />
-          <div className="truncate text-sm font-semibold text-[var(--text)]">{config.label}</div>
+        <div className="flex items-start justify-between gap-3 border-b border-[rgba(154,52,18,0.12)] px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-[rgba(154,52,18,0.55)]" />
+              <div className="truncate text-sm font-semibold text-[var(--text)]">{config.label}</div>
+            </div>
+            <div className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--muted)]">{config.description || summarizeNode(config)}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{config.family}</div>
+            {isCollapsible ? (
+              <button
+                type="button"
+                className="rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,255,255,0.72)] px-2.5 py-1 text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]"
+                onClick={() => data.onToggleExpanded?.()}
+              >
+                {isExpanded ? "Fold" : "Open"}
+              </button>
+            ) : null}
+          </div>
         </div>
-        <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{config.family}</div>
-      </div>
 
-      <div className="grid gap-3 px-4 py-3">
-        {config.family === "input" ? null : inputs.length > 0 || outputs.length > 0 ? (
-          <div className="grid grid-cols-2 items-start gap-x-6">
-            <div className="grid gap-1">
-              {inputs.map((port) => (
-                <PortRow key={`input-${port.key}`} nodeId={data.nodeId} port={port} side="input" />
-              ))}
+        <div className="grid gap-3 px-4 py-3">
+          {isExpanded ? (
+            <div className="grid gap-2">
+              <Input
+                value={config.label}
+                onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...currentConfig, label: event.target.value }))}
+                placeholder="Node label"
+              />
+              <Input
+                value={config.description}
+                onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...currentConfig, description: event.target.value }))}
+                placeholder="Node description"
+              />
             </div>
-            <div className="grid gap-1">
-              {outputs.map((port) => (
-                <PortRow key={`output-${port.key}`} nodeId={data.nodeId} port={port} side="output" />
-              ))}
-            </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {config.family === "input" && outputs.length > 0 ? (
-          <div className="grid gap-1">
-            {outputs.map((port) => (
-              <PortRow key={`output-${port.key}`} nodeId={data.nodeId} port={port} side="output" />
-            ))}
-          </div>
-        ) : null}
-
-        {config.family === "input" ? (
-          <div className="grid gap-2">
-            <textarea
-              value={config.defaultValue}
-              rows={5}
-              placeholder={config.placeholder}
-              onChange={(event) => data.onConfigChange?.((currentConfig) => ({
-                ...(currentConfig as InputBoundaryNode),
-                defaultValue: event.target.value,
-              }))}
-              className="min-h-[120px] resize-none rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
-            />
-            <div className="text-xs leading-5 text-[var(--muted)]">
-              这里可以直接编辑输入内容；右侧 Inspector 里继续调整占位符、类型和端口配置。
-            </div>
-          </div>
-        ) : null}
-
-        {config.family === "agent" ? (
-          <div className="grid gap-3">
-            <div className="text-sm leading-6 text-[var(--muted)]">{config.description}</div>
-            <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-sm text-[var(--text)]">
-              {summarizeNode(config)}
-            </div>
-            {config.skills.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {config.skills.map((skill) => (
-                  <span key={skill.name} className="rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.92)] px-2.5 py-1 text-[0.74rem] text-[var(--accent-strong)]">
-                    {skill.skillKey}
-                  </span>
+          {config.family === "input" ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                  <span>Value Type</span>
+                  <select
+                    className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                    value={config.valueType}
+                    onChange={(event) =>
+                      data.onConfigChange?.((currentConfig) => {
+                        const nextType = event.target.value as ValueType;
+                        const currentInput = currentConfig as InputBoundaryNode;
+                        return {
+                          ...currentInput,
+                          valueType: nextType,
+                          output: {
+                            ...currentInput.output,
+                            valueType: nextType,
+                          },
+                        };
+                      })
+                    }
+                  >
+                    {VALUE_TYPE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                  <span>Input Mode</span>
+                  <select
+                    className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                    value={config.inputMode}
+                    onChange={(event) =>
+                      data.onConfigChange?.((currentConfig) => ({
+                        ...(currentConfig as InputBoundaryNode),
+                        inputMode: event.target.value as InputBoundaryNode["inputMode"],
+                      }))
+                    }
+                  >
+                    {["inline", "reference"].map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="grid gap-1">
+                {outputs.map((port) => (
+                  <PortRow key={`output-${port.key}`} nodeId={data.nodeId} port={port} side="output" />
                 ))}
               </div>
-            ) : null}
-            {data.previewText ? (
-              <div className="whitespace-pre-wrap rounded-[16px] border border-[rgba(154,52,18,0.18)] bg-[rgba(255,244,240,0.9)] px-3 py-3 text-sm leading-6 text-[var(--text)]">
-                {data.previewText}
+              <div className="grid gap-2">
+                <Input
+                  value={config.output.label}
+                  onChange={(event) =>
+                    data.onConfigChange?.((currentConfig) => ({
+                      ...(currentConfig as InputBoundaryNode),
+                      output: {
+                        ...(currentConfig as InputBoundaryNode).output,
+                        label: event.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Output label"
+                />
+                <Input
+                  value={config.placeholder}
+                  onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as InputBoundaryNode), placeholder: event.target.value }))}
+                  placeholder="Placeholder"
+                />
+                <textarea
+                  value={config.defaultValue}
+                  rows={5}
+                  placeholder={config.placeholder}
+                  onChange={(event) =>
+                    data.onConfigChange?.((currentConfig) => ({
+                      ...(currentConfig as InputBoundaryNode),
+                      defaultValue: event.target.value,
+                    }))
+                  }
+                  className="min-h-[120px] resize-none rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
+                />
               </div>
-            ) : null}
-          </div>
-        ) : null}
+            </>
+          ) : null}
 
-        {config.family === "condition" ? (
-          <div className="grid gap-3">
-            <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-3 text-sm leading-6 text-[var(--text)]">
-              {summarizeNode(config)}
-            </div>
-            {data.previewText ? (
-              <div className="whitespace-pre-wrap rounded-[16px] border border-[rgba(154,52,18,0.18)] bg-[rgba(255,244,240,0.9)] px-3 py-3 text-sm leading-6 text-[var(--text)]">
-                {data.previewText}
+          {config.family !== "input" && isExpanded && (inputs.length > 0 || outputs.length > 0) ? (
+            <div className="grid grid-cols-2 items-start gap-x-6">
+              <div className="grid gap-1">
+                {inputs.map((port) => (
+                  <PortRow key={`input-${port.key}`} nodeId={data.nodeId} port={port} side="input" />
+                ))}
               </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {config.family === "output" ? (
-          <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.82)] p-3">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Preview</div>
-              <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{config.displayMode}</div>
+              <div className="grid gap-1">
+                {outputs.map((port) => (
+                  <PortRow key={`output-${port.key}`} nodeId={data.nodeId} port={port} side="output" />
+                ))}
+              </div>
             </div>
-            <div className="max-h-[180px] overflow-auto whitespace-pre-wrap break-words rounded-[12px] bg-[rgba(248,242,234,0.8)] px-3 py-3 text-sm leading-6 text-[var(--text)]">
-              {data.previewText || "Connect an upstream output to preview/export it."}
-            </div>
-          </div>
-        ) : null}
+          ) : null}
 
+          {config.family === "agent" ? (
+            <>
+              {!isExpanded ? (
+                <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-sm text-[var(--text)]">
+                  {summarizeNode(config)}
+                </div>
+              ) : (
+                <>
+                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                    <span>System Instruction</span>
+                    <textarea
+                      className="min-h-24 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
+                      value={config.systemInstruction}
+                      onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), systemInstruction: event.target.value }))}
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                    <span>Task Instruction</span>
+                    <textarea
+                      className="min-h-28 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
+                      value={config.taskInstruction}
+                      onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), taskInstruction: event.target.value }))}
+                    />
+                  </label>
+                  <PortEditorList
+                    label="Inputs"
+                    side="input"
+                    ports={config.inputs}
+                    onChange={(nextPorts) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), inputs: nextPorts }))}
+                  />
+                  <PortEditorList
+                    label="Outputs"
+                    side="output"
+                    ports={config.outputs}
+                    onChange={(nextPorts) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), outputs: nextPorts }))}
+                  />
+                  <SkillEditorList
+                    skills={config.skills}
+                    onChange={(nextSkills) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), skills: nextSkills }))}
+                    definitions={data.skillDefinitions ?? []}
+                    definitionsLoading={Boolean(data.skillDefinitionsLoading)}
+                    definitionsError={data.skillDefinitionsError ?? null}
+                  />
+                  <MappingEditor
+                    title="Output Binding"
+                    value={config.outputBinding}
+                    addLabel="Add Output Binding"
+                    onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), outputBinding: nextValue }))}
+                  />
+                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                    <span>Response Mode</span>
+                    <select
+                      className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                      value={config.responseMode}
+                      onChange={(event) =>
+                        data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), responseMode: event.target.value as AgentNode["responseMode"] }))
+                      }
+                    >
+                      {["json", "text"].map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <AdvancedJsonSection
+                    sections={[
+                      {
+                        label: "Inputs JSON",
+                        value: config.inputs,
+                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), inputs: nextValue as PortDefinition[] })),
+                      },
+                      {
+                        label: "Outputs JSON",
+                        value: config.outputs,
+                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), outputs: nextValue as PortDefinition[] })),
+                      },
+                      {
+                        label: "Skills JSON",
+                        value: config.skills,
+                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), skills: nextValue as AgentNode["skills"] })),
+                      },
+                      {
+                        label: "Output Binding JSON",
+                        value: config.outputBinding,
+                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), outputBinding: nextValue as Record<string, string> })),
+                        minHeight: "min-h-24",
+                      },
+                    ]}
+                  />
+                </>
+              )}
+            </>
+          ) : null}
+
+          {config.family === "condition" ? (
+            <>
+              {!isExpanded ? (
+                <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-3 text-sm leading-6 text-[var(--text)]">
+                  {summarizeNode(config)}
+                </div>
+              ) : (
+                <>
+                  <PortEditorList
+                    label="Inputs"
+                    side="input"
+                    ports={config.inputs}
+                    onChange={(nextPorts) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), inputs: nextPorts }))}
+                  />
+                  <BranchEditorList
+                    branches={config.branches}
+                    onChange={(nextBranches) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), branches: nextBranches }))}
+                  />
+                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                    <span>Condition Mode</span>
+                    <select
+                      className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                      value={config.conditionMode}
+                      onChange={(event) =>
+                        data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), conditionMode: event.target.value as ConditionNode["conditionMode"] }))
+                      }
+                    >
+                      {["rule", "model"].map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <RuleEditor
+                    rule={config.rule}
+                    onChange={(nextRule) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), rule: nextRule }))}
+                  />
+                  <MappingEditor
+                    title="Branch Mapping"
+                    value={config.branchMapping}
+                    addLabel="Add Branch Mapping"
+                    onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), branchMapping: nextValue }))}
+                  />
+                  <AdvancedJsonSection
+                    sections={[
+                      {
+                        label: "Inputs JSON",
+                        value: config.inputs,
+                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), inputs: nextValue as PortDefinition[] })),
+                      },
+                      {
+                        label: "Branches JSON",
+                        value: config.branches,
+                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), branches: nextValue as ConditionNode["branches"] })),
+                        minHeight: "min-h-24",
+                      },
+                      {
+                        label: "Rule JSON",
+                        value: config.rule,
+                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), rule: nextValue as ConditionNode["rule"] })),
+                        minHeight: "min-h-24",
+                      },
+                      {
+                        label: "Branch Mapping JSON",
+                        value: config.branchMapping,
+                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), branchMapping: nextValue as Record<string, string> })),
+                        minHeight: "min-h-24",
+                      },
+                    ]}
+                  />
+                </>
+              )}
+            </>
+          ) : null}
+
+          {config.family === "output" ? (
+            <>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
+                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                  <span>Display Mode</span>
+                  <select
+                    className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                    value={config.displayMode}
+                    onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), displayMode: event.target.value as OutputBoundaryNode["displayMode"] }))}
+                  >
+                    {["auto", "plain", "markdown", "json"].map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="mt-7 flex items-center gap-2 text-sm text-[var(--muted)]">
+                  <input
+                    checked={config.persistEnabled}
+                    type="checkbox"
+                    onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), persistEnabled: event.target.checked }))}
+                  />
+                  <span>Persist</span>
+                </label>
+                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                  <span>Persist Format</span>
+                  <select
+                    className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+                    value={config.persistFormat}
+                    onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), persistFormat: event.target.value as OutputBoundaryNode["persistFormat"] }))}
+                  >
+                    {["txt", "md", "json"].map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="grid gap-2">
+                <Input
+                  value={config.input.label}
+                  onChange={(event) =>
+                    data.onConfigChange?.((currentConfig) => ({
+                      ...(currentConfig as OutputBoundaryNode),
+                      input: {
+                        ...(currentConfig as OutputBoundaryNode).input,
+                        label: event.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Input label"
+                />
+                <Input
+                  value={config.fileNameTemplate}
+                  onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), fileNameTemplate: event.target.value }))}
+                  placeholder="File name template"
+                />
+              </div>
+              <div className="grid gap-1">
+                {inputs.map((port) => (
+                  <PortRow key={`input-${port.key}`} nodeId={data.nodeId} port={port} side="input" />
+                ))}
+              </div>
+              <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.82)] p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Preview</div>
+                  <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{config.displayMode}</div>
+                </div>
+                <div className="max-h-[180px] overflow-auto whitespace-pre-wrap break-words rounded-[12px] bg-[rgba(248,242,234,0.8)] px-3 py-3 text-sm leading-6 text-[var(--text)]">
+                  {data.previewText || "Connect an upstream output to preview/export it."}
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          {data.previewText && config.family !== "output" ? (
+            <div className="whitespace-pre-wrap rounded-[16px] border border-[rgba(154,52,18,0.18)] bg-[rgba(255,244,240,0.9)] px-3 py-3 text-sm leading-6 text-[var(--text)]">
+              {data.previewText}
+            </div>
+          ) : null}
+
+          {selected ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="ghost" onClick={() => void data.onSavePreset?.()}>
+                Save As Preset
+              </Button>
+              <Button variant="ghost" onClick={() => data.onDelete?.()}>
+                Delete Node
+              </Button>
+            </div>
+          ) : null}
+        </div>
       </div>
-    </div>
     </>
   );
 }
@@ -1105,8 +1424,6 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
       return [preset.label, preset.description, preset.presetId].some((value) => value.toLowerCase().includes(query));
     });
   }, [creationMenu?.sourceValueType, getRecommendedPresets, search]);
-
-  const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId) ?? null, [nodes, selectedNodeId]);
 
   const previewTextByNode = useMemo(() => {
     return Object.fromEntries(nodes.map((node) => [node.id, createPreviewText(node, nodes, edges)]));
@@ -1315,6 +1632,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
         nodeId: id,
         config,
         previewText: "",
+        isExpanded: config.family === "input" || config.family === "output",
       },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -1385,35 +1703,19 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
     setCreationMenu(null);
   }
 
-  function updateSelectedNode(updater: (config: NodePresetDefinition) => NodePresetDefinition) {
-    if (!selectedNode) return;
-    setNodes((current) =>
-      current.map((node) =>
-        node.id === selectedNode.id
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                config: updater(node.data.config),
-              },
-            }
-          : node,
-      ),
-    );
-  }
-
-  async function saveSelectedNodeAsPreset() {
-    if (!selectedNode) return;
-    const slug = selectedNode.data.config.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "custom";
+  async function saveNodeAsPreset(nodeId: string) {
+    const targetNode = nodes.find((node) => node.id === nodeId);
+    if (!targetNode) return;
+    const slug = targetNode.data.config.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "custom";
     const nextPreset = {
-      ...deepClonePreset(selectedNode.data.config),
+      ...deepClonePreset(targetNode.data.config),
       presetId: `preset.local.${slug}.${crypto.randomUUID().slice(0, 6)}`,
-      label: `${selectedNode.data.config.label} Copy`,
+      label: `${targetNode.data.config.label} Copy`,
     } satisfies NodePresetDefinition;
     try {
       await apiPost<{ presetId: string; updatedAt?: string | null }>("/api/presets", {
         presetId: nextPreset.presetId,
-        sourcePresetId: selectedNode.data.config.presetId,
+        sourcePresetId: targetNode.data.config.presetId,
         definition: nextPreset,
       });
       setPersistedPresets((current) => [nextPreset, ...current.filter((item) => item.presetId !== nextPreset.presetId)]);
@@ -1486,7 +1788,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
     <div className="grid h-screen grid-rows-[56px_minmax(0,1fr)_36px] bg-[radial-gradient(circle_at_top,rgba(154,52,18,0.1),transparent_22%),linear-gradient(180deg,#f5efe2_0%,#ede4d2_100%)]">
       <header className="grid grid-cols-[minmax(220px,320px)_1fr_auto] items-center gap-3 border-b border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.82)] px-4 backdrop-blur-xl">
         <Input className="h-10" value={graphName} onChange={(event) => setGraphName(event.target.value)} placeholder="Graph name" />
-        <div className="text-sm text-[var(--muted)]">Preset-driven node system prototype</div>
+        <div className="text-sm text-[var(--muted)]">Double click canvas to create nodes. Drag from an output handle into empty space for type-aware suggestions.</div>
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => void handleSave()}>
             Save
@@ -1500,46 +1802,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
         </div>
       </header>
 
-      <div className="grid min-h-0 grid-cols-[320px_minmax(0,1fr)_360px]">
-        <aside className="grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] border-r border-[rgba(154,52,18,0.16)] bg-[rgba(255,248,240,0.76)] px-4 py-4">
-          <div>
-            <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Node Library</div>
-            <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">Create Nodes</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              Empty agent comes first. Preset agents are suggested by current value type when created from a dragged connection.
-            </p>
-          </div>
-          <Input className="mt-4 h-10" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search presets" />
-          <div className="mt-4 grid min-h-0 gap-3 overflow-y-auto pr-1">
-            {nodePalette.map((preset) => (
-              <button
-                key={preset.presetId}
-                type="button"
-                draggable
-                className="cursor-grab rounded-[20px] border border-[rgba(154,52,18,0.18)] bg-[rgba(255,250,241,0.92)] p-4 text-left shadow-[0_10px_24px_rgba(60,41,20,0.06)] transition-transform hover:-translate-y-px active:cursor-grabbing"
-                onClick={() => {
-                  const wrapperBounds = wrapperRef.current?.getBoundingClientRect();
-                  const position = wrapperBounds
-                    ? reactFlow.screenToFlowPosition({
-                        x: wrapperBounds.left + wrapperBounds.width * 0.52,
-                        y: wrapperBounds.top + wrapperBounds.height * 0.4,
-                      })
-                    : { x: 200, y: 200 };
-                  addNodeFromPresetId(preset.presetId, position);
-                }}
-                onDragStart={(event) => {
-                  event.dataTransfer.setData("application/graphiteui-node-preset", preset.presetId);
-                  event.dataTransfer.effectAllowed = "move";
-                }}
-              >
-                <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{preset.family}</div>
-                <div className="mt-1 text-lg font-semibold text-[var(--text)]">{preset.label}</div>
-                <div className="mt-2 text-sm leading-6 text-[var(--muted)]">{preset.description}</div>
-              </button>
-            ))}
-          </div>
-        </aside>
-
+      <div className="relative min-w-0 min-h-0">
         <div
           className="relative min-w-0 min-h-0"
           ref={wrapperRef}
@@ -1556,6 +1819,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                 data: {
                   ...node.data,
                   previewText: node.data.previewText || previewTextByNode[node.id] || "",
+                  isExpanded: node.data.isExpanded,
                   onConfigChange: (updater: (config: NodePresetDefinition) => NodePresetDefinition) => {
                     setNodes((current) =>
                       current.map((candidate) =>
@@ -1571,6 +1835,21 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                       ),
                     );
                   },
+                  onToggleExpanded: () => {
+                    setNodes((current) =>
+                      current.map((candidate) =>
+                        candidate.id === node.id
+                          ? {
+                              ...candidate,
+                              data: {
+                                ...candidate.data,
+                                isExpanded: !candidate.data.isExpanded,
+                              },
+                            }
+                          : candidate,
+                      ),
+                    );
+                  },
                   onResizeEnd: (width: number, height: number) => {
                     setNodes((current) =>
                       current.map((n) =>
@@ -1580,6 +1859,15 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                       ),
                     );
                   },
+                  onDelete: () => {
+                    setNodes((current) => current.filter((candidate) => candidate.id !== node.id));
+                    setEdges((current) => current.filter((edge) => edge.source !== node.id && edge.target !== node.id));
+                    setSelectedNodeId((current) => (current === node.id ? null : current));
+                  },
+                  onSavePreset: () => saveNodeAsPreset(node.id),
+                  skillDefinitions,
+                  skillDefinitionsLoading,
+                  skillDefinitionsError,
                 },
               }))}
               edges={edges}
@@ -1713,6 +2001,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                   Close
                 </button>
               </div>
+              <Input className="mt-3 h-10" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search presets" />
               <div className="mt-3 grid gap-2">
                 {nodePalette.map((preset) => (
                   <button
@@ -1744,479 +2033,23 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
             <div className="pointer-events-none absolute inset-0 grid place-items-center">
               <div className="rounded-[28px] border border-dashed border-[rgba(154,52,18,0.26)] bg-[rgba(255,250,241,0.72)] px-8 py-6 text-center shadow-[0_18px_40px_rgba(60,41,20,0.08)]">
                 <div className="text-[0.72rem] uppercase tracking-[0.16em] text-[var(--accent-strong)]">Empty Canvas</div>
-                <div className="mt-3 text-2xl font-semibold text-[var(--text)]">Double click or drag a preset to start</div>
+                <div className="mt-3 text-2xl font-semibold text-[var(--text)]">Double click to create your first node</div>
                 <div className="mt-2 max-w-md text-sm leading-6 text-[var(--muted)]">
                   Drag from an output handle into empty space to get type-aware preset suggestions.
                 </div>
               </div>
             </div>
           ) : null}
-        </div>
-
-        <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] border-l border-[rgba(154,52,18,0.16)] bg-[rgba(255,248,240,0.76)] px-4 py-4">
-          <div>
-            <div className="text-[0.72rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Inspector</div>
-            <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">
-              {selectedNode ? selectedNode.data.config.label : "Graph"}
-            </h2>
-          </div>
-
-          <div className="mt-4 min-h-0 space-y-4 overflow-y-auto pr-1">
-            {!selectedNode ? (
-              <div className="grid gap-4">
-                <section className="rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.76)] p-4">
-                  <div className="text-sm font-semibold text-[var(--text)]">Current Phase</div>
-                  <div className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                    <div>Preset-driven node creation</div>
-                    <div>Structured inspector editing</div>
-                    <div>Type-aware creation suggestions</div>
-                    <div>Advanced JSON kept as fallback</div>
-                    <div>Skill definitions connected</div>
-                    <div>Preset persistence {presetsLoading ? "loading" : presetsError ? "degraded" : "connected"}</div>
-                    <div>Runtime migration pending</div>
-                  </div>
-                </section>
-                <section className="rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.76)] p-4">
-                  <div className="text-sm font-semibold text-[var(--text)]">Graph Info</div>
-                  <div className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                    <div>Nodes: {nodes.length}</div>
-                    <div>Edges: {edges.length}</div>
-                    <div>Built from new preset system</div>
-                  </div>
-                </section>
-              </div>
-            ) : null}
-
-            {selectedNode ? (
-              <div className="grid gap-4">
-                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                  <span>Label</span>
-                  <Input value={selectedNode.data.config.label} onChange={(event) => updateSelectedNode((config) => ({ ...config, label: event.target.value }))} />
-                </label>
-                <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                  <span>Description</span>
-                  <Input value={selectedNode.data.config.description} onChange={(event) => updateSelectedNode((config) => ({ ...config, description: event.target.value }))} />
-                </label>
-                <div className="rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.76)] p-4 text-sm leading-6 text-[var(--muted)]">
-                  <div>Family: {selectedNode.data.config.family}</div>
-                  <div>Preset ID: {selectedNode.data.config.presetId}</div>
-                </div>
-
-                {selectedNode.data.config.family === "input" ? (
-                  <>
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Value Type</span>
-                      <select
-                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                        value={selectedNode.data.config.valueType}
-                        onChange={(event) =>
-                          updateSelectedNode((config) => {
-                            const nextType = event.target.value as ValueType;
-                            const inputConfig = config as InputBoundaryNode;
-                            return {
-                              ...inputConfig,
-                              valueType: nextType,
-                              output: {
-                                ...inputConfig.output,
-                                valueType: nextType,
-                              },
-                            };
-                          })
-                        }
-                      >
-                        {Object.keys(TYPE_COLORS).map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Default Value</span>
-                      <textarea
-                        className="min-h-32 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                        value={selectedNode.data.config.defaultValue}
-                        onChange={(event) => updateSelectedNode((config) => ({ ...(config as InputBoundaryNode), defaultValue: event.target.value }))}
-                      />
-                    </label>
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Placeholder</span>
-                      <Input value={selectedNode.data.config.placeholder} onChange={(event) => updateSelectedNode((config) => ({ ...(config as InputBoundaryNode), placeholder: event.target.value }))} />
-                    </label>
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Input Mode</span>
-                      <select
-                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                        value={selectedNode.data.config.inputMode}
-                        onChange={(event) =>
-                          updateSelectedNode((config) => ({ ...(config as InputBoundaryNode), inputMode: event.target.value as InputBoundaryNode["inputMode"] }))
-                        }
-                      >
-                        {["inline", "reference"].map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <PanelSection title="Output Port" description="输入边界只暴露一个输出端口。">
-                      <div className="grid grid-cols-2 gap-3">
-                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                          <span>Output Key</span>
-                          <Input
-                            value={selectedNode.data.config.output.key}
-                            onChange={(event) =>
-                              updateSelectedNode((config) => ({
-                                ...(config as InputBoundaryNode),
-                                output: {
-                                  ...(config as InputBoundaryNode).output,
-                                  key: event.target.value,
-                                },
-                              }))
-                            }
-                          />
-                        </label>
-                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                          <span>Output Label</span>
-                          <Input
-                            value={selectedNode.data.config.output.label}
-                            onChange={(event) =>
-                              updateSelectedNode((config) => ({
-                                ...(config as InputBoundaryNode),
-                                output: {
-                                  ...(config as InputBoundaryNode).output,
-                                  label: event.target.value,
-                                },
-                              }))
-                            }
-                          />
-                        </label>
-                      </div>
-                    </PanelSection>
-                    <AdvancedJsonSection
-                      sections={[
-                        {
-                          label: "Input Boundary JSON",
-                          value: selectedNode.data.config,
-                          onChange: (nextValue) => updateSelectedNode(() => nextValue as InputBoundaryNode),
-                          minHeight: "min-h-40",
-                        },
-                      ]}
-                    />
-                  </>
-                ) : null}
-
-                {selectedNode.data.config.family === "agent" ? (
-                  <>
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>System Instruction</span>
-                      <textarea
-                        className="min-h-28 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                        value={selectedNode.data.config.systemInstruction}
-                        onChange={(event) => updateSelectedNode((config) => ({ ...(config as AgentNode), systemInstruction: event.target.value }))}
-                      />
-                    </label>
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Task Instruction</span>
-                      <textarea
-                        className="min-h-32 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                        value={selectedNode.data.config.taskInstruction}
-                        onChange={(event) => updateSelectedNode((config) => ({ ...(config as AgentNode), taskInstruction: event.target.value }))}
-                      />
-                    </label>
-                    <PortEditorList
-                      label="Inputs"
-                      side="input"
-                      ports={selectedNode.data.config.inputs}
-                      onChange={(nextPorts) => updateSelectedNode((config) => ({ ...(config as AgentNode), inputs: nextPorts }))}
-                    />
-                    <PortEditorList
-                      label="Outputs"
-                      side="output"
-                      ports={selectedNode.data.config.outputs}
-                      onChange={(nextPorts) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputs: nextPorts }))}
-                    />
-                    <SkillEditorList
-                      skills={selectedNode.data.config.skills}
-                      onChange={(nextSkills) => updateSelectedNode((config) => ({ ...(config as AgentNode), skills: nextSkills }))}
-                      definitions={skillDefinitions}
-                      definitionsLoading={skillDefinitionsLoading}
-                      definitionsError={skillDefinitionsError}
-                    />
-                    <MappingEditor
-                      title="Output Binding"
-                      value={selectedNode.data.config.outputBinding}
-                      addLabel="Add Output Binding"
-                      onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputBinding: nextValue }))}
-                    />
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Response Mode</span>
-                      <select
-                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                        value={selectedNode.data.config.responseMode}
-                        onChange={(event) =>
-                          updateSelectedNode((config) => ({ ...(config as AgentNode), responseMode: event.target.value as AgentNode["responseMode"] }))
-                        }
-                      >
-                        {["json", "text"].map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <AdvancedJsonSection
-                      sections={[
-                        {
-                          label: "Inputs JSON",
-                          value: selectedNode.data.config.inputs,
-                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), inputs: nextValue as PortDefinition[] })),
-                        },
-                        {
-                          label: "Outputs JSON",
-                          value: selectedNode.data.config.outputs,
-                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputs: nextValue as PortDefinition[] })),
-                        },
-                        {
-                          label: "Skills JSON",
-                          value: selectedNode.data.config.skills,
-                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), skills: nextValue as AgentNode["skills"] })),
-                        },
-                        {
-                          label: "Output Binding JSON",
-                          value: selectedNode.data.config.outputBinding,
-                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as AgentNode), outputBinding: nextValue as Record<string, string> })),
-                          minHeight: "min-h-24",
-                        },
-                      ]}
-                    />
-                  </>
-                ) : null}
-
-                {selectedNode.data.config.family === "condition" ? (
-                  <>
-                    <PortEditorList
-                      label="Inputs"
-                      side="input"
-                      ports={selectedNode.data.config.inputs}
-                      onChange={(nextPorts) => updateSelectedNode((config) => ({ ...(config as ConditionNode), inputs: nextPorts }))}
-                    />
-                    <BranchEditorList
-                      branches={selectedNode.data.config.branches}
-                      onChange={(nextBranches) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branches: nextBranches }))}
-                    />
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Condition Mode</span>
-                      <select
-                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                        value={selectedNode.data.config.conditionMode}
-                        onChange={(event) =>
-                          updateSelectedNode((config) => ({ ...(config as ConditionNode), conditionMode: event.target.value as ConditionNode["conditionMode"] }))
-                        }
-                      >
-                        {["rule", "model"].map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <RuleEditor
-                      rule={selectedNode.data.config.rule}
-                      onChange={(nextRule) => updateSelectedNode((config) => ({ ...(config as ConditionNode), rule: nextRule }))}
-                    />
-                    <MappingEditor
-                      title="Branch Mapping"
-                      value={selectedNode.data.config.branchMapping}
-                      addLabel="Add Branch Mapping"
-                      onChange={(nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branchMapping: nextValue }))}
-                    />
-                    <AdvancedJsonSection
-                      sections={[
-                        {
-                          label: "Inputs JSON",
-                          value: selectedNode.data.config.inputs,
-                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), inputs: nextValue as PortDefinition[] })),
-                        },
-                        {
-                          label: "Branches JSON",
-                          value: selectedNode.data.config.branches,
-                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branches: nextValue as ConditionNode["branches"] })),
-                          minHeight: "min-h-24",
-                        },
-                        {
-                          label: "Rule JSON",
-                          value: selectedNode.data.config.rule,
-                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), rule: nextValue as ConditionNode["rule"] })),
-                          minHeight: "min-h-24",
-                        },
-                        {
-                          label: "Branch Mapping JSON",
-                          value: selectedNode.data.config.branchMapping,
-                          onChange: (nextValue) => updateSelectedNode((config) => ({ ...(config as ConditionNode), branchMapping: nextValue as Record<string, string> })),
-                          minHeight: "min-h-24",
-                        },
-                      ]}
-                    />
-                  </>
-                ) : null}
-
-                {selectedNode.data.config.family === "output" ? (
-                  <>
-                    <PanelSection title="Input Port" description="输出边界只接收一个上游输入。">
-                      <div className="grid grid-cols-2 gap-3">
-                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                          <span>Input Key</span>
-                          <Input
-                            value={selectedNode.data.config.input.key}
-                            onChange={(event) =>
-                              updateSelectedNode((config) => ({
-                                ...(config as OutputBoundaryNode),
-                                input: {
-                                  ...(config as OutputBoundaryNode).input,
-                                  key: event.target.value,
-                                },
-                              }))
-                            }
-                          />
-                        </label>
-                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                          <span>Input Label</span>
-                          <Input
-                            value={selectedNode.data.config.input.label}
-                            onChange={(event) =>
-                              updateSelectedNode((config) => ({
-                                ...(config as OutputBoundaryNode),
-                                input: {
-                                  ...(config as OutputBoundaryNode).input,
-                                  label: event.target.value,
-                                },
-                              }))
-                            }
-                          />
-                        </label>
-                      </div>
-                      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
-                        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                          <span>Value Type</span>
-                          <select
-                            className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                            value={selectedNode.data.config.input.valueType}
-                            onChange={(event) =>
-                              updateSelectedNode((config) => ({
-                                ...(config as OutputBoundaryNode),
-                                input: {
-                                  ...(config as OutputBoundaryNode).input,
-                                  valueType: event.target.value as ValueType,
-                                },
-                              }))
-                            }
-                          >
-                            {VALUE_TYPE_OPTIONS.map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="mt-7 flex items-center gap-2 text-sm text-[var(--muted)]">
-                          <input
-                            checked={Boolean(selectedNode.data.config.input.required)}
-                            type="checkbox"
-                            onChange={(event) =>
-                              updateSelectedNode((config) => ({
-                                ...(config as OutputBoundaryNode),
-                                input: {
-                                  ...(config as OutputBoundaryNode).input,
-                                  required: event.target.checked,
-                                },
-                              }))
-                            }
-                          />
-                          <span>Required</span>
-                        </label>
-                      </div>
-                    </PanelSection>
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Display Mode</span>
-                      <select
-                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                        value={selectedNode.data.config.displayMode}
-                        onChange={(event) => updateSelectedNode((config) => ({ ...(config as OutputBoundaryNode), displayMode: event.target.value as OutputBoundaryNode["displayMode"] }))}
-                      >
-                        {["auto", "plain", "markdown", "json"].map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
-                      <input
-                        checked={selectedNode.data.config.persistEnabled}
-                        type="checkbox"
-                        onChange={(event) => updateSelectedNode((config) => ({ ...(config as OutputBoundaryNode), persistEnabled: event.target.checked }))}
-                      />
-                      <span>Persist output</span>
-                    </label>
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Persist Format</span>
-                      <select
-                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                        value={selectedNode.data.config.persistFormat}
-                        onChange={(event) => updateSelectedNode((config) => ({ ...(config as OutputBoundaryNode), persistFormat: event.target.value as OutputBoundaryNode["persistFormat"] }))}
-                      >
-                        {["txt", "md", "json"].map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>File Name Template</span>
-                      <Input value={selectedNode.data.config.fileNameTemplate} onChange={(event) => updateSelectedNode((config) => ({ ...(config as OutputBoundaryNode), fileNameTemplate: event.target.value }))} />
-                    </label>
-                    <AdvancedJsonSection
-                      sections={[
-                        {
-                          label: "Output Boundary JSON",
-                          value: selectedNode.data.config,
-                          onChange: (nextValue) => updateSelectedNode(() => nextValue as OutputBoundaryNode),
-                          minHeight: "min-h-40",
-                        },
-                      ]}
-                    />
-                  </>
-                ) : null}
-
-                <Button variant="ghost" onClick={() => void saveSelectedNodeAsPreset()}>
-                  Save As Preset
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setNodes((current) => current.filter((node) => node.id !== selectedNode.id));
-                    setEdges((current) => current.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id));
-                    setSelectedNodeId(null);
-                  }}
-                >
-                  Delete Node
-                </Button>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-4 flex items-center justify-between rounded-[18px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.92)] px-3 py-2 text-sm text-[var(--muted)]">
-            <span>Status</span>
+          <div className="pointer-events-none absolute bottom-4 left-4 z-10 max-w-[440px] rounded-[18px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.92)] px-3 py-2 text-sm text-[var(--muted)] shadow-[0_14px_32px_rgba(60,41,20,0.1)]">
+            <span>Status: </span>
             <span className="text-[var(--text)]">{statusMessage}</span>
+            {activeRunId ? (
+              <span className="pointer-events-auto ml-2">
+                Latest run: <a className="text-[var(--accent-strong)] underline" href={`/runs/${activeRunId}`}>{activeRunId}</a>
+              </span>
+            ) : null}
           </div>
-          {activeRunId ? (
-            <div className="mt-3 rounded-[18px] border border-[rgba(31,111,80,0.16)] bg-[rgba(241,250,245,0.92)] px-3 py-2 text-sm text-[var(--muted)]">
-              Latest run: <a className="text-[var(--accent-strong)] underline" href={`/runs/${activeRunId}`}>{activeRunId}</a>
-            </div>
-          ) : null}
-        </aside>
+        </div>
       </div>
 
       <footer className="flex items-center justify-between border-t border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.82)] px-4 text-sm text-[var(--muted)]">

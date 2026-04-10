@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from app.core.schemas.skills import SkillDefinition, SkillIoField, SkillSideEffect
+from app.core.schemas.skills import (
+    SkillCompatibilityReport,
+    SkillCompatibilityStatus,
+    SkillCompatibilityTarget,
+    SkillDefinition,
+    SkillIoField,
+    SkillSideEffect,
+    SkillSourceFormat,
+)
+from app.skills.registry import get_skill_registry
 
 
 SKILL_DEFINITIONS: list[SkillDefinition] = [
@@ -288,8 +297,51 @@ SKILL_DEFINITIONS: list[SkillDefinition] = [
 
 
 def list_skill_definitions() -> list[SkillDefinition]:
-    return [definition.model_copy(deep=True) for definition in SKILL_DEFINITIONS]
+    registry_keys = set(get_skill_registry().keys())
+    definitions: list[SkillDefinition] = []
+    for definition in SKILL_DEFINITIONS:
+        runtime_registered = definition.skill_key in registry_keys
+        definitions.append(
+            definition.model_copy(
+                deep=True,
+                update={
+                    "source_format": SkillSourceFormat.GRAPHITE,
+                    "runtime_registered": runtime_registered,
+                    "compatibility": _build_compatibility_reports(definition),
+                },
+            )
+        )
+    return definitions
 
 
 def get_skill_definition_registry() -> dict[str, SkillDefinition]:
     return {definition.skill_key: definition.model_copy(deep=True) for definition in SKILL_DEFINITIONS}
+
+
+def _build_compatibility_reports(definition: SkillDefinition) -> list[SkillCompatibilityReport]:
+    shared_missing_capabilities = [
+        "缺少标准 JSON Schema 输入定义",
+        "缺少可直接落盘的原生技能文件",
+    ]
+    if definition.output_schema:
+        shared_missing_capabilities.append("缺少标准化输出 schema 导出")
+    return [
+        SkillCompatibilityReport(
+            target=SkillCompatibilityTarget.CLAUDE_CODE,
+            status=SkillCompatibilityStatus.PARTIAL,
+            summary="当前是 Graphite 内部 skill 定义，语义接近，但还不是 Claude Code 原生文件。",
+            missingCapabilities=[
+                *shared_missing_capabilities,
+                "缺少 Claude Code 风格的 Markdown frontmatter",
+            ],
+        ),
+        SkillCompatibilityReport(
+            target=SkillCompatibilityTarget.CODEX,
+            status=SkillCompatibilityStatus.PARTIAL,
+            summary="当前能映射到 Codex skill 概念，但还不是 Codex 原生 SKILL.md 资产。",
+            missingCapabilities=[
+                *shared_missing_capabilities,
+                "缺少 Codex 原生 SKILL.md 包装与目录约定",
+            ],
+        ),
+    ]

@@ -371,15 +371,12 @@ def _generate_agent_response(
         ]
     )
 
-    try:
-        content = _chat_with_local_model(
-            system_prompt=config.system_instruction or "You are a precise workflow agent.",
-            user_prompt=user_prompt,
-            temperature=0.2,
-            max_tokens=160,
-        )
-    except RuntimeError:
-        content = _build_agent_fallback(output_keys, input_values)
+    content = _chat_with_local_model(
+        system_prompt=config.system_instruction or "You are a precise workflow agent.",
+        user_prompt=user_prompt,
+        temperature=0.2,
+        max_tokens=160,
+    )
 
     response_payload: dict[str, Any] = {"summary": content}
     if len(output_keys) == 1:
@@ -389,15 +386,6 @@ def _generate_agent_response(
     for key in output_keys:
         response_payload[key] = content
     return response_payload
-
-
-def _build_agent_fallback(output_keys: list[str], input_values: dict[str, Any]) -> str:
-    if len(output_keys) == 1 and output_keys[0] == "greeting":
-        name = str(input_values.get("name") or "朋友").strip() or "朋友"
-        return f"{name}，你好，欢迎来到 GraphiteUI。"
-    if len(output_keys) == 1:
-        return f"{output_keys[0]} generated from local fallback."
-    return "Generated from local fallback."
 
 
 def _invoke_skill(skill_func: Any, skill_inputs: dict[str, Any]) -> dict[str, Any]:

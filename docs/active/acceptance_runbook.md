@@ -6,10 +6,10 @@
 
 本轮验收重点不再是旧版 `creative_factory` 体验，而是：
 
-- state-aware editor 语义是否成立
+- 当前 preset-driven editor 是否已为 state-aware editor 打下可运行基础
 - 前端边界模型与后端 LangGraph 编译模型是否一致
 - `hello_world` 是否能完成保存、校验、运行闭环
-- 节点级结果是否能在 editor 内直接查看
+- 输出结果是否能在 editor 内回填，节点级详情是否至少可在 run detail 查看
 
 ## 2. Startup
 
@@ -45,8 +45,7 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 当前验收重点：
 
 - 边界节点是否已经替代显式 `start / end`
-- 逐项 state 连线是否足够清晰
-- 参数 socket 覆盖本地值是否符合 ComfyUI 心智
+- 节点输入输出与边界语义是否足够清晰
 - `hello_world` 是否能按新边界模型闭环运行
 
 ## AC-1 Editor Shell
@@ -87,14 +86,12 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 
 1. 打开 `/editor/new`
 2. 检查左侧是否存在：
-   - `State Panel`
    - `Node Palette`
 
 通过标准：
 
-- 两个区块清晰分开
-- state 列表可见
 - 节点库可搜索
+- 可从左侧点击或拖拽创建节点
 
 ## AC-4 Node Creation
 
@@ -113,33 +110,22 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 
 步骤：
 
-1. 定义输入 state `name`
-2. 定义输出 state `greeting / final_result`
-3. 创建 `hello_model`
+1. 使用 `hello_world` 模板或最小图
+2. 观察 `Input Boundary / Agent / Output Boundary`
 4. 观察节点呈现
 
 通过标准：
 
 - 节点能区分输入和输出
-- `hello_model` 只显示真实 `reads / writes`
 - 用户不需要依赖显式 `start/end` 才能理解图
+- 输入、处理、输出三类节点边界清晰
 
 ## AC-5.1 Parameter Socket Override
 
-步骤：
+当前状态说明：
 
-1. 创建 `hello_model`
-2. 观察节点中间的 `name` 输入框
-3. 确认输入框左侧存在参数 socket
-4. 将某个 state 连到 `name` 参数 socket
-5. 再断开连接并直接修改本地文本
-
-通过标准：
-
-- `hello_model` 只有一个 `name` 参数输入位
-- 不会同时出现重复的 `name` 输入 state chip
-- 已连接时，用户能看出上游值覆盖本地值
-- 未连接时，本地文本参与运行
+- 该项暂不作为当前代码库的通过标准
+- 当前 editor 仍以节点级 input/output port 为主，参数级 socket 后续再验收
 
 ## AC-6 Edge Semantics
 
@@ -147,12 +133,12 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 
 1. 将输入 state `name` 连到 `hello_model`
 2. 将 `hello_model` 的输出 state 连到输出边界
-3. 检查每个 state 是否有独立连线
+3. 检查输入输出端口和连线表达
 
 通过标准：
 
-- 每个 state 项有独立连线
-- 每条线能清楚表达该 state 的来龙去脉
+- 连线方向正确
+- 输入输出关系清晰可读
 
 ## AC-7 Save and Reload
 
@@ -166,8 +152,8 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 通过标准：
 
 - graph 成功保存
-- 跳转到 `/editor/{graphId}`
-- 刷新后仍能加载原图
+- 可从 `/editor/{graphId}` 重新打开
+- 刷新后仍能加载原图，节点尺寸等样式信息保持
 
 ## AC-8 Validate
 
@@ -194,26 +180,20 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 
 - run 状态可见
 - 运行成功或失败状态明确
-- 最终结果区域可见 greeting 或错误信息
-- 若使用参数连接覆盖，本地名字字段不会阻断运行
+- 输出节点或状态区可见 greeting 或错误信息
 
 ## AC-10 Node Result Inspection
 
 步骤：
 
 1. 完成一次 run
-2. 点击 `hello_model`
+2. 在 editor 中查看输出节点 preview 与 run 状态
+3. 打开 `/runs/{runId}`
 
 通过标准：
 
-- 可看到节点最近一次运行结果
-- 至少包含：
-  - `status`
-  - `input_summary`
-  - `output_summary`
-  - `warnings`
-  - `errors`
-  - `artifacts`
+- editor 内至少能看到最新 run 已回填的结果或失败提示
+- run detail 页面可看到节点时间线与输出摘要
 
 ## AC-11 Boundary Compilation Semantics
 
@@ -249,7 +229,7 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 
 步骤：
 
-1. 打开 `/editor/template-hello-world` 或从模板新建 hello_world
+1. 打开 `/editor/new?template=hello_world` 或从模板新建 hello_world
 2. 观察节点加载完成后的排列
 
 通过标准：

@@ -973,8 +973,9 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const inputs = listInputPorts(config);
   const outputs = listOutputPorts(config);
   const minHeight = NODE_MIN_HEIGHT[config.family] ?? 80;
-  const isCollapsible = true;
-  const isExpanded = Boolean(data.isExpanded);
+  const isInputNode = config.family === "input";
+  const isCollapsible = config.family !== "input";
+  const isExpanded = config.family === "input" ? true : Boolean(data.isExpanded);
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [draftLabel, setDraftLabel] = useState(config.label);
@@ -1084,6 +1085,38 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
         <div className="grid gap-3 px-4 py-3">
           {config.family === "input" ? (
             <>
+              <div className="flex flex-wrap gap-2">
+                {(["text", "json", "image", "audio", "video"] as ValueType[]).map((option) => {
+                  const active = config.valueType === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.12em] transition-colors",
+                        active
+                          ? "border-[var(--accent)] bg-[rgba(154,52,18,0.12)] text-[var(--accent-strong)]"
+                          : "border-[rgba(154,52,18,0.16)] bg-[rgba(255,255,255,0.72)] text-[var(--muted)] hover:bg-[rgba(255,248,240,0.92)]",
+                      )}
+                      onClick={() =>
+                        data.onConfigChange?.((currentConfig) => {
+                          const currentInput = currentConfig as InputBoundaryNode;
+                          return {
+                            ...currentInput,
+                            valueType: option,
+                            output: {
+                              ...currentInput.output,
+                              valueType: option,
+                            },
+                          };
+                        })
+                      }
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="grid gap-1">
                 {outputs.map((port) => (
                   <PortRow
@@ -1104,40 +1137,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                   />
                 ))}
               </div>
-              {isExpanded ? (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                      <span>Value Type</span>
-                      <select
-                        className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                        value={config.valueType}
-                        onChange={(event) =>
-                          data.onConfigChange?.((currentConfig) => {
-                            const nextType = event.target.value as ValueType;
-                            const currentInput = currentConfig as InputBoundaryNode;
-                            return {
-                              ...currentInput,
-                              valueType: nextType,
-                              output: {
-                                ...currentInput.output,
-                                valueType: nextType,
-                              },
-                            };
-                          })
-                        }
-                      >
-                        {VALUE_TYPE_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div />
-                  </div>
-                </>
-              ) : null}
               <div className="grid gap-2">
                 <textarea
                   value={config.defaultValue}

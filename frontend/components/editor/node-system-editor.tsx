@@ -526,7 +526,7 @@ function summarizeNode(config: NodePresetDefinition) {
     return config.placeholder || "Inline input boundary";
   }
   if (config.family === "agent") {
-    return config.taskInstruction || "Configure this agent node.";
+    return config.description || config.taskInstruction || "Configure this agent node.";
   }
   if (config.family === "condition") {
     return `${config.rule.source} ${config.rule.operator} ${String(config.rule.value)}`;

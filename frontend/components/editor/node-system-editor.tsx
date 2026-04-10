@@ -186,36 +186,6 @@ const INPUT_VALUE_TYPE_OPTIONS: Array<{ value: ValueType; label: string; icon: R
     ),
   },
   {
-    value: "image",
-    label: "Image",
-    icon: (
-      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
-        <rect x="2.5" y="3" width="11" height="10" rx="1.5" />
-        <circle cx="6" cy="6.5" r="1" />
-        <path d="m4 11 2.5-2.5L8.5 10l1.5-1.5L12 11" />
-      </svg>
-    ),
-  },
-  {
-    value: "audio",
-    label: "Audio",
-    icon: (
-      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
-        <path d="M9.5 3.5v6.2a1.8 1.8 0 1 1-1-1.6V5.2l4-1v4.5a1.8 1.8 0 1 1-1-1.6V3.5Z" />
-      </svg>
-    ),
-  },
-  {
-    value: "video",
-    label: "Video",
-    icon: (
-      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
-        <rect x="2.5" y="4" width="8.5" height="8" rx="1.5" />
-        <path d="m11 7 2.5-1.5v5L11 9" />
-      </svg>
-    ),
-  },
-  {
     value: "file",
     label: "File",
     icon: (

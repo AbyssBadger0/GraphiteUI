@@ -1620,16 +1620,14 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                 </div>
               ) : (
                 <>
-                  <details className="rounded-[20px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.7)] p-4">
-                    <summary className="cursor-pointer text-sm font-semibold text-[var(--text)]">Task Introduction</summary>
-                    <div className="mt-4 grid gap-1.5 text-sm text-[var(--muted)]">
-                      <textarea
-                        className="min-h-24 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                        value={config.description}
-                        onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), description: event.target.value }))}
-                      />
-                    </div>
-                  </details>
+                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                    <span>Task Introduction</span>
+                    <textarea
+                      className="min-h-24 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
+                      value={config.description}
+                      onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), description: event.target.value }))}
+                    />
+                  </label>
                   <label className="grid gap-1.5 text-sm text-[var(--muted)]">
                     <span>System Instruction</span>
                     <textarea

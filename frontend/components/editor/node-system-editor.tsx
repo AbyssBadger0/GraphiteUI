@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { EMPTY_AGENT_PRESET, getNodePresetById, NODE_PRESETS_MOCK } from "@/lib/node-presets-mock";
+import { EMPTY_AGENT_PRESET, getNodePresetById, NODE_PRESETS_MOCK, TEXT_INPUT_PRESET } from "@/lib/node-presets-mock";
 import {
   isValueTypeCompatible,
   type AgentNode,
@@ -343,18 +343,24 @@ function renderUploadedAssetPreview(asset: UploadedAssetEnvelope, actions?: Reac
   );
 }
 
-function openUploadedAsset(asset: UploadedAssetEnvelope) {
-  if (typeof window === "undefined") return;
-
-  if (asset.encoding === "data_url") {
-    window.open(asset.content, "_blank", "noopener,noreferrer");
-    return;
+function formatValueTypeLabel(valueType: ValueType) {
+  switch (valueType) {
+    case "image":
+      return "Image";
+    case "audio":
+      return "Audio";
+    case "video":
+      return "Video";
+    case "file":
+      return "File";
+    case "json":
+      return "JSON";
+    case "any":
+      return "Any";
+    case "text":
+    default:
+      return "Text";
   }
-
-  const blob = new Blob([asset.content], { type: asset.mimeType || "text/plain" });
-  const url = URL.createObjectURL(blob);
-  window.open(url, "_blank", "noopener,noreferrer");
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 async function fileToEnvelope(file: File): Promise<UploadedAssetEnvelope> {
@@ -1438,13 +1444,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                         {renderUploadedAssetPreview(
                           uploadedAsset,
                           <>
-                            <UploadedAssetActionButton label="打开本地文件" onClick={() => openUploadedAsset(uploadedAsset)}>
-                              <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.5">
-                                <path d="M6 4.5h-1A1.5 1.5 0 0 0 3.5 6v5A1.5 1.5 0 0 0 5 12.5h5A1.5 1.5 0 0 0 11.5 11v-1" />
-                                <path d="M8.5 3.5h4v4" />
-                                <path d="m12.5 3.5-5 5" />
-                              </svg>
-                            </UploadedAssetActionButton>
                             <UploadedAssetActionButton label="替换文件" onClick={() => uploadInputRef.current?.click()}>
                               <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.5">
                                 <path d="M11.5 6.5A3.5 3.5 0 0 0 5.7 4L4.5 5" />
@@ -2045,11 +2044,10 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
     [reactFlow],
   );
 
-function createNodeFromPreset(preset: NodePresetDefinition, position: { x: number; y: number }) {
-  const config = deepClonePreset(preset);
-  const id = `${config.family}_${crypto.randomUUID().slice(0, 8)}`;
-  return {
-    id,
+  function createNodeFromConfig(config: NodePresetDefinition, position: { x: number; y: number }) {
+    const id = `${config.family}_${crypto.randomUUID().slice(0, 8)}`;
+    return {
+      id,
       type: "default",
       position,
       data: {
@@ -2067,6 +2065,35 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
         width: "auto",
       },
     } satisfies FlowNode;
+  }
+
+function createNodeFromPreset(preset: NodePresetDefinition, position: { x: number; y: number }) {
+  const config = deepClonePreset(preset);
+  return createNodeFromConfig(config, position);
+}
+
+  async function addInputNodeFromFile(file: File, position: { x: number; y: number }) {
+    const envelope = await fileToEnvelope(file);
+    const typeLabel = formatValueTypeLabel(envelope.detectedType);
+    const inputConfig = {
+      ...deepClonePreset(TEXT_INPUT_PRESET),
+      label: `${typeLabel} Input`,
+      description: `Uploaded ${typeLabel.toLowerCase()} asset from ${file.name}.`,
+      valueType: envelope.detectedType,
+      output: {
+        ...deepClonePreset(TEXT_INPUT_PRESET).output,
+        key: envelope.detectedType,
+        label: typeLabel,
+        valueType: envelope.detectedType,
+      },
+      defaultValue: JSON.stringify(envelope),
+      placeholder: "",
+    } satisfies InputBoundaryNode;
+
+    const nextNode = createNodeFromConfig(inputConfig, position);
+    setNodes((current) => current.concat(nextNode));
+    setSelectedNodeId(nextNode.id);
+    setStatusMessage(`Added ${inputConfig.label} from ${file.name}`);
   }
 
   function addNodeFromPresetId(presetId: string, position: { x: number; y: number }, connectionSource?: { sourceNodeId?: string; sourceHandle?: string; sourceValueType?: ValueType | null }) {
@@ -2212,7 +2239,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
     <div className="grid h-screen grid-rows-[56px_minmax(0,1fr)_36px] bg-[radial-gradient(circle_at_top,rgba(154,52,18,0.1),transparent_22%),linear-gradient(180deg,#f5efe2_0%,#ede4d2_100%)]">
       <header className="grid grid-cols-[minmax(220px,320px)_1fr_auto] items-center gap-3 border-b border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.82)] px-4 backdrop-blur-xl">
         <Input className="h-10" value={graphName} onChange={(event) => setGraphName(event.target.value)} placeholder="Graph name" />
-        <div className="text-sm text-[var(--muted)]">Double click canvas to create nodes. Drag from an output handle into empty space for type-aware suggestions.</div>
+        <div className="text-sm text-[var(--muted)]">Double click canvas to create nodes. Drop files on empty canvas to create input nodes. Drag from an output handle into empty space for type-aware suggestions.</div>
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => void handleSave()}>
             Save
@@ -2374,14 +2401,21 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
               }}
               onDragOver={(event) => {
                 event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
+                event.dataTransfer.dropEffect = event.dataTransfer.files.length > 0 ? "copy" : "move";
               }}
               onDrop={(event) => {
                 event.preventDefault();
                 const presetId = event.dataTransfer.getData("application/graphiteui-node-preset");
-                if (!presetId) return;
+                if (presetId) {
+                  const position = reactFlow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+                  addNodeFromPresetId(presetId, position);
+                  return;
+                }
+
+                const droppedFile = event.dataTransfer.files?.[0] ?? null;
+                if (!droppedFile) return;
                 const position = reactFlow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
-                addNodeFromPresetId(presetId, position);
+                void addInputNodeFromFile(droppedFile, position);
               }}
               fitView
               minZoom={0.35}

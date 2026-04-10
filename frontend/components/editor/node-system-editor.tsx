@@ -923,33 +923,9 @@ function PortRow({
               {port.label}
             </span>
           )}
-          {editable && !isEditing ? (
-            <button
-              type="button"
-              className="absolute left-5 top-full z-10 mt-1 hidden h-6 w-6 items-center justify-center rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.96)] text-[var(--accent-strong)] shadow-[0_8px_18px_rgba(60,41,20,0.08)] group-hover:flex"
-              onClick={startEditing}
-              aria-label="Rename port"
-            >
-              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
-                <path d="M3 11.5 11.8 2.7a1.5 1.5 0 0 1 2.1 2.1L5 13.6 2 14l.4-3Z" />
-              </svg>
-            </button>
-          ) : null}
         </>
       ) : (
         <>
-          {editable && !isEditing ? (
-            <button
-              type="button"
-              className="absolute right-5 top-full z-10 mt-1 hidden h-6 w-6 items-center justify-center rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.96)] text-[var(--accent-strong)] shadow-[0_8px_18px_rgba(60,41,20,0.08)] group-hover:flex"
-              onClick={startEditing}
-              aria-label="Rename port"
-            >
-              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
-                <path d="M3 11.5 11.8 2.7a1.5 1.5 0 0 1 2.1 2.1L5 13.6 2 14l.4-3Z" />
-              </svg>
-            </button>
-          ) : null}
           {isEditing ? (
             <Input
               className="h-9 text-right"
@@ -999,6 +975,34 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const minHeight = NODE_MIN_HEIGHT[config.family] ?? 80;
   const isCollapsible = true;
   const isExpanded = Boolean(data.isExpanded);
+  const [isEditingLabel, setIsEditingLabel] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [draftLabel, setDraftLabel] = useState(config.label);
+  const [draftDescription, setDraftDescription] = useState(config.description);
+
+  useEffect(() => {
+    setDraftLabel(config.label);
+  }, [config.label]);
+
+  useEffect(() => {
+    setDraftDescription(config.description);
+  }, [config.description]);
+
+  function commitLabelEdit() {
+    const nextLabel = draftLabel.trim();
+    if (nextLabel && nextLabel !== config.label) {
+      data.onConfigChange?.((currentConfig) => ({ ...currentConfig, label: nextLabel }));
+    }
+    setIsEditingLabel(false);
+  }
+
+  function commitDescriptionEdit() {
+    const nextDescription = draftDescription.trim();
+    if (nextDescription !== config.description) {
+      data.onConfigChange?.((currentConfig) => ({ ...currentConfig, description: nextDescription }));
+    }
+    setIsEditingDescription(false);
+  }
 
   return (
     <>
@@ -1021,9 +1025,47 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-[rgba(154,52,18,0.55)]" />
-              <div className="truncate text-sm font-semibold text-[var(--text)]">{config.label}</div>
+              {isEditingLabel ? (
+                <Input
+                  className="h-9"
+                  value={draftLabel}
+                  autoFocus
+                  onChange={(event) => setDraftLabel(event.target.value)}
+                  onBlur={commitLabelEdit}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") commitLabelEdit();
+                    if (event.key === "Escape") {
+                      setDraftLabel(config.label);
+                      setIsEditingLabel(false);
+                    }
+                  }}
+                />
+              ) : (
+                <div className="truncate text-sm font-semibold text-[var(--text)] cursor-text" onDoubleClick={() => setIsEditingLabel(true)}>
+                  {config.label}
+                </div>
+              )}
             </div>
-            <div className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--muted)]">{config.description || summarizeNode(config)}</div>
+            {isEditingDescription ? (
+              <Input
+                className="mt-1 h-9"
+                value={draftDescription}
+                autoFocus
+                onChange={(event) => setDraftDescription(event.target.value)}
+                onBlur={commitDescriptionEdit}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") commitDescriptionEdit();
+                  if (event.key === "Escape") {
+                    setDraftDescription(config.description);
+                    setIsEditingDescription(false);
+                  }
+                }}
+              />
+            ) : (
+              <div className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--muted)] cursor-text" onDoubleClick={() => setIsEditingDescription(true)}>
+                {config.description || summarizeNode(config)}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{config.family}</div>
@@ -1040,21 +1082,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
         </div>
 
         <div className="grid gap-3 px-4 py-3">
-          {isExpanded ? (
-            <div className="grid gap-2">
-              <Input
-                value={config.label}
-                onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...currentConfig, label: event.target.value }))}
-                placeholder="Node label"
-              />
-              <Input
-                value={config.description}
-                onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...currentConfig, description: event.target.value }))}
-                placeholder="Node description"
-              />
-            </div>
-          ) : null}
-
           {config.family === "input" ? (
             <>
               <div className="grid gap-1">

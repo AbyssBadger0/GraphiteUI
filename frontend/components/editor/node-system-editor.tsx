@@ -1300,11 +1300,11 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           title={isDeleteConfirmActive ? "确认删除节点" : "删除节点"}
           data-delete-surface="true"
           className={cn(
-            "absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full border border-[rgba(154,52,18,0.14)] bg-[rgba(255,252,247,0.92)] text-[var(--muted)] shadow-[0_10px_24px_rgba(60,41,20,0.08)] transition",
+            "absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full shadow-[0_10px_24px_rgba(60,41,20,0.08)] transition",
             selected || isDeleteConfirmActive ? "opacity-100" : "opacity-0 group-hover/node:opacity-100",
             isDeleteConfirmActive
-              ? "border-[rgba(185,28,28,0.28)] bg-[rgb(185,28,28)] text-white"
-              : "hover:border-[rgba(154,52,18,0.24)] hover:text-[var(--accent)]",
+              ? "border border-[rgba(185,28,28,0.28)] bg-[rgb(185,28,28)] text-white"
+              : "border border-[rgba(154,52,18,0.14)] bg-[rgba(255,252,247,0.92)] text-[var(--muted)] hover:border-[rgba(154,52,18,0.24)] hover:text-[var(--accent)]",
           )}
           onPointerDown={(event) => {
             event.preventDefault();

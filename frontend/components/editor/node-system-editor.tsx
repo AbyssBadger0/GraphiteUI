@@ -549,6 +549,17 @@ function createAutoInputPort(existingPorts: PortDefinition[], sourceType: ValueT
   };
 }
 
+function createDefaultPort(side: "input" | "output", existingPorts: PortDefinition[]): PortDefinition {
+  const index = existingPorts.length + 1;
+  const typeLabel = "Text";
+  return {
+    key: createPortKey(side === "input" ? `input_${index}` : `output_${index}`, existingPorts),
+    label: side === "input" ? `${typeLabel} Input` : `${typeLabel} Output`,
+    valueType: "text",
+    ...(side === "input" ? { required: false } : {}),
+  };
+}
+
 function summarizeNode(config: NodePresetDefinition) {
   if (config.family === "input") {
     return config.placeholder || "Inline input boundary";
@@ -1251,6 +1262,109 @@ function PortRow({
   );
 }
 
+function PortCreateButton({
+  side,
+  visible,
+  initialPort,
+  onCreate,
+}: {
+  side: "input" | "output";
+  visible: boolean;
+  initialPort: PortDefinition;
+  onCreate: (port: PortDefinition) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [draftPort, setDraftPort] = useState<PortDefinition>(initialPort);
+
+  function openEditor() {
+    setDraftPort(initialPort);
+    setIsOpen(true);
+  }
+
+  function closeEditor() {
+    setIsOpen(false);
+  }
+
+  function commit() {
+    const nextKey = draftPort.key.trim();
+    const nextLabel = draftPort.label.trim();
+    if (!nextKey || !nextLabel) return;
+    onCreate({
+      ...draftPort,
+      key: nextKey,
+      label: nextLabel,
+    });
+    setIsOpen(false);
+  }
+
+  return (
+    <div className={cn("group relative flex min-h-6 items-center", side === "input" ? "justify-start" : "justify-end")}>
+      <button
+        type="button"
+        className={cn(
+          "inline-flex items-center gap-2 text-sm text-[var(--muted)] transition",
+          visible ? "opacity-100" : "opacity-0 pointer-events-none",
+        )}
+        onClick={openEditor}
+      >
+        <span className="grid h-5 w-5 place-items-center rounded-full border border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.82)] text-[var(--accent-strong)]">+</span>
+        <span>{side === "input" ? "Add input" : "Add output"}</span>
+      </button>
+      {isOpen ? (
+        <div
+          className={cn(
+            "absolute top-full z-20 mt-2 w-[260px] rounded-[16px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.98)] p-3 shadow-[0_14px_32px_rgba(60,41,20,0.14)]",
+            side === "input" ? "left-5" : "right-5",
+          )}
+        >
+          <div className="grid gap-3">
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              <span>Key</span>
+              <Input value={draftPort.key} onChange={(event) => setDraftPort((current) => ({ ...current, key: event.target.value }))} />
+            </label>
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              <span>Label</span>
+              <Input value={draftPort.label} onChange={(event) => setDraftPort((current) => ({ ...current, label: event.target.value }))} />
+            </label>
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              <span>Value Type</span>
+              <select
+                className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-2 text-[var(--text)]"
+                value={draftPort.valueType}
+                onChange={(event) => setDraftPort((current) => ({ ...current, valueType: event.target.value as ValueType }))}
+              >
+                {VALUE_TYPE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {side === "input" ? (
+              <label className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                <input
+                  checked={Boolean(draftPort.required)}
+                  type="checkbox"
+                  onChange={(event) => setDraftPort((current) => ({ ...current, required: event.target.checked }))}
+                />
+                <span>Required</span>
+              </label>
+            ) : null}
+            <div className="flex items-center justify-between gap-2">
+              <Button variant="ghost" onClick={closeEditor}>
+                Cancel
+              </Button>
+              <Button variant="ghost" onClick={commit}>
+                Create
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function getNodeMinHeight(config: NodePresetDefinition, isExpanded: boolean) {
   if (config.family === "input") {
     return 320;
@@ -1399,6 +1513,20 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
       }
       if (currentConfig.family === "condition" && side === "input") {
         return { ...currentConfig, inputs: currentConfig.inputs.filter((_, index) => index !== portIndex) };
+      }
+      return currentConfig;
+    });
+  }
+
+  function addNodePort(side: "input" | "output", port: PortDefinition) {
+    data.onConfigChange?.((currentConfig) => {
+      if (currentConfig.family === "agent") {
+        return side === "input"
+          ? { ...currentConfig, inputs: [...currentConfig.inputs, port] }
+          : { ...currentConfig, outputs: [...currentConfig.outputs, port] };
+      }
+      if (currentConfig.family === "condition" && side === "input") {
+        return { ...currentConfig, inputs: [...currentConfig.inputs, port] };
       }
       return currentConfig;
     });
@@ -1757,13 +1885,21 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                       id={buildHandleId("input", CREATE_INPUT_PORT_KEY)}
                       type="target"
                       position={Position.Left}
-                      className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border-2 !border-[rgba(154,52,18,0.18)] !bg-[rgba(255,255,255,0.96)] after:content-['+'] after:absolute after:left-1/2 after:top-1/2 after:-translate-x-1/2 after:-translate-y-1/2 after:text-[9px] after:font-semibold after:leading-none after:text-[var(--accent-strong)]"
+                      className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border-2 !border-[rgba(154,52,18,0.18)] !bg-[rgba(255,255,255,0.96)] before:content-[''] before:absolute before:left-1/2 before:top-1/2 before:h-[1.5px] before:w-[7px] before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:bg-[var(--accent-strong)] after:content-[''] after:absolute after:left-1/2 after:top-1/2 after:h-[7px] after:w-[1.5px] after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-[var(--accent-strong)]"
                       isConnectable
                     />
                     <span className="ml-2 inline-flex items-center gap-2 text-sm">
                       <span>Add {formatValueTypeLabel(data.connectingSourceType)} input</span>
                     </span>
                   </div>
+                ) : null}
+                {config.family === "agent" || config.family === "condition" ? (
+                  <PortCreateButton
+                    side="input"
+                    visible={selected || isHoveringNode}
+                    initialPort={createDefaultPort("input", inputs)}
+                    onCreate={(nextPort) => addNodePort("input", nextPort)}
+                  />
                 ) : null}
               </div>
               <div className="grid gap-1">
@@ -1783,6 +1919,14 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     }
                   />
                 ))}
+                {config.family === "agent" ? (
+                  <PortCreateButton
+                    side="output"
+                    visible={selected || isHoveringNode}
+                    initialPort={createDefaultPort("output", outputs)}
+                    onCreate={(nextPort) => addNodePort("output", nextPort)}
+                  />
+                ) : null}
               </div>
             </div>
           ) : null}

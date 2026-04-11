@@ -36,7 +36,6 @@ export type AgentNode = {
   systemInstruction: string;
   taskInstruction: string;
   skills: SkillAttachment[];
-  responseMode: "json" | "text";
   outputBinding: Record<string, string>;
 };
 

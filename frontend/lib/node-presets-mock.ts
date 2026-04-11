@@ -10,7 +10,6 @@ export const EMPTY_AGENT_PRESET = {
   systemInstruction: "",
   taskInstruction: "",
   skills: [],
-  responseMode: "json",
   outputBinding: {},
 } satisfies NodePresetDefinition;
 
@@ -99,7 +98,6 @@ export const SUMMARY_AGENT_PRESET = {
   systemInstruction: "You are a concise workflow summarization agent.",
   taskInstruction: "Read the source text and return a concise summary.",
   skills: [],
-  responseMode: "json",
   outputBinding: {
     summary: "$response.summary",
   },
@@ -138,7 +136,6 @@ export const HELLO_GREETING_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     greeting: "$skills.append_usage_introduction.greeting",
   },
@@ -194,7 +191,6 @@ export const FETCH_NEWS_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     rss_items: "$skills.fetch_market_news.rss_items",
   },
@@ -238,7 +234,6 @@ export const CLEAN_MARKET_NEWS_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     clean_news_items: "$skills.clean_market_news.clean_news_items",
     news_context: "$skills.clean_market_news.news_context",
@@ -286,7 +281,6 @@ export const BUILD_CREATIVE_BRIEF_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     creative_brief: "$skills.build_creative_brief.creative_brief",
   },
@@ -319,7 +313,6 @@ export const GENERATE_CREATIVE_VARIANTS_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     script_variants: "$skills.generate_creative_variants.script_variants",
   },
@@ -356,7 +349,6 @@ export const REVIEW_VARIANTS_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     evaluation_result: "$skills.review_creative_variants.evaluation_result",
     best_variant: "$skills.review_creative_variants.best_variant",
@@ -388,7 +380,6 @@ export const GENERATE_STORYBOARD_PACKAGES_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     storyboard_packages: "$skills.generate_storyboard_packages.storyboard_packages",
   },
@@ -420,7 +411,6 @@ export const GENERATE_VIDEO_PROMPT_PACKAGES_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     video_prompt_packages: "$skills.generate_video_prompt_packages.video_prompt_packages",
   },
@@ -452,7 +442,6 @@ export const PREPARE_IMAGE_TODO_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     image_generation_todo: "$skills.prepare_image_generation_todo.image_generation_todo",
   },
@@ -484,7 +473,6 @@ export const PREPARE_VIDEO_TODO_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     video_generation_todo: "$skills.prepare_video_generation_todo.video_generation_todo",
   },
@@ -528,7 +516,6 @@ export const FINALIZE_CREATIVE_PACKAGE_AGENT_PRESET = {
       usage: "required",
     },
   ],
-  responseMode: "json",
   outputBinding: {
     final_package: "$skills.finalize_creative_package.final_package",
     final_result: "$skills.finalize_creative_package.final_result",

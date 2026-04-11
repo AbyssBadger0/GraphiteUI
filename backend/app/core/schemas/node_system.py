@@ -33,11 +33,6 @@ class ConditionOperator(str, Enum):
     EXISTS = "exists"
 
 
-class ResponseMode(str, Enum):
-    JSON = "json"
-    TEXT = "text"
-
-
 class ConditionMode(str, Enum):
     RULE = "rule"
     MODEL = "model"
@@ -98,7 +93,6 @@ class AgentNodeConfig(BaseModel):
     system_instruction: str = Field(default="", alias="systemInstruction")
     task_instruction: str = Field(default="", alias="taskInstruction")
     skills: list[SkillAttachment] = Field(default_factory=list)
-    response_mode: ResponseMode = Field(default=ResponseMode.JSON, alias="responseMode")
     output_binding: dict[str, str] = Field(default_factory=dict, alias="outputBinding")
 
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)

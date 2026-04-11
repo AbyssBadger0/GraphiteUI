@@ -751,14 +751,25 @@ function SkillEditorList({
   definitionsLoading: boolean;
   definitionsError: string | null;
 }) {
-  const definitionOptions = definitions.map((definition) => definition.skillKey);
+  const attachedSkillKeys = useMemo(() => new Set(skills.map((skill) => skill.skillKey)), [skills]);
+  const availableDefinitions = useMemo(
+    () => definitions.filter((definition) => !attachedSkillKeys.has(definition.skillKey)),
+    [attachedSkillKeys, definitions],
+  );
+  const [selectedSkillKey, setSelectedSkillKey] = useState("");
 
-  function updateSkill(index: number, updater: (skill: SkillAttachment) => SkillAttachment) {
-    onChange(skills.map((item, skillIndex) => (skillIndex === index ? updater(item) : item)));
-  }
+  useEffect(() => {
+    if (!availableDefinitions.length) {
+      setSelectedSkillKey("");
+      return;
+    }
+    if (!availableDefinitions.some((definition) => definition.skillKey === selectedSkillKey)) {
+      setSelectedSkillKey(availableDefinitions[0]?.skillKey ?? "");
+    }
+  }, [availableDefinitions, selectedSkillKey]);
 
   return (
-    <PanelSection title="Skills" description="以结构化方式编辑技能挂载与映射。">
+    <PanelSection title="Skills" description="这里只负责挂载或移除已有 skill，不在这里编辑 skill 配置。">
       <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.64)] px-3 py-2 text-sm leading-6 text-[var(--muted)]">
         {definitionsLoading ? "Loading skill definitions..." : definitionsError ? `Skill definitions unavailable: ${definitionsError}` : `Loaded ${definitions.length} skill definitions.`}
       </div>
@@ -766,120 +777,74 @@ function SkillEditorList({
         <div key={`${skill.name}-${index}`} className="grid gap-3 rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
           {(() => {
             const definition = definitions.find((item) => item.skillKey === skill.skillKey);
-            const skillKeyOptions = skill.skillKey && !definitionOptions.includes(skill.skillKey) ? [skill.skillKey, ...definitionOptions] : definitionOptions;
-
-            return (
+            return definition ? (
               <>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-              <span>Name</span>
-              <Input
-                value={skill.name}
-                onChange={(event) => updateSkill(index, (currentSkill) => ({ ...currentSkill, name: event.target.value }))}
-              />
-            </label>
-            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-              <span>Skill Key</span>
-              <select
-                className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                value={skill.skillKey}
-                onChange={(event) =>
-                  updateSkill(index, (currentSkill) => {
-                    const selectedDefinition = definitions.find((item) => item.skillKey === event.target.value);
-                    return {
-                      ...currentSkill,
-                      skillKey: event.target.value,
-                      name:
-                        currentSkill.name === "" ||
-                        currentSkill.name === currentSkill.skillKey ||
-                        currentSkill.name.startsWith("skill_")
-                          ? selectedDefinition?.label ?? event.target.value
-                          : currentSkill.name,
-                    };
-                  })
-                }
-              >
-                <option value="">Select a skill</option>
-                {skillKeyOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          {definition ? (
-            <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-sm leading-6 text-[var(--muted)]">
-              <div className="font-medium text-[var(--text)]">{definition.label}</div>
-              <div>{definition.description}</div>
-              <div className="mt-2">Supported Value Types: {definition.supportedValueTypes.join(", ") || "n/a"}</div>
-              <div>Side Effects: {definition.sideEffects.join(", ") || "none"}</div>
-              <div className="mt-2">Inputs: {definition.inputSchema.map((field) => `${field.key}:${field.valueType}`).join(", ") || "none"}</div>
-              <div>Outputs: {definition.outputSchema.map((field) => `${field.key}:${field.valueType}`).join(", ") || "none"}</div>
-            </div>
-          ) : skill.skillKey ? (
-            <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-sm leading-6 text-[var(--muted)]">
-              No registered definition found for `{skill.skillKey}`. You can still keep editing mappings, or use Advanced JSON as fallback.
-            </div>
-          ) : null}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-              <span>Usage</span>
-              <select
-                className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                value={skill.usage ?? "optional"}
-                onChange={(event) =>
-                  updateSkill(index, (currentSkill) => ({ ...currentSkill, usage: event.target.value as SkillAttachment["usage"] }))
-                }
-              >
-                {["required", "optional"].map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <MappingEditor
-            title="Input Mapping"
-            value={skill.inputMapping}
-            addLabel="Add Input Mapping"
-            onChange={(nextValue) => updateSkill(index, (currentSkill) => ({ ...currentSkill, inputMapping: nextValue }))}
-          />
-          <MappingEditor
-            title="Context Binding"
-            value={skill.contextBinding}
-            addLabel="Add Context Binding"
-            onChange={(nextValue) => updateSkill(index, (currentSkill) => ({ ...currentSkill, contextBinding: nextValue }))}
-          />
-          <div className="flex justify-end">
-            <Button variant="ghost" onClick={() => onChange(skills.filter((_, skillIndex) => skillIndex !== index))}>
-              Remove Skill
-            </Button>
-          </div>
+                <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-sm leading-6 text-[var(--muted)]">
+                  <div className="font-medium text-[var(--text)]">{definition.label}</div>
+                  <div>{definition.description}</div>
+                  <div className="mt-2">Skill Key: {definition.skillKey}</div>
+                  <div>Supported Value Types: {definition.supportedValueTypes.join(", ") || "n/a"}</div>
+                  <div>Side Effects: {definition.sideEffects.join(", ") || "none"}</div>
+                  <div className="mt-2">Inputs: {definition.inputSchema.map((field) => `${field.key}:${field.valueType}`).join(", ") || "none"}</div>
+                  <div>Outputs: {definition.outputSchema.map((field) => `${field.key}:${field.valueType}`).join(", ") || "none"}</div>
+                </div>
+                <div className="flex justify-end">
+                  <Button variant="ghost" onClick={() => onChange(skills.filter((_, skillIndex) => skillIndex !== index))}>
+                    Remove Skill
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-sm leading-6 text-[var(--muted)]">
+                  No registered definition found for `{skill.skillKey}`. This skill can be removed here, but not edited.
+                </div>
+                <div className="flex justify-end">
+                  <Button variant="ghost" onClick={() => onChange(skills.filter((_, skillIndex) => skillIndex !== index))}>
+                    Remove Skill
+                  </Button>
+                </div>
               </>
             );
           })()}
         </div>
       ))}
-      <div className="flex justify-start">
-        <Button
-          variant="ghost"
-          onClick={() =>
-            onChange(
-              skills.concat({
-                name: `skill_${skills.length + 1}`,
-                skillKey: "",
-                inputMapping: {},
-                contextBinding: {},
-                usage: "optional",
-              }),
-            )
-          }
-        >
-          Add Skill
-        </Button>
-      </div>
+      {availableDefinitions.length ? (
+        <div className="grid gap-3 rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.64)] p-3">
+          <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+            <span>Add Existing Skill</span>
+            <select
+              className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
+              value={selectedSkillKey}
+              onChange={(event) => setSelectedSkillKey(event.target.value)}
+            >
+              {availableDefinitions.map((definition) => (
+                <option key={definition.skillKey} value={definition.skillKey}>
+                  {definition.label} ({definition.skillKey})
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              const nextDefinition = availableDefinitions.find((definition) => definition.skillKey === selectedSkillKey) ?? availableDefinitions[0];
+              if (!nextDefinition) return;
+              onChange(
+                skills.concat({
+                  name: nextDefinition.skillKey,
+                  skillKey: nextDefinition.skillKey,
+                  inputMapping: {},
+                  contextBinding: {},
+                  usage: "optional",
+                }),
+              );
+            }}
+          >
+            Add Skill
+          </Button>
+        </div>
+      ) : null}
     </PanelSection>
   );
 }
@@ -2084,22 +2049,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     addLabel="Add Output Binding"
                     onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), outputBinding: nextValue }))}
                   />
-                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                    <span>Response Mode</span>
-                    <select
-                      className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-                      value={config.responseMode}
-                      onChange={(event) =>
-                        data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), responseMode: event.target.value as AgentNode["responseMode"] }))
-                      }
-                    >
-                      {["json", "text"].map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
                   <AdvancedJsonSection
                     sections={[
                       {
@@ -2111,11 +2060,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                         label: "Outputs JSON",
                         value: config.outputs,
                         onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), outputs: nextValue as PortDefinition[] })),
-                      },
-                      {
-                        label: "Skills JSON",
-                        value: config.skills,
-                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), skills: nextValue as AgentNode["skills"] })),
                       },
                       {
                         label: "Output Binding JSON",

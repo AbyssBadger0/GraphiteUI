@@ -83,7 +83,6 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                                 "usage": "required",
                             }
                         ],
-                        "responseMode": "json",
                         "outputBinding": {
                             "greeting": "$skills.append_usage_introduction.greeting",
                         },

@@ -26,6 +26,7 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { Button } from "@/components/ui/button";
+import { ReferenceTextarea, type AutocompleteOption } from "@/components/editor/reference-textarea";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -120,6 +121,7 @@ type FlowNodeData = {
   defaultAgentTemperature?: number;
   availableModelRefs?: string[];
   modelDisplayLookup?: Record<string, string>;
+  knowledgeBases?: Array<{ name: string }>;
 };
 
 type FlowNode = Node<FlowNodeData>;
@@ -1192,62 +1194,88 @@ function SkillEditorList({
   }, [availableDefinitions, selectedSkillKey]);
 
   return (
-    <PanelSection title="Skills" description="这里只负责挂载或移除已有 skill，不在这里编辑 skill 配置。">
-      <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.64)] px-3 py-2 text-sm leading-6 text-[var(--muted)]">
-        {definitionsLoading ? "Loading skill definitions..." : definitionsError ? `Skill definitions unavailable: ${definitionsError}` : `Loaded ${definitions.length} skill definitions.`}
-      </div>
-      {skills.map((skill, index) => (
-        <div key={`${skill.name}-${index}`} className="grid gap-3 rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
-          {(() => {
+    <PanelSection title="Skills" description="挂载或移除已有 skill。">
+      {definitionsLoading ? (
+        <div className="px-1 py-1 text-xs text-[var(--muted)]">Loading skills...</div>
+      ) : definitionsError ? (
+        <div className="rounded-[12px] border border-[rgba(185,28,28,0.16)] bg-[rgba(255,248,248,0.8)] px-3 py-2 text-xs text-[rgb(153,27,27)]">{definitionsError}</div>
+      ) : null}
+      {skills.length > 0 ? (
+        <div className="grid gap-2">
+          {skills.map((skill, index) => {
             const definition = definitions.find((item) => item.skillKey === skill.skillKey);
-            return definition ? (
-              <>
-                <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-sm leading-6 text-[var(--muted)]">
-                  <div className="font-medium text-[var(--text)]">{definition.label}</div>
-                  <div>{definition.description}</div>
-                  <div className="mt-2">Skill Key: {definition.skillKey}</div>
-                  <div>Supported Value Types: {definition.supportedValueTypes.join(", ") || "n/a"}</div>
-                  <div>Side Effects: {definition.sideEffects.join(", ") || "none"}</div>
-                  <div className="mt-2">Inputs: {definition.inputSchema.map((field) => `${field.key}:${field.valueType}`).join(", ") || "none"}</div>
-                  <div>Outputs: {definition.outputSchema.map((field) => `${field.key}:${field.valueType}`).join(", ") || "none"}</div>
+            return (
+              <div key={`${skill.name}-${index}`} className="group/skill rounded-[14px] border border-[rgba(37,99,235,0.14)] bg-[rgba(239,246,255,0.6)] px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 flex-shrink-0 fill-none stroke-[#2563eb]" strokeWidth="1.5">
+                    <path d="M8 2.5v4l2.5 1.5" />
+                    <circle cx="8" cy="8" r="5.5" />
+                  </svg>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text)]">{definition?.label ?? skill.name}</span>
+                  {skill.usage === "required" ? (
+                    <span className="flex-shrink-0 rounded-full bg-[rgba(37,99,235,0.1)] px-1.5 py-px text-[0.6rem] font-medium uppercase tracking-wider text-[#2563eb]">required</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    title="Remove skill"
+                    className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-full text-[var(--muted)] opacity-0 transition hover:bg-[rgba(185,28,28,0.08)] hover:text-[rgb(185,28,28)] group-hover/skill:opacity-100"
+                    onClick={() => onChange(skills.filter((_, i) => i !== index))}
+                  >
+                    <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.8">
+                      <path d="m5 5 6 6" />
+                      <path d="m11 5-6 6" />
+                    </svg>
+                  </button>
                 </div>
-                <div className="flex justify-end">
-                  <Button variant="ghost" onClick={() => onChange(skills.filter((_, skillIndex) => skillIndex !== index))}>
-                    Remove Skill
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-sm leading-6 text-[var(--muted)]">
-                  No registered definition found for `{skill.skillKey}`. This skill can be removed here, but not edited.
-                </div>
-                <div className="flex justify-end">
-                  <Button variant="ghost" onClick={() => onChange(skills.filter((_, skillIndex) => skillIndex !== index))}>
-                    Remove Skill
-                  </Button>
-                </div>
-              </>
+                {definition ? (
+                  <>
+                    <div className="mt-1 line-clamp-1 text-xs text-[var(--muted)]">{definition.description}</div>
+                    {(definition.inputSchema.length > 0 || definition.outputSchema.length > 0) ? (
+                      <div className="mt-2 grid grid-cols-2 gap-x-4 text-[0.68rem]">
+                        {definition.inputSchema.length > 0 ? (
+                          <div>
+                            <div className="mb-0.5 font-medium uppercase tracking-wider text-[var(--muted)]">In</div>
+                            {definition.inputSchema.map((field) => (
+                              <div key={field.key} className="flex items-center gap-1 leading-5">
+                                <span className="text-[var(--text)]">{field.key}</span>
+                                <span style={{ color: TYPE_COLORS[field.valueType as ValueType] ?? TYPE_COLORS.any }}>{field.valueType}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <div />}
+                        {definition.outputSchema.length > 0 ? (
+                          <div>
+                            <div className="mb-0.5 font-medium uppercase tracking-wider text-[var(--muted)]">Out</div>
+                            {definition.outputSchema.map((field) => (
+                              <div key={field.key} className="flex items-center gap-1 leading-5">
+                                <span className="text-[var(--text)]">{field.key}</span>
+                                <span style={{ color: TYPE_COLORS[field.valueType as ValueType] ?? TYPE_COLORS.any }}>{field.valueType}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <div />}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="mt-1 text-xs text-[rgba(185,28,28,0.7)]">Definition not found: {skill.skillKey}</div>
+                )}
+              </div>
             );
-          })()}
+          })}
         </div>
-      ))}
+      ) : null}
       {availableDefinitions.length ? (
-        <div className="grid gap-3 rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.64)] p-3">
-          <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-            <span>Add Existing Skill</span>
-            <select
-              className="rounded-[14px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-3 text-[var(--text)]"
-              value={selectedSkillKey}
-              onChange={(event) => setSelectedSkillKey(event.target.value)}
-            >
-              {availableDefinitions.map((definition) => (
-                <option key={definition.skillKey} value={definition.skillKey}>
-                  {definition.label} ({definition.skillKey})
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="flex items-center gap-2">
+          <select
+            className="min-w-0 flex-1 rounded-[12px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-2.5 py-2 text-sm text-[var(--text)]"
+            value={selectedSkillKey}
+            onChange={(event) => setSelectedSkillKey(event.target.value)}
+          >
+            {availableDefinitions.map((definition) => (
+              <option key={definition.skillKey} value={definition.skillKey}>{definition.label}</option>
+            ))}
+          </select>
           <Button
             variant="ghost"
             onClick={() => {
@@ -1264,7 +1292,7 @@ function SkillEditorList({
               );
             }}
           >
-            Add Skill
+            Add
           </Button>
         </div>
       ) : null}
@@ -1886,7 +1914,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const isInputNode = config.family === "input";
   const isCollapsible = config.family !== "input";
   const isExpanded = config.family === "input" ? true : Boolean(data.isExpanded);
-  const shouldUseCardScroll = isExpanded && config.family !== "input";
+  const shouldUseCardScroll = isExpanded;
   const minHeight = getNodeMinHeight(config, isExpanded);
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -1909,6 +1937,25 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           defaultAgentTemperature: data.defaultAgentTemperature,
         })
       : null;
+
+  const refReadOptions = useMemo<AutocompleteOption[]>(() => {
+    if (config.family !== "agent") return [];
+    const opts: AutocompleteOption[] = [];
+    for (const port of config.inputs) opts.push({ category: "Inputs", label: port.label, path: `$inputs.${port.key}`, valueType: port.valueType });
+    for (const skill of config.skills) {
+      const def = (data.skillDefinitions ?? []).find((d) => d.skillKey === skill.skillKey);
+      if (def) {
+        for (const field of def.outputSchema) opts.push({ category: "Skills", label: `${skill.name}.${field.key}`, path: `$skills.${skill.name}.${field.key}`, valueType: field.valueType });
+      }
+    }
+    for (const port of config.outputs) opts.push({ category: "Response", label: port.label, path: `$response.${port.key}`, valueType: port.valueType });
+    return opts;
+  }, [config, data.skillDefinitions]);
+
+  const refWriteOptions = useMemo<AutocompleteOption[]>(() => {
+    if (config.family !== "agent") return [];
+    return config.outputs.map((port) => ({ category: "Outputs", label: port.label, path: `$output.${port.key}`, valueType: port.valueType }));
+  }, [config]);
 
   useEffect(() => {
     setDraftLabel(config.label);
@@ -2206,88 +2253,216 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           </div>
         </div>
 
+        <div className="flex flex-shrink-0 flex-col gap-3 px-4 pt-3">
+          {config.family === "input" ? (
+            <div className={cn("grid items-center gap-3", uploadedAsset ? "grid-cols-[1fr_auto]" : "grid-cols-[minmax(0,1fr)_auto]")}>
+              {!uploadedAsset ? (
+                <div className="flex flex-wrap gap-2">
+                  {INPUT_VALUE_TYPE_OPTIONS.map((option) => {
+                    const active = config.valueType === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        title={option.label}
+                        aria-label={option.label}
+                        className={cn(
+                          "inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
+                          active
+                            ? "border-[var(--accent)] bg-[rgba(154,52,18,0.12)] text-[var(--accent-strong)]"
+                            : "border-[rgba(154,52,18,0.16)] bg-[rgba(255,255,255,0.72)] text-[var(--muted)] hover:bg-[rgba(255,248,240,0.92)]",
+                        )}
+                        onClick={() =>
+                          data.onConfigChange?.((currentConfig) => {
+                            const currentInput = currentConfig as InputBoundaryNode;
+                            return {
+                              ...currentInput,
+                              valueType: option.value,
+                              output: {
+                                ...currentInput.output,
+                                valueType: option.value,
+                              },
+                            };
+                          })
+                        }
+                      >
+                        {option.icon}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-xs leading-5 text-[var(--muted)]">
+                  Uploaded asset locked this input as <span className="font-medium text-[var(--text)]">{uploadedAsset.detectedType}</span>.
+                </div>
+              )}
+              <div className="grid gap-1">
+                {outputs.map((port) => (
+                  <PortRow
+                    key={`output-${port.key}`}
+                    nodeId={data.nodeId}
+                    port={port}
+                    side="output"
+                    editable
+                    onRename={(nextLabel) =>
+                      data.onConfigChange?.((currentConfig) => ({
+                        ...(currentConfig as InputBoundaryNode),
+                        output: {
+                          ...(currentConfig as InputBoundaryNode).output,
+                          label: nextLabel,
+                        },
+                      }))
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {config.family !== "input" && (config.family === "agent" || isExpanded) && (inputs.length > 0 || outputs.length > 0) ? (
+            <div className="grid grid-cols-2 items-start gap-x-6">
+              <div className="grid gap-1">
+                {inputs.map((port, index) => (
+                  <PortRow
+                    key={`input-${port.key}`}
+                    nodeId={data.nodeId}
+                    port={port}
+                    side="input"
+                    portEditor={
+                      config.family === "agent" || config.family === "condition"
+                        ? {
+                            onChange: (nextPort) => updateNodePort("input", index, nextPort),
+                            onRemove: inputs.length > 1 ? () => removeNodePort("input", index) : undefined,
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+                {(config.family === "agent" || config.family === "condition") && data.connectingSourceType ? (
+                  <div className="group relative flex min-h-6 items-center justify-start text-[0.9rem] text-[var(--muted)]">
+                    <Handle
+                      id={buildHandleId("input", CREATE_INPUT_PORT_KEY)}
+                      type="target"
+                      position={Position.Left}
+                      className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border-2 !border-[rgba(154,52,18,0.18)] !bg-[rgba(255,255,255,0.96)] before:content-[''] before:absolute before:left-1/2 before:top-1/2 before:h-[1.5px] before:w-[7px] before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:bg-[var(--accent-strong)] after:content-[''] after:absolute after:left-1/2 after:top-1/2 after:h-[7px] after:w-[1.5px] after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-[var(--accent-strong)]"
+                      isConnectable
+                    />
+                    <span className="ml-2 inline-flex items-center gap-2 text-sm">
+                      <span>Add {formatValueTypeLabel(data.connectingSourceType)} input</span>
+                    </span>
+                  </div>
+                ) : null}
+                {config.family === "agent" || config.family === "condition" ? (
+                  <PortCreateButton
+                    side="input"
+                    visible={selected || isHoveringNode}
+                    initialPort={createDefaultPort("input", inputs)}
+                    onCreate={(nextPort) => addNodePort("input", nextPort)}
+                  />
+                ) : null}
+              </div>
+              <div className="grid gap-1">
+                {outputs.map((port, index) => (
+                  <PortRow
+                    key={`output-${port.key}`}
+                    nodeId={data.nodeId}
+                    port={port}
+                    side="output"
+                    portEditor={
+                      config.family === "agent"
+                        ? {
+                            onChange: (nextPort) => updateNodePort("output", index, nextPort),
+                            onRemove: outputs.length > 1 ? () => removeNodePort("output", index) : undefined,
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+                {config.family === "agent" ? (
+                  <PortCreateButton
+                    side="output"
+                    visible={selected || isHoveringNode}
+                    initialPort={createDefaultPort("output", outputs)}
+                    onCreate={(nextPort) => addNodePort("output", nextPort)}
+                  />
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {config.family === "output" ? (
+            <div className="grid gap-1">
+              {inputs.map((port) => (
+                <PortRow
+                  key={`input-${port.key}`}
+                  nodeId={data.nodeId}
+                  port={port}
+                  side="input"
+                  editable
+                  onRename={(nextLabel) =>
+                    data.onConfigChange?.((currentConfig) => ({
+                      ...(currentConfig as OutputBoundaryNode),
+                      input: {
+                        ...(currentConfig as OutputBoundaryNode).input,
+                        label: nextLabel,
+                      },
+                    }))
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {config.family === "agent" && isExpanded ? (
+            <div className="max-h-[200px] overflow-y-auto overscroll-contain">
+              <SkillEditorList
+                skills={config.skills}
+                onChange={(nextSkills) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), skills: nextSkills }))}
+                definitions={data.skillDefinitions ?? []}
+                definitionsLoading={Boolean(data.skillDefinitionsLoading)}
+                definitionsError={data.skillDefinitionsError ?? null}
+              />
+            </div>
+          ) : null}
+        </div>
+
         <div
-          className={cn("flex min-h-0 flex-1 flex-col gap-3 px-4 py-3", shouldUseCardScroll && "overflow-y-auto overscroll-contain")}
+          className={cn("flex min-h-0 flex-1 flex-col gap-3 px-4 pb-3", shouldUseCardScroll && "overflow-y-auto overscroll-contain")}
           onWheelCapture={shouldUseCardScroll ? (event) => event.stopPropagation() : undefined}
         >
           {config.family === "input" ? (
             <>
-              <div className={cn("grid items-center gap-3", uploadedAsset ? "grid-cols-[1fr_auto]" : "grid-cols-[minmax(0,1fr)_auto]")}>
-                {!uploadedAsset ? (
-                  <div className="flex flex-wrap gap-2">
-                    {INPUT_VALUE_TYPE_OPTIONS.map((option) => {
-                      const active = config.valueType === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          title={option.label}
-                          aria-label={option.label}
-                          className={cn(
-                            "inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
-                            active
-                              ? "border-[var(--accent)] bg-[rgba(154,52,18,0.12)] text-[var(--accent-strong)]"
-                              : "border-[rgba(154,52,18,0.16)] bg-[rgba(255,255,255,0.72)] text-[var(--muted)] hover:bg-[rgba(255,248,240,0.92)]",
-                          )}
-                          onClick={() =>
-                            data.onConfigChange?.((currentConfig) => {
-                              const currentInput = currentConfig as InputBoundaryNode;
-                              return {
-                                ...currentInput,
-                                valueType: option.value,
-                                output: {
-                                  ...currentInput.output,
-                                  valueType: option.value,
-                                },
-                              };
-                            })
-                          }
-                        >
-                          {option.icon}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-xs leading-5 text-[var(--muted)]">
-                    Uploaded asset locked this input as <span className="font-medium text-[var(--text)]">{uploadedAsset.detectedType}</span>.
-                  </div>
-                )}
-                <div className="grid gap-1">
-                  {outputs.map((port) => (
-                    <PortRow
-                      key={`output-${port.key}`}
-                      nodeId={data.nodeId}
-                      port={port}
-                      side="output"
-                      editable
-                      onRename={(nextLabel) =>
-                        data.onConfigChange?.((currentConfig) => ({
-                          ...(currentConfig as InputBoundaryNode),
-                          output: {
-                            ...(currentConfig as InputBoundaryNode).output,
-                            label: nextLabel,
-                          },
-                        }))
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
               <div className="flex flex-1 flex-col gap-2">
                 {config.valueType === "text" ? (
-                  <textarea
-                    value={config.defaultValue}
-                    rows={5}
-                    placeholder={config.placeholder}
-                    onChange={(event) =>
-                      data.onConfigChange?.((currentConfig) => ({
-                        ...(currentConfig as InputBoundaryNode),
-                        defaultValue: event.target.value,
-                      }))
-                    }
-                    className="min-h-[160px] h-full flex-1 resize-none rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
-                  />
+                  config.output.key === "knowledge_base" && (data.knowledgeBases ?? []).length > 0 ? (
+                    <select
+                      value={config.defaultValue}
+                      onChange={(event) =>
+                        data.onConfigChange?.((currentConfig) => ({
+                          ...(currentConfig as InputBoundaryNode),
+                          defaultValue: event.target.value,
+                        }))
+                      }
+                      className="min-h-[48px] flex-1 rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
+                    >
+                      {(data.knowledgeBases ?? []).map((kb) => (
+                        <option key={kb.name} value={kb.name}>{kb.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <textarea
+                      value={config.defaultValue}
+                      rows={5}
+                      placeholder={config.placeholder}
+                      onChange={(event) =>
+                        data.onConfigChange?.((currentConfig) => ({
+                          ...(currentConfig as InputBoundaryNode),
+                          defaultValue: event.target.value,
+                        }))
+                      }
+                      className="min-h-[160px] h-full flex-1 resize-none rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
+                    />
+                  )
                 ) : (
                   <>
                     <input
@@ -2368,77 +2543,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
             </>
           ) : null}
 
-          {config.family !== "input" && (config.family === "agent" || isExpanded) && (inputs.length > 0 || outputs.length > 0) ? (
-            <div className="grid grid-cols-2 items-start gap-x-6">
-              <div className="grid gap-1">
-                {inputs.map((port, index) => (
-                  <PortRow
-                    key={`input-${port.key}`}
-                    nodeId={data.nodeId}
-                    port={port}
-                    side="input"
-                    portEditor={
-                      config.family === "agent" || config.family === "condition"
-                        ? {
-                            onChange: (nextPort) => updateNodePort("input", index, nextPort),
-                            onRemove: inputs.length > 1 ? () => removeNodePort("input", index) : undefined,
-                          }
-                        : undefined
-                    }
-                  />
-                ))}
-                {(config.family === "agent" || config.family === "condition") && data.connectingSourceType ? (
-                  <div className="group relative flex min-h-6 items-center justify-start text-[0.9rem] text-[var(--muted)]">
-                    <Handle
-                      id={buildHandleId("input", CREATE_INPUT_PORT_KEY)}
-                      type="target"
-                      position={Position.Left}
-                      className="!left-[-7px] !top-1/2 !m-0 !h-3 !w-3 !-translate-y-1/2 !border-2 !border-[rgba(154,52,18,0.18)] !bg-[rgba(255,255,255,0.96)] before:content-[''] before:absolute before:left-1/2 before:top-1/2 before:h-[1.5px] before:w-[7px] before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:bg-[var(--accent-strong)] after:content-[''] after:absolute after:left-1/2 after:top-1/2 after:h-[7px] after:w-[1.5px] after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-[var(--accent-strong)]"
-                      isConnectable
-                    />
-                    <span className="ml-2 inline-flex items-center gap-2 text-sm">
-                      <span>Add {formatValueTypeLabel(data.connectingSourceType)} input</span>
-                    </span>
-                  </div>
-                ) : null}
-                {config.family === "agent" || config.family === "condition" ? (
-                  <PortCreateButton
-                    side="input"
-                    visible={selected || isHoveringNode}
-                    initialPort={createDefaultPort("input", inputs)}
-                    onCreate={(nextPort) => addNodePort("input", nextPort)}
-                  />
-                ) : null}
-              </div>
-              <div className="grid gap-1">
-                {outputs.map((port, index) => (
-                  <PortRow
-                    key={`output-${port.key}`}
-                    nodeId={data.nodeId}
-                    port={port}
-                    side="output"
-                    portEditor={
-                      config.family === "agent"
-                        ? {
-                            onChange: (nextPort) => updateNodePort("output", index, nextPort),
-                            onRemove: outputs.length > 1 ? () => removeNodePort("output", index) : undefined,
-                          }
-                        : undefined
-                    }
-                  />
-                ))}
-                {config.family === "agent" ? (
-                  <PortCreateButton
-                    side="output"
-                    visible={selected || isHoveringNode}
-                    initialPort={createDefaultPort("output", outputs)}
-                    onCreate={(nextPort) => addNodePort("output", nextPort)}
-                  />
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
           {config.family === "agent" && !isExpanded && agentRuntime ? (
             <AgentInlineRuntimeControls
               agentRuntime={agentRuntime}
@@ -2448,10 +2552,31 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
             />
           ) : null}
 
+          {config.family === "agent" && !isExpanded && config.skills.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {config.skills.map((skill) => {
+                const def = (data.skillDefinitions ?? []).find((d) => d.skillKey === skill.skillKey);
+                return (
+                  <span
+                    key={skill.skillKey}
+                    title={def?.description ?? skill.skillKey}
+                    className="inline-flex items-center gap-1 rounded-full border border-[rgba(37,99,235,0.18)] bg-[rgba(239,246,255,0.88)] px-2.5 py-0.5 text-[0.68rem] font-medium text-[#2563eb]"
+                  >
+                    <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.6">
+                      <path d="M8 2.5v4l2.5 1.5" />
+                      <circle cx="8" cy="8" r="5.5" />
+                    </svg>
+                    {def?.label ?? skill.name}
+                  </span>
+                );
+              })}
+            </div>
+          ) : null}
+
           {config.family === "agent" ? (
             <>
               {!isExpanded ? (
-                <div className="flex min-h-[140px] flex-1 items-center justify-center rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-5 py-4 text-center text-sm text-[var(--text)] break-words">
+                <div className="flex min-h-[100px] flex-1 items-center justify-center rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-5 py-4 text-center text-sm text-[var(--text)] break-words">
                   {summarizeNode(config)}
                 </div>
               ) : (
@@ -2464,29 +2589,40 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                       onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), description: event.target.value }))}
                     />
                   </label>
-                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                  <div className="grid gap-1.5 text-sm text-[var(--muted)]">
                     <span>System Instruction</span>
-                    <textarea
-                      className="min-h-24 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
+                    <ReferenceTextarea
+                      className="min-h-24"
                       value={config.systemInstruction}
-                      onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), systemInstruction: event.target.value }))}
+                      onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), systemInstruction: nextValue }))}
+                      readOptions={refReadOptions}
+                      writeOptions={refWriteOptions}
+                      onOutputReference={(key) =>
+                        data.onConfigChange?.((currentConfig) => {
+                          const agent = currentConfig as AgentNode;
+                          if (agent.outputBinding[key]) return agent;
+                          return { ...agent, outputBinding: { ...agent.outputBinding, [key]: `$response.${key}` } };
+                        })
+                      }
                     />
-                  </label>
-                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                  </div>
+                  <div className="grid gap-1.5 text-sm text-[var(--muted)]">
                     <span>Task Instruction</span>
-                    <textarea
-                      className="min-h-28 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
+                    <ReferenceTextarea
+                      className="min-h-28"
                       value={config.taskInstruction}
-                      onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), taskInstruction: event.target.value }))}
+                      onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), taskInstruction: nextValue }))}
+                      readOptions={refReadOptions}
+                      writeOptions={refWriteOptions}
+                      onOutputReference={(key) =>
+                        data.onConfigChange?.((currentConfig) => {
+                          const agent = currentConfig as AgentNode;
+                          if (agent.outputBinding[key]) return agent;
+                          return { ...agent, outputBinding: { ...agent.outputBinding, [key]: `$response.${key}` } };
+                        })
+                      }
                     />
-                  </label>
-                  <SkillEditorList
-                    skills={config.skills}
-                    onChange={(nextSkills) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), skills: nextSkills }))}
-                    definitions={data.skillDefinitions ?? []}
-                    definitionsLoading={Boolean(data.skillDefinitionsLoading)}
-                    definitionsError={data.skillDefinitionsError ?? null}
-                  />
+                  </div>
                   <MappingEditor
                     title="Output Binding"
                     value={config.outputBinding}
@@ -2671,26 +2807,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
 
           {config.family === "output" ? (
             <>
-              <div className="grid gap-1">
-                {inputs.map((port) => (
-                  <PortRow
-                    key={`input-${port.key}`}
-                    nodeId={data.nodeId}
-                    port={port}
-                    side="input"
-                    editable
-                    onRename={(nextLabel) =>
-                      data.onConfigChange?.((currentConfig) => ({
-                        ...(currentConfig as OutputBoundaryNode),
-                        input: {
-                          ...(currentConfig as OutputBoundaryNode).input,
-                          label: nextLabel,
-                        },
-                      }))
-                    }
-                  />
-                ))}
-              </div>
               {isExpanded ? (
                 <>
                   <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
@@ -2800,6 +2916,7 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
   const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
   const [skillDefinitionsLoading, setSkillDefinitionsLoading] = useState(true);
   const [skillDefinitionsError, setSkillDefinitionsError] = useState<string | null>(null);
+  const [knowledgeBases, setKnowledgeBases] = useState<Array<{ name: string }>>([]);
   const [editorSettings, setEditorSettings] = useState<EditorSettingsPayload | null>(null);
   const [connectingSourceType, setConnectingSourceType] = useState<ValueType | null>(null);
   const [creationMenu, setCreationMenu] = useState<{
@@ -3050,6 +3167,7 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
     }
 
     void loadSkillDefinitions();
+    apiGet<Array<{ name: string }>>("/api/knowledge/bases").then(setKnowledgeBases).catch(() => {});
 
     return () => {
       active = false;
@@ -3543,6 +3661,7 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
                   defaultAgentTemperature: agentRuntimeDefaults.defaultAgentTemperature,
                   availableModelRefs,
                   modelDisplayLookup,
+                  knowledgeBases,
                 },
               }))}
               edges={edges}

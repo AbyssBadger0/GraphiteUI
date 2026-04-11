@@ -161,6 +161,21 @@ export const ONBOARDING_HELPER_AGENT_PRESET = {
   },
 } satisfies NodePresetDefinition;
 
+export const KNOWLEDGE_BASE_INPUT_PRESET = {
+  presetId: "preset.input.knowledge_base.v1",
+  label: "Knowledge Base",
+  description: "Select a knowledge base to provide to downstream agents.",
+  family: "input",
+  valueType: "text",
+  output: {
+    key: "knowledge_base",
+    label: "Knowledge Base",
+    valueType: "text",
+  },
+  defaultValue: "GraphiteUI-official",
+  placeholder: "Knowledge base name",
+} satisfies NodePresetDefinition;
+
 export const ONBOARDING_ANSWER_OUTPUT_PRESET = {
   presetId: "preset.output.onboarding_answer.v1",
   label: "Onboarding Answer Output",
@@ -662,6 +677,7 @@ const STATIC_NODE_DEFINITIONS = [
   NAME_INPUT_PRESET,
   QUESTION_INPUT_PRESET,
   TASK_INPUT_PRESET,
+  KNOWLEDGE_BASE_INPUT_PRESET,
   TEXT_OUTPUT_PRESET,
   ONBOARDING_ANSWER_OUTPUT_PRESET,
   NEWS_CONTEXT_OUTPUT_PRESET,

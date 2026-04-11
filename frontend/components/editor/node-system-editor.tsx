@@ -1302,8 +1302,8 @@ function PortCreateButton({
       <button
         type="button"
         className={cn(
-          "relative flex min-h-6 w-full items-center text-sm text-[var(--muted)] transition",
-          side === "input" ? "justify-start pl-6 text-left" : "justify-end pr-6 text-right",
+          "relative inline-flex min-h-7 max-w-full items-center rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,252,247,0.92)] text-sm text-[var(--muted)] shadow-[0_8px_18px_rgba(60,41,20,0.06)] transition hover:border-[rgba(154,52,18,0.24)] hover:bg-[rgba(255,248,240,0.92)] hover:text-[var(--accent)]",
+          side === "input" ? "justify-start pl-6 pr-3 text-left" : "justify-end pl-3 pr-6 text-right",
           visible ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
         onClick={openEditor}

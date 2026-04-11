@@ -1687,10 +1687,10 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           title={isDeleteConfirmActive ? "确认删除节点" : "删除节点"}
           data-delete-surface="true"
           className={cn(
-            "absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full shadow-[0_10px_24px_rgba(60,41,20,0.08)] transition hover:border-[rgba(154,52,18,0.28)] hover:bg-[rgba(255,248,240,0.92)]",
+            "absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full shadow-[0_10px_24px_rgba(60,41,20,0.08)] transition",
             selected || isDeleteConfirmActive ? "opacity-100" : "opacity-0 group-hover/node:opacity-100",
             isDeleteConfirmActive
-              ? "border border-[rgba(185,28,28,0.28)] bg-[rgb(185,28,28)] text-white"
+              ? "border border-[rgba(185,28,28,0.28)] bg-[rgb(185,28,28)] text-white hover:border-[rgba(185,28,28,0.36)] hover:bg-[rgb(153,27,27)]"
               : "border border-[rgba(154,52,18,0.14)] bg-[rgba(255,252,247,0.92)] text-[var(--muted)] hover:border-[rgba(154,52,18,0.24)] hover:text-[var(--accent)]",
           )}
           onPointerDown={(event) => {
@@ -1727,7 +1727,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           )}
         </button>
         <FloatingLayer anchorRef={deleteButtonRef} open={isDeleteConfirmActive} placement="top-center" className="pointer-events-none">
-          <div className="whitespace-nowrap rounded-full border border-[rgba(185,28,28,0.16)] bg-[rgba(255,248,248,0.96)] px-2.5 py-1 text-[0.68rem] uppercase tracking-[0.12em] text-[rgb(153,27,27)] shadow-[0_10px_24px_rgba(127,29,29,0.12)]">
+          <div className="whitespace-nowrap rounded-full border border-[rgba(185,28,28,0.16)] bg-[rgba(255,248,248,0.98)] px-3.5 py-1.5 text-[0.76rem] font-medium uppercase tracking-[0.16em] text-[rgb(153,27,27)] shadow-[0_14px_32px_rgba(127,29,29,0.14)]">
             Delete node?
           </div>
         </FloatingLayer>

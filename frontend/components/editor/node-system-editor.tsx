@@ -26,7 +26,6 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { Button } from "@/components/ui/button";
-import { ReferenceTextarea, type AutocompleteOption } from "@/components/editor/reference-textarea";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -1950,25 +1949,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
         })
       : null;
 
-  const refReadOptions = useMemo<AutocompleteOption[]>(() => {
-    if (config.family !== "agent") return [];
-    const opts: AutocompleteOption[] = [];
-    for (const port of config.inputs) opts.push({ category: "Inputs", label: port.label, path: `$inputs.${port.key}`, valueType: port.valueType });
-    for (const skill of config.skills) {
-      const def = (data.skillDefinitions ?? []).find((d) => d.skillKey === skill.skillKey);
-      if (def) {
-        for (const field of def.outputSchema) opts.push({ category: "Skills", label: `${skill.name}.${field.key}`, path: `$skills.${skill.name}.${field.key}`, valueType: field.valueType });
-      }
-    }
-    for (const port of config.outputs) opts.push({ category: "Response", label: port.label, path: `$response.${port.key}`, valueType: port.valueType });
-    return opts;
-  }, [config, data.skillDefinitions]);
-
-  const refWriteOptions = useMemo<AutocompleteOption[]>(() => {
-    if (config.family !== "agent") return [];
-    return config.outputs.map((port) => ({ category: "Outputs", label: port.label, path: `$output.${port.key}`, valueType: port.valueType }));
-  }, [config]);
-
   useEffect(() => {
     setDraftLabel(config.label);
   }, [config.label]);
@@ -2599,20 +2579,11 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
             <>
               {!isExpanded ? null : (
                 <>
-                  <ReferenceTextarea
-                    className="min-h-32"
+                  <textarea
+                    className="min-h-32 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-sm text-[var(--text)]"
                     value={config.taskInstruction}
-                    placeholder="用 @ 引用输入和技能结果，用 # 指定输出字段"
-                    onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), taskInstruction: nextValue }))}
-                    readOptions={refReadOptions}
-                    writeOptions={refWriteOptions}
-                    onOutputReference={(key) =>
-                      data.onConfigChange?.((currentConfig) => {
-                        const agent = currentConfig as AgentNode;
-                        if (agent.outputBinding[key]) return agent;
-                        return { ...agent, outputBinding: { ...agent.outputBinding, [key]: `$response.${key}` } };
-                      })
-                    }
+                    placeholder="描述这个节点应该做什么（可留空，LLM 会根据输入和技能自行推理）"
+                    onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), taskInstruction: event.target.value }))}
                   />
                   {agentRuntime ? (
                     <PanelSection

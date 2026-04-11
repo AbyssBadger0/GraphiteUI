@@ -299,17 +299,20 @@ def _execute_agent_node(
         skill_func = registry.get(skill.skill_key)
         if skill_func is None:
             raise ValueError(f"Skill '{skill.skill_key}' is not registered.")
-        skill_inputs = {
-            target_key: _resolve_reference(
-                source_ref,
-                inputs=input_values,
-                response=response_payload,
-                skills=skill_context,
-                context=skill_context,
-                graph=graph_context,
-            )
-            for target_key, source_ref in skill.input_mapping.items()
-        }
+        if skill.input_mapping:
+            skill_inputs = {
+                target_key: _resolve_reference(
+                    source_ref,
+                    inputs=input_values,
+                    response=response_payload,
+                    skills=skill_context,
+                    context=skill_context,
+                    graph=graph_context,
+                )
+                for target_key, source_ref in skill.input_mapping.items()
+            }
+        else:
+            skill_inputs = dict(input_values)
         skill_result = _invoke_skill(skill_func, skill_inputs)
         selected_skills.append(skill.skill_key)
         skill_context[skill.name] = skill_result
@@ -432,6 +435,47 @@ def _parse_llm_json_response(content: str, output_keys: list[str]) -> dict[str, 
     return {key: cleaned for key in output_keys}
 
 
+def _build_auto_system_prompt(
+    config: AgentNodeConfig,
+    input_values: dict[str, Any],
+    skill_context: dict[str, Any],
+) -> str:
+    output_keys = [output.key for output in config.outputs]
+    parts = [
+        "你是一个工作流处理节点。根据输入和技能结果完成用户的任务指令。",
+        "严格返回一个 JSON 对象，不要加 markdown 围栏或任何前缀。",
+    ]
+
+    if input_values:
+        parts.append("\n== 输入 ==")
+        for key, value in input_values.items():
+            display = str(value)
+            if len(display) > 200:
+                display = display[:200] + "..."
+            parts.append(f"- {key}: {display}")
+
+    if skill_context:
+        parts.append("\n== 技能执行结果 ==")
+        for name, result in skill_context.items():
+            parts.append(f"[{name}]")
+            if isinstance(result, dict):
+                for k, v in result.items():
+                    display = str(v)
+                    if len(display) > 300:
+                        display = display[:300] + "..."
+                    parts.append(f"  {k}: {display}")
+            else:
+                parts.append(f"  {result}")
+
+    if output_keys:
+        example = json.dumps({k: "..." for k in output_keys}, ensure_ascii=False)
+        parts.append(f"\n== 必须返回的 JSON 格式 ==")
+        parts.append(example)
+        parts.append("每个字段填入最合适的值。")
+
+    return "\n".join(parts)
+
+
 def _generate_agent_response(
     config: AgentNodeConfig,
     input_values: dict[str, Any],
@@ -442,24 +486,20 @@ def _generate_agent_response(
     if not output_keys:
         return {"summary": ""}, "", [], runtime_config
 
-    user_prompt = "\n".join(
-        [
-            f"Task instruction: {config.task_instruction or 'Use the provided inputs and skill context to complete the workflow task.'}",
-            f"Inputs: {input_values}",
-            f"Skill context: {skill_context}",
-            f"Return only a valid JSON object with exactly these keys: {', '.join(output_keys)}.",
-            "Do not use markdown fences.",
-            "Do not add any prefix like answer: before or after the JSON.",
-            "Each key should contain the most appropriate JSON value for that output.",
-            f"Example shape: {json.dumps({key: '' for key in output_keys}, ensure_ascii=False)}",
-        ]
+    system_prompt = (
+        config.system_instruction
+        if config.system_instruction
+        else _build_auto_system_prompt(config, input_values, skill_context)
+    )
+
+    user_prompt = (
+        config.task_instruction
+        if config.task_instruction
+        else "根据输入和技能结果，完成输出。"
     )
 
     content, llm_meta = _chat_with_local_model_with_meta(
-        system_prompt=(
-            config.system_instruction
-            or "You are a structured workflow agent. Follow the requested output schema exactly and return only valid JSON."
-        ),
+        system_prompt=system_prompt,
         user_prompt=user_prompt,
         model=runtime_config["runtime_model_name"],
         provider_id=runtime_config["resolved_provider_id"],

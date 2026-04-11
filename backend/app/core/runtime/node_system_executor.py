@@ -670,6 +670,8 @@ def _coerce_input_boundary_value(value: Any, value_type: str) -> Any:
             return parsed
         if value_type in {"image", "audio", "video", "file"} and isinstance(parsed, dict) and parsed.get("kind") == "uploaded_file":
             return parsed
+        if value_type == "knowledge_base":
+            return value
         return value
     except json.JSONDecodeError:
         return value

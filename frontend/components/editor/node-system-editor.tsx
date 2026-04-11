@@ -246,16 +246,17 @@ const TYPE_COLORS: Record<ValueType, string> = {
   audio: "#7c3aed",
   video: "#be185d",
   file: "#475569",
+  knowledge_base: "#0369a1",
   any: "#64748b",
 };
 
-const VALUE_TYPE_OPTIONS: ValueType[] = ["text", "json", "image", "audio", "video", "file", "any"];
+const VALUE_TYPE_OPTIONS: ValueType[] = ["text", "json", "image", "audio", "video", "file", "knowledge_base", "any"];
 const RULE_OPERATOR_OPTIONS: ConditionRule["operator"][] = ["==", "!=", ">=", "<=", ">", "<", "exists"];
 
-const INPUT_VALUE_TYPE_OPTIONS: Array<{ value: ValueType; label: string; icon: ReactNode }> = [
+const INPUT_TYPE_BUTTONS: Array<{ value: ValueType; label: string; icon: ReactNode }> = [
   {
     value: "text",
-    label: "Text",
+    label: "文本",
     icon: (
       <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
         <path d="M3 4.5h10M8 4.5v7M5.5 11.5h5" />
@@ -264,11 +265,22 @@ const INPUT_VALUE_TYPE_OPTIONS: Array<{ value: ValueType; label: string; icon: R
   },
   {
     value: "file",
-    label: "File",
+    label: "文件",
     icon: (
       <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
         <path d="M5 2.5h4l2.5 2.5V12a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 3.5 12V4A1.5 1.5 0 0 1 5 2.5Z" />
         <path d="M9 2.5V5h2.5" />
+      </svg>
+    ),
+  },
+  {
+    value: "knowledge_base",
+    label: "知识库",
+    icon: (
+      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.5">
+        <path d="M3 3.5h10v9H3z" />
+        <path d="M5.5 3.5V2M8 3.5V2M10.5 3.5V2" />
+        <path d="M5.5 6.5h5M5.5 9h3" />
       </svg>
     ),
   },
@@ -2257,8 +2269,8 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           {config.family === "input" ? (
             <div className={cn("grid items-center gap-3", uploadedAsset ? "grid-cols-[1fr_auto]" : "grid-cols-[minmax(0,1fr)_auto]")}>
               {!uploadedAsset ? (
-                <div className="flex flex-wrap gap-2">
-                  {INPUT_VALUE_TYPE_OPTIONS.map((option) => {
+                <div className="flex gap-1.5">
+                  {INPUT_TYPE_BUTTONS.map((option) => {
                     const active = config.valueType === option.value;
                     return (
                       <button
@@ -2274,14 +2286,20 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                         )}
                         onClick={() =>
                           data.onConfigChange?.((currentConfig) => {
-                            const currentInput = currentConfig as InputBoundaryNode;
-                            return {
-                              ...currentInput,
-                              valueType: option.value,
-                              output: {
-                                ...currentInput.output,
+                            const prev = currentConfig as InputBoundaryNode;
+                            if (option.value === "knowledge_base") {
+                              return {
+                                ...prev,
                                 valueType: option.value,
-                              },
+                                defaultValue: (data.knowledgeBases ?? [])[0]?.name ?? "",
+                                output: { ...prev.output, key: "knowledge_base", label: "Knowledge Base", valueType: option.value },
+                              };
+                            }
+                            return {
+                              ...prev,
+                              valueType: option.value,
+                              defaultValue: option.value === "file" ? "" : (prev.valueType === "knowledge_base" ? "" : prev.defaultValue),
+                              output: { ...prev.output, valueType: option.value },
                             };
                           })
                         }
@@ -2433,8 +2451,8 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           {config.family === "input" ? (
             <>
               <div className="flex flex-1 flex-col gap-2">
-                {config.valueType === "text" ? (
-                  config.output.key === "knowledge_base" && (data.knowledgeBases ?? []).length > 0 ? (
+                {config.valueType === "knowledge_base" ? (
+                  (data.knowledgeBases ?? []).length > 0 ? (
                     <select
                       value={config.defaultValue}
                       onChange={(event) =>
@@ -2443,26 +2461,30 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                           defaultValue: event.target.value,
                         }))
                       }
-                      className="min-h-[48px] flex-1 rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
+                      className="min-h-[48px] rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
                     >
                       {(data.knowledgeBases ?? []).map((kb) => (
                         <option key={kb.name} value={kb.name}>{kb.name}</option>
                       ))}
                     </select>
                   ) : (
-                    <textarea
-                      value={config.defaultValue}
-                      rows={5}
-                      placeholder={config.placeholder}
-                      onChange={(event) =>
-                        data.onConfigChange?.((currentConfig) => ({
-                          ...(currentConfig as InputBoundaryNode),
-                          defaultValue: event.target.value,
-                        }))
-                      }
-                      className="min-h-[160px] h-full flex-1 resize-none rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
-                    />
+                    <div className="grid min-h-[60px] place-items-center rounded-[16px] border border-dashed border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.82)] px-4 py-4 text-center text-sm text-[var(--muted)]">
+                      No knowledge bases found
+                    </div>
                   )
+                ) : config.valueType === "text" || config.valueType === "json" ? (
+                  <textarea
+                    value={config.defaultValue}
+                    rows={5}
+                    placeholder={config.placeholder}
+                    onChange={(event) =>
+                      data.onConfigChange?.((currentConfig) => ({
+                        ...(currentConfig as InputBoundaryNode),
+                        defaultValue: event.target.value,
+                      }))
+                    }
+                    className="min-h-[160px] h-full flex-1 resize-none rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
+                  />
                 ) : (
                   <>
                     <input

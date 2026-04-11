@@ -15,6 +15,7 @@ class ValueType(str, Enum):
     AUDIO = "audio"
     VIDEO = "video"
     FILE = "file"
+    KNOWLEDGE_BASE = "knowledge_base"
     ANY = "any"
 
 

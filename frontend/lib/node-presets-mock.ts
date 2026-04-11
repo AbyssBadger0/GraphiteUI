@@ -166,11 +166,11 @@ export const KNOWLEDGE_BASE_INPUT_PRESET = {
   label: "Knowledge Base",
   description: "Select a knowledge base to provide to downstream agents.",
   family: "input",
-  valueType: "text",
+  valueType: "knowledge_base",
   output: {
     key: "knowledge_base",
     label: "Knowledge Base",
-    valueType: "text",
+    valueType: "knowledge_base",
   },
   defaultValue: "GraphiteUI-official",
   placeholder: "Knowledge base name",

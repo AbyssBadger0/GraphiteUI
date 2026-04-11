@@ -1814,37 +1814,17 @@ function PortCreateButton({
   }
 
   return (
-    <div className={cn("group relative flex min-h-6 items-center", side === "input" ? "justify-start" : "justify-end")}>
+    <div className="group relative inline-flex items-center">
       <button
         ref={triggerRef}
         type="button"
-        className={cn(
-          "relative inline-flex min-h-6 max-w-full items-center gap-1.5 rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,252,247,0.92)] py-0.5 text-sm text-[var(--muted)] shadow-[0_8px_18px_rgba(60,41,20,0.06)] transition hover:border-[rgba(154,52,18,0.24)] hover:bg-[rgba(255,248,240,0.92)] hover:text-[var(--accent)]",
-          side === "input" ? "ml-[-14px] pl-1 pr-2.5" : "mr-[-14px] pl-2.5 pr-1",
-        )}
+        className="inline-flex items-center gap-1 rounded-full border border-dashed border-[rgba(154,52,18,0.24)] bg-[rgba(255,252,247,0.5)] px-2.5 py-0.5 text-[0.68rem] font-medium text-[var(--muted)] transition hover:bg-[rgba(255,248,240,0.9)] hover:text-[var(--accent)]"
         onClick={openEditor}
       >
-        {side === "input" ? (
-          <>
-            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[rgba(154,52,18,0.08)]">
-              <svg width="8" height="8" viewBox="0 0 8 8" className="text-[var(--accent-strong)]">
-                <line x1="4" y1="0.5" x2="4" y2="7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="0.5" y1="4" x2="7.5" y2="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </span>
-            <span>Add input</span>
-          </>
-        ) : (
-          <>
-            <span>Add output</span>
-            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[rgba(154,52,18,0.08)]">
-              <svg width="8" height="8" viewBox="0 0 8 8" className="text-[var(--accent-strong)]">
-                <line x1="4" y1="0.5" x2="4" y2="7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="0.5" y1="4" x2="7.5" y2="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </span>
-          </>
-        )}
+        <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.8">
+          <path d="M8 3.5v9M3.5 8h9" />
+        </svg>
+        {side === "input" ? "input" : "output"}
       </button>
       <FloatingLayer anchorRef={triggerRef} open={isOpen} placement={side === "input" ? "bottom-start" : "bottom-end"}>
         <div className="w-[260px] rounded-[16px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.98)] p-3 shadow-[0_14px_32px_rgba(60,41,20,0.14)]">
@@ -2310,14 +2290,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     </span>
                   </div>
                 ) : null}
-                {config.family === "agent" || config.family === "condition" ? (
-                  <PortCreateButton
-                    side="input"
-                    visible={selected || isHoveringNode}
-                    initialPort={createDefaultPort("input", inputs)}
-                    onCreate={(nextPort) => addNodePort("input", nextPort)}
-                  />
-                ) : null}
+{/* hover add-input button removed — use the +input pill in the skill bar instead */}
               </div>
               <div className="grid gap-1">
                 {outputs.map((port, index) => (
@@ -2336,14 +2309,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     }
                   />
                 ))}
-                {config.family === "agent" ? (
-                  <PortCreateButton
-                    side="output"
-                    visible={selected || isHoveringNode}
-                    initialPort={createDefaultPort("output", outputs)}
-                    onCreate={(nextPort) => addNodePort("output", nextPort)}
-                  />
-                ) : null}
+{/* hover add-output button removed — use the +output pill in the skill bar instead */}
               </div>
             </div>
           ) : null}
@@ -2505,34 +2471,9 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                   onConfigChange={(updater) => data.onConfigChange?.((currentConfig) => updater(currentConfig as AgentNode))}
                 />
               ) : null}
-              <div className="flex flex-wrap items-center gap-1.5">
-                {config.skills.map((skill) => {
-                  const def = (data.skillDefinitions ?? []).find((d) => d.skillKey === skill.skillKey);
-                  return (
-                    <span
-                      key={skill.skillKey}
-                      title={def?.description ?? skill.skillKey}
-                      className="group/pill inline-flex items-center gap-1 rounded-full border border-[rgba(37,99,235,0.18)] bg-[rgba(239,246,255,0.88)] px-2.5 py-0.5 text-[0.68rem] font-medium text-[#2563eb]"
-                    >
-                      <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.6">
-                        <path d="M8 2.5v4l2.5 1.5" />
-                        <circle cx="8" cy="8" r="5.5" />
-                      </svg>
-                      {def?.label ?? skill.name}
-                      <button
-                        type="button"
-                        title="Remove skill"
-                        className="ml-0.5 grid h-3.5 w-3.5 place-items-center rounded-full opacity-0 transition hover:bg-[rgba(185,28,28,0.12)] hover:text-[rgb(185,28,28)] group-hover/pill:opacity-100"
-                        onClick={() => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), skills: (currentConfig as AgentNode).skills.filter((s) => s.skillKey !== skill.skillKey) }))}
-                      >
-                        <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2">
-                          <path d="m5 5 6 6" />
-                          <path d="m11 5-6 6" />
-                        </svg>
-                      </button>
-                    </span>
-                  );
-                })}
+              {/* ── action buttons row: +skill, +input, +output ── */}
+              <div className="flex items-center gap-1.5">
+                {/* +skill button */}
                 {(() => {
                   const attachedKeys = new Set(config.skills.map((s) => s.skillKey));
                   const available = (data.skillDefinitions ?? []).filter((d) => !attachedKeys.has(d.skillKey));
@@ -2581,7 +2522,53 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     </div>
                   );
                 })()}
+                {/* +input button */}
+                <PortCreateButton
+                  side="input"
+                  visible
+                  initialPort={createDefaultPort("input", inputs)}
+                  onCreate={(nextPort) => addNodePort("input", nextPort)}
+                />
+                {/* +output button */}
+                <PortCreateButton
+                  side="output"
+                  visible
+                  initialPort={createDefaultPort("output", outputs)}
+                  onCreate={(nextPort) => addNodePort("output", nextPort)}
+                />
               </div>
+              {/* ── attached skill pills ── */}
+              {config.skills.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {config.skills.map((skill) => {
+                    const def = (data.skillDefinitions ?? []).find((d) => d.skillKey === skill.skillKey);
+                    return (
+                      <span
+                        key={skill.skillKey}
+                        title={def?.description ?? skill.skillKey}
+                        className="group/pill inline-flex items-center gap-1 rounded-full border border-[rgba(37,99,235,0.18)] bg-[rgba(239,246,255,0.88)] px-2.5 py-0.5 text-[0.68rem] font-medium text-[#2563eb]"
+                      >
+                        <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.6">
+                          <path d="M8 2.5v4l2.5 1.5" />
+                          <circle cx="8" cy="8" r="5.5" />
+                        </svg>
+                        {def?.label ?? skill.name}
+                        <button
+                          type="button"
+                          title="Remove skill"
+                          className="ml-0.5 grid h-3.5 w-3.5 place-items-center rounded-full opacity-0 transition hover:bg-[rgba(185,28,28,0.12)] hover:text-[rgb(185,28,28)] group-hover/pill:opacity-100"
+                          onClick={() => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), skills: (currentConfig as AgentNode).skills.filter((s) => s.skillKey !== skill.skillKey) }))}
+                        >
+                          <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2">
+                            <path d="m5 5 6 6" />
+                            <path d="m11 5-6 6" />
+                          </svg>
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : null}
               <textarea
                 className="min-h-20 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-sm text-[var(--text)]"
                 value={config.taskInstruction}

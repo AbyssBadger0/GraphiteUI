@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
 import httpx
-from openai import OpenAI
 
 
 def _env_first(*keys: str, default: str) -> str:
@@ -16,17 +17,99 @@ def _env_first(*keys: str, default: str) -> str:
     return default
 
 
+def _parse_float_env(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
 LOCAL_LLM_BASE_URL = _env_first("LOCAL_BASE_URL", "OPENAI_BASE_URL", "LOCAL_LLM_BASE_URL", default="http://127.0.0.1:8888/v1").rstrip("/")
-LOCAL_LLM_MODEL = _env_first("LOCAL_TEXT_MODEL", "TEXT_MODEL", "LOCAL_MODEL_NAME", "UPSTREAM_MODEL_NAME", "LOCAL_LLM_MODEL", default="qwen-local")
 LOCAL_LLM_API_KEY = _env_first("LOCAL_API_KEY", "OPENAI_API_KEY", "LITELLM_MASTER_KEY", "LOCAL_LLM_API_KEY", default="sk-local")
+LOCAL_LLM_REQUEST_TIMEOUT_SEC = _parse_float_env("LOCAL_LLM_REQUEST_TIMEOUT_SEC", 180.0)
 ROOT_DIR = Path(__file__).resolve().parents[3]
 LOCAL_USAGE_GUIDE_PATH = ROOT_DIR / "使用介绍.md"
 DEFAULT_AGENT_TEMPERATURE = 0.2
 DEFAULT_AGENT_THINKING_ENABLED = False
+DEFAULT_LOCAL_MODEL_ALIAS = "lm-local"
+LOCAL_RUNTIME_CONFIG_CACHE_TTL_SEC = 5.0
+_LOCAL_RUNTIME_CONFIG_CACHE: tuple[float, dict[str, Any] | None] | None = None
+
+
+def _get_gateway_base_url() -> str:
+    trimmed = LOCAL_LLM_BASE_URL.rstrip("/")
+    return trimmed[:-3] if trimmed.endswith("/v1") else trimmed
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    items: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        item = str(raw or "").strip()
+        if not item:
+            continue
+        lowered = item.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        items.append(item)
+    return items
+
+
+def get_local_gateway_runtime_config(*, force_refresh: bool = False) -> dict[str, Any] | None:
+    global _LOCAL_RUNTIME_CONFIG_CACHE
+
+    now = time.monotonic()
+    if (
+        not force_refresh
+        and _LOCAL_RUNTIME_CONFIG_CACHE is not None
+        and now - _LOCAL_RUNTIME_CONFIG_CACHE[0] < LOCAL_RUNTIME_CONFIG_CACHE_TTL_SEC
+    ):
+        return _LOCAL_RUNTIME_CONFIG_CACHE[1]
+
+    runtime_config: dict[str, Any] | None = None
+    try:
+        with httpx.Client(timeout=3.0, trust_env=False) as client:
+            response = client.get(f"{_get_gateway_base_url()}/runtime-config")
+            response.raise_for_status()
+            payload = response.json()
+            if isinstance(payload, dict):
+                runtime_config = payload
+    except Exception:
+        runtime_config = None
+
+    _LOCAL_RUNTIME_CONFIG_CACHE = (now, runtime_config)
+    return runtime_config
+
+
+def get_local_route_model_names() -> list[str]:
+    runtime_config = get_local_gateway_runtime_config()
+    llama_config = runtime_config.get("llama") if isinstance(runtime_config, dict) else None
+    aliases = llama_config.get("local_route_model_names") if isinstance(llama_config, dict) else None
+    if isinstance(aliases, list):
+        deduped = _dedupe_strings([str(item) for item in aliases])
+        if deduped:
+            return deduped
+
+    configured_model = _env_first(
+        "LOCAL_TEXT_MODEL",
+        "TEXT_MODEL",
+        "LOCAL_MODEL_NAME",
+        "UPSTREAM_MODEL_NAME",
+        "LOCAL_LLM_MODEL",
+        default="",
+    ).strip()
+    if configured_model:
+        return [configured_model]
+    return [DEFAULT_LOCAL_MODEL_ALIAS]
 
 
 def get_default_text_model() -> str:
-    return LOCAL_LLM_MODEL
+    aliases = get_local_route_model_names()
+    return aliases[0] if aliases else DEFAULT_LOCAL_MODEL_ALIAS
 
 
 def get_default_agent_temperature() -> float:
@@ -37,23 +120,81 @@ def get_default_agent_thinking_enabled() -> bool:
     return DEFAULT_AGENT_THINKING_ENABLED
 
 
+def _normalize_message_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts = [_normalize_message_text(item) for item in value]
+        return "\n".join(part for part in parts if part).strip()
+    if isinstance(value, dict):
+        for key in ("text", "content", "reasoning_content", "reasoning"):
+            candidate = value.get(key)
+            if candidate:
+                return _normalize_message_text(candidate)
+        return json.dumps(value, ensure_ascii=False)
+    return str(value)
+
+
+def _extract_chat_completion_text(response_payload: dict[str, Any]) -> tuple[str, str]:
+    choices = response_payload.get("choices")
+    if isinstance(choices, list) and choices:
+        first_choice = choices[0] if isinstance(choices[0], dict) else {}
+        message = first_choice.get("message") if isinstance(first_choice, dict) else {}
+        if isinstance(message, dict):
+            content = _normalize_message_text(message.get("content")).strip()
+            reasoning = _normalize_message_text(
+                message.get("reasoning_content") or message.get("reasoning")
+            ).strip()
+            return content, reasoning
+
+    return (
+        _normalize_message_text(response_payload.get("content")).strip(),
+        _normalize_message_text(response_payload.get("reasoning")).strip(),
+    )
+
+
+def _request_local_chat_completion(request_payload: dict[str, Any]) -> dict[str, Any]:
+    headers = {
+        "Authorization": f"Bearer {LOCAL_LLM_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        with httpx.Client(timeout=LOCAL_LLM_REQUEST_TIMEOUT_SEC, trust_env=False) as client:
+            response = client.post(f"{LOCAL_LLM_BASE_URL}/chat/completions", headers=headers, json=request_payload)
+            response.raise_for_status()
+            payload = response.json()
+    except httpx.HTTPStatusError as exc:  # pragma: no cover - network path
+        detail = exc.response.text.strip()
+        raise RuntimeError(
+            f"Local LLM request failed: HTTP {exc.response.status_code} {detail[:600]}"
+        ) from exc
+    except httpx.HTTPError as exc:  # pragma: no cover - network path
+        raise RuntimeError(f"Local LLM request failed: {exc}") from exc
+    except ValueError as exc:  # pragma: no cover - network path
+        raise RuntimeError(f"Local LLM returned invalid JSON: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise RuntimeError("Local LLM returned an unexpected payload shape.")
+    return payload
+
+
 def _chat_with_local_model_with_meta(
     *,
     system_prompt: str,
     user_prompt: str,
     model: str | None = None,
+    provider_id: str = "local",
     temperature: float = DEFAULT_AGENT_TEMPERATURE,
     max_tokens: int | None = None,
-    reasoning_effort: str | None = None,
+    thinking_enabled: bool = False,
 ) -> tuple[str, dict[str, Any]]:
-    client = OpenAI(
-        base_url=LOCAL_LLM_BASE_URL,
-        api_key=LOCAL_LLM_API_KEY,
-        http_client=httpx.Client(trust_env=False),
-    )
     request_payload: dict[str, Any] = {
-        "model": model or LOCAL_LLM_MODEL,
+        "model": model or get_default_text_model(),
         "temperature": temperature,
+        "stream": False,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -61,37 +202,56 @@ def _chat_with_local_model_with_meta(
     }
     if max_tokens is not None:
         request_payload["max_tokens"] = max_tokens
-    if reasoning_effort:
-        request_payload["reasoning_effort"] = reasoning_effort
 
     warnings: list[str] = []
-    used_reasoning_effort = reasoning_effort
+    used_thinking = bool(thinking_enabled and provider_id == "local")
+    if used_thinking:
+        request_payload["return_progress"] = True
+        request_payload["reasoning_format"] = "auto"
+        request_payload["timings_per_token"] = True
+    elif thinking_enabled:
+        warnings.append(
+            f"Thinking mode was requested for provider '{provider_id}', but GraphiteUI currently only maps provider-specific thinking fields for the local gateway."
+        )
 
-    try:
-        response = client.chat.completions.create(**request_payload)
-    except Exception as exc:  # pragma: no cover - network path
-        if reasoning_effort:
-            fallback_payload = dict(request_payload)
-            fallback_payload.pop("reasoning_effort", None)
-            try:
-                response = client.chat.completions.create(**fallback_payload)
-                warnings.append(
-                    "Thinking mode was requested, but the current model backend rejected reasoning_effort. Retried without provider-level thinking."
-                )
-                used_reasoning_effort = None
-            except Exception as fallback_exc:  # pragma: no cover - network path
-                raise RuntimeError(f"Local LLM request failed: {fallback_exc}") from fallback_exc
-        else:
-            raise RuntimeError(f"Local LLM request failed: {exc}") from exc
+    response_payload = _request_local_chat_completion(request_payload)
+    content, reasoning = _extract_chat_completion_text(response_payload)
 
-    content = (response.choices[0].message.content or "").strip()
+    if not content and max_tokens is not None:
+        retry_payload = dict(request_payload)
+        retry_payload.pop("max_tokens", None)
+        response_payload = _request_local_chat_completion(retry_payload)
+        content, reasoning = _extract_chat_completion_text(response_payload)
+        warnings.append(
+            "The provider exhausted max_tokens before returning final content. Retried once without a max_tokens limit."
+        )
+
+    if not content and used_thinking:
+        retry_payload = dict(request_payload)
+        retry_payload.pop("return_progress", None)
+        retry_payload.pop("reasoning_format", None)
+        retry_payload.pop("timings_per_token", None)
+        response_payload = _request_local_chat_completion(retry_payload)
+        content, reasoning = _extract_chat_completion_text(response_payload)
+        used_thinking = False
+        warnings.append(
+            "Thinking mode was requested, but the local gateway returned reasoning without final content. Retried without local thinking fields."
+        )
+
     if not content:
         raise RuntimeError("Local LLM returned an empty response.")
+
     return content, {
         "base_url": LOCAL_LLM_BASE_URL,
-        "model": request_payload["model"],
+        "model": response_payload.get("model") or request_payload["model"],
+        "provider_id": provider_id,
         "temperature": temperature,
-        "reasoning_effort": used_reasoning_effort,
+        "thinking_enabled": used_thinking,
+        "reasoning_format": "auto" if used_thinking and provider_id == "local" else None,
+        "reasoning": reasoning,
+        "usage": response_payload.get("usage"),
+        "timings": response_payload.get("timings"),
+        "response_id": response_payload.get("id"),
         "warnings": warnings,
     }
 
@@ -103,13 +263,17 @@ def _chat_with_local_model(
     model: str | None = None,
     temperature: float = DEFAULT_AGENT_TEMPERATURE,
     max_tokens: int | None = None,
+    provider_id: str = "local",
+    thinking_enabled: bool = False,
 ) -> str:
     content, _meta = _chat_with_local_model_with_meta(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         model=model,
+        provider_id=provider_id,
         temperature=temperature,
         max_tokens=max_tokens,
+        thinking_enabled=thinking_enabled,
     )
     return content
 
@@ -124,7 +288,7 @@ def generate_hello_greeting(state: dict[str, Any], params: dict[str, Any] | None
         "and run the flow. Personalize it with the provided name when natural."
     )
     user_prompt = f"User name: {name}"
-    model_name = str(params.get("model") or LOCAL_LLM_MODEL)
+    model_name = str(params.get("model") or get_default_text_model())
     try:
         greeting = _chat_with_local_model(
             system_prompt=system_prompt,

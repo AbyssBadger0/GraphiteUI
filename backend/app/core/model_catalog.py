@@ -3,7 +3,12 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from app.tools.local_llm import LOCAL_LLM_BASE_URL, get_default_text_model
+from app.tools.local_llm import (
+    LOCAL_LLM_BASE_URL,
+    get_default_text_model,
+    get_local_gateway_runtime_config,
+    get_local_route_model_names,
+)
 
 
 def build_model_ref(provider_id: str, model_id: str) -> str:
@@ -13,9 +18,9 @@ def build_model_ref(provider_id: str, model_id: str) -> str:
 def split_model_ref(model_ref: str | None, *, default_provider: str = "local") -> tuple[str, str]:
     trimmed = (model_ref or "").strip()
     if not trimmed:
-      return default_provider, get_default_text_model()
+        return default_provider, get_default_text_model()
     if "/" not in trimmed:
-      return default_provider, trimmed
+        return default_provider, trimmed
     provider_id, model_id = trimmed.split("/", 1)
     provider_id = provider_id.strip() or default_provider
     model_id = model_id.strip() or get_default_text_model()
@@ -51,8 +56,70 @@ def get_default_video_model_ref() -> str:
 
 
 def build_model_catalog() -> dict[str, Any]:
-    local_text_model = get_default_text_model()
+    runtime_config = get_local_gateway_runtime_config()
+    llama_config = runtime_config.get("llama") if isinstance(runtime_config, dict) else {}
+    cloud_config = runtime_config.get("cloud") if isinstance(runtime_config, dict) else {}
+
+    local_route_models = get_local_route_model_names()
+    local_text_model = local_route_models[0] if local_route_models else get_default_text_model()
     local_video_model = get_default_video_model_name()
+    local_context_window = llama_config.get("ctx_size") if isinstance(llama_config, dict) else None
+    local_max_tokens = llama_config.get("n_predict") if isinstance(llama_config, dict) else None
+    local_display_model_name = (
+        str(runtime_config.get("display_model_name")).strip()
+        if isinstance(runtime_config, dict) and runtime_config.get("display_model_name")
+        else None
+    )
+    local_provider_models = [
+        {
+            "model_ref": build_model_ref("local", model_name),
+            "model": model_name,
+            "label": model_name,
+            "reasoning": True,
+            "modalities": ["text"],
+            "context_window": local_context_window if isinstance(local_context_window, int) else None,
+            "max_tokens": local_max_tokens if isinstance(local_max_tokens, int) else None,
+            "route_target": local_display_model_name,
+        }
+        for model_name in local_route_models
+    ]
+    if not local_provider_models:
+        local_provider_models = [
+            {
+                "model_ref": build_model_ref("local", local_text_model),
+                "model": local_text_model,
+                "label": local_text_model,
+                "reasoning": True,
+                "modalities": ["text"],
+                "context_window": local_context_window if isinstance(local_context_window, int) else None,
+                "max_tokens": local_max_tokens if isinstance(local_max_tokens, int) else None,
+                "route_target": local_display_model_name,
+            }
+        ]
+
+    openrouter_aliases = cloud_config.get("aliases") if isinstance(cloud_config, dict) else {}
+    openrouter_models = cloud_config.get("models") if isinstance(cloud_config, dict) else {}
+    openrouter_example_refs: list[str] = []
+    if isinstance(openrouter_aliases, dict):
+        openrouter_example_refs.extend(
+            build_model_ref("openrouter", str(alias).strip())
+            for alias in openrouter_aliases.values()
+            if str(alias).strip()
+        )
+    if isinstance(openrouter_models, dict):
+        openrouter_example_refs.extend(
+            build_model_ref("openrouter", str(model_name).strip())
+            for model_name in openrouter_models.values()
+            if str(model_name).strip()
+        )
+    deduped_openrouter_example_refs: list[str] = []
+    seen_openrouter_refs: set[str] = set()
+    for model_ref in openrouter_example_refs:
+        lowered = model_ref.lower()
+        if lowered in seen_openrouter_refs:
+            continue
+        seen_openrouter_refs.add(lowered)
+        deduped_openrouter_example_refs.append(model_ref)
 
     return {
         "default_text_model_ref": build_model_ref("local", local_text_model),
@@ -61,37 +128,13 @@ def build_model_catalog() -> dict[str, Any]:
             {
                 "provider_id": "local",
                 "label": "Local Gateway",
-                "description": "Current GraphiteUI local model gateway. This is the only active provider until additional vendors are configured.",
+                "description": "Current GraphiteUI local model gateway. GraphiteUI sends provider/model refs here first, then the gateway routes to llama.cpp or future upstream vendors.",
                 "transport": "openai-compatible",
                 "configured": True,
                 "base_url": LOCAL_LLM_BASE_URL,
-                "models": [
-                    {
-                        "model_ref": build_model_ref("local", local_text_model),
-                        "model": local_text_model,
-                        "label": local_text_model,
-                        "reasoning": True,
-                        "modalities": ["text"],
-                        "context_window": None,
-                        "max_tokens": None,
-                    },
-                    *(
-                        [
-                            {
-                                "model_ref": build_model_ref("local", local_video_model),
-                                "model": local_video_model,
-                                "label": local_video_model,
-                                "reasoning": False,
-                                "modalities": ["video"],
-                                "context_window": None,
-                                "max_tokens": None,
-                            }
-                        ]
-                        if local_video_model != local_text_model
-                        else []
-                    ),
-                ],
+                "models": local_provider_models,
                 "example_model_refs": [],
+                "gateway": runtime_config or {},
             },
             {
                 "provider_id": "openai",
@@ -129,9 +172,9 @@ def build_model_catalog() -> dict[str, Any]:
                 "description": "Planned proxy provider entry for multi-vendor routing through one gateway.",
                 "transport": "openai-compatible",
                 "configured": False,
-                "base_url": "https://openrouter.ai/api/v1",
+                "base_url": str(cloud_config.get("api_base") or "https://openrouter.ai/api/v1"),
                 "models": [],
-                "example_model_refs": ["openrouter/anthropic/claude-sonnet-4.6", "openrouter/auto"],
+                "example_model_refs": deduped_openrouter_example_refs or ["openrouter/anthropic/claude-sonnet-4.6", "openrouter/auto"],
             },
         ],
     }

@@ -207,7 +207,7 @@ type PresetDocument = {
 };
 
 const HELLO_WORLD_TEMPLATE_ID = "hello_world";
-const DEFAULT_EDITOR_TEXT_MODEL_REF = "local/qwen-local";
+const DEFAULT_EDITOR_TEXT_MODEL_REF = "local/lm-local";
 const DEFAULT_AGENT_THINKING_ENABLED = false;
 const DEFAULT_AGENT_TEMPERATURE = 0.2;
 const TYPE_COLORS: Record<ValueType, string> = {

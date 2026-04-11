@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-import os
-
 from fastapi import APIRouter
 
-from app.core.model_catalog import build_model_catalog, get_default_text_model_ref, get_default_video_model_ref
+from app.core.model_catalog import (
+    build_model_catalog,
+    get_default_text_model_ref,
+    get_default_video_model_ref,
+    resolve_runtime_model_name,
+)
 from app.skills.definitions import get_skill_definition_registry
 from app.templates.registry import list_templates
 from app.tools.local_llm import (
     get_default_agent_temperature,
     get_default_agent_thinking_enabled,
-    get_default_text_model,
 )
 from app.tools.registry import get_tool_registry
 
@@ -20,27 +22,18 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 @router.get("")
 def get_settings_endpoint() -> dict:
-    text_model = (
-        os.environ.get("LOCAL_TEXT_MODEL")
-        or os.environ.get("TEXT_MODEL")
-        or os.environ.get("LOCAL_MODEL_NAME")
-        or os.environ.get("UPSTREAM_MODEL_NAME")
-        or get_default_text_model()
-    )
+    text_model_ref = get_default_text_model_ref()
+    video_model_ref = get_default_video_model_ref()
     model_catalog = build_model_catalog()
     return {
         "model": {
-            "text_model": text_model,
-            "text_model_ref": get_default_text_model_ref(),
-            "video_model": os.environ.get("LOCAL_VIDEO_MODEL")
-            or os.environ.get("VIDEO_MODEL")
-            or os.environ.get("LOCAL_MODEL_NAME")
-            or os.environ.get("UPSTREAM_MODEL_NAME")
-            or text_model,
-            "video_model_ref": get_default_video_model_ref(),
+            "text_model": resolve_runtime_model_name(text_model_ref),
+            "text_model_ref": text_model_ref,
+            "video_model": resolve_runtime_model_name(video_model_ref),
+            "video_model_ref": video_model_ref,
         },
         "agent_runtime_defaults": {
-            "model": get_default_text_model_ref(),
+            "model": text_model_ref,
             "thinking_enabled": get_default_agent_thinking_enabled(),
             "temperature": get_default_agent_temperature(),
         },

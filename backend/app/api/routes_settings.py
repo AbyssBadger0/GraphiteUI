@@ -4,6 +4,7 @@ import os
 
 from fastapi import APIRouter
 
+from app.core.model_catalog import build_model_catalog, get_default_text_model_ref, get_default_video_model_ref
 from app.skills.definitions import get_skill_definition_registry
 from app.templates.registry import list_templates
 from app.tools.local_llm import (
@@ -26,20 +27,24 @@ def get_settings_endpoint() -> dict:
         or os.environ.get("UPSTREAM_MODEL_NAME")
         or get_default_text_model()
     )
+    model_catalog = build_model_catalog()
     return {
         "model": {
             "text_model": text_model,
+            "text_model_ref": get_default_text_model_ref(),
             "video_model": os.environ.get("LOCAL_VIDEO_MODEL")
             or os.environ.get("VIDEO_MODEL")
             or os.environ.get("LOCAL_MODEL_NAME")
             or os.environ.get("UPSTREAM_MODEL_NAME")
             or text_model,
+            "video_model_ref": get_default_video_model_ref(),
         },
         "agent_runtime_defaults": {
-            "model": text_model,
+            "model": get_default_text_model_ref(),
             "thinking_enabled": get_default_agent_thinking_enabled(),
             "temperature": get_default_agent_temperature(),
         },
+        "model_catalog": model_catalog,
         "revision": {
             "max_revision_round": 1,
         },

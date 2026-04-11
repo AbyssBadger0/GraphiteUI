@@ -112,9 +112,10 @@ type FlowNodeData = {
   skillDefinitions?: SkillDefinition[];
   skillDefinitionsLoading?: boolean;
   skillDefinitionsError?: string | null;
-  globalTextModel?: string;
+  globalTextModelRef?: string;
   globalThinkingEnabled?: boolean;
   defaultAgentTemperature?: number;
+  availableModelRefs?: string[];
 };
 
 type FlowNode = Node<FlowNodeData>;
@@ -140,12 +141,36 @@ type SkillDefinition = {
 type EditorSettingsPayload = {
   model: {
     text_model: string;
+    text_model_ref: string;
     video_model: string;
+    video_model_ref: string;
   };
   agent_runtime_defaults?: {
     model: string;
     thinking_enabled: boolean;
     temperature: number;
+  };
+  model_catalog?: {
+    default_text_model_ref: string;
+    default_video_model_ref: string;
+    providers: Array<{
+      provider_id: string;
+      label: string;
+      description: string;
+      transport: string;
+      configured: boolean;
+      base_url: string;
+      models: Array<{
+        model_ref: string;
+        model: string;
+        label: string;
+        reasoning: boolean;
+        modalities: string[];
+        context_window: number | null;
+        max_tokens: number | null;
+      }>;
+      example_model_refs: string[];
+    }>;
   };
 };
 
@@ -182,7 +207,7 @@ type PresetDocument = {
 };
 
 const HELLO_WORLD_TEMPLATE_ID = "hello_world";
-const DEFAULT_EDITOR_TEXT_MODEL = "qwen-local";
+const DEFAULT_EDITOR_TEXT_MODEL_REF = "local/qwen-local";
 const DEFAULT_AGENT_THINKING_ENABLED = false;
 const DEFAULT_AGENT_TEMPERATURE = 0.2;
 const TYPE_COLORS: Record<ValueType, string> = {
@@ -243,18 +268,18 @@ function normalizeNodeConfig<T extends NodePresetDefinition>(config: T): T {
 function resolveAgentRuntimeConfig(
   config: AgentNode,
   defaults?: {
-    globalTextModel?: string;
+    globalTextModelRef?: string;
     globalThinkingEnabled?: boolean;
     defaultAgentTemperature?: number;
   },
 ) {
   const normalizedConfig = normalizeNodeConfig(config) as AgentNode;
-  const globalTextModel = defaults?.globalTextModel || DEFAULT_EDITOR_TEXT_MODEL;
+  const globalTextModelRef = defaults?.globalTextModelRef || DEFAULT_EDITOR_TEXT_MODEL_REF;
   const globalThinkingEnabled = defaults?.globalThinkingEnabled ?? DEFAULT_AGENT_THINKING_ENABLED;
   const defaultAgentTemperature = normalizeAgentTemperature(defaults?.defaultAgentTemperature);
   const overrideModel = normalizedConfig.model?.trim() ?? "";
   const resolvedModel =
-    normalizedConfig.modelSource === "override" && overrideModel ? overrideModel : globalTextModel;
+    normalizedConfig.modelSource === "override" && overrideModel ? overrideModel : globalTextModelRef;
   const resolvedThinking =
     normalizedConfig.thinkingMode === "inherit"
       ? globalThinkingEnabled
@@ -263,7 +288,7 @@ function resolveAgentRuntimeConfig(
 
   return {
     ...normalizedConfig,
-    globalTextModel,
+    globalTextModelRef,
     globalThinkingEnabled,
     defaultAgentTemperature,
     resolvedModel,
@@ -1561,7 +1586,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const agentRuntime =
     config.family === "agent"
       ? resolveAgentRuntimeConfig(config, {
-          globalTextModel: data.globalTextModel,
+          globalTextModelRef: data.globalTextModelRef,
           globalThinkingEnabled: data.globalThinkingEnabled,
           defaultAgentTemperature: data.defaultAgentTemperature,
         })
@@ -2148,7 +2173,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                   {agentRuntime ? (
                     <PanelSection
                       title="Advanced Runtime"
-                      description={`Global model: ${agentRuntime.globalTextModel} · Default thinking: ${agentRuntime.globalThinkingEnabled ? "on" : "off"}`}
+                      description={`Global model: ${agentRuntime.globalTextModelRef} · Default thinking: ${agentRuntime.globalThinkingEnabled ? "on" : "off"}`}
                     >
                       <div className="grid grid-cols-2 gap-3">
                         <label className="grid gap-1.5 text-sm text-[var(--muted)]">
@@ -2187,10 +2212,11 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                       </div>
                       {agentRuntime.modelSource === "override" ? (
                         <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                          <span>Model</span>
+                          <span>Model Ref</span>
                           <Input
+                            list={`model-ref-options-${data.nodeId}`}
                             value={agentRuntime.model}
-                            placeholder={agentRuntime.globalTextModel}
+                            placeholder={agentRuntime.globalTextModelRef}
                             onChange={(event) =>
                               data.onConfigChange?.((currentConfig) => ({
                                 ...(currentConfig as AgentNode),
@@ -2198,6 +2224,11 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                               }))
                             }
                           />
+                          <datalist id={`model-ref-options-${data.nodeId}`}>
+                            {(data.availableModelRefs ?? []).map((modelRef) => (
+                              <option key={modelRef} value={modelRef} />
+                            ))}
+                          </datalist>
                         </label>
                       ) : null}
                       <label className="grid gap-1.5 text-sm text-[var(--muted)]">
@@ -2508,13 +2539,24 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
   }, [edges, nodes]);
   const agentRuntimeDefaults = useMemo(
     () => ({
-      globalTextModel:
-        editorSettings?.agent_runtime_defaults?.model || editorSettings?.model.text_model || DEFAULT_EDITOR_TEXT_MODEL,
+      globalTextModelRef:
+        editorSettings?.agent_runtime_defaults?.model || editorSettings?.model.text_model_ref || DEFAULT_EDITOR_TEXT_MODEL_REF,
       globalThinkingEnabled:
         editorSettings?.agent_runtime_defaults?.thinking_enabled ?? DEFAULT_AGENT_THINKING_ENABLED,
       defaultAgentTemperature:
         editorSettings?.agent_runtime_defaults?.temperature ?? DEFAULT_AGENT_TEMPERATURE,
     }),
+    [editorSettings],
+  );
+  const availableModelRefs = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (editorSettings?.model_catalog?.providers ?? [])
+            .filter((provider) => provider.configured)
+            .flatMap((provider) => provider.models.map((model) => model.model_ref)),
+        ),
+      ),
     [editorSettings],
   );
 
@@ -3013,9 +3055,10 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
                   skillDefinitions,
                   skillDefinitionsLoading,
                   skillDefinitionsError,
-                  globalTextModel: agentRuntimeDefaults.globalTextModel,
+                  globalTextModelRef: agentRuntimeDefaults.globalTextModelRef,
                   globalThinkingEnabled: agentRuntimeDefaults.globalThinkingEnabled,
                   defaultAgentTemperature: agentRuntimeDefaults.defaultAgentTemperature,
+                  availableModelRefs,
                 },
               }))}
               edges={edges}

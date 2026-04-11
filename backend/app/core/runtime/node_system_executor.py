@@ -9,6 +9,7 @@ from typing import Any
 
 from app.core.runtime.output_boundary_utils import save_output_value
 from app.core.runtime.state import create_initial_run_state, utc_now_iso
+from app.core.model_catalog import get_default_text_model_ref, normalize_model_ref, resolve_runtime_model_name
 from app.core.schemas.node_system import (
     AgentNodeConfig,
     ConditionNodeConfig,
@@ -24,7 +25,6 @@ from app.tools.local_llm import (
     _chat_with_local_model_with_meta,
     get_default_agent_temperature,
     get_default_agent_thinking_enabled,
-    get_default_text_model,
 )
 
 
@@ -405,7 +405,7 @@ def _generate_agent_response(
     content, llm_meta = _chat_with_local_model_with_meta(
         system_prompt=config.system_instruction or "You are a precise workflow agent.",
         user_prompt=user_prompt,
-        model=runtime_config["resolved_model"],
+        model=runtime_config["runtime_model_name"],
         temperature=runtime_config["resolved_temperature"],
         reasoning_effort=runtime_config.get("resolved_reasoning_effort"),
     )
@@ -414,7 +414,7 @@ def _generate_agent_response(
     response_payload: dict[str, Any] = {"summary": content, **parsed_fields}
     updated_runtime_config = {
         **runtime_config,
-        "provider_model": llm_meta.get("model", runtime_config["resolved_model"]),
+        "provider_model": llm_meta.get("model", runtime_config["runtime_model_name"]),
         "provider_temperature": llm_meta.get("temperature", runtime_config["resolved_temperature"]),
         "provider_reasoning_effort": llm_meta.get("reasoning_effort"),
         "provider_thinking_enabled": bool(llm_meta.get("reasoning_effort")),
@@ -423,15 +423,15 @@ def _generate_agent_response(
 
 
 def _resolve_agent_runtime_config(config: AgentNodeConfig) -> dict[str, Any]:
-    global_model = get_default_text_model()
+    global_model_ref = get_default_text_model_ref()
     global_thinking_enabled = get_default_agent_thinking_enabled()
     default_temperature = get_default_agent_temperature()
-    override_model = config.model.strip()
+    override_model_ref = normalize_model_ref(config.model) if config.model.strip() else ""
 
     resolved_model = (
-        override_model
-        if config.model_source.value == "override" and override_model
-        else global_model
+        override_model_ref
+        if config.model_source.value == "override" and override_model_ref
+        else global_model_ref
     )
     resolved_thinking = (
         global_thinking_enabled
@@ -439,19 +439,21 @@ def _resolve_agent_runtime_config(config: AgentNodeConfig) -> dict[str, Any]:
         else config.thinking_mode.value == "on"
     )
     resolved_temperature = max(0.0, min(float(config.temperature), 2.0))
+    runtime_model_name = resolve_runtime_model_name(resolved_model)
 
     return {
         "model_source": config.model_source.value,
-        "configured_model": override_model,
+        "configured_model_ref": override_model_ref,
         "thinking_mode": config.thinking_mode.value,
         "configured_temperature": config.temperature,
-        "global_model": global_model,
+        "global_model_ref": global_model_ref,
         "global_thinking_enabled": global_thinking_enabled,
         "default_temperature": default_temperature,
-        "resolved_model": resolved_model,
+        "resolved_model_ref": resolved_model,
         "resolved_thinking": resolved_thinking,
         "resolved_temperature": resolved_temperature,
         "resolved_reasoning_effort": "medium" if resolved_thinking else None,
+        "runtime_model_name": runtime_model_name,
     }
 
 

@@ -1,12 +1,12 @@
 ---
 name: Search Knowledge Base
-description: Search a specified knowledge base folder and return grounded document snippets for downstream GraphiteUI workflows.
+description: Search a knowledge base and return grounded context for the agent to reason over.
 tools: []
 graphite:
   skill_key: search_knowledge_base
   supported_value_types:
     - text
-    - json
+    - knowledge_base
   side_effects:
     - knowledge_read
   input_schema:
@@ -14,24 +14,20 @@ graphite:
       label: Query
       valueType: text
       required: true
-      description: The user question or retrieval query to search for.
+      description: Search query or question to retrieve relevant documents.
     - key: knowledge_base
       label: Knowledge Base
-      valueType: text
+      valueType: knowledge_base
       required: false
-      description: Knowledge base folder name under the repository-level knowledge directory.
+      description: Name of the knowledge base directory to search.
   output_schema:
-    - key: knowledge_base
-      label: Knowledge Base
-      valueType: text
-      description: The knowledge base that was searched.
-    - key: results
-      label: Results
-      valueType: json
-      description: Ranked retrieval results with titles, summaries, and sources.
     - key: context
       label: Context
       valueType: text
-      description: Combined source excerpts for downstream answer generation.
+      description: Combined document excerpts for grounded reasoning.
+    - key: results
+      label: Results
+      valueType: json
+      description: Array of matched documents with title, summary, and source.
 ---
-Search the specified repository knowledge base and return concise retrieval results plus combined context text for downstream grounded answering.
+Search a local knowledge base by query and return ranked document excerpts as grounded context.

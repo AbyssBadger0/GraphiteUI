@@ -1,43 +1,25 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from typing import Any
 
 from app.knowledge.loader import DEFAULT_KNOWLEDGE_BASE, search_knowledge
 from app.core.schemas.skills import SkillCatalogStatus
 from app.core.storage.skill_store import get_skill_status_map, list_managed_skill_keys
-from app.tools.registry import get_tool_registry
+from app.tools.local_llm import _chat_with_local_model
 
 
 SkillFunc = Callable[..., dict[str, Any]]
 
 
 def get_skill_registry(*, include_disabled: bool = False) -> dict[str, SkillFunc]:
-    tools = get_tool_registry()
-    registry = {
-        "search_docs": search_docs,
+    registry: dict[str, SkillFunc] = {
         "search_knowledge_base": search_knowledge_base_skill,
-        "analyze_assets": analyze_assets,
-        "generate_draft": generate_draft,
-        "evaluate_output": evaluate_output,
-        "fetch_market_news_context": fetch_market_news_context_skill,
-        "clean_market_news": clean_market_news_skill,
-        "build_creative_brief": build_creative_brief_skill,
-        "generate_creative_variants": generate_creative_variants_skill,
-        "review_creative_variants": review_creative_variants_skill,
-        "generate_storyboard_packages": generate_storyboard_packages_skill,
-        "generate_video_prompt_packages": generate_video_prompt_packages_skill,
-        "prepare_image_generation_todo": prepare_image_generation_todo_skill,
-        "prepare_video_generation_todo": prepare_video_generation_todo_skill,
-        "finalize_creative_package": finalize_creative_package_skill,
-        "generate_hello_greeting": tools["generate_hello_greeting"],
-        "append_usage_introduction": tools["append_usage_introduction"],
-        "output_usage_introduction": tools["output_usage_introduction"],
-        "fetch_benchmark_assets": tools["fetch_benchmark_assets"],
-        "normalize_asset_records": tools["normalize_asset_records"],
-        "select_top_video_assets": tools["select_top_video_assets"],
-        "analyze_video_assets": tools["analyze_video_assets"],
-        "extract_creative_patterns": tools["extract_creative_patterns"],
+        "summarize_text": summarize_text_skill,
+        "extract_json_fields": extract_json_fields_skill,
+        "translate_text": translate_text_skill,
+        "rewrite_text": rewrite_text_skill,
     }
     if include_disabled:
         allowed_keys = list_managed_skill_keys()
@@ -51,16 +33,9 @@ def get_skill_registry(*, include_disabled: bool = False) -> dict[str, SkillFunc
     }
 
 
-def search_docs(query: str) -> dict[str, Any]:
-    results = search_knowledge(query, knowledge_base=DEFAULT_KNOWLEDGE_BASE, limit=3)
-    return {
-        "query": query,
-        "results": [
-            {"title": item["title"], "summary": item["summary"], "source": item["source"]}
-            for item in results
-        ],
-    }
-
+# ---------------------------------------------------------------------------
+# search_knowledge_base — local knowledge retrieval
+# ---------------------------------------------------------------------------
 
 def search_knowledge_base_skill(**skill_inputs: Any) -> dict[str, Any]:
     query = str(skill_inputs.get("query") or "").strip()
@@ -72,175 +47,126 @@ def search_knowledge_base_skill(**skill_inputs: Any) -> dict[str, Any]:
     limit = max(1, min(limit, 8))
 
     results = search_knowledge(query, knowledge_base=knowledge_base, limit=limit)
-    serialized_results = [
-        {
-            "title": item["title"],
-            "summary": item["summary"],
-            "source": item["source"],
-        }
-        for item in results
-    ]
     context = "\n\n".join(
-        f"[{index}] {item['title']} ({item['source']})\n{item['content']}"
-        for index, item in enumerate(results, start=1)
+        f"[{i}] {item['title']} ({item['source']})\n{item['content']}"
+        for i, item in enumerate(results, start=1)
     )
     return {
-        "knowledge_base": knowledge_base,
-        "results": serialized_results,
         "context": context,
+        "results": [
+            {"title": item["title"], "summary": item["summary"], "source": item["source"]}
+            for item in results
+        ],
     }
 
 
-def analyze_assets(materials: list[str]) -> dict[str, Any]:
-    return {
-        "materials_count": len(materials),
-        "summary": f"Analyzed {len(materials)} materials for structure and reuse potential.",
-    }
+# ---------------------------------------------------------------------------
+# summarize_text — LLM-powered text summarization
+# ---------------------------------------------------------------------------
 
+def summarize_text_skill(**skill_inputs: Any) -> dict[str, Any]:
+    text = str(skill_inputs.get("text") or "").strip()
+    max_sentences = str(skill_inputs.get("max_sentences") or "3").strip()
 
-def generate_draft(plan: str, knowledge: list[str], memories: list[str]) -> dict[str, Any]:
-    return {
-        "draft": (
-            f"Draft generated from plan '{plan[:80]}', "
-            f"knowledge={len(knowledge)}, memories={len(memories)}."
-        )
-    }
+    if not text:
+        return {"summary": "", "key_points": []}
 
-
-def evaluate_output(content: str) -> dict[str, Any]:
-    score = 8.2 if content else 5.0
-    return {
-        "score": score,
-        "issues": [] if content else ["Content is empty."],
-        "suggestions": ["Tighten the opening hook.", "Clarify the target audience."],
-    }
-
-
-def fetch_market_news_context_skill(**skill_inputs: Any) -> dict[str, Any]:
-    tools = get_tool_registry()
-    return tools["fetch_market_news_context"](
-        {
-            "task_input": skill_inputs.get("task_input", ""),
-            "theme_config": skill_inputs.get("theme_config") or {},
-        },
-        None,
+    raw = _chat_with_local_model(
+        system_prompt="You are a concise summarization assistant. Return valid JSON only.",
+        user_prompt=(
+            f"Summarize the following text in at most {max_sentences} sentences. "
+            f'Return JSON: {{"summary": "...", "key_points": ["...", "..."]}}\n\n{text}'
+        ),
     )
+    try:
+        parsed = json.loads(raw)
+        return {
+            "summary": str(parsed.get("summary", "")),
+            "key_points": list(parsed.get("key_points", [])),
+        }
+    except json.JSONDecodeError:
+        return {"summary": raw.strip(), "key_points": []}
 
 
-def clean_market_news_skill(**skill_inputs: Any) -> dict[str, Any]:
-    tools = get_tool_registry()
-    return tools["clean_market_news"](
-        {
-            "rss_items": skill_inputs.get("rss_items") or [],
-        },
-        None,
+# ---------------------------------------------------------------------------
+# extract_json_fields — LLM-powered structured extraction
+# ---------------------------------------------------------------------------
+
+def extract_json_fields_skill(**skill_inputs: Any) -> dict[str, Any]:
+    text = str(skill_inputs.get("text") or "").strip()
+    fields = str(skill_inputs.get("fields") or "").strip()
+
+    if not text or not fields:
+        return {"extracted": {}, "confidence": "low"}
+
+    raw = _chat_with_local_model(
+        system_prompt="You are a precise data extraction assistant. Return valid JSON only.",
+        user_prompt=(
+            f"Extract these fields from the text: {fields}\n\n"
+            f"Text:\n{text}\n\n"
+            f'Return JSON: {{"extracted": {{...}}, "confidence": "high|medium|low"}}'
+        ),
     )
+    try:
+        parsed = json.loads(raw)
+        return {
+            "extracted": parsed.get("extracted", {}),
+            "confidence": str(parsed.get("confidence", "medium")),
+        }
+    except json.JSONDecodeError:
+        return {"extracted": {}, "confidence": "low"}
 
 
-def build_creative_brief_skill(**skill_inputs: Any) -> dict[str, Any]:
-    tools = get_tool_registry()
-    return tools["build_creative_brief"](
-        {
-            "task_input": skill_inputs.get("task_input", ""),
-            "theme_config": skill_inputs.get("theme_config") or {},
-            "pattern_summary": skill_inputs.get("pattern_summary", ""),
-            "news_context": skill_inputs.get("news_context", ""),
-        },
-        None,
+# ---------------------------------------------------------------------------
+# translate_text — LLM-powered translation
+# ---------------------------------------------------------------------------
+
+def translate_text_skill(**skill_inputs: Any) -> dict[str, Any]:
+    text = str(skill_inputs.get("text") or "").strip()
+    target_language = str(skill_inputs.get("target_language") or "en").strip()
+
+    if not text:
+        return {"translated": "", "source_language": ""}
+
+    raw = _chat_with_local_model(
+        system_prompt="You are a professional translator. Return valid JSON only.",
+        user_prompt=(
+            f"Translate the following text to {target_language}. Preserve the original tone.\n\n"
+            f"Text:\n{text}\n\n"
+            f'Return JSON: {{"translated": "...", "source_language": "..."}}'
+        ),
     )
+    try:
+        parsed = json.loads(raw)
+        return {
+            "translated": str(parsed.get("translated", "")),
+            "source_language": str(parsed.get("source_language", "")),
+        }
+    except json.JSONDecodeError:
+        return {"translated": raw.strip(), "source_language": ""}
 
 
-def generate_creative_variants_skill(**skill_inputs: Any) -> dict[str, Any]:
-    tools = get_tool_registry()
-    return tools["generate_creative_variants"](
-        {
-            "task_input": skill_inputs.get("task_input", ""),
-            "theme_config": skill_inputs.get("theme_config") or {},
-            "creative_brief": skill_inputs.get("creative_brief", ""),
-            "revision_feedback": skill_inputs.get("revision_feedback") or [],
-            "revision_round": int(skill_inputs.get("revision_round", 0) or 0),
-        },
-        {
-            "variant_count": int(skill_inputs.get("variant_count", 2) or 2),
-        },
+# ---------------------------------------------------------------------------
+# rewrite_text — LLM-powered text rewriting
+# ---------------------------------------------------------------------------
+
+def rewrite_text_skill(**skill_inputs: Any) -> dict[str, Any]:
+    text = str(skill_inputs.get("text") or "").strip()
+    instruction = str(skill_inputs.get("instruction") or "").strip()
+
+    if not text:
+        return {"rewritten": ""}
+
+    raw = _chat_with_local_model(
+        system_prompt="You are a skilled writing assistant. Return valid JSON only.",
+        user_prompt=(
+            f"Rewrite the following text according to this instruction: {instruction}\n\n"
+            f"Text:\n{text}\n\n"
+            f'Return JSON: {{"rewritten": "..."}}'
+        ),
     )
-
-
-def review_creative_variants_skill(**skill_inputs: Any) -> dict[str, Any]:
-    tools = get_tool_registry()
-    return tools["review_creative_variants"](
-        {
-            "task_input": skill_inputs.get("task_input", ""),
-            "theme_config": skill_inputs.get("theme_config") or {},
-            "script_variants": skill_inputs.get("script_variants") or [],
-            "creative_brief": skill_inputs.get("creative_brief", ""),
-            "revision_round": int(skill_inputs.get("revision_round", 0) or 0),
-            "max_revision_round": int(skill_inputs.get("max_revision_round", 1) or 1),
-        },
-        {
-            "pass_threshold": float(skill_inputs.get("pass_threshold", 7.8) or 7.8),
-        },
-    )
-
-
-def generate_storyboard_packages_skill(**skill_inputs: Any) -> dict[str, Any]:
-    tools = get_tool_registry()
-    return tools["generate_storyboard_packages"](
-        {
-            "script_variants": skill_inputs.get("script_variants") or [],
-        },
-        None,
-    )
-
-
-def generate_video_prompt_packages_skill(**skill_inputs: Any) -> dict[str, Any]:
-    tools = get_tool_registry()
-    return tools["generate_video_prompt_packages"](
-        {
-            "script_variants": skill_inputs.get("script_variants") or [],
-            "storyboard_packages": skill_inputs.get("storyboard_packages") or [],
-        },
-        None,
-    )
-
-
-def prepare_image_generation_todo_skill(**skill_inputs: Any) -> dict[str, Any]:
-    tools = get_tool_registry()
-    return tools["prepare_image_generation_todo"](
-        {
-            "best_variant": skill_inputs.get("best_variant") or {},
-            "storyboard_packages": skill_inputs.get("storyboard_packages") or [],
-        },
-        None,
-    )
-
-
-def prepare_video_generation_todo_skill(**skill_inputs: Any) -> dict[str, Any]:
-    tools = get_tool_registry()
-    return tools["prepare_video_generation_todo"](
-        {
-            "best_variant": skill_inputs.get("best_variant") or {},
-            "video_prompt_packages": skill_inputs.get("video_prompt_packages") or [],
-        },
-        None,
-    )
-
-
-def finalize_creative_package_skill(**skill_inputs: Any) -> dict[str, Any]:
-    evaluation_result = skill_inputs.get("evaluation_result") or {}
-    final_package = {
-        "theme_config": skill_inputs.get("theme_config") or {},
-        "creative_brief": skill_inputs.get("creative_brief", ""),
-        "best_variant": skill_inputs.get("best_variant") or {},
-        "storyboard_packages": skill_inputs.get("storyboard_packages") or [],
-        "video_prompt_packages": skill_inputs.get("video_prompt_packages") or [],
-        "image_generation_todo": skill_inputs.get("image_generation_todo") or {},
-        "video_generation_todo": skill_inputs.get("video_generation_todo") or {},
-        "evaluation_result": evaluation_result,
-    }
-    decision = str(evaluation_result.get("decision") or "pass")
-    final_result = f"Finalized creative package with decision '{decision}'."
-    return {
-        "final_package": final_package,
-        "final_result": final_result,
-    }
+    try:
+        parsed = json.loads(raw)
+        return {"rewritten": str(parsed.get("rewritten", ""))}
+    except json.JSONDecodeError:
+        return {"rewritten": raw.strip()}

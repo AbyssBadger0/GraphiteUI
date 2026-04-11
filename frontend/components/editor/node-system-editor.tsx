@@ -1179,10 +1179,10 @@ function PortRow({
 
 // 各节点类型的最小高度，防止缩放导致内容显示不全
 const NODE_MIN_HEIGHT: Record<string, number> = {
-  input: 240,     // header + port row + textarea(min-h-120) + hint text + padding
-  output: 180,    // header + port row + preview area + padding
-  agent: 120,     // header + port rows + description + padding
-  condition: 100, // header + port rows + rule summary + padding
+  input: 248,     // header + port row + textarea(min-h-120) + bottom inset
+  output: 228,    // header + port row + preview area + bottom inset
+  agent: 208,     // header + port rows + summary block + bottom inset
+  condition: 176, // header + port rows + rule summary + bottom inset
 };
 
 const DEFAULT_NODE_WIDTH = 360;
@@ -1311,7 +1311,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
         <div
           data-node-card="true"
           className={cn(
-            "group/node relative z-10 h-full min-w-[160px] rounded-[18px] border bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,237,219,0.96)_100%)] shadow-[0_18px_36px_rgba(60,41,20,0.1)]",
+            "group/node relative z-10 flex h-full min-w-[160px] flex-col overflow-hidden rounded-[18px] border bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,237,219,0.96)_100%)] shadow-[0_18px_36px_rgba(60,41,20,0.1)]",
             selected ? "border-[var(--accent)]" : "border-[rgba(154,52,18,0.25)]",
           )}
           onDoubleClickCapture={(event) => {
@@ -1458,7 +1458,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           </div>
         </div>
 
-        <div className="grid gap-3 px-4 py-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 py-3">
           {config.family === "input" ? (
             <>
               <div className={cn("grid items-center gap-3", uploadedAsset ? "grid-cols-[1fr_auto]" : "grid-cols-[minmax(0,1fr)_auto]")}>
@@ -1523,7 +1523,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                   ))}
                 </div>
               </div>
-              <div className="grid gap-2">
+              <div className="mt-auto grid gap-2">
                 {config.valueType === "text" ? (
                   <textarea
                     value={config.defaultValue}
@@ -1635,7 +1635,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           {config.family === "agent" ? (
             <>
               {!isExpanded ? (
-                <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-sm text-[var(--text)] break-words">
+                <div className="mt-auto rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-sm text-[var(--text)] break-words">
                   {summarizeNode(config)}
                 </div>
               ) : (
@@ -1738,7 +1738,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           {config.family === "condition" ? (
             <>
               {!isExpanded ? (
-                <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-3 text-sm leading-6 text-[var(--text)] break-words">
+                <div className="mt-auto rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-3 text-sm leading-6 text-[var(--text)] break-words">
                   {summarizeNode(config)}
                 </div>
               ) : (
@@ -1882,7 +1882,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                   </div>
                 </>
               ) : null}
-              <div className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.82)] p-3">
+              <div className="mt-auto rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.82)] p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Preview</div>
                   <div className="text-[0.68rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{config.displayMode}</div>

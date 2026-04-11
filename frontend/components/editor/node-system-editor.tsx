@@ -16,6 +16,7 @@ import {
   useNodesInitialized,
   useNodesState,
   useReactFlow,
+  useUpdateNodeInternals,
   type Connection,
   type Edge,
   type Node,
@@ -2057,6 +2058,7 @@ const nodeTypes = {
 function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: GraphPayload; isNewFromTemplate: boolean }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const reactFlow = useReactFlow<FlowNode, Edge>();
+  const updateNodeInternals = useUpdateNodeInternals();
   const [graphName, setGraphName] = useState(initialGraph.name);
   const [graphId, setGraphId] = useState<string | null>(initialGraph.graph_id ?? null);
   const [templateId] = useState(initialGraph.template_id);
@@ -2649,9 +2651,10 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                     const nextPort = createAutoInputPort(targetNode.data.config.inputs, sourceType);
                     nextTargetHandle = buildHandleId("input", nextPort.key);
                     targetType = nextPort.valueType;
+                    const nextTargetNodeId = targetNode.id;
                     setNodes((current) =>
                       current.map((candidate) =>
-                        candidate.id === targetNode.id
+                        candidate.id === nextTargetNodeId
                           ? (() => {
                               const currentConfig = candidate.data.config as AgentNode;
                               return {
@@ -2668,13 +2671,15 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                           : candidate,
                       ),
                     );
+                    requestAnimationFrame(() => updateNodeInternals(nextTargetNodeId));
                   } else if (targetNode.data.config.family === "condition") {
                     const nextPort = createAutoInputPort(targetNode.data.config.inputs, sourceType);
                     nextTargetHandle = buildHandleId("input", nextPort.key);
                     targetType = nextPort.valueType;
+                    const nextTargetNodeId = targetNode.id;
                     setNodes((current) =>
                       current.map((candidate) =>
-                        candidate.id === targetNode.id
+                        candidate.id === nextTargetNodeId
                           ? (() => {
                               const currentConfig = candidate.data.config as ConditionNode;
                               return {
@@ -2691,6 +2696,7 @@ function createNodeFromPreset(preset: NodePresetDefinition, position: { x: numbe
                           : candidate,
                       ),
                     );
+                    requestAnimationFrame(() => updateNodeInternals(nextTargetNodeId));
                   }
                 }
 

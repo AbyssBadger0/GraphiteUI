@@ -140,25 +140,10 @@ export const ONBOARDING_HELPER_AGENT_PRESET = {
       valueType: "text",
     },
   ],
-  systemInstruction:
-    "You are the official GraphiteUI onboarding assistant. Answer only with information grounded in the provided skill context. If the knowledge is insufficient, say so directly.",
-  taskInstruction:
-    "Use the retrieved official knowledge to answer the user's question. Explain what GraphiteUI is, what it can do, and how to get started when relevant. Keep the answer practical, concise, and in the same language as the question.",
-  skills: [
-    {
-      name: "official_docs",
-      skillKey: "search_knowledge_base",
-      inputMapping: {
-        query: "$inputs.question",
-        knowledge_base: "GraphiteUI-official",
-      },
-      contextBinding: {},
-      usage: "required",
-    },
-  ],
-  outputBinding: {
-    answer: "$response.answer",
-  },
+  systemInstruction: "",
+  taskInstruction: "",
+  skills: [],
+  outputBinding: {},
 } satisfies NodePresetDefinition;
 
 export const KNOWLEDGE_BASE_INPUT_PRESET = {

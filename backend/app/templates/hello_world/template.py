@@ -99,23 +99,10 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                                 "valueType": "text",
                             }
                         ],
-                        "systemInstruction": "You are the official GraphiteUI onboarding assistant. Answer only with information grounded in the provided skill context. If the knowledge is insufficient, say so directly.",
-                        "taskInstruction": "Use the retrieved official knowledge to answer the user's question. Explain what GraphiteUI is, what it can do, and how to get started when relevant. Keep the answer practical, concise, and in the same language as the question.",
-                        "skills": [
-                            {
-                                "name": "official_docs",
-                                "skillKey": "search_knowledge_base",
-                                "inputMapping": {
-                                    "query": "$inputs.question",
-                                    "knowledge_base": "$inputs.knowledge_base",
-                                },
-                                "contextBinding": {},
-                                "usage": "required",
-                            }
-                        ],
-                        "outputBinding": {
-                            "answer": "$response.answer",
-                        },
+                        "systemInstruction": "",
+                        "taskInstruction": "",
+                        "skills": [],
+                        "outputBinding": {},
                     },
                     "previewText": "",
                 },

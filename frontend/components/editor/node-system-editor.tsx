@@ -2215,7 +2215,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                 </div>
               </FloatingLayer>
             </div>
-            {config.family !== "agent" ? (
+            {config.family ? (
               <div className="relative mt-1">
                 <div ref={descriptionAnchorRef} className="line-clamp-2 text-xs leading-5 text-[var(--muted)] cursor-text" onDoubleClick={() => setIsEditingDescription(true)}>
                   {config.description || summarizeNode(config)}
@@ -2597,59 +2597,22 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
 
           {config.family === "agent" ? (
             <>
-              {!isExpanded ? (
-                <div className="flex min-h-[100px] flex-1 items-center justify-center rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.78)] px-5 py-4 text-center text-sm text-[var(--text)] break-words">
-                  {summarizeNode(config)}
-                </div>
-              ) : (
+              {!isExpanded ? null : (
                 <>
-                  <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-                    <span>Task Introduction</span>
-                    <textarea
-                      className="min-h-24 rounded-[16px] border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3.5 py-3 text-[var(--text)]"
-                      value={config.description}
-                      onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), description: event.target.value }))}
-                    />
-                  </label>
-                  <div className="grid gap-1.5 text-sm text-[var(--muted)]">
-                    <span>System Instruction</span>
-                    <ReferenceTextarea
-                      className="min-h-24"
-                      value={config.systemInstruction}
-                      onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), systemInstruction: nextValue }))}
-                      readOptions={refReadOptions}
-                      writeOptions={refWriteOptions}
-                      onOutputReference={(key) =>
-                        data.onConfigChange?.((currentConfig) => {
-                          const agent = currentConfig as AgentNode;
-                          if (agent.outputBinding[key]) return agent;
-                          return { ...agent, outputBinding: { ...agent.outputBinding, [key]: `$response.${key}` } };
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="grid gap-1.5 text-sm text-[var(--muted)]">
-                    <span>Task Instruction</span>
-                    <ReferenceTextarea
-                      className="min-h-28"
-                      value={config.taskInstruction}
-                      onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), taskInstruction: nextValue }))}
-                      readOptions={refReadOptions}
-                      writeOptions={refWriteOptions}
-                      onOutputReference={(key) =>
-                        data.onConfigChange?.((currentConfig) => {
-                          const agent = currentConfig as AgentNode;
-                          if (agent.outputBinding[key]) return agent;
-                          return { ...agent, outputBinding: { ...agent.outputBinding, [key]: `$response.${key}` } };
-                        })
-                      }
-                    />
-                  </div>
-                  <MappingEditor
-                    title="Output Binding"
-                    value={config.outputBinding}
-                    addLabel="Add Output Binding"
-                    onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), outputBinding: nextValue }))}
+                  <ReferenceTextarea
+                    className="min-h-32"
+                    value={config.taskInstruction}
+                    placeholder="用 @ 引用输入和技能结果，用 # 指定输出字段"
+                    onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), taskInstruction: nextValue }))}
+                    readOptions={refReadOptions}
+                    writeOptions={refWriteOptions}
+                    onOutputReference={(key) =>
+                      data.onConfigChange?.((currentConfig) => {
+                        const agent = currentConfig as AgentNode;
+                        if (agent.outputBinding[key]) return agent;
+                        return { ...agent, outputBinding: { ...agent.outputBinding, [key]: `$response.${key}` } };
+                      })
+                    }
                   />
                   {agentRuntime ? (
                     <PanelSection

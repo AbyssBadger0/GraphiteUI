@@ -205,8 +205,7 @@ export function ReferenceTextarea({
     const segments = parseReferences(value);
     return segments.map((seg, i) => {
       if (seg.type === "text") {
-        // render invisible text that takes the same space
-        return <span key={i} className="text-transparent">{seg.content}</span>;
+        return <span key={i} className="text-[var(--text)]">{seg.content}</span>;
       }
       const colors = CATEGORY_COLORS[seg.category];
       return (

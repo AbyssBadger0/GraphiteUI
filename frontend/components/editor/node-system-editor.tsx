@@ -1302,12 +1302,21 @@ function PortCreateButton({
       <button
         type="button"
         className={cn(
-          "inline-flex items-center gap-2 text-sm text-[var(--muted)] transition",
+          "relative flex min-h-6 w-full items-center text-sm text-[var(--muted)] transition",
+          side === "input" ? "justify-start pl-6 text-left" : "justify-end pr-6 text-right",
           visible ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
         onClick={openEditor}
       >
-        <span className="grid h-5 w-5 place-items-center rounded-full border border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.82)] text-[var(--accent-strong)]">+</span>
+        <span
+          className={cn(
+            "absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-2 border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.96)]",
+            side === "input" ? "left-[-7px]" : "right-[-7px]",
+          )}
+        >
+          <span className="absolute left-1/2 top-1/2 h-[1.5px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--accent-strong)]" />
+          <span className="absolute left-1/2 top-1/2 h-[7px] w-[1.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--accent-strong)]" />
+        </span>
         <span>{side === "input" ? "Add input" : "Add output"}</span>
       </button>
       {isOpen ? (

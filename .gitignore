@@ -78,15 +78,19 @@ backend/data/graphs/*.json
 backend/data/memories/runtime/
 backend/data/runs/
 
+# Demo files to exclude
+demo/slg_langgraph_single_file_modified_v2.py
+
 # Generated demo artifacts
 demo/__pycache__/
 demo/outputs/
 
-# Future local data directories
-outputs/
-tmp/
-temp/
+# Claude Code / Dev tools
+.claude/
 .superpowers/
+.graphite/
+.dev_*.log
+.next/
 
-# Local gateway/proxy experiment files
-scripts/lm_core.py
+# Agent/dev-only configs (not for open source)
+AGENTS.md

@@ -1913,6 +1913,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const presetConfirmTimeoutRef = useRef<number | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
+  const presetButtonRef = useRef<HTMLButtonElement | null>(null);
   const labelAnchorRef = useRef<HTMLDivElement | null>(null);
   const descriptionAnchorRef = useRef<HTMLDivElement | null>(null);
   const uploadedAsset = config.family === "input" ? tryParseUploadedAssetEnvelope(config.defaultValue) : null;
@@ -2109,6 +2110,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
         >
         {isPresetEligibleFamily(config.family) ? (
           <button
+            ref={presetButtonRef}
             type="button"
             aria-label="Save as Preset"
             title="Save as Preset"
@@ -2146,6 +2148,11 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
             )}
           </button>
         ) : null}
+        <FloatingLayer anchorRef={presetButtonRef} open={isPresetConfirmActive} placement="top-center" className="pointer-events-none">
+          <div className="whitespace-nowrap rounded-full border border-[rgba(34,197,94,0.16)] bg-[rgba(220,252,231,0.98)] px-3.5 py-1.5 text-[0.76rem] font-medium uppercase tracking-[0.16em] text-[rgb(22,163,74)] shadow-[0_14px_32px_rgba(21,128,61,0.14)]">
+            Save preset?
+          </div>
+        </FloatingLayer>
         <button
           ref={deleteButtonRef}
           type="button"

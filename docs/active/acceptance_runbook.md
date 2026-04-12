@@ -131,9 +131,10 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 
 步骤：
 
-1. 将输入 state `name` 连到 `hello_model`
-2. 将 `hello_model` 的输出 state 连到输出边界
-3. 检查输入输出端口和连线表达
+1. 将 `Question Input.question` 连到 `GraphiteUI Onboarding Helper.question`
+2. 将 `Knowledge Base.knowledge_base` 连到 `GraphiteUI Onboarding Helper.knowledge_base`
+3. 将处理节点的 `answer` 连到输出边界
+4. 检查输入输出端口和连线表达
 
 通过标准：
 
@@ -160,7 +161,7 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 步骤：
 
 1. 点击 `Validate`
-2. 观察 inspector 中的反馈
+2. 观察顶部状态反馈或错误提示
 
 通过标准：
 
@@ -171,8 +172,8 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 
 步骤：
 
-1. 使用最小 `hello_world` 图
-2. 在输入边界中设置名字参数，或将输入 state 连到 `hello_model.name`
+1. 使用 `hello_world` 模板或等价最小图
+2. 在 `Question Input` 中填写问题，并确认 `Knowledge Base` 为可用知识库
 3. 点击 `Run`
 4. 等待运行结束
 
@@ -180,7 +181,7 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 
 - run 状态可见
 - 运行成功或失败状态明确
-- 输出节点或状态区可见 greeting 或错误信息
+- 输出节点或状态区可见 answer 或错误信息
 
 ## AC-10 Node Result Inspection
 
@@ -206,7 +207,7 @@ curl --noproxy '*' -fsS http://127.0.0.1:8765/health
 通过标准：
 
 - 用户能理解真实输入和真实输出
-- greeting 或最终结果能被明确读取
+- `answer` 能被明确读取
 - 前端边界模型不会阻碍后端 LangGraph 运行
 
 ## AC-12 Node Resize

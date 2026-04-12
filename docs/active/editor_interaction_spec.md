@@ -4,6 +4,11 @@
 
 本文件定义新 editor 的具体交互规则。
 
+注意：
+
+- 本文件描述的是目标交互，不代表当前代码已经全部实现
+- 当前仍待实现的事项，请同时参考 [FUTURE_WORK.md](/home/abyss/GraphiteUI/docs/FUTURE_WORK.md)
+
 它服务于 [editor_rebuild_requirements.md](/home/abyss/GraphiteUI/docs/active/editor_rebuild_requirements.md)，回答的是：
 
 - 页面上具体怎么呈现
@@ -232,9 +237,10 @@
 - 当用户进入拖线中的连线态时，可接入的参数字段左侧应浮现亮点
 - 参数已被连接覆盖后，widget 保持可见但进入置灰禁用态
 
-第一阶段已落地的示例：
+当前状态说明：
 
-- `hello_model.name`
+- 当前代码仍以节点级 ports 为主
+- 通用参数 socket 规则仍属于目标态交互
 
 第一阶段对参数 widget 的最小要求：
 
@@ -265,7 +271,7 @@
 若同时需要 branch label 和 flow keys：
 
 - 第一阶段建议格式：
-  - `pass · greeting`
+  - `pass · answer`
   - `revise · issues`
 
 ## 7.3 Color Rule
@@ -358,7 +364,7 @@ state 的颜色来自 state 定义。
 
 - run 是否成功
 - 最终结果摘要
-- `hello_world` 的 greeting
+- `hello_world` 的 answer
 
 ## 10. Boundary Model
 
@@ -390,26 +396,27 @@ state 的颜色来自 state 定义。
 第一阶段唯一必须跑通的交互流：
 
 1. 打开 `/editor/new`
-2. 定义输入 state `name`
-3. 定义输出 state `greeting / final_result`
-4. 创建 `Text Input`
-5. 创建 `hello_model`
-6. 创建 `Text Output`
-7. 连接逐项 state flow
-8. 在 `hello_model` 上配置本地名字，或把上游 state 连到名字参数 socket
-9. Save
-10. Validate
-11. Run
-12. 点击 `hello_model` 查看节点结果
-13. 在最终结果中看到 greeting
+2. 定义输入 state `question / knowledge_base`
+3. 定义输出 state `answer`
+4. 创建 `Question Input`
+5. 创建 `Knowledge Base`
+6. 创建 `GraphiteUI Onboarding Helper`
+7. 创建 `Onboarding Answer`
+8. 连接输入、处理和输出
+9. 配置问题文本与知识库
+10. Save
+11. Validate
+12. Run
+13. 点击处理节点或输出节点查看最新结果
+14. 在最终结果中看到 answer
 
 ## 12. Non-Goals
 
 第一阶段交互明确不做：
 
-- 从空白连线处弹 Node Picker
+- 通用参数级 socket 覆盖体系
+- editor 内完整节点级执行详情面板
 - 子图
 - 协作编辑
 - 高级时序调试
-- 自动布局
 - 复杂的端口级多线 state routing

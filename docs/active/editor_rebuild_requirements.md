@@ -4,6 +4,11 @@
 
 本文件定义 GraphiteUI 新 editor 的当前唯一产品需求。
 
+注意：
+
+- 本文件描述的是目标态要求，不代表这些能力已经全部落地
+- 当前仍明确属于未来工作的事项，请同时参考 [FUTURE_WORK.md](/home/abyss/GraphiteUI/docs/FUTURE_WORK.md)
+
 新 editor 不再按“普通节点图编辑器”理解，而是按：
 
 - LangGraph-compatible runtime
@@ -173,9 +178,9 @@ GraphiteUI editor 的目标不是做通用流程图工具。
 
 说明：
 
-- `hello_world` 的真实输入是 `name`
-- `hello_world` 的真实输出是 `greeting / final_result`
-- `greeting / final_result / llm_response` 不应被错误表达成初始输入
+- 当前 `hello_world` 模板的真实输入是 `question / knowledge_base`
+- 当前 `hello_world` 模板的真实输出是 `answer`
+- `answer` 不应被错误表达成初始输入
 
 第一阶段已确定的边界节点范围：
 
@@ -218,7 +223,7 @@ GraphiteUI editor 的目标不是做通用流程图工具。
 
 第一阶段至少要求：
 
-- `hello_model.name` 支持参数 socket
+- 参数字段的“本地值 / 上游覆盖”语义要被清楚定义
 - 保存后重新打开图时，参数绑定关系可被还原
 
 ## 5. Scope
@@ -453,12 +458,11 @@ GraphiteUI editor 的目标不是做通用流程图工具。
 
 目标：
 
-- 输入边界提供 `name`
-- `hello_model` 节点读取 `name`
-- `hello_model.name` 可以来自本地文本框，也可以由上游连接覆盖
-- `hello_model` 节点写出 `greeting / final_result / llm_response`
+- 输入边界提供 `question / knowledge_base`
+- `GraphiteUI Onboarding Helper` 节点读取 `question / knowledge_base`
+- 处理节点写出 `answer`
 - 后端调用本地 OpenAI-compatible 模型服务
-- 前端可见 `greeting`
+- 前端可见 `answer`
 
 必经流程：
 
@@ -470,7 +474,7 @@ GraphiteUI editor 的目标不是做通用流程图工具。
 6. 运行 graph
 7. 查看 run 成功或失败
 8. 点击节点查看节点运行结果
-9. 在最终结果中看到 greeting
+9. 在最终结果中看到 answer
 
 ## 9. Technical Constraints
 

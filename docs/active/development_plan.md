@@ -165,7 +165,7 @@
 - 建最小图
 - 配置输入参数
 - Save / Validate / Run
-- 在 editor 内查看 greeting
+- 在 editor 内查看 answer
 - 验证前端边界模型可被编译为后端 LangGraph
 
 完成标准：
@@ -245,7 +245,7 @@
 完成条件：
 
 - 新 editor 创建的 `hello_world` 图可保存、校验、运行
-- greeting 在 editor 内可见
+- answer 在 editor 内可见
 - 前端边界模型可稳定编译为后端 LangGraph
 
 当前判断：

@@ -147,6 +147,7 @@ Agent 节点展开后只有一个纯文本 textarea：
 - 匹配失败的参数跳过
 
 ### Step 4: 验证
-- hello_world 模板：agent 挂载 search_knowledge_base，提示词留空 → 应能自动检索并回答
+- `hello_world` 模板：只给 `question / knowledge_base`，提示词留空 → 应能自动生成 `answer`
+- 后续若某个 agent 挂载检索类 skill，skill 结果应自动注入 system prompt 上下文
 - 写"用中文简洁回答" → 应按指令调整风格
 - 不挂任何 skill，只有输入输出 → 应按提示词直接生成

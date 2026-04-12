@@ -25,7 +25,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
             {
                 "id": "input_1",
                 "type": "default",
-                "position": {"x": 80, "y": 120},
+                "position": {"x": 80, "y": 160},
                 "data": {
                     "nodeId": "input_1",
                     "config": {
@@ -48,7 +48,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
             {
                 "id": "input_kb",
                 "type": "default",
-                "position": {"x": 80, "y": 420},
+                "position": {"x": 80, "y": 540},
                 "data": {
                     "nodeId": "input_kb",
                     "config": {
@@ -68,7 +68,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                     "previewText": "",
                 },
             },
-            # ── Column 2: Agents ──
+            # ── Column 2: Agents (parallel) ──
             {
                 "id": "agent_1",
                 "type": "default",
@@ -112,7 +112,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
             {
                 "id": "agent_2",
                 "type": "default",
-                "position": {"x": 560, "y": 420},
+                "position": {"x": 560, "y": 480},
                 "data": {
                     "nodeId": "agent_2",
                     "config": {
@@ -122,16 +122,22 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                         "family": "agent",
                         "inputs": [
                             {
-                                "key": "text_input",
-                                "label": "Text Input",
+                                "key": "question",
+                                "label": "Question",
                                 "valueType": "text",
+                                "required": True,
+                            },
+                            {
+                                "key": "knowledge_base",
+                                "label": "Knowledge Base",
+                                "valueType": "knowledge_base",
                                 "required": True,
                             },
                         ],
                         "outputs": [
                             {
-                                "key": "formatted",
-                                "label": "Formatted",
+                                "key": "answer",
+                                "label": "Answer",
                                 "valueType": "text",
                             }
                         ],
@@ -172,7 +178,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
             {
                 "id": "output_2",
                 "type": "default",
-                "position": {"x": 1040, "y": 420},
+                "position": {"x": 1040, "y": 480},
                 "data": {
                     "nodeId": "output_2",
                     "config": {
@@ -182,7 +188,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                         "family": "output",
                         "input": {
                             "key": "value",
-                            "label": "Formatted",
+                            "label": "Answer",
                             "valueType": "text",
                             "required": True,
                         },
@@ -196,7 +202,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
             },
         ],
         "edges": [
-            # Input → Agents
+            # Input → Agent 1
             {
                 "id": "edge_q_agent1",
                 "source": "input_1",
@@ -211,14 +217,22 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                 "sourceHandle": "output:knowledge_base",
                 "targetHandle": "input:knowledge_base",
             },
+            # Input → Agent 2 (parallel)
             {
-                "id": "edge_agent1_agent2",
-                "source": "agent_1",
+                "id": "edge_q_agent2",
+                "source": "input_1",
                 "target": "agent_2",
-                "sourceHandle": "output:answer",
-                "targetHandle": "input:text_input",
+                "sourceHandle": "output:question",
+                "targetHandle": "input:question",
             },
-            # Agents → Outputs
+            {
+                "id": "edge_kb_agent2",
+                "source": "input_kb",
+                "target": "agent_2",
+                "sourceHandle": "output:knowledge_base",
+                "targetHandle": "input:knowledge_base",
+            },
+            # Agent → Output
             {
                 "id": "edge_agent1_out1",
                 "source": "agent_1",
@@ -230,7 +244,7 @@ def _create_default_node_system_graph(theme_preset: dict[str, Any]) -> dict[str,
                 "id": "edge_agent2_out2",
                 "source": "agent_2",
                 "target": "output_2",
-                "sourceHandle": "output:formatted",
+                "sourceHandle": "output:answer",
                 "targetHandle": "input:value",
             },
         ],

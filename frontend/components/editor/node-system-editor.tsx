@@ -3311,16 +3311,34 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
     setNodes((current) => {
       if (current.length === 0) return current;
 
+      // Group nodes into columns by their original x position (within 200px tolerance)
       const sorted = [...current].sort((a, b) => a.position.x - b.position.x);
+      const columns: FlowNode[][] = [];
+      for (const node of sorted) {
+        const lastColumn = columns[columns.length - 1];
+        if (lastColumn && Math.abs(node.position.x - lastColumn[0].position.x) < 200) {
+          lastColumn.push(node);
+        } else {
+          columns.push([node]);
+        }
+      }
+
+      // Layout columns: each column gets a fresh x, nodes within a column keep their relative y
       const GAP = 80;
       let nextX = sorted[0].position.x;
-      const centerY = sorted.reduce((sum, n) => sum + n.position.y, 0) / sorted.length;
+      const positionMap = new Map<string, { x: number; y: number }>();
 
-      return sorted.map((node) => {
-        const width = node.measured?.width ?? (typeof node.style?.width === "number" ? node.style.width : 280);
-        const updatedNode = { ...node, position: { x: nextX, y: centerY } };
-        nextX += width + GAP;
-        return updatedNode;
+      for (const column of columns) {
+        const maxWidth = Math.max(...column.map((n) => n.measured?.width ?? (typeof n.style?.width === "number" ? n.style.width : 280)));
+        for (const node of column) {
+          positionMap.set(node.id, { x: nextX, y: node.position.y });
+        }
+        nextX += maxWidth + GAP;
+      }
+
+      return current.map((node) => {
+        const pos = positionMap.get(node.id);
+        return pos ? { ...node, position: pos } : node;
       });
     });
   }, [isNewFromTemplate, nodesInitialized, setNodes]);

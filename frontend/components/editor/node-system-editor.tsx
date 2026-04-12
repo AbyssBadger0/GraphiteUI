@@ -1,12 +1,13 @@
 "use client";
 
 import {
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
-  type SelectHTMLAttributes,
   type SyntheticEvent,
   type TextareaHTMLAttributes,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -372,31 +373,376 @@ const NODE_SELECT_CLASS =
 const NODE_TEXTAREA_CLASS =
   "w-full resize-none rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3.5 py-3 text-sm leading-6 text-[var(--text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] outline-none transition focus:border-[rgba(154,52,18,0.28)] focus:bg-white";
 
+type FieldSelectOption = {
+  value: string;
+  label: string;
+  detail?: string;
+};
+
 function FieldSelect({
+  value,
+  onValueChange,
+  options,
   className,
   wrapperClassName,
   iconClassName,
-  children,
-  ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & {
+  menuClassName,
+  triggerLabelClassName,
+  optionLabelClassName,
+  tone = "light",
+  menuTone = "light",
+  align = "start",
+  ariaLabel,
+  title,
+  disabled = false,
+  minMenuWidth = 0,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  options: FieldSelectOption[];
+  className?: string;
   wrapperClassName?: string;
   iconClassName?: string;
+  menuClassName?: string;
+  triggerLabelClassName?: string;
+  optionLabelClassName?: string;
+  tone?: "light" | "dark";
+  menuTone?: "light" | "dark";
+  align?: "start" | "end";
+  ariaLabel?: string;
+  title?: string;
+  disabled?: boolean;
+  minMenuWidth?: number;
 }) {
+  const listboxId = useId();
+  const [open, setOpen] = useState(false);
+  const [menuWidth, setMenuWidth] = useState<number | null>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const preferredPlacement: FloatingPlacement = align === "end" ? "bottom-end" : "bottom-start";
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selectedIndex = options.findIndex((option) => option.value === value);
+  const selectedOption = options[selectedIndex] ?? options[0] ?? null;
+  const isDisabled = disabled || options.length === 0;
+  const resolvedMenuWidth = menuWidth ? Math.max(menuWidth, minMenuWidth) : minMenuWidth || undefined;
+
+  useEffect(() => {
+    if (!open) return;
+
+    const syncMenuWidth = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      setMenuWidth(Math.round(rect.width));
+    };
+
+    syncMenuWidth();
+
+    if (typeof ResizeObserver === "undefined" || !triggerRef.current) {
+      window.addEventListener("resize", syncMenuWidth);
+      return () => window.removeEventListener("resize", syncMenuWidth);
+    }
+
+    const observer = new ResizeObserver(syncMenuWidth);
+    observer.observe(triggerRef.current);
+    window.addEventListener("resize", syncMenuWidth);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", syncMenuWidth);
+    };
+  }, [minMenuWidth, open]);
+
+  useEffect(() => {
+    if (!open) {
+      setActiveIndex(-1);
+      return;
+    }
+
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    const frameId = window.requestAnimationFrame(() => {
+      menuRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [open, selectedIndex]);
+
+  useEffect(() => {
+    if (!open || activeIndex < 0) return;
+    optionRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as globalThis.Node | null;
+      if (!target) return;
+      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (isDisabled && open) {
+      setOpen(false);
+    }
+  }, [isDisabled, open]);
+
+  const stopSelectEvent = (event: SyntheticEvent) => {
+    event.stopPropagation();
+  };
+
+  const stopDragEvent = (event: SyntheticEvent) => {
+    event.stopPropagation();
+  };
+
+  const selectOption = (nextValue: string) => {
+    onValueChange(nextValue);
+    setOpen(false);
+    window.requestAnimationFrame(() => {
+      triggerRef.current?.focus();
+    });
+  };
+
+  const moveActiveIndex = (direction: 1 | -1) => {
+    if (options.length === 0) return;
+    setActiveIndex((current) => {
+      const baseIndex = current >= 0 ? current : selectedIndex >= 0 ? selectedIndex : 0;
+      return (baseIndex + direction + options.length) % options.length;
+    });
+  };
+
+  const handleTriggerKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (isDisabled) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+        return;
+      }
+      moveActiveIndex(1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        setActiveIndex(selectedIndex >= 0 ? selectedIndex : Math.max(options.length - 1, 0));
+        return;
+      }
+      moveActiveIndex(-1);
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      setOpen((current) => !current);
+      return;
+    }
+
+    if (event.key === "Escape" && open) {
+      event.preventDefault();
+      setOpen(false);
+    }
+  };
+
+  const handleMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      moveActiveIndex(1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      moveActiveIndex(-1);
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      setActiveIndex(0);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      setActiveIndex(Math.max(options.length - 1, 0));
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (activeIndex >= 0 && options[activeIndex]) {
+        selectOption(options[activeIndex].value);
+      }
+      return;
+    }
+
+    if (event.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  const triggerToneClassName =
+    tone === "dark"
+      ? "border-[rgba(15,23,42,0.12)] bg-[rgba(30,36,48,0.96)] text-[rgba(255,250,241,0.96)] shadow-[0_10px_18px_rgba(15,23,42,0.16)] focus:border-[rgba(217,119,6,0.32)] focus:bg-[rgba(38,44,56,0.98)]"
+      : "border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] text-[var(--text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] hover:border-[rgba(154,52,18,0.22)]";
+
+  const menuToneClassName =
+    menuTone === "dark"
+      ? "border-[rgba(15,23,42,0.18)] bg-[rgba(30,36,48,0.98)]"
+      : "border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.98)]";
+
+  const optionBaseClassName =
+    menuTone === "dark"
+      ? "text-[rgba(255,250,241,0.92)] hover:bg-[rgba(255,255,255,0.08)]"
+      : "text-[var(--text)] hover:bg-[rgba(154,52,18,0.08)]";
+
+  const optionSelectedClassName =
+    menuTone === "dark"
+      ? "bg-[rgba(217,119,6,0.18)] text-[rgba(255,250,241,0.98)]"
+      : "bg-[rgba(154,52,18,0.12)] text-[var(--accent-strong)]";
+
+  const optionActiveClassName =
+    menuTone === "dark"
+      ? "bg-[rgba(255,255,255,0.06)]"
+      : "bg-[rgba(154,52,18,0.06)]";
+
   return (
-    <div className={cn("relative", wrapperClassName)}>
-      <select className={cn(NODE_SELECT_CLASS, className)} {...props}>
-        {children}
-      </select>
+    <div className={cn("relative nodrag nowheel pointer-events-auto", wrapperClassName)}>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={open ? listboxId : undefined}
+        title={title}
+        disabled={isDisabled}
+        onPointerDown={stopDragEvent}
+        onMouseDown={stopDragEvent}
+        onKeyDown={handleTriggerKeyDown}
+        onClick={(event) => {
+          stopSelectEvent(event);
+          if (isDisabled) return;
+          setOpen((current) => !current);
+        }}
+        className={cn(
+          NODE_SELECT_CLASS,
+          "nodrag nowheel pointer-events-auto flex items-center text-left",
+          triggerToneClassName,
+          isDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+          className,
+        )}
+      >
+        <span className={cn("block min-w-0 flex-1 truncate", triggerLabelClassName)}>{selectedOption?.label ?? value}</span>
+      </button>
       <svg
         viewBox="0 0 16 16"
         className={cn(
-          "pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 fill-none stroke-[var(--muted)]",
+          "pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 fill-none stroke-[var(--muted)] transition-transform",
+          open ? "rotate-180" : null,
+          tone === "dark" ? "stroke-[rgba(255,250,241,0.72)]" : null,
           iconClassName,
         )}
         strokeWidth="1.5"
       >
         <path d="m4.5 6 3.5 4 3.5-4" />
       </svg>
+      <FloatingLayer anchorRef={triggerRef} open={open} placement={preferredPlacement}>
+        <div
+          id={listboxId}
+          ref={menuRef}
+          role="listbox"
+          aria-label={ariaLabel}
+          aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
+          tabIndex={-1}
+          className={cn(
+            "nodrag nowheel pointer-events-auto max-h-[260px] overflow-y-auto overflow-x-hidden rounded-[16px] border p-1 shadow-[0_20px_40px_rgba(60,41,20,0.18)] backdrop-blur focus:outline-none",
+            menuToneClassName,
+            menuClassName,
+          )}
+          style={{ width: resolvedMenuWidth ? `${resolvedMenuWidth}px` : undefined }}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+          }}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={handleMenuKeyDown}
+        >
+          <div className="grid gap-1">
+            {options.map((option, index) => {
+              const selected = option.value === value;
+              const active = index === activeIndex;
+              return (
+                <button
+                  id={`${listboxId}-option-${index}`}
+                  key={option.value}
+                  ref={(node) => {
+                    optionRefs.current[index] = node;
+                  }}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  className={cn(
+                    "nodrag nowheel pointer-events-auto flex w-full items-center justify-between gap-3 rounded-[12px] px-3 py-2 text-left text-sm transition",
+                    optionBaseClassName,
+                    selected ? optionSelectedClassName : active ? optionActiveClassName : null,
+                  )}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                  }}
+                  onMouseDown={(event) => {
+                    event.stopPropagation();
+                  }}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => {
+                    selectOption(option.value);
+                  }}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className={cn("block truncate", optionLabelClassName)}>{option.label}</span>
+                    {option.detail ? (
+                      <span
+                        className={cn(
+                          "mt-0.5 block text-[0.72rem]",
+                          menuTone === "dark" ? "text-[rgba(255,250,241,0.56)]" : "text-[var(--muted)]",
+                        )}
+                      >
+                        {option.detail}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className={cn("opacity-0 transition", selected ? "opacity-100" : null)}>
+                    <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
+                      <path d="m3.5 8.5 3 3 6-7" />
+                    </svg>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </FloatingLayer>
     </div>
   );
 }
@@ -511,45 +857,39 @@ function EditorSwitchRow({
 function InlineRuntimeSelect({
   value,
   onChange,
-  children,
+  options,
   ariaLabel,
+  minMenuWidth = 0,
+  className,
+  triggerLabelClassName,
+  optionLabelClassName,
 }: {
   value: string;
   onChange: (value: string) => void;
-  children: ReactNode;
+  options: FieldSelectOption[];
   ariaLabel: string;
+  minMenuWidth?: number;
+  className?: string;
+  triggerLabelClassName?: string;
+  optionLabelClassName?: string;
 }) {
-  const stopSelectEvent = (event: SyntheticEvent) => {
-    event.stopPropagation();
-  };
-
   return (
-    <div
-      className="nodrag nowheel pointer-events-auto"
-      onPointerDownCapture={stopSelectEvent}
-      onMouseDownCapture={stopSelectEvent}
-      onClickCapture={stopSelectEvent}
-      onPointerDown={stopSelectEvent}
-      onMouseDown={stopSelectEvent}
-      onClick={stopSelectEvent}
-    >
+    <div className="nodrag nowheel pointer-events-auto">
       <FieldSelect
-        aria-label={ariaLabel}
+        ariaLabel={ariaLabel}
         title={ariaLabel}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onPointerDownCapture={stopSelectEvent}
-        onMouseDownCapture={stopSelectEvent}
-        onClickCapture={stopSelectEvent}
-        onPointerDown={stopSelectEvent}
-        onMouseDown={stopSelectEvent}
-        onClick={stopSelectEvent}
+        onValueChange={onChange}
+        options={options}
+        minMenuWidth={minMenuWidth}
         wrapperClassName="min-w-0"
-        className="nodrag nowheel min-h-[40px] min-w-0 cursor-pointer rounded-[14px] border border-[rgba(15,23,42,0.12)] bg-[rgba(30,36,48,0.96)] px-3 py-2 pr-9 text-[0.82rem] font-medium text-[rgba(255,250,241,0.96)] shadow-[0_10px_18px_rgba(15,23,42,0.16)] focus:border-[rgba(217,119,6,0.32)] focus:bg-[rgba(38,44,56,0.98)]"
-        iconClassName="stroke-[rgba(255,250,241,0.72)]"
-      >
-        {children}
-      </FieldSelect>
+        triggerLabelClassName={triggerLabelClassName}
+        optionLabelClassName={optionLabelClassName}
+        className={cn(
+          "nodrag nowheel min-h-[52px] min-w-0 rounded-[18px] px-4 py-3 pr-10 text-[0.94rem] font-medium leading-5",
+          className,
+        )}
+      />
     </div>
   );
 }
@@ -614,21 +954,16 @@ function buildModelSelectOptions(
   availableModelRefs: string[],
   modelDisplayLookup: Record<string, string>,
 ) {
-  const currentOverrideModel = agentRuntime.model?.trim() ?? "";
-  const options: Array<{ value: string; label: string }> = [
-    {
-      value: "__global__",
-      label: getModelDisplayLabel(agentRuntime.globalTextModelRef, modelDisplayLookup),
-    },
-  ];
-  const seen = new Set<string>(["__global__"]);
-  const candidates = currentOverrideModel
-    ? [currentOverrideModel, ...availableModelRefs]
+  const resolvedModel = agentRuntime.resolvedModel?.trim() ?? "";
+  const options: FieldSelectOption[] = [];
+  const seen = new Set<string>();
+  const candidates = resolvedModel
+    ? [resolvedModel, ...availableModelRefs]
     : availableModelRefs;
 
   for (const modelRef of candidates) {
     const trimmed = modelRef.trim();
-    if (!trimmed || trimmed === agentRuntime.globalTextModelRef || seen.has(trimmed)) continue;
+    if (!trimmed || seen.has(trimmed)) continue;
     seen.add(trimmed);
     options.push({
       value: trimmed,
@@ -665,21 +1000,22 @@ function AgentInlineRuntimeControls({
 }) {
   const modelOptions = buildModelSelectOptions(agentRuntime, availableModelRefs, modelDisplayLookup);
   const thinkingOptions = buildThinkingSelectOptions();
-  const currentOverrideModel = agentRuntime.model?.trim() ?? "";
-  const selectedModelValue =
-    agentRuntime.modelSource === "override" && currentOverrideModel
-      ? currentOverrideModel
-      : "__global__";
+  const selectedModelValue = agentRuntime.resolvedModel;
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-[minmax(0,1.9fr)_132px] items-start gap-2">
       <InlineRuntimeSelect
         ariaLabel="Select model"
         value={selectedModelValue}
+        options={modelOptions}
+        minMenuWidth={340}
+        className="text-[0.9rem]"
+        triggerLabelClassName="whitespace-nowrap"
+        optionLabelClassName="whitespace-normal break-words leading-6"
         onChange={(nextValue) =>
           onConfigChange((currentConfig) => {
             const currentAgent = currentConfig as AgentNode;
-            if (nextValue === "__global__") {
+            if (nextValue === agentRuntime.globalTextModelRef) {
               return {
                 ...currentAgent,
                 modelSource: "global",
@@ -693,29 +1029,22 @@ function AgentInlineRuntimeControls({
             };
           })
         }
-      >
-        {modelOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </InlineRuntimeSelect>
+      />
       <InlineRuntimeSelect
         ariaLabel="Select thinking mode"
         value={agentRuntime.resolvedThinking ? "on" : "off"}
+        options={thinkingOptions}
+        minMenuWidth={180}
+        className="text-[0.88rem]"
+        triggerLabelClassName="whitespace-nowrap"
+        optionLabelClassName="whitespace-normal break-words leading-6"
         onChange={(nextValue) =>
           onConfigChange((currentConfig) => ({
             ...(currentConfig as AgentNode),
             thinkingMode: nextValue as AgentThinkingMode,
           }))
         }
-      >
-        {thinkingOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </InlineRuntimeSelect>
+      />
     </div>
   );
 }
@@ -868,6 +1197,8 @@ function renderUploadedAssetPreview(asset: UploadedAssetEnvelope, actions?: Reac
 
 function formatValueTypeLabel(valueType: ValueType) {
   switch (valueType) {
+    case "knowledge_base":
+      return "Knowledge Base";
     case "image":
       return "Image";
     case "audio":
@@ -885,6 +1216,45 @@ function formatValueTypeLabel(valueType: ValueType) {
       return "Text";
   }
 }
+
+function formatValueTypeDetail(valueType: ValueType) {
+  switch (valueType) {
+    case "text":
+      return "Plain prompts, prose, and free-form strings.";
+    case "json":
+      return "Structured objects and machine-readable payloads.";
+    case "image":
+      return "Image files or generated visuals.";
+    case "audio":
+      return "Audio clips, speech, or sound assets.";
+    case "video":
+      return "Video assets and motion outputs.";
+    case "file":
+      return "Generic uploaded files with no fixed schema.";
+    case "knowledge_base":
+      return "A reference to one of the workspace knowledge bases.";
+    case "any":
+      return "Accept any compatible upstream value.";
+    default:
+      return "";
+  }
+}
+
+const VALUE_TYPE_SELECT_OPTIONS: FieldSelectOption[] = VALUE_TYPE_OPTIONS.map((option) => ({
+  value: option,
+  label: formatValueTypeLabel(option),
+  detail: formatValueTypeDetail(option),
+}));
+
+const RULE_OPERATOR_SELECT_OPTIONS: FieldSelectOption[] = RULE_OPERATOR_OPTIONS.map((option) => ({
+  value: option,
+  label: option,
+}));
+
+const CONDITION_MODE_SELECT_OPTIONS: FieldSelectOption[] = [
+  { value: "rule", label: "Rule", detail: "Evaluate an explicit source/operator/value rule." },
+  { value: "model", label: "Model", detail: "Let the model decide the branch from context." },
+];
 
 function normalizeViewportSize(size: unknown): NodeViewportSize | null {
   if (!size || typeof size !== "object") return null;
@@ -1530,13 +1900,11 @@ function RuleEditor({
       <div className="grid grid-cols-2 gap-3">
         <label className="grid gap-1.5 text-sm text-[var(--muted)]">
           <span>Operator</span>
-          <FieldSelect value={rule.operator} onChange={(event) => onChange({ ...rule, operator: event.target.value as ConditionRule["operator"] })}>
-            {RULE_OPERATOR_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </FieldSelect>
+          <FieldSelect
+            value={rule.operator}
+            onValueChange={(nextValue) => onChange({ ...rule, operator: nextValue as ConditionRule["operator"] })}
+            options={RULE_OPERATOR_SELECT_OPTIONS}
+          />
         </label>
         <label className="grid gap-1.5 text-sm text-[var(--muted)]">
           <span>Value</span>
@@ -1579,7 +1947,48 @@ function AdvancedJsonSection({
   );
 }
 
-type FloatingPlacement = "bottom-start" | "bottom-end" | "top-center";
+type FloatingPlacement = "bottom-start" | "bottom-end" | "top-start" | "top-end" | "top-center";
+
+function clampFloatingCoordinate(value: number, min: number, max: number) {
+  if (max <= min) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+function computeFloatingPosition(
+  anchorRect: DOMRect,
+  floatingRect: DOMRect,
+  placement: FloatingPlacement,
+) {
+  const viewportPadding = 12;
+  const offset = 8;
+  const horizontalAlignment = placement.endsWith("end")
+    ? "end"
+    : placement.endsWith("center")
+      ? "center"
+      : "start";
+  const preferTop = placement.startsWith("top");
+  const spaceAbove = anchorRect.top - viewportPadding;
+  const spaceBelow = window.innerHeight - anchorRect.bottom - viewportPadding;
+  const fitsAbove = floatingRect.height + offset <= spaceAbove;
+  const fitsBelow = floatingRect.height + offset <= spaceBelow;
+  const placeAbove = preferTop ? fitsAbove || !fitsBelow : !fitsBelow && fitsAbove;
+  const rawTop = placeAbove ? anchorRect.top - floatingRect.height - offset : anchorRect.bottom + offset;
+  const rawLeft =
+    horizontalAlignment === "end"
+      ? anchorRect.right - floatingRect.width
+      : horizontalAlignment === "center"
+        ? anchorRect.left + anchorRect.width / 2 - floatingRect.width / 2
+        : anchorRect.left;
+
+  return {
+    left: Math.round(
+      clampFloatingCoordinate(rawLeft, viewportPadding, window.innerWidth - floatingRect.width - viewportPadding),
+    ),
+    top: Math.round(
+      clampFloatingCoordinate(rawTop, viewportPadding, window.innerHeight - floatingRect.height - viewportPadding),
+    ),
+  };
+}
 
 function FloatingLayer({
   anchorRef,
@@ -1595,7 +2004,8 @@ function FloatingLayer({
   children: ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
-  const [position, setPosition] = useState<{ left: number; top: number; shift: string } | null>(null);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const floatingRef = useRef<HTMLDivElement | null>(null);
   const lastSignatureRef = useRef("");
 
   useEffect(() => {
@@ -1613,46 +2023,56 @@ function FloatingLayer({
 
     const updatePosition = () => {
       const anchor = anchorRef.current;
-      if (anchor) {
-        const rect = anchor.getBoundingClientRect();
-        let left = rect.left;
-        let top = rect.bottom + 8;
-        let shift = "";
-
-        if (placement === "bottom-end") {
-          left = rect.right;
-          shift = "translate(-100%, 0)";
-        } else if (placement === "top-center") {
-          left = rect.left + rect.width / 2;
-          top = rect.top - 8;
-          shift = "translate(-50%, -100%)";
-        }
-
-        const signature = `${Math.round(left)}:${Math.round(top)}:${shift}`;
-        if (signature !== lastSignatureRef.current) {
-          lastSignatureRef.current = signature;
-          setPosition({ left, top, shift });
-        }
+      const floating = floatingRef.current;
+      if (!anchor || !floating) return;
+      const nextPosition = computeFloatingPosition(anchor.getBoundingClientRect(), floating.getBoundingClientRect(), placement);
+      const signature = `${nextPosition.left}:${nextPosition.top}`;
+      if (signature !== lastSignatureRef.current) {
+        lastSignatureRef.current = signature;
+        setPosition(nextPosition);
       }
+    };
 
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(frameId);
       frameId = window.requestAnimationFrame(updatePosition);
     };
 
-    updatePosition();
+    scheduleUpdate();
+
+    window.addEventListener("resize", scheduleUpdate);
+    window.addEventListener("scroll", scheduleUpdate, true);
+
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleUpdate) : null;
+    if (observer && anchorRef.current) {
+      observer.observe(anchorRef.current);
+    }
+    if (observer && floatingRef.current) {
+      observer.observe(floatingRef.current);
+    }
+
     return () => {
       window.cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", scheduleUpdate);
+      window.removeEventListener("scroll", scheduleUpdate, true);
+      observer?.disconnect();
     };
   }, [anchorRef, mounted, open, placement]);
 
   if (!mounted || !open || !position) {
-    return null;
+    if (!mounted || !open) {
+      return null;
+    }
   }
 
   return createPortal(
     <div
+      ref={floatingRef}
       className={cn("fixed left-0 top-0 z-[2000]", className)}
       style={{
-        transform: `translate(${position.left}px, ${position.top}px) ${position.shift}`.trim(),
+        left: position?.left ?? -9999,
+        top: position?.top ?? -9999,
+        visibility: position ? "visible" : "hidden",
       }}
     >
       {children}
@@ -1798,13 +2218,11 @@ function PortRow({
             </label>
             <label className="grid gap-1.5 text-sm text-[var(--muted)]">
               <span>Value Type</span>
-              <FieldSelect value={draftPort.valueType} onChange={(event) => setDraftPort((current) => ({ ...current, valueType: event.target.value as ValueType }))}>
-                {VALUE_TYPE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </FieldSelect>
+              <FieldSelect
+                value={draftPort.valueType}
+                onValueChange={(nextValue) => setDraftPort((current) => ({ ...current, valueType: nextValue as ValueType }))}
+                options={VALUE_TYPE_SELECT_OPTIONS}
+              />
             </label>
             {side === "input" ? (
               <EditorSwitchRow
@@ -1919,13 +2337,11 @@ function PortRow({
             </label>
             <label className="grid gap-1.5 text-sm text-[var(--muted)]">
               <span>Value Type</span>
-              <FieldSelect value={draftPort.valueType} onChange={(event) => setDraftPort((current) => ({ ...current, valueType: event.target.value as ValueType }))}>
-                {VALUE_TYPE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </FieldSelect>
+              <FieldSelect
+                value={draftPort.valueType}
+                onValueChange={(nextValue) => setDraftPort((current) => ({ ...current, valueType: nextValue as ValueType }))}
+                options={VALUE_TYPE_SELECT_OPTIONS}
+              />
             </label>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -2059,13 +2475,11 @@ function PortCreateButton({
         </label>
         <label className="grid gap-1.5 text-sm text-[var(--muted)]">
           <span>Value Type</span>
-          <FieldSelect value={draftPort.valueType} onChange={(event) => setDraftPort((current) => ({ ...current, valueType: event.target.value as ValueType }))}>
-            {VALUE_TYPE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </FieldSelect>
+          <FieldSelect
+            value={draftPort.valueType}
+            onValueChange={(nextValue) => setDraftPort((current) => ({ ...current, valueType: nextValue as ValueType }))}
+            options={VALUE_TYPE_SELECT_OPTIONS}
+          />
         </label>
         {side === "input" ? (
           <EditorSwitchRow
@@ -2722,18 +3136,15 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                   (data.knowledgeBases ?? []).length > 0 ? (
                     <FieldSelect
                       value={config.defaultValue}
-                      onChange={(event) =>
+                      onValueChange={(nextValue) =>
                         data.onConfigChange?.((currentConfig) => ({
                           ...(currentConfig as InputBoundaryNode),
-                          defaultValue: event.target.value,
+                          defaultValue: nextValue,
                         }))
                       }
-                      className="min-h-[48px] rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.88)] px-3 py-3 text-sm text-[var(--text)]"
-                    >
-                      {(data.knowledgeBases ?? []).map((kb) => (
-                        <option key={kb.name} value={kb.name}>{kb.name}</option>
-                      ))}
-                    </FieldSelect>
+                      className="min-h-[48px] rounded-[16px] px-3 py-3 text-sm"
+                      options={(data.knowledgeBases ?? []).map((kb) => ({ value: kb.name, label: kb.name }))}
+                    />
                   ) : (
                     <div className="grid min-h-[60px] place-items-center rounded-[16px] border border-dashed border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.82)] px-4 py-4 text-center text-sm text-[var(--muted)]">
                       No knowledge bases found
@@ -2964,16 +3375,11 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     <span>Condition Mode</span>
                     <FieldSelect
                       value={config.conditionMode}
-                      onChange={(event) =>
-                        data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), conditionMode: event.target.value as ConditionNode["conditionMode"] }))
+                      onValueChange={(nextValue) =>
+                        data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), conditionMode: nextValue as ConditionNode["conditionMode"] }))
                       }
-                    >
-                      {["rule", "model"].map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </FieldSelect>
+                      options={CONDITION_MODE_SELECT_OPTIONS}
+                    />
                   </label>
                   <RuleEditor
                     rule={config.rule}

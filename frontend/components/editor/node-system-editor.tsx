@@ -2082,14 +2082,14 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
           }
           }}
         >
-        {selected && isPresetEligibleFamily(config.family) ? (
+        {isPresetEligibleFamily(config.family) ? (
           <button
             type="button"
             aria-label="Save as Preset"
             title="Save as Preset"
             className={cn(
-              "absolute right-[52px] top-3 z-20 grid h-8 w-8 place-items-center rounded-full shadow-[0_10px_24px_rgba(60,41,20,0.08)] transition border border-[rgba(154,52,18,0.14)] bg-[rgba(255,252,247,0.92)] text-[var(--muted)] opacity-0 group-hover/node:opacity-100 group-hover/node:border-[rgba(154,52,18,0.24)] group-hover/node:text-[var(--accent)]",
-              selected && "opacity-100",
+              "absolute right-[52px] top-3 z-20 grid h-8 w-8 place-items-center rounded-full shadow-[0_10px_24px_rgba(60,41,20,0.08)] transition border border-[rgba(154,52,18,0.14)] bg-[rgba(255,252,247,0.92)] text-[var(--muted)]",
+              selected || isDeleteConfirmActive ? "opacity-100" : "opacity-0 group-hover/node:opacity-100 group-hover/node:border-[rgba(154,52,18,0.24)] group-hover/node:text-[var(--accent)]",
             )}
             onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
             onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); }}

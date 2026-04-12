@@ -22,6 +22,8 @@
 - `acceptance_runbook.md`
 - `node_system_design.md`
 - `skill_management_and_agent_direction.md`
+- `演示指南.md`
+- `已交付功能.md`
 
 ## `docs/architecture/`
 

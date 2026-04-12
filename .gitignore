@@ -79,11 +79,13 @@ backend/data/memories/runtime/
 backend/data/runs/
 
 # Demo files to exclude
-demo/slg_langgraph_single_file_modified_v2.py
+demo/
 
-# Generated demo artifacts
-demo/__pycache__/
-demo/outputs/
+# Scripts / Local experiments
+scripts/lm_core.py
+
+# Local outputs
+backend/data/outputs/
 
 # Claude Code / Dev tools
 .claude/

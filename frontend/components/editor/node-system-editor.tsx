@@ -2643,7 +2643,7 @@ function PortCreateButton({
 }
 
 function getNodeMinHeight(config: NodePresetDefinition) {
-  if (config.family === "input") return 320;
+  if (config.family === "input") return 260;
   if (config.family === "output") return 280;
   if (config.family === "agent") return 360;
   if (config.family === "condition") return 300;
@@ -3299,15 +3299,15 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                 ) : config.valueType === "text" || config.valueType === "json" ? (
                   <FieldTextarea
                     value={config.defaultValue}
-                    rows={5}
+                    rows={6}
                     placeholder={config.placeholder}
                     onChange={(event) =>
                       data.onConfigChange?.((currentConfig) => ({
-                          ...(currentConfig as InputBoundaryNode),
-                          defaultValue: event.target.value,
+                        ...(currentConfig as InputBoundaryNode),
+                        defaultValue: event.target.value,
                       }))
                     }
-                    className="min-h-[160px] h-full flex-1"
+                    className="min-h-[132px] h-full flex-1"
                   />
                 ) : (
                   <>

@@ -674,11 +674,7 @@ def _resolve_agent_runtime_config(config: AgentNodeConfig) -> dict[str, Any]:
         if config.model_source.value == "override" and override_model_ref
         else global_model_ref
     )
-    resolved_thinking = (
-        global_thinking_enabled
-        if config.thinking_mode.value == "inherit"
-        else config.thinking_mode.value == "on"
-    )
+    resolved_thinking = config.thinking_mode.value == "on"
     resolved_temperature = max(0.0, min(float(config.temperature), 2.0))
     resolved_provider_id, _resolved_model_name = resolved_model.split("/", 1) if "/" in resolved_model else ("local", resolved_model)
     runtime_model_name = resolve_runtime_model_name(resolved_model)

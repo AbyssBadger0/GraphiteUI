@@ -103,7 +103,7 @@ Graph 中使用两类边命名：
 
 ### `nodes`
 
-`nodes` 也使用对象映射，键名就是节点名。节点名全图唯一，不允许重复。
+`nodes` 也使用对象映射，键名就是节点 key。节点 key 全图唯一，不允许重复。
 
 示例：
 
@@ -111,6 +111,7 @@ Graph 中使用两类边命名：
 {
   "input_question": {
     "kind": "input",
+    "name": "Input Question",
     "ui": {
       "position": { "x": 80, "y": 160 },
       "collapsed": false,
@@ -127,6 +128,7 @@ Graph 中使用两类边命名：
   },
   "agent_answer": {
     "kind": "agent",
+    "name": "Agent Answer",
     "ui": {
       "position": { "x": 560, "y": 160 },
       "collapsed": false,
@@ -152,7 +154,8 @@ Graph 中使用两类边命名：
 ### 约束
 
 - 节点名全局唯一
-- 节点配置中不再保存独立的 `label / description / valueType`
+- 节点配置中不再保存独立的 `label / valueType`
+- 节点可保留单独的 `name` 作为显示名，和节点 key 分离
 - 节点的输入、输出显示内容都直接来自绑定的 state
 - 节点需要保存自身 UI 信息，至少包括：
   - `position`
@@ -221,7 +224,7 @@ Graph 中使用两类边命名：
 - 输入口名称默认显示 `question`
 - 输出口名称默认显示 `final_result`
 
-用户在节点上修改名称时，本质上修改的是 `state_schema` 中对应的 state 名称，因此全图所有引用这个 state 的地方都会一起变化。
+用户在节点上修改端口名称时，本质上修改的是 `state_schema` 中对应的 state 名称，因此全图所有引用这个 state 的地方都会一起变化。
 
 ## 新增输入 / 输出端口交互
 

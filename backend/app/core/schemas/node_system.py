@@ -219,6 +219,7 @@ class NodeSystemOutputConfig(BaseModel):
 
 class NodeSystemInputNode(BaseModel):
     kind: Literal["input"] = "input"
+    name: str = ""
     description: str = ""
     ui: NodeSystemNodeUi
     reads: list[NodeSystemReadBinding] = Field(default_factory=list)
@@ -228,6 +229,7 @@ class NodeSystemInputNode(BaseModel):
 
 class NodeSystemAgentNode(BaseModel):
     kind: Literal["agent"] = "agent"
+    name: str = ""
     description: str = ""
     ui: NodeSystemNodeUi
     reads: list[NodeSystemReadBinding] = Field(default_factory=list)
@@ -237,6 +239,7 @@ class NodeSystemAgentNode(BaseModel):
 
 class NodeSystemConditionNode(BaseModel):
     kind: Literal["condition"] = "condition"
+    name: str = ""
     description: str = ""
     ui: NodeSystemNodeUi
     reads: list[NodeSystemReadBinding] = Field(default_factory=list)
@@ -246,6 +249,7 @@ class NodeSystemConditionNode(BaseModel):
 
 class NodeSystemOutputNode(BaseModel):
     kind: Literal["output"] = "output"
+    name: str = ""
     description: str = ""
     ui: NodeSystemNodeUi
     reads: list[NodeSystemReadBinding] = Field(default_factory=list)

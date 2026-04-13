@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { RichContent, formatRichContentValue, resolveRichContentDisplayMode } from "@/components/ui/rich-content";
 import { apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { buildCanonicalGraphFromLegacyGraph, type CanonicalGraphPayload } from "@/lib/node-system-canonical";
 import { EMPTY_AGENT_PRESET, getNodePresetById, NODE_PRESETS_MOCK, TEXT_INPUT_PRESET } from "@/lib/node-presets-mock";
 import {
   isValueTypeCompatible,
@@ -175,6 +176,7 @@ type EditorSettingsPayload = {
 };
 
 type RunDetail = NodeSystemRunDetail;
+type CanonicalGraph = CanonicalGraphPayload;
 
 type PresetDocument = {
   presetId: string;
@@ -4560,6 +4562,42 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
   const previewTextByNode = useMemo(() => {
     return Object.fromEntries(nodes.map((node) => [node.id, createPreviewText(node, nodes, edges)]));
   }, [edges, nodes]);
+  const legacyGraphSnapshot = useMemo<GraphPayload>(
+    () => ({
+      graph_family: "node_system",
+      graph_id: graphId,
+      name: graphName,
+      template_id: templateId,
+      state_schema: stateSchema,
+      nodes: nodes.map((node) => ({
+        id: node.id,
+        type: "default",
+        position: node.position,
+        data: {
+          nodeId: node.data.nodeId,
+          config: node.data.config,
+          previewText: node.data.previewText || previewTextByNode[node.id] || "",
+          isExpanded: node.data.config.family === "input" ? true : Boolean(node.data.isExpanded),
+          collapsedSize: node.data.collapsedSize ?? null,
+          expandedSize: node.data.expandedSize ?? null,
+        },
+      })),
+      edges: edges.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle ?? null,
+        targetHandle: edge.targetHandle ?? null,
+      })),
+      metadata,
+    }),
+    [edges, graphId, graphName, metadata, nodes, previewTextByNode, stateSchema, templateId],
+  );
+  const canonicalGraph = useMemo<CanonicalGraph>(
+    () => buildCanonicalGraphFromLegacyGraph(legacyGraphSnapshot),
+    [legacyGraphSnapshot],
+  );
+  const canonicalNodeKeys = useMemo(() => Object.keys(canonicalGraph.nodes), [canonicalGraph]);
   const agentRuntimeDefaults = useMemo(
     () => ({
       globalTextModelRef:
@@ -5089,34 +5127,7 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
   }
 
   function buildPayload(): GraphPayload {
-    return {
-      graph_family: "node_system",
-      graph_id: graphId,
-      name: graphName,
-      template_id: templateId,
-      state_schema: stateSchema,
-      nodes: nodes.map((node) => ({
-        id: node.id,
-        type: "default",
-        position: node.position,
-        data: {
-          nodeId: node.data.nodeId,
-          config: node.data.config,
-          previewText: node.data.previewText || previewTextByNode[node.id] || "",
-          isExpanded: node.data.config.family === "input" ? true : Boolean(node.data.isExpanded),
-          collapsedSize: node.data.collapsedSize ?? null,
-          expandedSize: node.data.expandedSize ?? null,
-        },
-      })),
-      edges: edges.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle ?? null,
-        targetHandle: edge.targetHandle ?? null,
-      })),
-      metadata,
-    };
+    return legacyGraphSnapshot;
   }
 
   async function handleSave() {
@@ -5141,7 +5152,7 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
   async function handleRun() {
     try {
       const response = await apiPost<{ run_id: string; status: string }>("/api/graphs/run", buildPayload());
-      const queuedStatusMap = Object.fromEntries(nodes.map((node) => [node.id, "idle"])) as Record<string, RunNodeStatus>;
+      const queuedStatusMap = Object.fromEntries(canonicalNodeKeys.map((nodeKey) => [nodeKey, "idle"])) as Record<string, RunNodeStatus>;
       setRunNodeStatusMap(queuedStatusMap);
       setActiveRunStatus(response.status as RunStatus);
       setCurrentRunNodeId(null);

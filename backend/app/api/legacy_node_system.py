@@ -46,6 +46,7 @@ class LegacyNodePortBinding:
 class LegacyNodeRecord:
     old_id: str
     node_name: str
+    display_name: str
     family: str
     position: dict[str, float]
     is_expanded: bool
@@ -198,6 +199,7 @@ def _legacy_node_from_canonical(
 ) -> dict[str, Any]:
     reads = list(getattr(node, "reads", []))
     writes = list(getattr(node, "writes", []))
+    display_name = _strip_string(getattr(node, "name", "")) or node_name
     data: dict[str, Any] = {
         "nodeId": node_name,
         "previewText": "",
@@ -210,7 +212,7 @@ def _legacy_node_from_canonical(
         primary_state = writes[0].state if writes else "value"
         config = {
             "presetId": f"node.input.{node_name}",
-            "label": node_name,
+            "label": display_name,
             "description": node.description,
             "family": "input",
             "valueType": _legacy_port_value_type_from_state_type(state_schema[primary_state].type.value),
@@ -231,7 +233,7 @@ def _legacy_node_from_canonical(
     elif isinstance(node, NodeSystemAgentNode):
         config = {
             "presetId": f"node.agent.{node_name}",
-            "label": node_name,
+            "label": display_name,
             "description": node.description,
             "family": "agent",
             "inputs": [_build_legacy_port(binding.state, state_schema, required=binding.required) for binding in reads],
@@ -265,7 +267,7 @@ def _legacy_node_from_canonical(
     elif isinstance(node, NodeSystemConditionNode):
         config = {
             "presetId": f"node.condition.{node_name}",
-            "label": node_name,
+            "label": display_name,
             "description": node.description,
             "family": "condition",
             "inputs": [_build_legacy_port(binding.state, state_schema, required=binding.required) for binding in reads],
@@ -301,7 +303,7 @@ def _legacy_node_from_canonical(
         primary_state = reads[0].state if reads else "value"
         config = {
             "presetId": f"node.output.{node_name}",
-            "label": node_name,
+            "label": display_name,
             "description": node.description,
             "family": "output",
             "input": _build_legacy_port(primary_state, state_schema, required=True),
@@ -616,6 +618,7 @@ def _coerce_legacy_nodes(
             )
         preferred_name = _strip_string(config.get("label")) or raw_id or f"{family}_{index + 1}"
         node_name = _normalize_node_name(preferred_name, seen_names)
+        display_name = _strip_string(config.get("label")) or node_name
         id_mapping[raw_id or node_name] = node_name
         position = item.get("position") if isinstance(item.get("position"), dict) else {}
         reads = _legacy_port_bindings(config, "input")
@@ -655,6 +658,7 @@ def _coerce_legacy_nodes(
             LegacyNodeRecord(
                 old_id=raw_id or node_name,
                 node_name=node_name,
+                display_name=display_name,
                 family=family,
                 position={
                     "x": float(position.get("x", 0)),
@@ -704,6 +708,7 @@ def _build_canonical_nodes_from_legacy(records: list[LegacyNodeRecord]) -> dict[
             nodes[record.node_name] = NodeSystemInputNode.model_validate(
                 {
                     "kind": "input",
+                    "name": record.display_name,
                     "description": record.description,
                     "ui": ui_payload,
                     "reads": [],
@@ -721,6 +726,7 @@ def _build_canonical_nodes_from_legacy(records: list[LegacyNodeRecord]) -> dict[
             nodes[record.node_name] = NodeSystemAgentNode.model_validate(
                 {
                     "kind": "agent",
+                    "name": record.display_name,
                     "description": record.description,
                     "ui": ui_payload,
                     "reads": reads,
@@ -752,6 +758,7 @@ def _build_canonical_nodes_from_legacy(records: list[LegacyNodeRecord]) -> dict[
             nodes[record.node_name] = NodeSystemConditionNode.model_validate(
                 {
                     "kind": "condition",
+                    "name": record.display_name,
                     "description": record.description,
                     "ui": ui_payload,
                     "reads": reads,
@@ -770,6 +777,7 @@ def _build_canonical_nodes_from_legacy(records: list[LegacyNodeRecord]) -> dict[
             nodes[record.node_name] = NodeSystemOutputNode.model_validate(
                 {
                     "kind": "output",
+                    "name": record.display_name,
                     "description": record.description,
                     "ui": ui_payload,
                     "reads": reads or [{"state": "value", "required": True}],

@@ -11,7 +11,8 @@
 - 当 `agent` 接入 knowledge base 时，编辑器会自动显式挂载 `search_knowledge_base`
 - `search_knowledge_base` 已经接到正式本地索引与检索链路
 - run detail 已经返回知识库检索摘要与来源
-- 当前已导入两个正式样板库：
+- 当前已导入三个正式知识库：
+  - `graphiteui-official`
   - `python-official-3.14`
   - `langgraph-official-v1`
 
@@ -75,12 +76,13 @@
 
 更适合的试水方式是：
 
-- 使用两个固定的官方文档库快照
+- 使用项目知识库加两个固定的官方文档库快照
 - 在本地或 dev 环境中导入
 - 使用同一批文档进行稳定、可复现的验证
 
-当前已验证的两个知识库：
+当前已验证的三个知识库：
 
+- GraphiteUI 项目知识库
 - Python 官方文档库
 - LangGraph 官方文档库
 

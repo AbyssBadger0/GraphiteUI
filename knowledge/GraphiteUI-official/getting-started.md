@@ -1,17 +1,28 @@
 # 如何开始使用 GraphiteUI
 
-第一次使用 GraphiteUI，可以按下面的顺序开始：
+第一次使用 GraphiteUI，推荐按下面的顺序走：
 
-1. 打开一个现成模板，例如 Hello World。
-2. 查看左到右的节点链路，理解输入是如何进入 agent，再如何进入 output 的。
-3. 修改 input 节点里的默认问题或默认文本。
-4. 点击运行，观察 output 节点是否返回了符合预期的结果。
-5. 如果需要扩展流程，可以双击画布创建新节点，或从连接点拉线创建新的输入端口。
+1. 运行 `./scripts/start.sh`，确保前后端都启动。
+2. 打开 `/editor/new`，从模板创建一张图，例如 `Hello World`。
+3. 先看清节点链路：`input -> agent -> output`。
+4. 在问题输入里改一个你关心的问题。
+5. 在知识库输入里选择要测试的库，例如：
+   - `graphiteui-official`
+   - `python-official-3.14`
+   - `langgraph-official-v1`
+6. 把知识库 input 连到 agent 后，确认 agent 节点上已经显式出现 `search_knowledge_base`。
+7. 点击 `Validate`，确认图结构合法。
+8. 点击 `Run`，然后去 output 节点和 run detail 看结果。
 
-如果你要验证 grounded answer 场景，建议先从一个简单问题开始，例如：
+如果你想快速理解 GraphiteUI 自己的产品形态，建议先问这些问题：
 
-- 什么是 GraphiteUI？
-- 你能做些什么？
-- 我该如何开始使用？
+- GraphiteUI 是什么？
+- GraphiteUI 现在已经做到了什么程度？
+- State Panel 是怎么工作的？
+- knowledge base 是怎么接入 agent 的？
 
-这样可以更容易看出知识库检索、skill 调用和 agent 回答之间的关系。
+如果你想验证知识库能力，推荐切换不同库来对比：
+
+- 用 `graphiteui-official` 问项目本身
+- 用 `python-official-3.14` 问 Python API
+- 用 `langgraph-official-v1` 问 LangGraph 概念和机制

@@ -54,7 +54,7 @@ export const KNOWLEDGE_BASE_INPUT_PRESET = {
     label: "Knowledge Base",
     valueType: "knowledge_base",
   },
-  defaultValue: "GraphiteUI-official",
+  defaultValue: "graphiteui-official",
   placeholder: "Knowledge base name",
 } satisfies NodePresetDefinition;
 

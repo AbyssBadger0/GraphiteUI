@@ -1,13 +1,25 @@
 # GraphiteUI 能做些什么
 
-GraphiteUI 现在最适合用来展示和验证以下工作方式：
+GraphiteUI 当前已经适合做这些事情：
 
-- 通过 input 节点接收文本或文件，并把它们传给下游节点。
-- 通过 agent 节点编排系统提示词、任务提示词、输入端口、输出端口以及 skill 挂载。
-- 通过 condition 节点根据结构化结果做分支判断。
-- 通过 output 节点预览文本、JSON 或上传资源相关结果。
-- 通过 skill 调用知识检索、内容清洗、素材分析或其他 GraphiteUI 管理的能力。
+- 新建、保存、加载、校验和运行一张节点图。
+- 通过 `input / agent / condition / output` 四类核心节点组织一条完整流程。
+- 给 agent 显式挂载 skill，并在节点卡片里直接看到它挂了什么能力。
+- 通过右侧 `State Panel` 管理 graph state，并把 state 的读写关系同步回具体节点。
+- 运行带条件分支和基础 cycles 的图，并查看 `cycle_summary / cycle_iterations`。
+- 把知识库通过 input 节点接给 agent，再由 `search_knowledge_base` 做正式检索。
+- 在 run detail 里查看节点执行结果、技能输出、知识库摘要和输出产物。
 
-在当前产品形态里，GraphiteUI 更像一个“可视化 workflow playground”，用于把 LLM、知识库、skill 和输出结果放进同一个界面里观察。
+目前比较适合的使用场景是：
 
-如果你想快速理解它，最好的方式通常是直接打开现成模板，修改输入，然后运行一次，观察每个节点输出了什么。
+- workflow 原型验证
+- grounded answer 场景
+- 多节点 prompt / skill / output 组合测试
+- LangGraph 风格流程的可视化编排
+
+当前还没有完全做完的能力主要是：
+
+- cycles 高级终止策略和可视化
+- memory 正式写入与召回
+- 人类在环与断点
+- 更强的知识库管理和检索增强

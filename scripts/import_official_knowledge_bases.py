@@ -11,12 +11,12 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.core.storage.database import initialize_storage
-from app.knowledge.loader import import_official_knowledge_bases
+from app.knowledge.loader import import_bundled_knowledge_bases
 
 
 def main() -> int:
     initialize_storage()
-    imported = import_official_knowledge_bases()
+    imported = import_bundled_knowledge_bases()
     print(json.dumps(imported, ensure_ascii=False, indent=2))
     return 0
 

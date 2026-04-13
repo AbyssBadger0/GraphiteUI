@@ -33,7 +33,7 @@ LOCAL_LLM_BASE_URL = _env_first("LOCAL_BASE_URL", "OPENAI_BASE_URL", "LOCAL_LLM_
 LOCAL_LLM_API_KEY = _env_first("LOCAL_API_KEY", "OPENAI_API_KEY", "LITELLM_MASTER_KEY", "LOCAL_LLM_API_KEY", default="sk-local")
 LOCAL_LLM_REQUEST_TIMEOUT_SEC = _parse_float_env("LOCAL_LLM_REQUEST_TIMEOUT_SEC", 180.0)
 ROOT_DIR = Path(__file__).resolve().parents[3]
-LOCAL_USAGE_GUIDE_PATH = ROOT_DIR / "使用介绍.md"
+LOCAL_ONBOARDING_GUIDE_PATH = ROOT_DIR / "knowledge" / "GraphiteUI-official" / "getting-started.md"
 DEFAULT_AGENT_TEMPERATURE = 0.2
 DEFAULT_AGENT_THINKING_ENABLED = True
 DEFAULT_LOCAL_MODEL_ALIAS = "lm-local"
@@ -351,15 +351,15 @@ def generate_hello_greeting(state: dict[str, Any], params: dict[str, Any] | None
 def output_usage_introduction(state: dict[str, Any], params: dict[str, Any] | None = None) -> dict[str, Any]:
     _ = state
     _ = params
-    if not LOCAL_USAGE_GUIDE_PATH.exists():
-        raise RuntimeError(f"Local usage guide file not found: {LOCAL_USAGE_GUIDE_PATH}")
-    content = LOCAL_USAGE_GUIDE_PATH.read_text(encoding="utf-8").strip()
+    if not LOCAL_ONBOARDING_GUIDE_PATH.exists():
+        raise RuntimeError(f"Local onboarding guide file not found: {LOCAL_ONBOARDING_GUIDE_PATH}")
+    content = LOCAL_ONBOARDING_GUIDE_PATH.read_text(encoding="utf-8").strip()
     if not content:
-        raise RuntimeError(f"Local usage guide file is empty: {LOCAL_USAGE_GUIDE_PATH}")
+        raise RuntimeError(f"Local onboarding guide file is empty: {LOCAL_ONBOARDING_GUIDE_PATH}")
     return {
         "greeting": content,
         "final_result": content,
-        "source_path": str(LOCAL_USAGE_GUIDE_PATH),
+        "source_path": str(LOCAL_ONBOARDING_GUIDE_PATH),
     }
 
 
@@ -369,14 +369,14 @@ def append_usage_introduction(state: dict[str, Any], params: dict[str, Any] | No
     greeting = str(params.get("greeting") or "").strip()
     if not greeting:
         raise RuntimeError("append_usage_introduction requires a non-empty greeting input.")
-    if not LOCAL_USAGE_GUIDE_PATH.exists():
-        raise RuntimeError(f"Local usage guide file not found: {LOCAL_USAGE_GUIDE_PATH}")
-    guide = LOCAL_USAGE_GUIDE_PATH.read_text(encoding="utf-8").strip()
+    if not LOCAL_ONBOARDING_GUIDE_PATH.exists():
+        raise RuntimeError(f"Local onboarding guide file not found: {LOCAL_ONBOARDING_GUIDE_PATH}")
+    guide = LOCAL_ONBOARDING_GUIDE_PATH.read_text(encoding="utf-8").strip()
     if not guide:
-        raise RuntimeError(f"Local usage guide file is empty: {LOCAL_USAGE_GUIDE_PATH}")
+        raise RuntimeError(f"Local onboarding guide file is empty: {LOCAL_ONBOARDING_GUIDE_PATH}")
     combined = f"{greeting}\n\n{guide}"
     return {
         "greeting": combined,
         "final_result": combined,
-        "source_path": str(LOCAL_USAGE_GUIDE_PATH),
+        "source_path": str(LOCAL_ONBOARDING_GUIDE_PATH),
     }

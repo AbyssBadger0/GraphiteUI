@@ -98,3 +98,4 @@ backend/data/outputs/
 
 # Agent/dev-only configs (not for open source)
 AGENTS.md
+.codex

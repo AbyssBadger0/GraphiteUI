@@ -61,7 +61,7 @@ def _create_default_node_system_graph() -> dict[str, Any]:
                             "label": "Knowledge Base",
                             "valueType": "knowledge_base",
                         },
-                        "defaultValue": "GraphiteUI-official",
+                        "defaultValue": "graphiteui-official",
                         "placeholder": "Knowledge base name",
                     },
                     "previewText": "",

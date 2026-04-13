@@ -23,13 +23,26 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 KNOWLEDGE_ROOT = BACKEND_DIR / "data" / "kb"
 DOWNLOAD_ROOT = KNOWLEDGE_ROOT / "_downloads"
-DEFAULT_KNOWLEDGE_BASE = "langgraph-official-v1"
+GRAPHITEUI_REPO_BLOB_BASE = "https://github.com/AbyssBadger0/GraphiteUI/blob/main/"
+GRAPHITEUI_KNOWLEDGE_BASE_ID = "graphiteui-official"
+DEFAULT_KNOWLEDGE_BASE = GRAPHITEUI_KNOWLEDGE_BASE_ID
 HTTP_USER_AGENT = "GraphiteUI-KB-Importer/1.0"
 PYTHON_DOCS_DOWNLOAD_URL = "https://docs.python.org/3/download.html"
 PYTHON_DOCS_BASE_URL = "https://docs.python.org/3/"
 LANGGRAPH_DOCS_START_URL = "https://docs.langchain.com/oss/python/langgraph/overview"
 LANGGRAPH_DOCS_ALLOWED_PREFIX = "https://docs.langchain.com/oss/python/langgraph/"
 BLOCK_TEXT_TAGS = ("h1", "h2", "h3", "h4", "p", "li", "pre", "dt", "dd", "blockquote")
+GRAPHITEUI_PROJECT_DOC_FILES = [
+    REPO_ROOT / "knowledge" / "GraphiteUI-official" / "what-is-graphiteui.md",
+    REPO_ROOT / "knowledge" / "GraphiteUI-official" / "capabilities.md",
+    REPO_ROOT / "knowledge" / "GraphiteUI-official" / "getting-started.md",
+    REPO_ROOT / "knowledge" / "GraphiteUI-official" / "node-editor-basics.md",
+    REPO_ROOT / "knowledge" / "GraphiteUI-official" / "current-architecture.md",
+    REPO_ROOT / "knowledge" / "GraphiteUI-official" / "runtime-and-roadmap.md",
+    REPO_ROOT / "README.md",
+    REPO_ROOT / "docs" / "FUTURE_WORK.md",
+    REPO_ROOT / "docs" / "knowledge_base_strategy.md",
+]
 
 
 @dataclass(slots=True)
@@ -60,8 +73,10 @@ def list_knowledge_bases() -> list[dict[str, object]]:
             """
             SELECT kb_id, label, description, source_kind, source_url, version, document_count, chunk_count, imported_at
             FROM knowledge_bases
-            ORDER BY updated_at DESC, kb_id ASC
+            ORDER BY CASE WHEN kb_id = ? THEN 0 ELSE 1 END, updated_at DESC, kb_id ASC
             """
+            ,
+            (DEFAULT_KNOWLEDGE_BASE,),
         ).fetchall()
 
     return [
@@ -154,11 +169,33 @@ def search_knowledge(query: str, *, knowledge_base: str | None = None, limit: in
 
 
 def import_official_knowledge_bases() -> list[dict[str, object]]:
+    return import_bundled_knowledge_bases()
+
+
+def import_bundled_knowledge_bases() -> list[dict[str, object]]:
     imported = [
+        import_graphiteui_project_knowledge_base(),
         import_python_official_knowledge_base(),
         import_langgraph_official_knowledge_base(),
     ]
     return imported
+
+
+def import_graphiteui_project_knowledge_base() -> dict[str, object]:
+    documents = _load_local_markdown_documents(GRAPHITEUI_PROJECT_DOC_FILES)
+    record = KnowledgeBaseRecord(
+        kb_id=GRAPHITEUI_KNOWLEDGE_BASE_ID,
+        label="GraphiteUI Project Docs",
+        description="Project-specific GraphiteUI documentation and current implementation notes.",
+        source_kind="graphiteui_project_docs",
+        source_url="https://github.com/AbyssBadger0/GraphiteUI",
+        version="v1",
+        payload={
+            "source_files": [str(path.relative_to(REPO_ROOT)) for path in GRAPHITEUI_PROJECT_DOC_FILES if path.exists()],
+            "imported_at": _utc_now_iso(),
+        },
+    )
+    return _replace_knowledge_base(record, documents)
 
 
 def import_python_official_knowledge_base() -> dict[str, object]:
@@ -227,7 +264,7 @@ def _resolve_knowledge_base_id(knowledge_base: str | None) -> str:
     with get_connection() as connection:
         if requested:
             row = connection.execute(
-                "SELECT kb_id FROM knowledge_bases WHERE kb_id = ?",
+                "SELECT kb_id FROM knowledge_bases WHERE lower(kb_id) = lower(?)",
                 (requested,),
             ).fetchone()
             if row is None:
@@ -260,6 +297,7 @@ def _search_ranked_rows(connection: sqlite3.Connection, kb_id: str, query: str, 
                 """
                 SELECT
                     c.chunk_id,
+                    c.doc_id,
                     c.title,
                     c.section,
                     c.url,
@@ -282,7 +320,7 @@ def _search_ranked_rows(connection: sqlite3.Connection, kb_id: str, query: str, 
     query_like = f"%{query.lower()}%"
     fallback_rows = connection.execute(
         """
-        SELECT chunk_id, title, section, url, summary, content, metadata_json, 0.0 AS score
+        SELECT chunk_id, doc_id, title, section, url, summary, content, metadata_json, 0.0 AS score
         FROM knowledge_chunks
         WHERE kb_id = ?
           AND (
@@ -305,7 +343,17 @@ def _search_ranked_rows(connection: sqlite3.Connection, kb_id: str, query: str, 
         key=lambda row: _score_chunk_row(row, query_lower, search_terms),
         reverse=True,
     )
-    return reranked[:limit]
+    unique_rows: list[sqlite3.Row] = []
+    seen_doc_ids: set[str] = set()
+    for row in reranked:
+        doc_id = str(row["doc_id"] or row["url"] or row["chunk_id"])
+        if doc_id in seen_doc_ids:
+            continue
+        unique_rows.append(row)
+        seen_doc_ids.add(doc_id)
+        if len(unique_rows) >= limit:
+            break
+    return unique_rows
 
 
 def _score_chunk_row(row: sqlite3.Row, query_lower: str, search_terms: list[str]) -> float:
@@ -346,6 +394,41 @@ def _score_chunk_row(row: sqlite3.Row, query_lower: str, search_terms: list[str]
         score += 1
     elif source_path.startswith("whatsnew/") and "what" not in query_lower and "new" not in query_lower:
         score -= 6
+    score += _score_project_specific_boosts(
+        title=title,
+        section=section,
+        query_lower=query_lower,
+        source_path=source_path,
+    )
+    return score
+
+
+def _score_project_specific_boosts(*, title: str, section: str, query_lower: str, source_path: str) -> float:
+    score = 0.0
+    roadmap_terms = ("还缺", "缺什么", "未来", "roadmap", "待办", "计划", "后续")
+    knowledge_terms = ("knowledge base", "knowledgebase", "知识库", "kb", "agent")
+    architecture_terms = ("架构", "architecture", "runtime", "运行态", "协议")
+    state_terms = ("state panel", "state", "状态面板", "状态", "reader", "writer")
+
+    if source_path.endswith("docs/future_work.md") or source_path.endswith("runtime-and-roadmap.md"):
+        if any(term in query_lower for term in roadmap_terms):
+            score += 20
+
+    if source_path.endswith("docs/knowledge_base_strategy.md"):
+        if any(term in query_lower for term in knowledge_terms):
+            score += 18
+
+    if source_path.endswith("current-architecture.md"):
+        if any(term in query_lower for term in architecture_terms):
+            score += 16
+
+    if source_path.endswith("node-editor-basics.md") or source_path.endswith("capabilities.md"):
+        if any(term in query_lower for term in state_terms):
+            score += 12
+
+    if "graphiteui" in title or "graphiteui" in section:
+        score += 4
+
     return score
 
 
@@ -498,6 +581,34 @@ def _chunk_documents(kb_id: str, documents: list[KnowledgeDocument]) -> list[dic
                 }
             )
     return chunks
+
+
+def _load_local_markdown_documents(paths: list[Path]) -> list[KnowledgeDocument]:
+    documents: list[KnowledgeDocument] = []
+    for path in paths:
+        if not path.exists() or not path.is_file():
+            continue
+        raw = path.read_text(encoding="utf-8", errors="ignore")
+        relative_path = path.relative_to(REPO_ROOT).as_posix()
+        title = _extract_markdown_title(raw, fallback=path.stem.replace("-", " ").replace("_", " "))
+        content = _markdown_to_text(raw)
+        if len(content) < 80:
+            continue
+        documents.append(
+            KnowledgeDocument(
+                doc_id=relative_path.removesuffix(path.suffix),
+                title=title,
+                url=urljoin(GRAPHITEUI_REPO_BLOB_BASE, relative_path),
+                section=title,
+                content=content,
+                source_path=relative_path,
+                metadata={
+                    "source_path": relative_path,
+                    "source_kind": "repo_markdown",
+                },
+            )
+        )
+    return documents
 
 
 def _split_text_into_chunks(text: str, *, max_chars: int = 1400, overlap: int = 180) -> list[str]:
@@ -681,6 +792,25 @@ def _parse_html_document(html: str, *, url: str, doc_id: str, source_path: str) 
             "source_path": source_path,
         },
     )
+
+
+def _extract_markdown_title(raw: str, *, fallback: str) -> str:
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            return stripped.lstrip("#").strip() or fallback
+    return fallback
+
+
+def _markdown_to_text(raw: str) -> str:
+    text = raw
+    text = re.sub(r"```([^\n]*)\n", "\nCode Block:\n", text)
+    text = text.replace("```", "\n")
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", text)
+    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^\s*[-*+]\s+", "- ", text, flags=re.MULTILINE)
+    return _normalize_whitespace(text)
 
 
 def _extract_block_text(main: BeautifulSoup) -> str:

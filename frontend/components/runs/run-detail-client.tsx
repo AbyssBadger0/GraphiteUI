@@ -8,40 +8,9 @@ import { InfoBlock } from "@/components/ui/info-block";
 import { RichContent, formatRichContentValue } from "@/components/ui/rich-content";
 import { apiGet } from "@/lib/api";
 import { useLanguage } from "@/components/providers/language-provider";
+import type { ExportedOutput, NodeSystemRunDetail } from "@/lib/node-system-schema";
 
-type RunDetail = {
-  run_id: string;
-  graph_name: string;
-  status: string;
-  current_node_id?: string | null;
-  revision_round: number;
-  final_result?: string | null;
-  final_score?: number | null;
-  knowledge_summary?: string;
-  memory_summary?: string;
-  artifacts: Record<string, unknown>;
-  node_executions: Array<{
-    node_id: string;
-    status: string;
-    output_summary: string;
-    duration_ms: number;
-  }>;
-};
-
-type ExportedOutput = {
-  node_id?: string;
-  state_key?: string;
-  label?: string;
-  display_mode?: string;
-  persist_enabled?: boolean;
-  persist_format?: string;
-  value?: unknown;
-  saved_file?: {
-    file_name?: string;
-    format?: string;
-    path?: string;
-  } | null;
-};
+type RunDetail = NodeSystemRunDetail;
 
 export function RunDetailClient({ runId }: { runId: string }) {
   const { t } = useLanguage();
@@ -122,8 +91,8 @@ export function RunDetailClient({ runId }: { runId: string }) {
             <InfoBlock title="Output Boundaries">
               <div className="grid gap-3">
                 {(run.artifacts.exported_outputs as ExportedOutput[]).map((output, index) => (
-                  <div key={`${output.node_id ?? output.state_key ?? "output"}-${index}`} className="rounded-[14px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
-                    <div className="font-medium">{output.label ?? output.state_key ?? "Output"}</div>
+                  <div key={`${output.node_id ?? output.source_key ?? "output"}-${index}`} className="rounded-[14px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
+                    <div className="font-medium">{output.label ?? output.source_key ?? "Output"}</div>
                     <div className="mt-2">
                       <RichContent text={formatRichContentValue(output.value)} displayMode={output.display_mode ?? "auto"} />
                     </div>

@@ -51,33 +51,22 @@ import {
   type ConditionRule,
   type InputBoundaryNode,
   type NodeFamily,
+  type NodeSystemGraphEdge,
+  type NodeSystemGraphNode,
+  type NodeSystemGraphPayload,
+  type NodeSystemRunDetail,
+  type NodeSystemTemplateRecord,
   type NodePresetDefinition,
+  type NodeViewportSize,
   type OutputBoundaryNode,
   type PortDefinition,
+  type RunNodeStatus,
+  type RunStatus,
   type ValueType,
 } from "@/lib/node-system-schema";
-import type { StateField } from "@/lib/node-system-schema";
 
-type GraphPayload = {
-  graph_family?: "node_system";
-  graph_id?: string | null;
-  name: string;
-  template_id: string;
-  state_schema: StateField[];
-  nodes: unknown[];
-  edges: unknown[];
-  metadata: Record<string, unknown>;
-};
-
-type TemplateRecord = {
-  template_id: string;
-  label: string;
-  description: string;
-  default_graph_name: string;
-  supported_node_types: string[];
-  state_schema: StateField[];
-  default_node_system_graph: Omit<GraphPayload, "graph_id">;
-};
+type GraphPayload = NodeSystemGraphPayload;
+type TemplateRecord = NodeSystemTemplateRecord;
 
 type EditorClientProps = {
   mode: "new" | "existing";
@@ -171,35 +160,7 @@ type EditorSettingsPayload = {
   };
 };
 
-type RunOutputPreview = {
-  node_id?: string;
-  state_key?: string;
-  label?: string;
-  display_mode?: string;
-  value?: unknown;
-};
-
-type RunStatus = "queued" | "running" | "completed" | "failed";
-type RunNodeStatus = "idle" | "running" | "success" | "failed";
-
-type RunNodeExecution = {
-  node_id: string;
-  status: string;
-  errors?: string[];
-};
-
-type RunDetail = {
-  run_id: string;
-  status: RunStatus;
-  current_node_id?: string | null;
-  final_result?: string | null;
-  errors?: string[];
-  node_status_map?: Record<string, RunNodeStatus>;
-  artifacts: {
-    exported_outputs?: RunOutputPreview[];
-  };
-  node_executions: RunNodeExecution[];
-};
+type RunDetail = NodeSystemRunDetail;
 
 type PresetDocument = {
   presetId: string;
@@ -217,11 +178,6 @@ type CreationMenuEntry = {
   mode: "preset" | "node";
   presetId?: string;
   nodeKind?: "input" | "output";
-};
-
-type NodeViewportSize = {
-  width?: number;
-  height?: number;
 };
 
 const CREATION_MENU_FAMILY_PRIORITY: Record<NodeFamily, number> = {
@@ -302,12 +258,24 @@ function normalizeAgentTemperature(value: number | undefined) {
 }
 
 function normalizeNodeConfig<T extends NodePresetDefinition>(config: T): T {
+  const normalizedStateReads = config.stateReads ?? [];
+  const normalizedStateWrites = (config.stateWrites ?? []).map((binding) => ({
+    ...binding,
+    mode: binding.mode ?? "replace",
+  }));
+
   if (config.family !== "agent") {
-    return config;
+    return {
+      ...config,
+      stateReads: normalizedStateReads,
+      stateWrites: normalizedStateWrites,
+    } as T;
   }
 
   const normalizedConfig = {
     ...config,
+    stateReads: normalizedStateReads,
+    stateWrites: normalizedStateWrites,
     modelSource: config.modelSource ?? "global",
     model: config.model ?? "",
     thinkingMode: config.thinkingMode === "off" ? "off" : "on",
@@ -1394,14 +1362,12 @@ function createEditorDefaults(templates: TemplateRecord[], defaultTemplateId?: s
   };
 }
 
-function createFlowNodeFromGraphNode(node: any): FlowNode {
+function createFlowNodeFromGraphNode(node: NodeSystemGraphNode): FlowNode {
   const config = normalizeNodeConfig(deepClonePreset(node.data?.config as NodePresetDefinition));
   const isExpanded = config.family === "input" ? true : Boolean(node.data?.isExpanded);
   const collapsedSize = normalizeViewportSize(node.data?.collapsedSize);
   const expandedSize = normalizeViewportSize(node.data?.expandedSize);
   const activeSize = isExpanded ? expandedSize : collapsedSize;
-  const fallbackWidth = typeof node.style?.width === "number" ? node.style.width : undefined;
-  const fallbackHeight = typeof node.style?.height === "number" ? node.style.height : undefined;
   const defaultWidth = getDefaultNodeWidth(config);
   return {
     id: node.id,
@@ -1417,11 +1383,11 @@ function createFlowNodeFromGraphNode(node: any): FlowNode {
     },
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
-    style: buildNodeStyleFromState(config, isExpanded, activeSize, fallbackWidth ?? defaultWidth, fallbackHeight),
+    style: buildNodeStyleFromState(config, isExpanded, activeSize, defaultWidth),
   } satisfies FlowNode;
 }
 
-function createFlowEdgeFromGraphEdge(edge: any, nodesById: Map<string, FlowNode>): Edge {
+function createFlowEdgeFromGraphEdge(edge: NodeSystemGraphEdge, nodesById: Map<string, FlowNode>): Edge {
   const sourceNode = nodesById.get(edge.source);
   const sourceType = sourceNode ? getPortType(sourceNode.data.config, edge.sourceHandle) : "any";
   const color = TYPE_COLORS[sourceType ?? "any"];
@@ -4139,7 +4105,6 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
         id: node.id,
         type: "default",
         position: node.position,
-        style: node.style,
         data: {
           nodeId: node.data.nodeId,
           config: node.data.config,

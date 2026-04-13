@@ -5,6 +5,86 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class SavedOutputArtifact(BaseModel):
+    node_id: str | None = None
+    source_key: str
+    path: str
+    format: str
+    file_name: str
+
+
+class OutputPreview(BaseModel):
+    node_id: str | None = None
+    label: str | None = None
+    source_kind: str = "node_output"
+    source_key: str
+    display_mode: str = "auto"
+    persist_enabled: bool = False
+    persist_format: str = "auto"
+    value: Any = None
+
+
+class ExportedOutput(OutputPreview):
+    saved_file: SavedOutputArtifact | None = None
+
+
+class StateWriterRecord(BaseModel):
+    node_id: str
+    output_key: str
+    mode: str = "replace"
+    updated_at: str | None = None
+
+
+class StateSnapshot(BaseModel):
+    values: dict[str, Any] = Field(default_factory=dict)
+    last_writers: dict[str, StateWriterRecord] = Field(default_factory=dict)
+
+
+class StateEvent(BaseModel):
+    node_id: str
+    state_key: str
+    output_key: str
+    mode: str = "replace"
+    value: Any = None
+    created_at: str
+
+
+class NodeStateReadRecord(BaseModel):
+    state_key: str
+    input_key: str
+    value: Any = None
+
+
+class NodeStateWriteRecord(BaseModel):
+    state_key: str
+    output_key: str
+    mode: str = "replace"
+    value: Any = None
+
+
+class NodeExecutionArtifacts(BaseModel):
+    inputs: dict[str, Any] = Field(default_factory=dict)
+    outputs: dict[str, Any] = Field(default_factory=dict)
+    family: str = ""
+    selected_branch: str | None = None
+    response: dict[str, Any] | None = None
+    reasoning: str | None = None
+    runtime_config: dict[str, Any] | None = None
+    state_reads: list[NodeStateReadRecord] = Field(default_factory=list)
+    state_writes: list[NodeStateWriteRecord] = Field(default_factory=list)
+
+
+class RunArtifacts(BaseModel):
+    skill_outputs: list[dict[str, Any]] = Field(default_factory=list)
+    output_previews: list[OutputPreview] = Field(default_factory=list)
+    saved_outputs: list[SavedOutputArtifact] = Field(default_factory=list)
+    exported_outputs: list[ExportedOutput] = Field(default_factory=list)
+    node_outputs: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    active_edge_ids: list[str] = Field(default_factory=list)
+    state_events: list[StateEvent] = Field(default_factory=list)
+    state_values: dict[str, Any] = Field(default_factory=dict)
+
+
 class RunSummary(BaseModel):
     """Summary returned by GET /api/runs."""
     run_id: str
@@ -16,6 +96,7 @@ class RunSummary(BaseModel):
     started_at: str
     completed_at: str | None = None
     duration_ms: int | None = None
+    final_score: float | None = None
 
 
 class RunDetail(RunSummary):
@@ -23,14 +104,16 @@ class RunDetail(RunSummary):
     selected_skills: list[str] = Field(default_factory=list)
     skill_outputs: list[dict[str, Any]] = Field(default_factory=list)
     evaluation_result: dict[str, Any] = Field(default_factory=dict)
+    knowledge_summary: str = ""
+    memory_summary: str = ""
     final_result: str = ""
     node_status_map: dict[str, str] = Field(default_factory=dict)
-    node_executions: list[dict[str, Any]] = Field(default_factory=list)
+    node_executions: list[NodeExecutionDetail] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
-    output_previews: list[dict[str, Any]] = Field(default_factory=list)
-    artifacts: dict[str, Any] = Field(default_factory=dict)
-    state_snapshot: dict[str, Any] = Field(default_factory=dict)
+    output_previews: list[OutputPreview] = Field(default_factory=list)
+    artifacts: RunArtifacts = Field(default_factory=RunArtifacts)
+    state_snapshot: StateSnapshot = Field(default_factory=StateSnapshot)
 
 
 class NodeExecutionDetail(BaseModel):
@@ -43,6 +126,6 @@ class NodeExecutionDetail(BaseModel):
     duration_ms: int = 0
     input_summary: str = ""
     output_summary: str = ""
-    artifacts: dict[str, Any] = Field(default_factory=dict)
+    artifacts: NodeExecutionArtifacts = Field(default_factory=NodeExecutionArtifacts)
     warnings: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)

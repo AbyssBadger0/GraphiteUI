@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import heapq
+import copy
 import json
 import logging
 import re
@@ -87,6 +88,8 @@ def execute_node_system_graph(
     state["status"] = "running"
     state["started_at"] = utc_now_iso()
     state["node_status_map"] = {node.id: "idle" for node in graph.nodes}
+    state["metadata"] = dict(graph.metadata)
+    _initialize_graph_state(graph, state)
 
     nodes_by_id = {node.id: node for node in graph.nodes}
     incoming_edges, outgoing_edges = _index_edges(graph.edges)
@@ -135,10 +138,12 @@ def execute_node_system_graph(
             _persist_run_progress(state, node_outputs, active_edge_ids, started_perf=started_perf)
 
         try:
-            input_values = _resolve_input_values(incoming_for_node, node_outputs, active_edge_ids)
+            edge_input_values = _resolve_input_values(incoming_for_node, node_outputs, active_edge_ids)
+            input_values, state_reads = _apply_state_reads(node, edge_input_values, state)
             body = _execute_node(node, input_values, state)
             duration_ms = int((time.perf_counter() - node_started_perf) * 1000)
             node_outputs[node_id] = body.get("outputs", {})
+            state_writes = _apply_state_writes(node, body.get("outputs", {}), state)
             active_edge_ids.update(_select_active_outgoing_edges(outgoing_edges.get(node_id, []), body))
             state["node_status_map"][node_id] = "success"
             if body.get("selected_skills"):
@@ -170,6 +175,8 @@ def execute_node_system_graph(
                         "response": body.get("response"),
                         "reasoning": body.get("reasoning"),
                         "runtime_config": body.get("runtime_config"),
+                        "state_reads": state_reads,
+                        "state_writes": state_writes,
                     },
                     "warnings": body.get("warnings", []),
                     "errors": [],
@@ -230,11 +237,13 @@ def _refresh_run_artifacts(
     started_perf: float,
 ) -> None:
     state["duration_ms"] = max(int((time.perf_counter() - started_perf) * 1000), 0)
+    saved_outputs = list(state.get("saved_outputs", []))
     exported_outputs = [
         {
             "node_id": preview.get("node_id"),
-            "state_key": preview.get("state_key"),
             "label": preview.get("label"),
+            "source_kind": preview.get("source_kind", "node_output"),
+            "source_key": preview.get("source_key"),
             "display_mode": preview.get("display_mode"),
             "persist_enabled": preview.get("persist_enabled"),
             "persist_format": preview.get("persist_format"),
@@ -242,32 +251,112 @@ def _refresh_run_artifacts(
             "saved_file": next(
                 (
                     item
-                    for item in state.get("saved_outputs", [])
-                    if item.get("state_key") == preview.get("state_key")
+                    for item in saved_outputs
+                    if item.get("node_id") == preview.get("node_id")
+                    and item.get("source_key") == preview.get("source_key")
                 ),
                 None,
             ),
         }
         for preview in state.get("output_previews", [])
     ]
+    state_values = dict(state.get("state_values", {}))
+    state_events = list(state.get("state_events", []))
+    state_last_writers = dict(state.get("state_last_writers", {}))
     state["artifacts"] = {
         "skill_outputs": state.get("skill_outputs", []),
         "output_previews": state.get("output_previews", []),
-        "saved_outputs": state.get("saved_outputs", []),
+        "saved_outputs": saved_outputs,
         "exported_outputs": exported_outputs,
         "node_outputs": node_outputs,
         "active_edge_ids": sorted(active_edge_ids),
+        "state_events": state_events,
+        "state_values": state_values,
     }
     state["state_snapshot"] = {
-        "node_outputs": node_outputs,
-        "selected_skills": state.get("selected_skills", []),
-        "skill_outputs": state.get("skill_outputs", []),
-        "output_previews": state.get("output_previews", []),
-        "saved_outputs": state.get("saved_outputs", []),
-        "exported_outputs": exported_outputs,
-        "final_result": state.get("final_result", ""),
-        "active_edge_ids": sorted(active_edge_ids),
+        "values": state_values,
+        "last_writers": state_last_writers,
     }
+
+
+def _initialize_graph_state(graph: NodeSystemGraphDocument, state: dict[str, Any]) -> None:
+    initialized_values = {
+        field.key: copy.deepcopy(field.default_value)
+        for field in graph.state_schema
+    }
+    initialized_values.update(dict(state.get("state_values", {})))
+    state["state_values"] = initialized_values
+    state["state_last_writers"] = dict(state.get("state_last_writers", {}))
+    state["state_events"] = list(state.get("state_events", []))
+    state["state_snapshot"] = {
+        "values": dict(initialized_values),
+        "last_writers": dict(state["state_last_writers"]),
+    }
+
+
+def _apply_state_reads(
+    node: NodeSystemGraphNode,
+    input_values: dict[str, Any],
+    state: dict[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    resolved_inputs = dict(input_values)
+    read_records: list[dict[str, Any]] = []
+    for binding in getattr(node.data.config, "state_reads", []):
+        if binding.input_key in resolved_inputs:
+            raise ValueError(
+                f"Node '{node.id}' input '{binding.input_key}' is bound by both an edge and state '{binding.state_key}'."
+            )
+        value = copy.deepcopy(state.get("state_values", {}).get(binding.state_key))
+        resolved_inputs[binding.input_key] = value
+        read_records.append(
+            {
+                "state_key": binding.state_key,
+                "input_key": binding.input_key,
+                "value": value,
+            }
+        )
+    return resolved_inputs, read_records
+
+
+def _apply_state_writes(
+    node: NodeSystemGraphNode,
+    output_values: dict[str, Any],
+    state: dict[str, Any],
+) -> list[dict[str, Any]]:
+    write_records: list[dict[str, Any]] = []
+    state_values = state.setdefault("state_values", {})
+    state_last_writers = state.setdefault("state_last_writers", {})
+    state_events = state.setdefault("state_events", [])
+
+    for binding in getattr(node.data.config, "state_writes", []):
+        value = copy.deepcopy(output_values.get(binding.output_key))
+        state_values[binding.state_key] = value
+        writer_record = {
+            "node_id": node.id,
+            "output_key": binding.output_key,
+            "mode": binding.mode.value,
+            "updated_at": utc_now_iso(),
+        }
+        state_last_writers[binding.state_key] = writer_record
+        state_events.append(
+            {
+                "node_id": node.id,
+                "state_key": binding.state_key,
+                "output_key": binding.output_key,
+                "mode": binding.mode.value,
+                "value": value,
+                "created_at": utc_now_iso(),
+            }
+        )
+        write_records.append(
+            {
+                "state_key": binding.state_key,
+                "output_key": binding.output_key,
+                "mode": binding.mode.value,
+                "value": value,
+            }
+        )
+    return write_records
 
 
 def _index_edges(edges: list[NodeSystemGraphEdge]) -> tuple[dict[str, list[NodeSystemGraphEdge]], dict[str, list[NodeSystemGraphEdge]]]:
@@ -362,6 +451,7 @@ def _execute_node(node: NodeSystemGraphNode, input_values: dict[str, Any], state
     config = node.data.config
     graph_context = {
         "metadata": state.get("metadata", {}),
+        "state": state.get("state_values", {}),
     }
     if isinstance(config, InputBoundaryNodeConfig):
         raw_value = input_values.get(config.output.key, config.default_value)
@@ -376,8 +466,9 @@ def _execute_node(node: NodeSystemGraphNode, input_values: dict[str, Any], state
         value = input_values.get(config.input.key)
         preview = {
             "node_id": node.id,
-            "state_key": config.input.key,
             "label": config.label,
+            "source_kind": "node_output",
+            "source_key": config.input.key,
             "display_mode": config.display_mode.value,
             "persist_enabled": config.persist_enabled,
             "persist_format": config.persist_format.value,
@@ -388,7 +479,8 @@ def _execute_node(node: NodeSystemGraphNode, input_values: dict[str, Any], state
             saved_outputs.append(
                 save_output_value(
                     run_id=str(state.get("run_id", "")),
-                    state_key=config.input.key,
+                    node_id=node.id,
+                    source_key=config.input.key,
                     value=value,
                     persist_format=config.persist_format.value,
                     file_name_template=config.file_name_template or config.label or config.input.key,
@@ -446,6 +538,7 @@ def _execute_agent_node(
                     skills=skill_context,
                     context=skill_context,
                     graph=graph_context,
+                    state_values=graph_context.get("state", {}),
                 )
                 for target_key, source_ref in skill.input_mapping.items()
             }
@@ -462,6 +555,7 @@ def _execute_agent_node(
                 skills=skill_context,
                 context=skill_context,
                 graph=graph_context,
+                state_values=graph_context.get("state", {}),
             )
         skill_outputs.append(
             {
@@ -480,6 +574,7 @@ def _execute_agent_node(
             skills=skill_context,
             context=skill_context,
             graph=graph_context,
+            state_values=graph_context.get("state", {}),
         )
         for output in config.outputs
     }
@@ -501,6 +596,7 @@ def _execute_agent_node(
             skills=skill_context,
             context=skill_context,
             graph=graph_context,
+            state_values=graph_context.get("state", {}),
         )
         for output in config.outputs
     }
@@ -721,6 +817,7 @@ def _execute_condition_node(
         skills={},
         context={},
         graph=graph_context,
+        state_values=graph_context.get("state", {}),
     )
     condition_result = _evaluate_condition_rule(rule_value, config.rule.operator.value, config.rule.value)
     branch_key = _resolve_branch_key(config.branch_mapping, condition_result)
@@ -742,6 +839,7 @@ def _resolve_reference(
     skills: dict[str, Any],
     context: dict[str, Any],
     graph: dict[str, Any],
+    state_values: dict[str, Any],
 ) -> Any:
     if not isinstance(reference, str) or not reference.startswith("$"):
         return reference
@@ -754,6 +852,8 @@ def _resolve_reference(
         return _read_path(skills, reference[len("$skills."):])
     if reference.startswith("$context."):
         return _read_path(context, reference[len("$context."):])
+    if reference.startswith("$state."):
+        return _read_path(state_values, reference[len("$state."):])
     if reference.startswith("$graph."):
         return _read_path(graph, reference[len("$graph."):])
     return reference

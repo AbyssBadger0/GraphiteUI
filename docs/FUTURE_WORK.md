@@ -9,38 +9,12 @@
 
 当前优先级：
 
-1. State Panel 与 state 一等对象表达
-2. Cycles 正式支持
-3. Knowledge Base 正式能力建设
-4. Memory 正式能力建设
-5. 人类在环与断点
+1. Cycles 正式支持
+2. Knowledge Base 正式能力建设
+3. Memory 正式能力建设
+4. 人类在环与断点
 
-## 1. State Panel 与 state 一等对象表达
-
-当前代码现状：
-
-- editor 已有画布、建点、连线、运行、输出预览
-- `state_schema` 已经存在于 graph payload 中，但 editor 里没有真正可编辑的 `State Panel`
-- 当前 state 既不是 graph 内的一等编辑对象，也没有和 node 上的读写关系形成正式契约
-
-后续要做：
-
-- 在 editor 右侧增加默认折叠的 `State Panel`
-- 明确 `State Panel` 不是只读展示，而是 graph 级 state 的主编辑入口
-- 让 `state_schema` 成为 graph 内可编辑的正式对象，至少支持：
-  - 新增 / 删除 state
-  - 编辑 `key / type / title / description / defaultValue / ui`
-  - 按 state 聚合查看 readers / writers
-- 让 `State Panel` 的编辑同步修改 node 上的正式配置，而不是引入第三套持久化结构
-- 把 node 的 state 关系收敛为结构化字段，而不是继续依赖隐式约定或自由文本：
-  - `stateReads`
-  - `stateWrites`
-- 明确 node 才是 readers / writers 的持久化 source of truth：
-  - graph 保存后可以完整还原编辑状态
-  - node 被单独保存、复制、另存为 preset 时不丢失 state 行为
-  - 只保存 graph、不保存节点模板时，该节点不会自动进入节点选择列表
-
-## 2. Cycles 正式支持
+## 1. Cycles 正式支持
 
 当前代码现状：
 
@@ -63,7 +37,7 @@
   - 恢复后从哪一轮、哪个节点继续
 - 在 editor 和 run detail 中可视化循环轮次、回边和终止原因
 
-## 3. Knowledge Base 正式能力建设
+## 2. Knowledge Base 正式能力建设
 
 当前代码现状：
 
@@ -82,7 +56,7 @@
   - runtime 如何返回检索命中、来源、摘要与引用
 - 决定第一版是否先做全文检索正式化，还是直接进入分块检索 / 向量检索
 
-## 4. Memory 正式能力建设
+## 3. Memory 正式能力建设
 
 当前代码现状：
 
@@ -101,7 +75,7 @@
   - run detail 返回哪些 memory 相关结构化字段
 - 决定是否保留独立 memory 页面；如果保留，至少要支持真实记录、检索、来源追踪和详情查看
 
-## 5. 人类在环与断点
+## 4. 人类在环与断点
 
 当前代码现状：
 

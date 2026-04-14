@@ -108,6 +108,10 @@ type FlowNodeData = {
   modelDisplayLookup?: Record<string, string>;
   knowledgeBases?: KnowledgeBaseOption[];
   stateFieldLookup?: Record<string, string>;
+  stateFields?: StateField[];
+  onRenameStateName?: (stateKey: string, nextName: string) => void;
+  onBindStateToPort?: (side: "input" | "output", stateKey: string) => boolean;
+  onCreateStateAndBindToPort?: (side: "input" | "output", field: StateField) => boolean;
   onOpenStatePanel?: () => void;
 };
 
@@ -241,7 +245,21 @@ const TYPE_COLORS: Record<ValueType, string> = {
 };
 
 const VALUE_TYPE_OPTIONS: ValueType[] = ["text", "json", "image", "audio", "video", "file", "knowledge_base", "any"];
-const STATE_FIELD_TYPE_OPTIONS: StateFieldType[] = ["string", "number", "boolean", "object", "array", "markdown", "json", "file_list"];
+const STATE_FIELD_TYPE_OPTIONS: StateFieldType[] = [
+  "string",
+  "number",
+  "boolean",
+  "object",
+  "array",
+  "markdown",
+  "json",
+  "file_list",
+  "image",
+  "audio",
+  "video",
+  "file",
+  "knowledge_base",
+];
 const RULE_OPERATOR_OPTIONS: ConditionRule["operator"][] = ["==", "!=", ">=", "<=", ">", "<", "exists"];
 
 const INPUT_TYPE_BUTTONS: Array<{ value: ValueType; label: string; icon: ReactNode }> = [
@@ -308,6 +326,11 @@ function defaultStateValueForType(type: StateFieldType): unknown {
     case "array":
     case "file_list":
       return [];
+    case "image":
+    case "audio":
+    case "video":
+    case "file":
+    case "knowledge_base":
     case "markdown":
     case "string":
     default:
@@ -315,19 +338,28 @@ function defaultStateValueForType(type: StateFieldType): unknown {
   }
 }
 
-function createDefaultStateField(existingKeys: string[]): StateField {
+function createStateKey(base: string, existingKeys: string[]) {
+  const normalizedBase = base.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "state";
+  let nextKey = normalizedBase;
+  let index = 2;
   const existing = new Set(existingKeys);
-  let index = existing.size + 1;
-  let key = `state_${index}`;
-  while (existing.has(key)) {
+  while (existing.has(nextKey)) {
+    nextKey = `${normalizedBase}_${index}`;
     index += 1;
-    key = `state_${index}`;
   }
+  return nextKey;
+}
 
+function getStateDisplayName(field: Pick<StateField, "key" | "name">) {
+  return String(field.name ?? "").trim() || field.key;
+}
+
+function createDefaultStateField(existingKeys: string[]): StateField {
+  const key = createStateKey(`state_${existingKeys.length + 1}`, existingKeys);
   return {
     key,
     type: "string",
-    title: `State ${index}`,
+    name: key,
     description: "",
     value: "",
     ui: {
@@ -338,6 +370,57 @@ function createDefaultStateField(existingKeys: string[]): StateField {
 
 function isStructuredStateType(type: StateFieldType) {
   return type === "object" || type === "array" || type === "json" || type === "file_list";
+}
+
+function stateFieldTypeToValueType(type: StateFieldType): ValueType {
+  switch (type) {
+    case "object":
+    case "array":
+    case "json":
+    case "file_list":
+      return "json";
+    case "image":
+      return "image";
+    case "audio":
+      return "audio";
+    case "video":
+      return "video";
+    case "file":
+      return "file";
+    case "knowledge_base":
+      return "knowledge_base";
+    case "number":
+    case "boolean":
+    case "markdown":
+    case "string":
+    default:
+      return "text";
+  }
+}
+
+function valueTypeToStateFieldType(type: ValueType): StateFieldType {
+  switch (type) {
+    case "json":
+      return "json";
+    case "image":
+      return "image";
+    case "audio":
+      return "audio";
+    case "video":
+      return "video";
+    case "file":
+      return "file";
+    case "knowledge_base":
+      return "knowledge_base";
+    case "text":
+    case "any":
+    default:
+      return "string";
+  }
+}
+
+function getStateFieldByKey(stateFields: StateField[], stateKey: string) {
+  return stateFields.find((field) => field.key === stateKey);
 }
 
 function stringifyStateValue(value: unknown, type: StateFieldType) {
@@ -416,6 +499,89 @@ function withNodeStateBindings(
     stateReads,
     stateWrites,
   } as NodePresetDefinition);
+}
+
+function renameStateKeyInPort(port: PortDefinition, currentKey: string, nextKey: string): PortDefinition {
+  if (port.key !== currentKey) return port;
+  return {
+    ...port,
+    key: nextKey,
+    label: port.label === currentKey ? nextKey : port.label,
+  };
+}
+
+function renameStateKeyInNodeConfig(config: NodePresetDefinition, currentKey: string, nextKey: string): NodePresetDefinition {
+  if (config.family === "input") {
+    return normalizeNodeConfig({
+      ...config,
+      output: renameStateKeyInPort(config.output, currentKey, nextKey),
+      stateWrites: (config.stateWrites ?? []).map((binding) =>
+        binding.stateKey === currentKey || binding.outputKey === currentKey
+          ? {
+              ...binding,
+              stateKey: binding.stateKey === currentKey ? nextKey : binding.stateKey,
+              outputKey: binding.outputKey === currentKey ? nextKey : binding.outputKey,
+            }
+          : binding,
+      ),
+    } satisfies InputBoundaryNode);
+  }
+
+  if (config.family === "output") {
+    return normalizeNodeConfig({
+      ...config,
+      input: renameStateKeyInPort(config.input, currentKey, nextKey),
+      stateReads: (config.stateReads ?? []).map((binding) =>
+        binding.stateKey === currentKey || binding.inputKey === currentKey
+          ? {
+              ...binding,
+              stateKey: binding.stateKey === currentKey ? nextKey : binding.stateKey,
+              inputKey: binding.inputKey === currentKey ? nextKey : binding.inputKey,
+            }
+          : binding,
+      ),
+    } satisfies OutputBoundaryNode);
+  }
+
+  if (config.family === "condition") {
+    return normalizeNodeConfig({
+      ...config,
+      inputs: config.inputs.map((port) => renameStateKeyInPort(port, currentKey, nextKey)),
+      stateReads: (config.stateReads ?? []).map((binding) =>
+        binding.stateKey === currentKey || binding.inputKey === currentKey
+          ? {
+              ...binding,
+              stateKey: binding.stateKey === currentKey ? nextKey : binding.stateKey,
+              inputKey: binding.inputKey === currentKey ? nextKey : binding.inputKey,
+            }
+          : binding,
+      ),
+    } satisfies ConditionNode);
+  }
+
+  return normalizeNodeConfig({
+    ...config,
+    inputs: config.inputs.map((port) => renameStateKeyInPort(port, currentKey, nextKey)),
+    outputs: config.outputs.map((port) => renameStateKeyInPort(port, currentKey, nextKey)),
+    stateReads: (config.stateReads ?? []).map((binding) =>
+      binding.stateKey === currentKey || binding.inputKey === currentKey
+        ? {
+            ...binding,
+            stateKey: binding.stateKey === currentKey ? nextKey : binding.stateKey,
+            inputKey: binding.inputKey === currentKey ? nextKey : binding.inputKey,
+          }
+        : binding,
+    ),
+    stateWrites: (config.stateWrites ?? []).map((binding) =>
+      binding.stateKey === currentKey || binding.outputKey === currentKey
+        ? {
+            ...binding,
+            stateKey: binding.stateKey === currentKey ? nextKey : binding.stateKey,
+            outputKey: binding.outputKey === currentKey ? nextKey : binding.outputKey,
+          }
+        : binding,
+    ),
+  } satisfies AgentNode);
 }
 
 function resolveAgentRuntimeConfig(
@@ -1598,6 +1764,52 @@ function listStateWritablePorts(config: NodePresetDefinition) {
   return listOutputPorts(config);
 }
 
+function getBoundStateKeyForPort(config: NodePresetDefinition, side: "input" | "output", portKey: string) {
+  if (side === "input") {
+    if (config.family === "agent" || config.family === "condition") {
+      return (config.stateReads ?? []).find((binding) => binding.inputKey === portKey)?.stateKey ?? portKey;
+    }
+    if (config.family === "output") {
+      return (config.stateReads ?? []).find((binding) => binding.inputKey === portKey)?.stateKey ?? portKey;
+    }
+    return null;
+  }
+
+  if (config.family === "agent" || config.family === "input") {
+    return (config.stateWrites ?? []).find((binding) => binding.outputKey === portKey)?.stateKey ?? portKey;
+  }
+
+  return null;
+}
+
+function resolvePortForDisplay(
+  config: NodePresetDefinition,
+  side: "input" | "output",
+  port: PortDefinition,
+  stateFields: StateField[],
+): PortDefinition {
+  const stateKey = getBoundStateKeyForPort(config, side, port.key);
+  const stateField = stateKey ? getStateFieldByKey(stateFields, stateKey) : null;
+  if (!stateField) {
+    return port;
+  }
+
+  return {
+    ...port,
+    label: getStateDisplayName(stateField),
+    valueType: stateFieldTypeToValueType(stateField.type),
+  };
+}
+
+function resolvePortsForDisplay(
+  config: NodePresetDefinition,
+  side: "input" | "output",
+  stateFields: StateField[],
+) {
+  const ports = side === "input" ? listInputPorts(config) : listOutputPorts(config);
+  return ports.map((port) => resolvePortForDisplay(config, side, port, stateFields));
+}
+
 function findFirstCompatibleInputHandle(config: NodePresetDefinition, sourceType: ValueType) {
   const inputPort = listInputPorts(config).find((port) => isValueTypeCompatible(sourceType, port.valueType));
   return inputPort ? buildHandleId("input", inputPort.key) : null;
@@ -2241,6 +2453,7 @@ function PortRow({
   side,
   editable = false,
   onRename,
+  boundState,
   portEditor,
 }: {
   nodeId: string;
@@ -2248,6 +2461,7 @@ function PortRow({
   side: "input" | "output";
   editable?: boolean;
   onRename?: (nextLabel: string) => void;
+  boundState?: StateField | null;
   portEditor?: {
     onChange: (nextPort: PortDefinition) => void;
     onRemove?: () => void;
@@ -2255,30 +2469,37 @@ function PortRow({
 }) {
   const color = TYPE_COLORS[port.valueType];
   const [isEditing, setIsEditing] = useState(false);
-  const [draftLabel, setDraftLabel] = useState(port.label);
+  const [draftLabel, setDraftLabel] = useState(boundState ? getStateDisplayName(boundState) : port.label);
   const [isEditingPortConfig, setIsEditingPortConfig] = useState(false);
   const [draftPort, setDraftPort] = useState<PortDefinition>(port);
   const labelRef = useRef<HTMLSpanElement | null>(null);
+  const displayLabel = boundState ? getStateDisplayName(boundState) : port.label;
 
   useEffect(() => {
-    setDraftLabel(port.label);
-    setDraftPort(port);
-  }, [port]);
+    setDraftLabel(displayLabel);
+    setDraftPort({
+      ...port,
+      label: displayLabel,
+    });
+  }, [displayLabel, port]);
 
   function startEditing() {
     if (portEditor) {
-      setDraftPort(port);
+      setDraftPort({
+        ...port,
+        label: displayLabel,
+      });
       setIsEditingPortConfig(true);
       return;
     }
     if (!editable) return;
-    setDraftLabel(port.label);
+    setDraftLabel(displayLabel);
     setIsEditing(true);
   }
 
   function commitEditing() {
     const nextLabel = draftLabel.trim();
-    if (nextLabel && nextLabel !== port.label) {
+    if (nextLabel && nextLabel !== displayLabel) {
       onRename?.(nextLabel);
     }
     setIsEditing(false);
@@ -2287,8 +2508,15 @@ function PortRow({
   function commitPortEditing() {
     const nextLabel = draftPort.label.trim();
     const nextKey = draftPort.key.trim();
-    if (!nextLabel || !nextKey) {
+    if (!nextLabel || (!boundState && !nextKey)) {
       setDraftPort(port);
+      setIsEditingPortConfig(false);
+      return;
+    }
+    if (boundState) {
+      if (nextLabel !== getStateDisplayName(boundState)) {
+        onRename?.(nextLabel);
+      }
       setIsEditingPortConfig(false);
       return;
     }
@@ -2313,7 +2541,7 @@ function PortRow({
             isConnectable
           />
           <span ref={labelRef} className="ml-2 truncate cursor-text" onDoubleClick={startEditing}>
-            {port.label}
+            {displayLabel}
           </span>
           <FloatingEditorCard
             anchorRef={labelRef}
@@ -2330,7 +2558,7 @@ function PortRow({
               onKeyDown={(event) => {
                 if (event.key === "Enter") commitEditing();
                 if (event.key === "Escape") {
-                  setDraftLabel(port.label);
+                  setDraftLabel(displayLabel);
                   setIsEditing(false);
                 }
               }}
@@ -2339,7 +2567,7 @@ function PortRow({
               <PanelIconButton
                 label="Cancel"
                 onClick={() => {
-                  setDraftLabel(port.label);
+                  setDraftLabel(displayLabel);
                   setIsEditing(false);
                 }}
               >
@@ -2363,17 +2591,22 @@ function PortRow({
             widthClassName="w-[340px]"
           >
             <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-              <span>Key</span>
-              <Input value={draftPort.key} onChange={(event) => setDraftPort((current) => ({ ...current, key: event.target.value }))} />
+              <span>{boundState ? "State Key" : "Key"}</span>
+              <Input
+                value={boundState?.key ?? draftPort.key}
+                disabled={Boolean(boundState)}
+                onChange={(event) => setDraftPort((current) => ({ ...current, key: event.target.value }))}
+              />
             </label>
             <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-              <span>Label</span>
+              <span>{boundState ? "Name" : "Label"}</span>
               <Input value={draftPort.label} onChange={(event) => setDraftPort((current) => ({ ...current, label: event.target.value }))} />
             </label>
             <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-              <span>Value Type</span>
+              <span>{boundState ? "State Type" : "Value Type"}</span>
               <FieldSelect
                 value={draftPort.valueType}
+                disabled={Boolean(boundState)}
                 onValueChange={(nextValue) => setDraftPort((current) => ({ ...current, valueType: nextValue as ValueType }))}
                 options={VALUE_TYPE_SELECT_OPTIONS}
               />
@@ -2432,7 +2665,7 @@ function PortRow({
       ) : (
         <>
           <span ref={labelRef} className="truncate text-right cursor-text" onDoubleClick={startEditing}>
-            {port.label}
+            {displayLabel}
           </span>
           <FloatingEditorCard
             anchorRef={labelRef}
@@ -2449,7 +2682,7 @@ function PortRow({
               onKeyDown={(event) => {
                 if (event.key === "Enter") commitEditing();
                 if (event.key === "Escape") {
-                  setDraftLabel(port.label);
+                  setDraftLabel(displayLabel);
                   setIsEditing(false);
                 }
               }}
@@ -2458,7 +2691,7 @@ function PortRow({
               <PanelIconButton
                 label="Cancel"
                 onClick={() => {
-                  setDraftLabel(port.label);
+                  setDraftLabel(displayLabel);
                   setIsEditing(false);
                 }}
               >
@@ -2482,17 +2715,22 @@ function PortRow({
             widthClassName="w-[340px]"
           >
             <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-              <span>Key</span>
-              <Input value={draftPort.key} onChange={(event) => setDraftPort((current) => ({ ...current, key: event.target.value }))} />
+              <span>{boundState ? "State Key" : "Key"}</span>
+              <Input
+                value={boundState?.key ?? draftPort.key}
+                disabled={Boolean(boundState)}
+                onChange={(event) => setDraftPort((current) => ({ ...current, key: event.target.value }))}
+              />
             </label>
             <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-              <span>Label</span>
+              <span>{boundState ? "Name" : "Label"}</span>
               <Input value={draftPort.label} onChange={(event) => setDraftPort((current) => ({ ...current, label: event.target.value }))} />
             </label>
             <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-              <span>Value Type</span>
+              <span>{boundState ? "State Type" : "Value Type"}</span>
               <FieldSelect
                 value={draftPort.valueType}
+                disabled={Boolean(boundState)}
                 onValueChange={(nextValue) => setDraftPort((current) => ({ ...current, valueType: nextValue as ValueType }))}
                 options={VALUE_TYPE_SELECT_OPTIONS}
               />
@@ -2554,40 +2792,132 @@ function PortRow({
   );
 }
 
-function PortCreateButton({
+function normalizeStateSearchText(value: string) {
+  return value.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function isSubsequence(query: string, target: string) {
+  if (!query) return true;
+  let index = 0;
+  for (const character of target) {
+    if (character === query[index]) {
+      index += 1;
+      if (index === query.length) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function matchesStateSearch(field: StateField, query: string) {
+  const normalizedQuery = normalizeStateSearchText(query);
+  if (!normalizedQuery) return true;
+
+  const displayName = getStateDisplayName(field);
+  const haystacks = [
+    normalizeStateSearchText(displayName),
+    normalizeStateSearchText(field.key),
+    normalizeStateSearchText(field.description),
+  ];
+
+  if (haystacks.some((value) => value.includes(normalizedQuery))) {
+    return true;
+  }
+
+  const queryTerms = normalizedQuery.split(" ").filter(Boolean);
+  const words = normalizeStateSearchText(`${displayName} ${field.key}`).split(" ").filter(Boolean);
+  if (
+    queryTerms.length > 0 &&
+    queryTerms.every((term) => words.some((word) => word.startsWith(term)))
+  ) {
+    return true;
+  }
+
+  const queryCompact = normalizedQuery.replace(/\s+/g, "");
+  const initials = words.map((word) => word[0] ?? "").join("");
+  return isSubsequence(queryCompact, initials) || haystacks.some((value) => isSubsequence(queryCompact, value.replace(/\s+/g, "")));
+}
+
+function createDraftStateFromQuery(query: string, existingKeys: string[]): StateField {
+  const trimmedQuery = query.trim();
+  const key = createStateKey(trimmedQuery || "state", existingKeys);
+  return {
+    key,
+    name: trimmedQuery || key,
+    type: "string",
+    description: "",
+    value: "",
+    ui: {
+      color: "",
+    },
+  };
+}
+
+function StatePortCreateButton({
   side,
   visible,
-  initialPort,
-  onCreate,
+  stateFields,
+  onBindState,
+  onCreateState,
 }: {
   side: "input" | "output";
   visible: boolean;
-  initialPort: PortDefinition;
-  onCreate: (port: PortDefinition) => void;
+  stateFields: StateField[];
+  onBindState: (stateKey: string) => boolean;
+  onCreateState: (field: StateField) => boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [draftPort, setDraftPort] = useState<PortDefinition>(initialPort);
+  const [search, setSearch] = useState("");
+  const [draftState, setDraftState] = useState<StateField | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
+  const matchingStates = useMemo(
+    () => stateFields.filter((field) => matchesStateSearch(field, search)),
+    [search, stateFields],
+  );
+
   function openEditor() {
-    setDraftPort(initialPort);
+    setSearch("");
+    setDraftState(null);
+    setError(null);
     setIsOpen(true);
   }
 
   function closeEditor() {
     setIsOpen(false);
+    setSearch("");
+    setDraftState(null);
+    setError(null);
   }
 
-  function commit() {
-    const nextKey = draftPort.key.trim();
-    const nextLabel = draftPort.label.trim();
-    if (!nextKey || !nextLabel) return;
-    onCreate({
-      ...draftPort,
-      key: nextKey,
-      label: nextLabel,
-    });
-    setIsOpen(false);
+  function beginCreateState() {
+    setDraftState(createDraftStateFromQuery(search, stateFields.map((field) => field.key)));
+    setError(null);
+  }
+
+  function commitCreateState() {
+    if (!draftState) return;
+    const nextKey = draftState.key.trim();
+    const nextName = draftState.name.trim() || nextKey;
+    if (!nextKey) {
+      setError("State key cannot be empty.");
+      return;
+    }
+    if (stateFields.some((field) => field.key === nextKey)) {
+      setError(`State key '${nextKey}' already exists.`);
+      return;
+    }
+    if (
+      onCreateState({
+        ...draftState,
+        key: nextKey,
+        name: nextName,
+      })
+    ) {
+      closeEditor();
+    }
   }
 
   if (!visible && !isOpen) {
@@ -2616,45 +2946,156 @@ function PortCreateButton({
         anchorRef={triggerRef}
         open={isOpen}
         placement={side === "input" ? "bottom-start" : "bottom-end"}
-        title={`Create ${side === "input" ? "Input" : "Output"}`}
-        widthClassName="w-[340px]"
+        title={draftState ? `Create ${side === "input" ? "Input" : "Output"} State` : `Select ${side === "input" ? "Input" : "Output"} State`}
+        widthClassName="w-[360px]"
       >
-        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-          <span>Key</span>
-          <Input value={draftPort.key} onChange={(event) => setDraftPort((current) => ({ ...current, key: event.target.value }))} />
-        </label>
-        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-          <span>Label</span>
-          <Input value={draftPort.label} onChange={(event) => setDraftPort((current) => ({ ...current, label: event.target.value }))} />
-        </label>
-        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-          <span>Value Type</span>
-          <FieldSelect
-            value={draftPort.valueType}
-            onValueChange={(nextValue) => setDraftPort((current) => ({ ...current, valueType: nextValue as ValueType }))}
-            options={VALUE_TYPE_SELECT_OPTIONS}
-          />
-        </label>
-        {side === "input" ? (
-          <EditorSwitchRow
-            label="Required"
-            checked={Boolean(draftPort.required)}
-            onCheckedChange={(checked) => setDraftPort((current) => ({ ...current, required: checked }))}
-          />
-        ) : null}
-        <div className="flex items-center justify-end gap-2">
-          <PanelIconButton label="Cancel" onClick={closeEditor}>
-            <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
-              <path d="m4.5 4.5 7 7" />
-              <path d="m11.5 4.5-7 7" />
-            </svg>
-          </PanelIconButton>
-          <PanelIconButton label="Create" tone="positive" onClick={commit}>
-            <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
-              <path d="m3.5 8.5 3 3 6-7" />
-            </svg>
-          </PanelIconButton>
-        </div>
+        {draftState ? (
+          <div className="grid gap-3">
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Name</span>
+              <Input
+                value={draftState.name}
+                onChange={(event) => setDraftState((current) => (current ? { ...current, name: event.target.value } : current))}
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Key</span>
+              <Input
+                value={draftState.key}
+                onChange={(event) => setDraftState((current) => (current ? { ...current, key: event.target.value } : current))}
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Type</span>
+              <FieldSelect
+                value={draftState.type}
+                onValueChange={(nextValue) =>
+                  setDraftState((current) =>
+                    current
+                      ? {
+                          ...current,
+                          type: nextValue as StateFieldType,
+                          value: defaultStateValueForType(nextValue as StateFieldType),
+                        }
+                      : current,
+                  )
+                }
+                options={STATE_FIELD_TYPE_OPTIONS.map((type) => ({
+                  value: type,
+                  label: type,
+                }))}
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+              <span>Description</span>
+              <FieldTextarea
+                rows={3}
+                value={draftState.description}
+                onChange={(event) => setDraftState((current) => (current ? { ...current, description: event.target.value } : current))}
+              />
+            </label>
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_88px]">
+              <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+                <span>Color</span>
+                <Input
+                  value={draftState.ui?.color ?? ""}
+                  placeholder="#d97706"
+                  onChange={(event) =>
+                    setDraftState((current) =>
+                      current
+                        ? {
+                            ...current,
+                            ui: {
+                              ...(current.ui ?? {}),
+                              color: event.target.value,
+                            },
+                          }
+                        : current,
+                    )
+                  }
+                />
+              </label>
+              <div className="grid gap-1.5 text-sm text-[var(--muted)]">
+                <span>Swatch</span>
+                <div
+                  className="h-11 rounded-[16px] border border-[rgba(154,52,18,0.14)] bg-[rgba(255,255,255,0.78)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]"
+                  style={{ backgroundColor: draftState.ui?.color?.trim() || "rgba(255,255,255,0.78)" }}
+                />
+              </div>
+            </div>
+            <StateDefaultValueEditor
+              field={draftState}
+              onChange={(nextValue) => setDraftState((current) => (current ? { ...current, value: nextValue } : current))}
+            />
+            <div className={cn("text-xs", error ? "text-[rgb(153,27,27)]" : "text-[var(--muted)]")}>
+              {error ?? "Create the state and bind this port to it immediately."}
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <PanelIconButton
+                label="Back"
+                onClick={() => {
+                  setDraftState(null);
+                  setError(null);
+                }}
+              >
+                <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
+                  <path d="M10.5 3.5 5.5 8l5 4.5" />
+                </svg>
+              </PanelIconButton>
+              <PanelIconButton label="Create" tone="positive" onClick={commitCreateState}>
+                <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
+                  <path d="m3.5 8.5 3 3 6-7" />
+                </svg>
+              </PanelIconButton>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            <Input
+              className="h-11"
+              value={search}
+              autoFocus
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={`Search or create ${side === "input" ? "input" : "output"} state`}
+            />
+            <div className="grid gap-2">
+              {search.trim() ? (
+                <button
+                  type="button"
+                  className="rounded-[16px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,244,240,0.92)] px-3 py-2 text-left transition hover:bg-[rgba(255,248,240,1)]"
+                  onClick={beginCreateState}
+                >
+                  <div className="text-[0.7rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">Create</div>
+                  <div className="mt-0.5 text-sm font-semibold text-[var(--text)]">新增 “{search.trim()}”</div>
+                </button>
+              ) : null}
+              {matchingStates.map((field) => (
+                <button
+                  key={field.key}
+                  type="button"
+                  className="rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,255,255,0.82)] px-3 py-2 text-left transition hover:bg-[rgba(255,248,240,0.92)]"
+                  onClick={() => {
+                    if (onBindState(field.key)) {
+                      closeEditor();
+                    }
+                  }}
+                >
+                  <div className="text-[0.7rem] uppercase tracking-[0.12em] text-[var(--accent-strong)]">{field.type}</div>
+                  <div className="mt-0.5 text-sm font-semibold text-[var(--text)]">{getStateDisplayName(field)}</div>
+                  <div className="mt-1 text-xs leading-5 text-[var(--muted)]">{field.key}</div>
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <PanelIconButton label="Cancel" onClick={closeEditor}>
+                <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8">
+                  <path d="m4.5 4.5 7 7" />
+                  <path d="m11.5 4.5-7 7" />
+                </svg>
+              </PanelIconButton>
+            </div>
+          </div>
+        )}
       </FloatingEditorCard>
     </div>
   );
@@ -2678,11 +3119,16 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const config = data.config;
   const displayName = data.displayName ?? getNodeDisplayName(config, data.nodeId);
   const displayDescription = data.displayDescription?.trim() || config.description;
-  const inputs = listInputPorts(config);
-  const outputs = listOutputPorts(config);
+  const stateFields = data.stateFields ?? [];
+  const inputs = resolvePortsForDisplay(config, "input", stateFields);
+  const outputs = resolvePortsForDisplay(config, "output", stateFields);
   const isInputNode = config.family === "input";
   const minHeight = getNodeMinHeight(config);
   const executionVisual = resolveNodeExecutionVisual(data.executionStatus, data.isCurrentRunNode);
+  const getBoundState = (side: "input" | "output", portKey: string) => {
+    const stateKey = getBoundStateKeyForPort(config, side, portKey);
+    return stateKey ? getStateFieldByKey(stateFields, stateKey) ?? null : null;
+  };
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isHoveringNode, setIsHoveringNode] = useState(false);
@@ -2821,16 +3267,37 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   function updateNodePort(side: "input" | "output", portIndex: number, nextPort: PortDefinition) {
     data.onConfigChange?.((currentConfig) => {
       if (currentConfig.family === "agent") {
-        const nextPorts = side === "input" ? [...currentConfig.inputs] : [...currentConfig.outputs];
+        const currentPorts = side === "input" ? currentConfig.inputs : currentConfig.outputs;
+        const previousPort = currentPorts[portIndex];
+        const nextPorts = [...currentPorts];
         nextPorts[portIndex] = nextPort;
         return side === "input"
-          ? { ...currentConfig, inputs: nextPorts }
-          : { ...currentConfig, outputs: nextPorts };
+          ? {
+              ...currentConfig,
+              inputs: nextPorts,
+              stateReads: (currentConfig.stateReads ?? []).map((binding) =>
+                binding.inputKey === previousPort?.key ? { ...binding, inputKey: nextPort.key } : binding,
+              ),
+            }
+          : {
+              ...currentConfig,
+              outputs: nextPorts,
+              stateWrites: (currentConfig.stateWrites ?? []).map((binding) =>
+                binding.outputKey === previousPort?.key ? { ...binding, outputKey: nextPort.key } : binding,
+              ),
+            };
       }
       if (currentConfig.family === "condition" && side === "input") {
+        const previousPort = currentConfig.inputs[portIndex];
         const nextPorts = [...currentConfig.inputs];
         nextPorts[portIndex] = nextPort;
-        return { ...currentConfig, inputs: nextPorts };
+        return {
+          ...currentConfig,
+          inputs: nextPorts,
+          stateReads: (currentConfig.stateReads ?? []).map((binding) =>
+            binding.inputKey === previousPort?.key ? { ...binding, inputKey: nextPort.key } : binding,
+          ),
+        };
       }
       return currentConfig;
     });
@@ -2839,13 +3306,28 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   function removeNodePort(side: "input" | "output", portIndex: number) {
     data.onConfigChange?.((currentConfig) => {
       if (currentConfig.family === "agent") {
-        const nextPorts = (side === "input" ? currentConfig.inputs : currentConfig.outputs).filter((_, index) => index !== portIndex);
+        const currentPorts = side === "input" ? currentConfig.inputs : currentConfig.outputs;
+        const removedPort = currentPorts[portIndex];
+        const nextPorts = currentPorts.filter((_, index) => index !== portIndex);
         return side === "input"
-          ? { ...currentConfig, inputs: nextPorts }
-          : { ...currentConfig, outputs: nextPorts };
+          ? {
+              ...currentConfig,
+              inputs: nextPorts,
+              stateReads: (currentConfig.stateReads ?? []).filter((binding) => binding.inputKey !== removedPort?.key),
+            }
+          : {
+              ...currentConfig,
+              outputs: nextPorts,
+              stateWrites: (currentConfig.stateWrites ?? []).filter((binding) => binding.outputKey !== removedPort?.key),
+            };
       }
       if (currentConfig.family === "condition" && side === "input") {
-        return { ...currentConfig, inputs: currentConfig.inputs.filter((_, index) => index !== portIndex) };
+        const removedPort = currentConfig.inputs[portIndex];
+        return {
+          ...currentConfig,
+          inputs: currentConfig.inputs.filter((_, index) => index !== portIndex),
+          stateReads: (currentConfig.stateReads ?? []).filter((binding) => binding.inputKey !== removedPort?.key),
+        };
       }
       return currentConfig;
     });
@@ -3152,14 +3634,17 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     port={port}
                     side="output"
                     editable
+                    boundState={getBoundState("output", port.key)}
                     onRename={(nextLabel) =>
-                      data.onConfigChange?.((currentConfig) => ({
-                        ...(currentConfig as InputBoundaryNode),
-                        output: {
-                          ...(currentConfig as InputBoundaryNode).output,
-                          label: nextLabel,
-                        },
-                      }))
+                      getBoundState("output", port.key)
+                        ? data.onRenameStateName?.(getBoundState("output", port.key)!.key, nextLabel)
+                        : data.onConfigChange?.((currentConfig) => ({
+                            ...(currentConfig as InputBoundaryNode),
+                            output: {
+                              ...(currentConfig as InputBoundaryNode).output,
+                              label: nextLabel,
+                            },
+                          }))
                     }
                   />
                 ))}
@@ -3176,6 +3661,13 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     nodeId={data.nodeId}
                     port={port}
                     side="input"
+                    boundState={getBoundState("input", port.key)}
+                    onRename={(nextLabel) => {
+                      const boundState = getBoundState("input", port.key);
+                      if (boundState) {
+                        data.onRenameStateName?.(boundState.key, nextLabel);
+                      }
+                    }}
                     portEditor={
                       config.family === "agent" || config.family === "condition"
                         ? {
@@ -3209,6 +3701,13 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     nodeId={data.nodeId}
                     port={port}
                     side="output"
+                    boundState={getBoundState("output", port.key)}
+                    onRename={(nextLabel) => {
+                      const boundState = getBoundState("output", port.key);
+                      if (boundState) {
+                        data.onRenameStateName?.(boundState.key, nextLabel);
+                      }
+                    }}
                     portEditor={
                       config.family === "agent"
                         ? {
@@ -3234,14 +3733,17 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     port={port}
                     side="input"
                     editable
+                    boundState={getBoundState("input", port.key)}
                     onRename={(nextLabel) =>
-                      data.onConfigChange?.((currentConfig) => ({
-                        ...(currentConfig as OutputBoundaryNode),
-                        input: {
-                          ...(currentConfig as OutputBoundaryNode).input,
-                          label: nextLabel,
-                        },
-                      }))
+                      getBoundState("input", port.key)
+                        ? data.onRenameStateName?.(getBoundState("input", port.key)!.key, nextLabel)
+                        : data.onConfigChange?.((currentConfig) => ({
+                            ...(currentConfig as OutputBoundaryNode),
+                            input: {
+                              ...(currentConfig as OutputBoundaryNode).input,
+                              label: nextLabel,
+                            },
+                          }))
                     }
                   />
                 ))}
@@ -3455,18 +3957,20 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                   </>
                 ) : null}
                 {/* +input button */}
-                <PortCreateButton
+                <StatePortCreateButton
                   side="input"
                   visible
-                  initialPort={createDefaultPort("input", inputs)}
-                  onCreate={(nextPort) => addNodePort("input", nextPort)}
+                  stateFields={stateFields}
+                  onBindState={(stateKey) => data.onBindStateToPort?.("input", stateKey) ?? false}
+                  onCreateState={(field) => data.onCreateStateAndBindToPort?.("input", field) ?? false}
                 />
                 {/* +output button */}
-                <PortCreateButton
+                <StatePortCreateButton
                   side="output"
                   visible
-                  initialPort={createDefaultPort("output", outputs)}
-                  onCreate={(nextPort) => addNodePort("output", nextPort)}
+                  stateFields={stateFields}
+                  onBindState={(stateKey) => data.onBindStateToPort?.("output", stateKey) ?? false}
+                  onCreateState={(field) => data.onCreateStateAndBindToPort?.("output", field) ?? false}
                 />
               </div>
               {/* ── attached skill pills ── */}
@@ -4015,7 +4519,7 @@ function StateFieldCard({
             <span className="rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,255,255,0.72)] px-2 py-0.5 text-[0.62rem] uppercase tracking-[0.14em] text-[var(--accent-strong)]">
               state
             </span>
-            <div className="truncate text-sm font-semibold text-[var(--text)]">{field.title || field.key}</div>
+            <div className="truncate text-sm font-semibold text-[var(--text)]">{getStateDisplayName(field)}</div>
           </div>
           <div className="mt-1 text-xs leading-5 text-[var(--muted)]">
             {readers.length} readers · {writers.length} writers
@@ -4058,13 +4562,13 @@ function StateFieldCard({
 
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_148px]">
           <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-            <span>Title</span>
+            <span>Name</span>
             <Input
-              value={field.title}
+              value={field.name}
               onChange={(event) =>
                 onUpdateState(field.key, (current) => ({
                   ...current,
-                  title: event.target.value,
+                  name: event.target.value,
                 }))
               }
             />
@@ -4537,7 +5041,7 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
   const stateFieldLookup = useMemo(
     () =>
       Object.fromEntries(
-        stateSchema.map((field) => [field.key, field.title?.trim() ? `${field.title} (${field.key})` : field.key]),
+        stateSchema.map((field) => [field.key, getStateDisplayName(field)]),
       ),
     [stateSchema],
   );
@@ -4547,10 +5051,13 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
         id: node.id,
         label: getCanonicalNodeDisplayName(canonicalGraph, node.id),
         family: node.data.config.family,
-        inputs: listInputPorts(node.data.config),
-        outputs: listStateWritablePorts(node.data.config),
+        inputs: resolvePortsForDisplay(node.data.config, "input", stateSchema),
+        outputs:
+          node.data.config.family === "output"
+            ? resolvePortsForDisplay(node.data.config, "input", stateSchema)
+            : resolvePortsForDisplay(node.data.config, "output", stateSchema),
       })),
-    [canonicalGraph, nodes],
+    [canonicalGraph, nodes, stateSchema],
   );
   const stateBindingsByKey = useMemo(() => {
     const readersByKey: Record<string, StateBindingSummary[]> = {};
@@ -4558,8 +5065,11 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
 
     for (const node of nodes) {
       const nodeLabel = getCanonicalNodeDisplayName(canonicalGraph, node.id);
-      const inputPorts = listInputPorts(node.data.config);
-      const outputPorts = listStateWritablePorts(node.data.config);
+      const inputPorts = resolvePortsForDisplay(node.data.config, "input", stateSchema);
+      const outputPorts =
+        node.data.config.family === "output"
+          ? resolvePortsForDisplay(node.data.config, "input", stateSchema)
+          : resolvePortsForDisplay(node.data.config, "output", stateSchema);
 
       for (const binding of node.data.config.stateReads ?? []) {
         const matchedPort = inputPorts.find((port) => port.key === binding.inputKey);
@@ -4594,7 +5104,7 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
       readersByKey,
       writersByKey,
     };
-  }, [canonicalGraph, nodes]);
+  }, [canonicalGraph, nodes, stateSchema]);
   const runNodeSummary = useMemo(() => summarizeRunNodeStates(nodeIds, runNodeStatusMap), [nodeIds, runNodeStatusMap]);
   const suppressOutputPreviewFallback = activeRunStatus === "queued" || activeRunStatus === "running";
   const knowledgeSkillSyncSignature = useMemo(
@@ -5246,37 +5756,229 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
             : field,
         ),
       );
+      const readNodeIds = new Set(
+        nodes.filter((node) => (node.data.config.stateReads ?? []).some((binding) => binding.stateKey === currentKey)).map((node) => node.id),
+      );
+      const writeNodeIds = new Set(
+        nodes.filter((node) => (node.data.config.stateWrites ?? []).some((binding) => binding.stateKey === currentKey)).map((node) => node.id),
+      );
       setNodes((current) =>
         current.map((node) => ({
           ...node,
           data: {
             ...node.data,
-            config: withNodeStateBindings(
-              node.data.config,
-              (node.data.config.stateReads ?? []).map((binding) =>
-                binding.stateKey === currentKey
-                  ? {
-                      ...binding,
-                      stateKey: normalizedKey,
-                    }
-                  : binding,
-              ),
-              (node.data.config.stateWrites ?? []).map((binding) =>
-                binding.stateKey === currentKey
-                  ? {
-                      ...binding,
-                      stateKey: normalizedKey,
-                    }
-                  : binding,
-              ),
-            ),
+            config: renameStateKeyInNodeConfig(node.data.config, currentKey, normalizedKey),
           },
+        })),
+      );
+      setEdges((current) =>
+        current.map((edge) => ({
+          ...edge,
+          sourceHandle:
+            edge.sourceHandle && writeNodeIds.has(edge.source) && getPortKeyFromHandle(edge.sourceHandle) === currentKey
+              ? buildHandleId("output", normalizedKey)
+              : edge.sourceHandle,
+          targetHandle:
+            edge.targetHandle && readNodeIds.has(edge.target) && getPortKeyFromHandle(edge.targetHandle) === currentKey
+              ? buildHandleId("input", normalizedKey)
+              : edge.targetHandle,
         })),
       );
       setStatusMessage(`Renamed state ${currentKey} -> ${normalizedKey}`);
       return true;
     },
-    [setNodes, stateSchema],
+    [nodes, setEdges, setNodes, stateSchema],
+  );
+
+  const renameStateName = useCallback((stateKey: string, nextName: string) => {
+    const normalizedName = nextName.trim();
+    setStateSchema((current) =>
+      current.map((field) =>
+        field.key === stateKey
+          ? {
+              ...field,
+              name: normalizedName || field.key,
+            }
+          : field,
+      ),
+    );
+    setStatusMessage(`Updated state ${stateKey} name.`);
+  }, []);
+
+  const bindStateFieldToPort = useCallback(
+    (nodeId: string, side: "input" | "output", field: StateField) => {
+      const targetNode = nodes.find((node) => node.id === nodeId);
+      if (!targetNode) {
+        return false;
+      }
+
+      const displayName = getNodeDisplayName(targetNode.data.config, targetNode.id);
+      const port: PortDefinition = {
+        key: field.key,
+        label: getStateDisplayName(field),
+        valueType: stateFieldTypeToValueType(field.type),
+        ...(side === "input" ? { required: targetNode.data.config.family === "output" } : {}),
+      };
+
+      if (side === "input") {
+        if (targetNode.data.config.family === "agent") {
+          const config = targetNode.data.config as AgentNode;
+          if (config.inputs.some((input) => input.key === field.key) || (config.stateReads ?? []).some((binding) => binding.inputKey === field.key)) {
+            setStatusMessage(`Node '${displayName}' already has input '${field.key}'.`);
+            return false;
+          }
+          setNodes((current) =>
+            current.map((node) =>
+              node.id === nodeId
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      config: normalizeNodeConfig({
+                        ...config,
+                        inputs: [...config.inputs, port],
+                        stateReads: [...(config.stateReads ?? []), { stateKey: field.key, inputKey: field.key, required: false }],
+                      } satisfies AgentNode),
+                    },
+                  }
+                : node,
+            ),
+          );
+          setStatusMessage(`Bound state ${field.key} to ${displayName}.${field.key}`);
+          return true;
+        }
+
+        if (targetNode.data.config.family === "condition") {
+          const config = targetNode.data.config as ConditionNode;
+          if (config.inputs.some((input) => input.key === field.key) || (config.stateReads ?? []).some((binding) => binding.inputKey === field.key)) {
+            setStatusMessage(`Node '${displayName}' already has input '${field.key}'.`);
+            return false;
+          }
+          setNodes((current) =>
+            current.map((node) =>
+              node.id === nodeId
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      config: normalizeNodeConfig({
+                        ...config,
+                        inputs: [...config.inputs, port],
+                        stateReads: [...(config.stateReads ?? []), { stateKey: field.key, inputKey: field.key, required: false }],
+                      } satisfies ConditionNode),
+                    },
+                  }
+                : node,
+            ),
+          );
+          setStatusMessage(`Bound state ${field.key} to ${displayName}.${field.key}`);
+          return true;
+        }
+
+        if (targetNode.data.config.family === "output") {
+          const config = targetNode.data.config as OutputBoundaryNode;
+          setNodes((current) =>
+            current.map((node) =>
+              node.id === nodeId
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      config: normalizeNodeConfig({
+                        ...config,
+                        input: {
+                          ...port,
+                          required: true,
+                        },
+                        stateReads: [{ stateKey: field.key, inputKey: field.key, required: true }],
+                      } satisfies OutputBoundaryNode),
+                    },
+                  }
+                : node,
+            ),
+          );
+          setStatusMessage(`Bound state ${field.key} to ${displayName}.${field.key}`);
+          return true;
+        }
+
+        return false;
+      }
+
+      if (targetNode.data.config.family === "agent") {
+        const config = targetNode.data.config as AgentNode;
+        if (config.outputs.some((output) => output.key === field.key) || (config.stateWrites ?? []).some((binding) => binding.outputKey === field.key)) {
+          setStatusMessage(`Node '${displayName}' already has output '${field.key}'.`);
+          return false;
+        }
+        setNodes((current) =>
+          current.map((node) =>
+            node.id === nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    config: normalizeNodeConfig({
+                      ...config,
+                      outputs: [...config.outputs, port],
+                      stateWrites: [...(config.stateWrites ?? []), { stateKey: field.key, outputKey: field.key, mode: "replace" }],
+                    } satisfies AgentNode),
+                  },
+                }
+              : node,
+          ),
+        );
+        setStatusMessage(`Bound ${displayName}.${field.key} to state ${field.key}`);
+        return true;
+      }
+
+      if (targetNode.data.config.family === "input") {
+        const config = targetNode.data.config as InputBoundaryNode;
+        setNodes((current) =>
+          current.map((node) =>
+            node.id === nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    config: normalizeNodeConfig({
+                      ...config,
+                      output: port,
+                      stateWrites: [{ stateKey: field.key, outputKey: field.key, mode: "replace" }],
+                    } satisfies InputBoundaryNode),
+                  },
+                }
+              : node,
+          ),
+        );
+        setStatusMessage(`Bound ${displayName}.${field.key} to state ${field.key}`);
+        return true;
+      }
+
+      return false;
+    },
+    [nodes, setNodes],
+  );
+
+  const createStateAndBindToPort = useCallback(
+    (nodeId: string, side: "input" | "output", field: StateField) => {
+      const normalizedKey = field.key.trim();
+      if (!normalizedKey) {
+        setStatusMessage("State key cannot be empty.");
+        return false;
+      }
+      if (stateSchema.some((item) => item.key === normalizedKey)) {
+        setStatusMessage(`State key '${normalizedKey}' already exists.`);
+        return false;
+      }
+      const nextField: StateField = {
+        ...field,
+        key: normalizedKey,
+        name: field.name.trim() || normalizedKey,
+      };
+      setStateSchema((current) => [...current, nextField]);
+      return bindStateFieldToPort(nodeId, side, nextField);
+    },
+    [bindStateFieldToPort, stateSchema],
   );
 
   const addStateField = useCallback(() => {
@@ -5601,7 +6303,28 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
                   availableModelRefs,
                   modelDisplayLookup,
                   knowledgeBases,
+                  stateFields: stateSchema,
                   stateFieldLookup,
+                  onRenameStateName: renameStateName,
+                  onBindStateToPort: (side: "input" | "output", stateKey: string) => {
+                    const field = getStateFieldByKey(stateSchema, stateKey);
+                    if (!field) {
+                      setStatusMessage(`State '${stateKey}' not found.`);
+                      return false;
+                    }
+                    const bound = bindStateFieldToPort(node.id, side, field);
+                    if (bound) {
+                      requestAnimationFrame(() => updateNodeInternals(node.id));
+                    }
+                    return bound;
+                  },
+                  onCreateStateAndBindToPort: (side: "input" | "output", field: StateField) => {
+                    const created = createStateAndBindToPort(node.id, side, field);
+                    if (created) {
+                      requestAnimationFrame(() => updateNodeInternals(node.id));
+                    }
+                    return created;
+                  },
                   onOpenStatePanel: () => setIsStatePanelOpen(true),
                 },
               }))}
@@ -5640,55 +6363,47 @@ function NodeSystemCanvas({ initialGraph, isNewFromTemplate }: { initialGraph: G
 
                 if (getPortKeyFromHandle(connection.targetHandle) === CREATE_INPUT_PORT_KEY && sourceType) {
                   if (targetNode.data.config.family === "agent") {
-                    const nextPort = createAutoInputPort(targetNode.data.config.inputs, sourceType);
-                    nextTargetHandle = buildHandleId("input", nextPort.key);
-                    targetType = nextPort.valueType;
-                    const nextTargetNodeId = targetNode.id;
-                    setNodes((current) =>
-                      current.map((candidate) =>
-                        candidate.id === nextTargetNodeId
-                          ? (() => {
-                              const currentConfig = candidate.data.config as AgentNode;
-                              return {
-                                ...candidate,
-                                data: {
-                                  ...candidate.data,
-                                  config: {
-                                    ...currentConfig,
-                                    inputs: [...currentConfig.inputs, nextPort],
-                                  } satisfies AgentNode,
-                                },
-                              };
-                            })()
-                          : candidate,
-                      ),
-                    );
-                    requestAnimationFrame(() => updateNodeInternals(nextTargetNodeId));
+                    const sourcePortKey = getPortKeyFromHandle(connection.sourceHandle) || `${sourceType}_input`;
+                    const existingState = getStateFieldByKey(stateSchema, sourcePortKey);
+                    const nextField =
+                      existingState ??
+                      {
+                        ...createDraftStateFromQuery(sourcePortKey, stateSchema.map((field) => field.key)),
+                        name: sourcePortKey,
+                        type: valueTypeToStateFieldType(sourceType),
+                        value: defaultStateValueForType(valueTypeToStateFieldType(sourceType)),
+                      };
+                    if (!existingState) {
+                      setStateSchema((current) => [...current, nextField]);
+                    }
+                    if (!bindStateFieldToPort(targetNode.id, "input", nextField)) {
+                      setConnectingSourceType(null);
+                      return;
+                    }
+                    nextTargetHandle = buildHandleId("input", nextField.key);
+                    targetType = stateFieldTypeToValueType(nextField.type);
+                    requestAnimationFrame(() => updateNodeInternals(targetNode.id));
                   } else if (targetNode.data.config.family === "condition") {
-                    const nextPort = createAutoInputPort(targetNode.data.config.inputs, sourceType);
-                    nextTargetHandle = buildHandleId("input", nextPort.key);
-                    targetType = nextPort.valueType;
-                    const nextTargetNodeId = targetNode.id;
-                    setNodes((current) =>
-                      current.map((candidate) =>
-                        candidate.id === nextTargetNodeId
-                          ? (() => {
-                              const currentConfig = candidate.data.config as ConditionNode;
-                              return {
-                                ...candidate,
-                                data: {
-                                  ...candidate.data,
-                                  config: {
-                                    ...currentConfig,
-                                    inputs: [...currentConfig.inputs, nextPort],
-                                  } satisfies ConditionNode,
-                                },
-                              };
-                            })()
-                          : candidate,
-                      ),
-                    );
-                    requestAnimationFrame(() => updateNodeInternals(nextTargetNodeId));
+                    const sourcePortKey = getPortKeyFromHandle(connection.sourceHandle) || `${sourceType}_input`;
+                    const existingState = getStateFieldByKey(stateSchema, sourcePortKey);
+                    const nextField =
+                      existingState ??
+                      {
+                        ...createDraftStateFromQuery(sourcePortKey, stateSchema.map((field) => field.key)),
+                        name: sourcePortKey,
+                        type: valueTypeToStateFieldType(sourceType),
+                        value: defaultStateValueForType(valueTypeToStateFieldType(sourceType)),
+                      };
+                    if (!existingState) {
+                      setStateSchema((current) => [...current, nextField]);
+                    }
+                    if (!bindStateFieldToPort(targetNode.id, "input", nextField)) {
+                      setConnectingSourceType(null);
+                      return;
+                    }
+                    nextTargetHandle = buildHandleId("input", nextField.key);
+                    targetType = stateFieldTypeToValueType(nextField.type);
+                    requestAnimationFrame(() => updateNodeInternals(targetNode.id));
                   }
                 }
 

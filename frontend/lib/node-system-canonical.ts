@@ -28,6 +28,7 @@ export type CanonicalStateType =
   | "knowledge_base";
 
 export type CanonicalStateDefinition = {
+  name: string;
   description: string;
   type: CanonicalStateType;
   value?: unknown;
@@ -206,6 +207,7 @@ function ensureStateDefinition(
 ): void {
   if (!stateSchema[stateKey]) {
     stateSchema[stateKey] = {
+      name: stateKey,
       description: "",
       type: preferredType ?? "text",
       value: preferredType === "number" ? 0 : preferredType === "boolean" ? false : preferredType === "json" || preferredType === "object" ? {} : preferredType === "array" || preferredType === "file_list" ? [] : "",
@@ -380,6 +382,7 @@ export function buildCanonicalGraphFromLegacyGraph(graph: NodeSystemGraphPayload
   for (const field of graph.state_schema) {
     const legacyField = field as StateField & { defaultValue?: unknown };
     stateSchema[field.key] = {
+      name: stripString((field as StateField & { title?: string }).name) || stripString((field as StateField & { title?: string }).title) || field.key,
       description: field.description,
       type: canonicalStateTypeFromLegacy(field.type),
       value: legacyField.value ?? legacyField.defaultValue,

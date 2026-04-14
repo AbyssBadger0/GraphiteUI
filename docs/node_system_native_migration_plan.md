@@ -39,10 +39,9 @@
 - 后端已经存在兼容层 [legacy_node_system.py](/home/abyss/GraphiteUI/backend/app/api/legacy_node_system.py)
 - 前端主编辑器仍以旧结构思维工作
 - 旧前端依赖的展示字段主要有：
-  - `config.label`
   - `config.description`
-  - `port.label`
-  - `state.title`
+  - 节点显示名与端口显示名的旧派生字段
+  - `state.name`
   - `branch.label`
   - 旧形态的 `skills`
   - `outputBinding`
@@ -126,8 +125,8 @@
 - 节点 key 继续作为唯一身份
 - 节点显示名使用 `node.name`
 - 节点描述直接来自 `node.description`
-- `state.title` 不再作为正式源字段，显示时直接取 state 名
-- `port.label` 不再作为正式源字段，显示时直接取绑定 state 名
+- `state.name` 作为 state 的正式显示名
+- 端口显示名直接取绑定的 `state.name`，不再单独作为正式源字段存储
 
 ### 影响文件
 

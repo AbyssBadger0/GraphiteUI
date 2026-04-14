@@ -39,7 +39,12 @@ export type StateFieldType =
   | "array"
   | "markdown"
   | "json"
-  | "file_list";
+  | "file_list"
+  | "image"
+  | "audio"
+  | "video"
+  | "file"
+  | "knowledge_base";
 
 export type StateFieldUi = {
   color?: string;
@@ -48,7 +53,7 @@ export type StateFieldUi = {
 export type StateField = {
   key: string;
   type: StateFieldType;
-  title: string;
+  name: string;
   description: string;
   value?: unknown;
   ui?: StateFieldUi;

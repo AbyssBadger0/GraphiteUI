@@ -72,6 +72,11 @@ def _legacy_state_type_from_canonical(state_type: str) -> str:
         "markdown": "markdown",
         "json": "json",
         "file_list": "file_list",
+        "image": "image",
+        "audio": "audio",
+        "video": "video",
+        "file": "file",
+        "knowledge_base": "knowledge_base",
     }
     return mapping.get(state_type, LEGACY_STATE_TYPE_FALLBACK)
 
@@ -161,7 +166,7 @@ def _build_legacy_state_schema(state_schema: dict[str, NodeSystemStateDefinition
             {
                 "key": state_name,
                 "type": _legacy_state_type_from_canonical(definition.type.value),
-                "title": state_name,
+                "name": _strip_string(definition.name) or state_name,
                 "description": definition.description,
                 "value": definition.value,
                 "ui": {
@@ -176,7 +181,7 @@ def _build_legacy_port(state_name: str, state_schema: dict[str, NodeSystemStateD
     definition = state_schema[state_name]
     return {
         "key": state_name,
-        "label": state_name,
+        "label": _strip_string(definition.name) or state_name,
         "valueType": _legacy_port_value_type_from_state_type(definition.type.value),
         "required": required,
     }
@@ -435,6 +440,7 @@ def _coerce_legacy_state_schema(state_schema_payload: Any) -> dict[str, NodeSyst
             )
         state_schema[state_key] = NodeSystemStateDefinition.model_validate(
             {
+                "name": _strip_string(item.get("name")) or _strip_string(item.get("title")) or state_key,
                 "description": _strip_string(item.get("description")),
                 "type": _canonical_state_type_from_legacy(item.get("type")),
                 "value": item.get("value", item.get("defaultValue")),
@@ -554,6 +560,7 @@ def _ensure_state_definition(
         resolved_type = preferred_type or "text"
         state_schema[state_name] = NodeSystemStateDefinition.model_validate(
             {
+                "name": state_name,
                 "description": "",
                 "type": resolved_type,
                 "value": _default_value_for_state_type(resolved_type),
@@ -565,6 +572,7 @@ def _ensure_state_definition(
     if preferred_type and state_schema[state_name].type == NodeSystemStateType.TEXT and preferred_type != "text":
         state_schema[state_name] = NodeSystemStateDefinition.model_validate(
             {
+                "name": state_schema[state_name].name,
                 "description": state_schema[state_name].description,
                 "type": preferred_type,
                 "value": state_schema[state_name].value,

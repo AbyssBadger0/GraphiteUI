@@ -421,6 +421,67 @@
 
 ---
 
+## Phase 10：导出可执行的 LangGraph Python 文件
+
+### 目标
+
+在后端已经具备 LangGraph-native 执行主链之后，再补“导出 Python LangGraph 脚本”能力。
+
+### 主要改动
+
+- 新增代码生成模块，例如：
+  - `backend/app/core/langgraph/codegen.py`
+- 将 build plan 编译为可执行 Python 源码
+- 明确导出文件结构：
+  - imports
+  - state schema
+  - node callables / stubs
+  - `StateGraph` 构建逻辑
+  - `add_edge`
+  - `add_conditional_edges`
+  - compile / invoke 示例
+- 新增导出接口，例如：
+  - `/api/graphs/export/langgraph-python`
+
+### 设计要求
+
+- 导出的 Python 文件必须是可读、可运行、可二次编辑的源码
+- 不能只导出中间 JSON
+- 不能只导出 build plan
+- 生成结果必须明确区分：
+  - 当前 GraphiteUI 可自动生成的部分
+  - 仍需开发者手工补完的部分
+
+### 第一阶段建议只支持
+
+- `input`
+- `agent`
+- `condition`
+- `output`
+- `state_schema`
+- `edges`
+- `conditional_edges`
+
+暂不强行覆盖：
+
+- interrupt
+- checkpoint
+- subgraph
+- 高级知识库工具链
+
+### 可验证结果
+
+- `hello_world` 能导出一份可执行的 LangGraph Python 文件
+- 生成脚本可以在独立 Python 环境中运行
+- 导出的 graph 结构与当前 GraphiteUI graph 一致
+
+### 完成标准
+
+- 后端已具备稳定的 Python 源码导出能力
+- 前端后续只需要接一个“导出 LangGraph Python”入口即可
+
+---
+
 ## 每阶段统一验收标准
 
 每个阶段都必须跑至少这组检查：
@@ -448,6 +509,7 @@
 8. Phase 7：cycles LangGraph 化
 9. Phase 8：知识库与技能执行语义重构
 10. Phase 9：退役旧 executor
+11. Phase 10：导出 LangGraph Python 文件
 
 ## 当前讨论结论
 

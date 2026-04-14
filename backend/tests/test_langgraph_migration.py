@@ -11,7 +11,6 @@ from app.core.compiler.validator import validate_graph
 from app.core.langgraph.compiler import compile_graph_to_langgraph_plan, resolve_graph_runtime_backend
 from app.core.langgraph.runtime import execute_node_system_graph_langgraph
 from app.core.runtime.state import create_initial_run_state, set_run_status
-from app.core.runtime.node_system_executor import execute_node_system_graph
 from app.core.schemas.node_system import NodeSystemGraphPayload, NodeSystemTemplate
 from app.templates.loader import load_template_record
 
@@ -232,21 +231,6 @@ class LangGraphMigrationTests(unittest.TestCase):
         backend, reasons = resolve_graph_runtime_backend(graph)
         self.assertEqual(backend, "langgraph")
         self.assertEqual(reasons, [])
-
-    @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
-    @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response)
-    @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
-    @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
-    def test_hello_world_custom_executor_baseline(self):
-        graph = _load_hello_world_graph()
-        result = execute_node_system_graph(graph, persist_progress=False)
-        self.assertEqual(result["status"], "completed")
-        self.assertEqual(result["runtime_backend"], "legacy")
-        self.assertTrue(result["lifecycle"]["updated_at"])
-        self.assertEqual(result["checkpoint_metadata"]["available"], False)
-        self.assertEqual(result["checkpoint_metadata"]["thread_id"], result["run_id"])
-        self.assertEqual(len(result["node_executions"]), 3)
-        self.assertIn("answer", result["state_snapshot"]["values"])
 
     @patch("app.core.langgraph.runtime.save_run", lambda state: None)
     @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)

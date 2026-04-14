@@ -417,6 +417,8 @@
 
 ## Phase 9：退役旧 executor
 
+状态：已完成
+
 ### 目标
 
 当 LangGraph runtime 已覆盖主链能力后，正式退役旧 executor。

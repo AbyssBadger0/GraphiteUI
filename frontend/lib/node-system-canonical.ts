@@ -292,7 +292,7 @@ function extractLegacyStateWrites(config: NodePresetDefinition): Record<string, 
   return result;
 }
 
-function toCanonicalNode(node: NodeSystemGraphNode): CanonicalNode {
+export function buildCanonicalNodeFromLegacyNode(node: NodeSystemGraphNode): CanonicalNode {
   const config = node.data.config;
   const readsByPort = extractLegacyStateReads(config);
   const writesByPort = extractLegacyStateWrites(config);
@@ -391,7 +391,7 @@ export function buildCanonicalGraphFromLegacyGraph(graph: NodeSystemGraphPayload
   }
 
   const nodes = Object.fromEntries(
-    graph.nodes.map((node) => [node.id, toCanonicalNode(node)]),
+    graph.nodes.map((node) => [node.id, buildCanonicalNodeFromLegacyNode(node)]),
   );
   const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
   const conditionalEdgesBySource: Record<string, Record<string, string>> = {};
@@ -460,4 +460,20 @@ export function buildCanonicalGraphFromLegacyGraph(graph: NodeSystemGraphPayload
     })),
     metadata: graph.metadata,
   };
+}
+
+export function buildLegacyStateSchemaFromCanonicalGraph(graph: CanonicalGraphPayload): StateField[] {
+  return Object.entries(graph.state_schema).map(([key, definition]) => ({
+    key,
+    name: stripString(definition.name) || key,
+    description: definition.description,
+    type:
+      definition.type === "text"
+        ? "string"
+        : definition.type,
+    value: definition.value,
+    ui: {
+      color: definition.color,
+    },
+  }));
 }

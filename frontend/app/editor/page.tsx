@@ -1,15 +1,31 @@
 import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
+import { buildLegacyGraphFromCanonicalGraph, type CanonicalGraphPayload, type CanonicalTemplateRecord } from "@/lib/node-system-canonical";
 import type { GraphSummary, TemplateSummary } from "@/lib/types";
 
 async function loadEditorLandingData() {
   try {
     const [graphs, templates] = await Promise.all([
-      apiGet<GraphSummary[]>("/api/graphs"),
-      apiGet<TemplateSummary[]>("/api/templates"),
+      apiGet<CanonicalGraphPayload[]>("/api/graphs"),
+      apiGet<CanonicalTemplateRecord[]>("/api/templates"),
     ]);
-    return { graphs, templates };
+    return {
+      graphs: graphs.map((graph) => {
+        const legacyGraph = buildLegacyGraphFromCanonicalGraph(graph);
+        return {
+          graph_id: legacyGraph.graph_id ?? "",
+          name: legacyGraph.name,
+          nodes: legacyGraph.nodes,
+          edges: legacyGraph.edges,
+        } satisfies GraphSummary;
+      }),
+      templates: templates.map((template) => ({
+        template_id: template.template_id,
+        label: template.label,
+        description: template.description,
+      }) satisfies TemplateSummary),
+    };
   } catch {
     return { graphs: [] as GraphSummary[], templates: [] as TemplateSummary[] };
   }

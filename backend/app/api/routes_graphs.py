@@ -8,7 +8,6 @@ from pydantic import ValidationError
 
 from app.api.legacy_node_system import (
     LegacyGraphPayloadError,
-    graph_to_legacy_payload,
     parse_graph_payload,
 )
 from app.core.compiler.validator import validate_graph
@@ -74,8 +73,8 @@ def _parse_graph_request(payload: dict[str, Any]) -> NodeSystemGraphPayload:
 
 
 @router.get("")
-def list_graphs_endpoint() -> list[dict[str, Any]]:
-    return [graph_to_legacy_payload(graph) for graph in list_graphs()]
+def list_graphs_endpoint() -> list[NodeSystemGraphDocument]:
+    return list_graphs()
 
 
 @router.post("/save", response_model=GraphSaveResponse)
@@ -102,9 +101,9 @@ def save_graph_endpoint(payload: dict[str, Any]) -> GraphSaveResponse:
 
 
 @router.get("/{graph_id}")
-def get_graph_endpoint(graph_id: str) -> dict[str, Any]:
+def get_graph_endpoint(graph_id: str) -> NodeSystemGraphDocument:
     try:
-        return graph_to_legacy_payload(load_graph(graph_id))
+        return load_graph(graph_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

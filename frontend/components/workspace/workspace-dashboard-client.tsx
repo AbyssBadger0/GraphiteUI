@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { MetricCard } from "@/components/ui/metric-card";
 import { apiGet } from "@/lib/api";
 import { useLanguage } from "@/components/providers/language-provider";
+import { buildLegacyGraphFromCanonicalGraph, type CanonicalGraphPayload } from "@/lib/node-system-canonical";
 import type { GraphSummary, RunSummary } from "@/lib/types";
 
 export function WorkspaceDashboardClient() {
@@ -22,11 +23,21 @@ export function WorkspaceDashboardClient() {
     async function loadDashboard() {
       try {
         const [graphPayload, runPayload] = await Promise.all([
-          apiGet<GraphSummary[]>("/api/graphs"),
+          apiGet<CanonicalGraphPayload[]>("/api/graphs"),
           apiGet<RunSummary[]>("/api/runs"),
         ]);
         if (!cancelled) {
-          setGraphs(graphPayload);
+          setGraphs(
+            graphPayload.map((graph) => {
+              const legacyGraph = buildLegacyGraphFromCanonicalGraph(graph);
+              return {
+                graph_id: legacyGraph.graph_id ?? "",
+                name: legacyGraph.name,
+                nodes: legacyGraph.nodes,
+                edges: legacyGraph.edges,
+              } satisfies GraphSummary;
+            }),
+          );
           setRuns(runPayload);
           setError(null);
         }

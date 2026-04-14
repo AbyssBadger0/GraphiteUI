@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from app.core.compiler.validator import validate_graph
 from app.core.langgraph import execute_node_system_graph_langgraph, resolve_graph_runtime_backend
 from app.core.runtime.node_system_executor import execute_node_system_graph
-from app.core.runtime.state import create_initial_run_state, utc_now_iso
+from app.core.runtime.state import create_initial_run_state, set_run_status, touch_run_lifecycle
 from app.core.schemas.node_system import (
     GraphSaveResponse,
     GraphValidationResponse,
@@ -105,6 +105,7 @@ def run_graph_endpoint(payload: dict[str, Any], background_tasks: BackgroundTask
     if langgraph_fallback_reasons:
         run_state["metadata"]["langgraph_fallback_reasons"] = list(langgraph_fallback_reasons)
     run_state["node_status_map"] = {node_name: "idle" for node_name in executed_graph.nodes}
+    touch_run_lifecycle(run_state)
     save_run(run_state)
 
     background_tasks.add_task(_run_graph_worker, executed_graph, run_state, runtime_backend, langgraph_fallback_reasons)
@@ -136,7 +137,6 @@ def _run_graph_worker(
         execute_node_system_graph(graph, run_state, persist_progress=True)
     except Exception as exc:  # pragma: no cover - defensive runtime path
         logger.exception("Graph run %s failed: %s", run_state.get("run_id"), exc)
-        run_state["status"] = "failed"
-        run_state["completed_at"] = utc_now_iso()
+        set_run_status(run_state, "failed")
         run_state.setdefault("errors", []).append(str(exc))
         save_run(run_state)

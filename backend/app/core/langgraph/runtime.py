@@ -20,7 +20,7 @@ from app.core.runtime.node_system_executor import (
     _select_active_outgoing_edges,
     _build_execution_edges,
 )
-from app.core.runtime.state import create_initial_run_state, utc_now_iso
+from app.core.runtime.state import create_initial_run_state, set_run_status, touch_run_lifecycle, utc_now_iso
 from app.core.schemas.node_system import NodeSystemGraphDocument
 from app.core.storage.run_store import save_run
 
@@ -45,7 +45,7 @@ def execute_node_system_graph_langgraph(
         graph_name=graph.name,
         max_revision_round=int(graph.metadata.get("max_revision_round", 1)),
     )
-    state["status"] = "running"
+    set_run_status(state, "running")
     state["runtime_backend"] = "langgraph"
     state["started_at"] = utc_now_iso()
     state["node_status_map"] = {node_name: "idle" for node_name in graph.nodes}
@@ -93,9 +93,8 @@ def execute_node_system_graph_langgraph(
     try:
         result_state = compiled.invoke(dict(state.get("state_values", {})))
         state["state_values"] = dict(result_state)
-        state["status"] = "completed"
+        set_run_status(state, "completed")
         state["current_node_id"] = None
-        state["completed_at"] = utc_now_iso()
         state["cycle_summary"] = {
             "has_cycle": False,
             "back_edges": [],
@@ -117,8 +116,7 @@ def execute_node_system_graph_langgraph(
         save_run(state)
         return state
     except Exception as exc:  # pragma: no cover - defensive runtime path
-        state["status"] = "failed"
-        state["completed_at"] = utc_now_iso()
+        set_run_status(state, "failed")
         state.setdefault("errors", []).append(str(exc))
         _refresh_run_artifacts(state, node_outputs, active_edge_ids, started_perf=started_perf)
         save_run(state)
@@ -144,6 +142,7 @@ def _build_langgraph_node_callable(
             node_started_perf = time.perf_counter()
             state["current_node_id"] = node_name
             state["node_status_map"][node_name] = "running"
+            touch_run_lifecycle(state)
             state["state_values"] = {
                 **dict(state.get("state_values", {})),
                 **dict(current_values or {}),
@@ -203,7 +202,7 @@ def _build_langgraph_node_callable(
             except Exception as exc:  # pragma: no cover - defensive runtime path
                 duration_ms = int((time.perf_counter() - node_started_perf) * 1000)
                 state["node_status_map"][node_name] = "failed"
-                state["status"] = "failed"
+                set_run_status(state, "failed")
                 state["errors"] = [*state.get("errors", []), str(exc)]
                 state["node_executions"] = [
                     *state.get("node_executions", []),

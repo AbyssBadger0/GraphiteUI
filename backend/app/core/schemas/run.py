@@ -66,6 +66,24 @@ class CycleSummary(BaseModel):
     stop_reason: str | None = None
 
 
+class CheckpointMetadata(BaseModel):
+    available: bool = False
+    checkpoint_id: str | None = None
+    thread_id: str | None = None
+    checkpoint_ns: str | None = None
+    saver: str | None = None
+    resume_source: str | None = None
+
+
+class RunLifecycleRecord(BaseModel):
+    updated_at: str = ""
+    paused_at: str | None = None
+    resumed_at: str | None = None
+    pause_reason: str | None = None
+    resume_count: int = 0
+    resumed_from_run_id: str | None = None
+
+
 class NodeStateReadRecord(BaseModel):
     state_key: str
     input_key: str
@@ -112,6 +130,8 @@ class RunSummary(BaseModel):
     graph_name: str
     status: str
     runtime_backend: str = ""
+    lifecycle: RunLifecycleRecord = Field(default_factory=RunLifecycleRecord)
+    checkpoint_metadata: CheckpointMetadata = Field(default_factory=CheckpointMetadata)
     current_node_id: str | None = None
     revision_round: int = 0
     started_at: str

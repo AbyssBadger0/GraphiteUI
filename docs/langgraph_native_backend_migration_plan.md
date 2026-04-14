@@ -242,6 +242,8 @@
 
 ## Phase 4：重构运行状态模型，对齐 LangGraph 生命周期
 
+状态：已完成
+
 ### 目标
 
 让 run state 不再围绕旧 executor 设计，而是对齐 LangGraph-native 的生命周期。

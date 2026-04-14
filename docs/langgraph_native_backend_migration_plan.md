@@ -316,6 +316,8 @@
 
 ## Phase 6：接入 interrupt / 人类在环
 
+状态：已完成
+
 ### 目标
 
 把 LangGraph-native 的另一块关键差异补上。

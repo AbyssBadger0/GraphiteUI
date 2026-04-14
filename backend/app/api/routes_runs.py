@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
 
 from app.core.langgraph import execute_node_system_graph_langgraph, resolve_graph_runtime_backend
 from app.core.runtime.state import create_initial_run_state, set_run_status, touch_run_lifecycle
@@ -59,7 +60,11 @@ def get_run_node_detail_endpoint(run_id: str, node_id: str) -> NodeExecutionDeta
 
 
 @router.post("/{run_id}/resume")
-def resume_run_endpoint(run_id: str, background_tasks: BackgroundTasks) -> dict[str, str]:
+def resume_run_endpoint(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+    payload: dict[str, Any] | None = Body(default=None),
+) -> dict[str, str]:
     try:
         previous_run = load_run(run_id)
     except FileNotFoundError as exc:
@@ -111,17 +116,18 @@ def resume_run_endpoint(run_id: str, background_tasks: BackgroundTasks) -> dict[
     touch_run_lifecycle(resumed_run)
     save_run(resumed_run)
 
-    background_tasks.add_task(_resume_run_worker, graph, resumed_run)
+    background_tasks.add_task(_resume_run_worker, graph, resumed_run, payload.get("resume") if payload else None)
     return {"run_id": resumed_run["run_id"], "status": resumed_run["status"]}
 
 
-def _resume_run_worker(graph, resumed_run: dict) -> None:
+def _resume_run_worker(graph, resumed_run: dict, resume_payload: Any | None = None) -> None:
     try:
         execute_node_system_graph_langgraph(
             graph,
             initial_state=resumed_run,
             persist_progress=True,
             resume_from_checkpoint=True,
+            resume_command=resume_payload,
         )
     except Exception as exc:  # pragma: no cover - defensive runtime path
         logger.exception("Failed to resume run %s: %s", resumed_run.get("run_id"), exc)

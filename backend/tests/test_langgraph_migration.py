@@ -194,6 +194,67 @@ class LangGraphMigrationTests(unittest.TestCase):
         self.assertEqual(result["lifecycle"]["resumed_from_run_id"], initial_state["run_id"])
         self.assertIn("answer", result["state_snapshot"]["values"])
 
+    @patch("app.core.langgraph.runtime.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response)
+    @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
+    @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
+    def test_langgraph_interrupt_before_waits_for_human(self):
+        graph = _load_hello_world_graph()
+        payload = graph.model_dump(by_alias=True)
+        payload["metadata"] = {"interrupt_before": ["answer_helper"]}
+        interrupt_graph = NodeSystemGraphPayload.model_validate(payload)
+
+        result = execute_node_system_graph_langgraph(interrupt_graph, persist_progress=False)
+
+        self.assertEqual(result["status"], "awaiting_human")
+        self.assertEqual(result["runtime_backend"], "langgraph")
+        self.assertEqual(result["current_node_id"], "answer_helper")
+        self.assertEqual(result["lifecycle"]["pause_reason"], "breakpoint")
+        self.assertTrue(result["checkpoint_metadata"]["available"])
+        self.assertEqual(result["state_snapshot"]["values"]["question"], "什么是 GraphiteUI？")
+        self.assertEqual(result["metadata"]["pending_interrupt_nodes"], ["answer_helper"])
+        self.assertEqual(result["metadata"]["pending_interrupts"], [])
+
+    @patch("app.core.langgraph.runtime.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response)
+    @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
+    @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
+    def test_langgraph_interrupt_resume_accepts_human_state_updates(self):
+        graph = _load_hello_world_graph()
+        payload = graph.model_dump(by_alias=True)
+        payload["metadata"] = {"interrupt_before": ["answer_helper"]}
+        interrupt_graph = NodeSystemGraphPayload.model_validate(payload)
+
+        interrupted = execute_node_system_graph_langgraph(interrupt_graph, persist_progress=False)
+        self.assertEqual(interrupted["status"], "awaiting_human")
+
+        resumed_state = create_initial_run_state(
+            graph_id=interrupt_graph.graph_id or "test_graph",
+            graph_name=interrupt_graph.name,
+            max_revision_round=1,
+        )
+        resumed_state["checkpoint_metadata"] = dict(interrupted["checkpoint_metadata"])
+        resumed_state["metadata"] = {"resolved_runtime_backend": "langgraph"}
+        set_run_status(resumed_state, "resuming", resumed_from_run_id=interrupted["run_id"])
+
+        result = execute_node_system_graph_langgraph(
+            interrupt_graph,
+            initial_state=resumed_state,
+            persist_progress=False,
+            resume_from_checkpoint=True,
+            resume_command={"question": "人工确认后的问题"},
+        )
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["runtime_backend"], "langgraph")
+        self.assertEqual(result["lifecycle"]["resume_count"], 1)
+        self.assertEqual(result["lifecycle"]["resumed_from_run_id"], interrupted["run_id"])
+        self.assertEqual(result["state_snapshot"]["values"]["question"], "人工确认后的问题")
+        self.assertEqual(result["state_snapshot"]["values"]["answer"], "answer_helper:人工确认后的问题")
+        self.assertNotIn("pending_interrupt_nodes", result.get("metadata", {}))
+
     def test_knowledge_base_validation_template_still_valid(self):
         graph = _load_knowledge_base_validation_graph()
         validation = validate_graph(graph)

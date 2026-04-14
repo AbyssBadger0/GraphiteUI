@@ -7,6 +7,7 @@ from typing import Any
 from typing import Annotated
 
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command
 from typing_extensions import TypedDict
 
 from app.core.langgraph.checkpoints import JsonCheckpointSaver
@@ -36,6 +37,7 @@ def execute_node_system_graph_langgraph(
     *,
     persist_progress: bool = False,
     resume_from_checkpoint: bool = False,
+    resume_command: Any | None = None,
 ) -> dict[str, Any]:
     build_plan = compile_graph_to_langgraph_plan(graph)
     if build_plan.requirements.unsupported_reasons:
@@ -100,16 +102,42 @@ def execute_node_system_graph_langgraph(
     for node_name in build_plan.requirements.terminal_nodes:
         workflow.add_edge(node_name, END)
 
-    compiled = workflow.compile(checkpointer=checkpoint_saver)
+    interrupt_before, interrupt_after = _resolve_interrupt_configuration(graph)
+    compiled = workflow.compile(
+        checkpointer=checkpoint_saver,
+        interrupt_before=interrupt_before,
+        interrupt_after=interrupt_after,
+    )
 
     try:
         if resume_from_checkpoint:
             if checkpoint_saver.get_tuple(checkpoint_lookup_config) is None:
                 raise ValueError("No LangGraph checkpoint is available for this run.")
-            result_state = compiled.invoke(None, config=runtime_config)
+            snapshot = compiled.get_state(runtime_config)
+            resume_runtime_config: dict[str, Any] = checkpoint_lookup_config
+            if _snapshot_has_interrupt_payload(snapshot):
+                result_state = compiled.invoke(Command(resume=resume_command), config=resume_runtime_config)
+            else:
+                if isinstance(resume_command, dict) and resume_command:
+                    resume_runtime_config = compiled.update_state(checkpoint_lookup_config, resume_command)
+                result_state = compiled.invoke(None, config=resume_runtime_config)
         else:
             result_state = compiled.invoke(dict(state.get("state_values", {})), config=runtime_config)
         state["state_values"] = dict(result_state)
+        snapshot = compiled.get_state(checkpoint_lookup_config)
+        if _is_waiting_for_human(snapshot):
+            _apply_waiting_state(
+                state,
+                snapshot,
+                checkpoint_saver=checkpoint_saver,
+                checkpoint_lookup_config=checkpoint_lookup_config,
+                started_perf=started_perf,
+                node_outputs=node_outputs,
+                active_edge_ids=active_edge_ids,
+            )
+            save_run(state)
+            return state
+        _clear_pending_interrupt_metadata(state)
         set_run_status(state, "completed")
         state["current_node_id"] = None
         state["cycle_summary"] = {
@@ -362,3 +390,97 @@ def _persist_langgraph_progress(
 ) -> None:
     _sync_checkpoint_metadata(state, checkpoint_saver, checkpoint_lookup_config)
     _persist_run_progress(state, node_outputs, active_edge_ids, started_perf=started_perf)
+
+
+def _resolve_interrupt_configuration(graph: NodeSystemGraphDocument) -> tuple[list[str] | None, list[str] | None]:
+    metadata = dict(graph.metadata or {})
+
+    def _normalize(value: Any) -> list[str] | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            items = [value]
+        elif isinstance(value, list):
+            items = [str(item).strip() for item in value]
+        else:
+            return None
+        normalized = [item for item in items if item]
+        return normalized or None
+
+    interrupt_before = _normalize(metadata.get("interrupt_before"))
+    if interrupt_before is None:
+        interrupt_before = _normalize(metadata.get("interruptBefore"))
+    interrupt_after = _normalize(metadata.get("interrupt_after"))
+    if interrupt_after is None:
+        interrupt_after = _normalize(metadata.get("interruptAfter"))
+    return interrupt_before, interrupt_after
+
+
+def _is_waiting_for_human(snapshot: Any) -> bool:
+    if snapshot is None:
+        return False
+    if getattr(snapshot, "next", ()):
+        return True
+    return _snapshot_has_interrupt_payload(snapshot)
+
+
+def _snapshot_has_interrupt_payload(snapshot: Any) -> bool:
+    for task in getattr(snapshot, "tasks", ()) or ():
+        if getattr(task, "interrupts", ()):
+            return True
+    return False
+
+
+def _serialize_pending_interrupts(snapshot: Any) -> tuple[list[str], list[dict[str, Any]]]:
+    pending_nodes: list[str] = []
+    pending_interrupts: list[dict[str, Any]] = []
+
+    for task in getattr(snapshot, "tasks", ()) or ():
+        node_name = str(getattr(task, "name", "") or "").strip()
+        if node_name and node_name not in pending_nodes:
+            pending_nodes.append(node_name)
+        for interrupt in getattr(task, "interrupts", ()) or ():
+            pending_interrupts.append(
+                {
+                    "node_id": node_name or None,
+                    "interrupt_id": getattr(interrupt, "id", None),
+                    "value": getattr(interrupt, "value", None),
+                }
+            )
+
+    if not pending_nodes:
+        pending_nodes = [str(item) for item in (getattr(snapshot, "next", ()) or ()) if str(item).strip()]
+
+    return pending_nodes, pending_interrupts
+
+
+def _apply_waiting_state(
+    state: dict[str, Any],
+    snapshot: Any,
+    *,
+    checkpoint_saver: JsonCheckpointSaver,
+    checkpoint_lookup_config: dict[str, Any],
+    started_perf: float,
+    node_outputs: dict[str, dict[str, Any]],
+    active_edge_ids: set[str],
+) -> None:
+    state["state_values"] = dict(getattr(snapshot, "values", {}) or {})
+    pending_nodes, pending_interrupts = _serialize_pending_interrupts(snapshot)
+    pause_reason = "interrupt" if pending_interrupts else "breakpoint"
+    set_run_status(state, "awaiting_human", pause_reason=pause_reason)
+    state["current_node_id"] = pending_nodes[0] if pending_nodes else None
+    node_status_map = state.setdefault("node_status_map", {})
+    for node_name in pending_nodes:
+        node_status_map[node_name] = "paused"
+    metadata = state.setdefault("metadata", {})
+    metadata["pending_interrupt_nodes"] = pending_nodes
+    metadata["pending_interrupts"] = pending_interrupts
+    metadata["resolved_runtime_backend"] = "langgraph"
+    _sync_checkpoint_metadata(state, checkpoint_saver, checkpoint_lookup_config)
+    _refresh_run_artifacts(state, node_outputs, active_edge_ids, started_perf=started_perf)
+
+
+def _clear_pending_interrupt_metadata(state: dict[str, Any]) -> None:
+    metadata = state.setdefault("metadata", {})
+    metadata.pop("pending_interrupt_nodes", None)
+    metadata.pop("pending_interrupts", None)

@@ -4,10 +4,12 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi.responses import PlainTextResponse
 from pydantic import ValidationError
 
 from app.core.compiler.validator import validate_graph
 from app.core.langgraph import execute_node_system_graph_langgraph, resolve_graph_runtime_backend
+from app.core.langgraph.codegen import generate_langgraph_python_source
 from app.core.runtime.state import create_initial_run_state, set_run_status, touch_run_lifecycle
 from app.core.schemas.node_system import (
     GraphSaveResponse,
@@ -75,6 +77,32 @@ def validate_graph_endpoint(payload: dict[str, Any]) -> GraphValidationResponse:
     except ValidationError as exc:
         return GraphValidationResponse(valid=False, issues=_schema_errors_to_paths(exc))
     return validate_graph(graph_payload)
+
+
+@router.post("/export/langgraph-python", response_class=PlainTextResponse)
+def export_langgraph_python_endpoint(payload: dict[str, Any]) -> str:
+    try:
+        graph_payload = _parse_graph_request(payload)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=GraphValidationResponse(valid=False, issues=_schema_errors_to_paths(exc)).model_dump(),
+        ) from exc
+
+    validation = validate_graph(graph_payload)
+    if not validation.valid:
+        raise HTTPException(status_code=422, detail=validation.model_dump())
+
+    runtime_backend, reasons = resolve_graph_runtime_backend(graph_payload)
+    if runtime_backend != "langgraph":
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": f"Graph '{graph_payload.graph_id or graph_payload.name}' is not supported by the LangGraph runtime exporter.",
+                "reasons": reasons,
+            },
+        )
+    return generate_langgraph_python_source(graph_payload)
 
 
 @router.post("/run")

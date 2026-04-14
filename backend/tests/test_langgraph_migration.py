@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.compiler.validator import validate_graph
 from app.core.langgraph.compiler import compile_graph_to_langgraph_plan, resolve_graph_runtime_backend
+from app.core.langgraph.codegen import generate_langgraph_python_source
 from app.core.langgraph.runtime import execute_node_system_graph_langgraph
 from app.core.runtime.state import create_initial_run_state, set_run_status
 from app.core.schemas.node_system import NodeSystemGraphPayload, NodeSystemTemplate
@@ -365,6 +366,20 @@ class LangGraphMigrationTests(unittest.TestCase):
         backend, reasons = resolve_graph_runtime_backend(graph)
         self.assertEqual(backend, "langgraph")
         self.assertEqual(reasons, [])
+
+    @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response)
+    @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
+    @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
+    def test_exported_langgraph_python_source_is_executable(self):
+        graph = _load_hello_world_graph()
+        source = generate_langgraph_python_source(graph)
+        self.assertIn("def build_graph()", source)
+        self.assertIn("def invoke_graph", source)
+
+        namespace: dict[str, object] = {}
+        exec(source, namespace, namespace)
+        result = namespace["invoke_graph"]()
+        self.assertIn("answer", result)
 
     @patch("app.core.langgraph.runtime.save_run", lambda state: None)
     @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)

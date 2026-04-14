@@ -443,6 +443,8 @@
 
 ## Phase 10：导出可执行的 LangGraph Python 文件
 
+状态：已完成
+
 ### 目标
 
 在后端已经具备 LangGraph-native 执行主链之后，再补“导出 Python LangGraph 脚本”能力。

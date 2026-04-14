@@ -79,6 +79,104 @@ def _fake_generate_agent_response_fail_once(node, input_values, skill_context, r
     return _fake_generate_agent_response(node, input_values, skill_context, runtime_config)
 
 
+def _fake_generate_agent_response_increment(node, input_values, skill_context, runtime_config):
+    _ = skill_context
+    counter = int(input_values.get("counter") or 0) + 1
+    outputs = {
+        binding.state: counter
+        for binding in node.writes
+    }
+    return outputs, "", [], runtime_config
+
+
+def _build_cycle_graph() -> NodeSystemGraphPayload:
+    return NodeSystemGraphPayload.model_validate(
+        {
+            "name": "Cycle Validation",
+            "state_schema": {
+                "counter": {
+                    "name": "counter",
+                    "description": "Counter for validating LangGraph cycle execution.",
+                    "type": "number",
+                    "value": 0,
+                    "color": "#d97706",
+                }
+            },
+            "nodes": {
+                "seed_counter": {
+                    "kind": "input",
+                    "name": "seed_counter",
+                    "description": "Seed counter value.",
+                    "ui": {"position": {"x": 0, "y": 0}, "collapsed": False},
+                    "writes": [{"state": "counter", "mode": "replace"}],
+                    "config": {"value": 0},
+                },
+                "increment_counter": {
+                    "kind": "agent",
+                    "name": "increment_counter",
+                    "description": "Increment the counter by one.",
+                    "ui": {"position": {"x": 240, "y": 0}, "collapsed": False},
+                    "reads": [{"state": "counter", "required": True}],
+                    "writes": [{"state": "counter", "mode": "replace"}],
+                    "config": {"skills": [], "systemInstruction": "", "taskInstruction": ""},
+                },
+                "continue_check": {
+                    "kind": "condition",
+                    "name": "continue_check",
+                    "description": "Loop until the counter reaches three.",
+                    "ui": {"position": {"x": 520, "y": 0}, "collapsed": False},
+                    "reads": [{"state": "counter", "required": True}],
+                    "config": {
+                        "branches": ["continue", "stop"],
+                        "conditionMode": "rule",
+                        "branchMapping": {},
+                        "rule": {"source": "counter", "operator": "<", "value": 3},
+                    },
+                },
+                "output_counter": {
+                    "kind": "output",
+                    "name": "output_counter",
+                    "description": "Show the final counter.",
+                    "ui": {"position": {"x": 800, "y": 0}, "collapsed": False},
+                    "reads": [{"state": "counter", "required": True}],
+                    "config": {
+                        "displayMode": "auto",
+                        "persistEnabled": False,
+                        "persistFormat": "auto",
+                        "fileNameTemplate": "",
+                    },
+                },
+            },
+            "edges": [
+                {
+                    "source": "seed_counter",
+                    "target": "increment_counter",
+                    "sourceHandle": "write:counter",
+                    "targetHandle": "read:counter",
+                },
+                {
+                    "source": "increment_counter",
+                    "target": "continue_check",
+                    "sourceHandle": "write:counter",
+                    "targetHandle": "read:counter",
+                },
+            ],
+            "conditional_edges": [
+                {
+                    "source": "continue_check",
+                    "branches": {
+                        "continue": "increment_counter",
+                        "stop": "output_counter",
+                    },
+                }
+            ],
+            "metadata": {
+                "cycle_max_iterations": 5,
+            },
+        }
+    )
+
+
 class LangGraphMigrationTests(unittest.TestCase):
     def test_hello_world_validate_baseline(self):
         graph = _load_hello_world_graph()
@@ -101,21 +199,11 @@ class LangGraphMigrationTests(unittest.TestCase):
         self.assertEqual(backend, "langgraph")
         self.assertEqual(reasons, [])
 
-    def test_conditional_graph_resolves_legacy_backend(self):
-        graph = _load_hello_world_graph()
-        payload = graph.model_dump(by_alias=True)
-        payload["conditional_edges"] = [
-            {
-                "source": "answer_helper",
-                "branches": {
-                    "done": "output_answer",
-                },
-            }
-        ]
-        conditional_graph = NodeSystemGraphPayload.model_validate(payload)
-        backend, reasons = resolve_graph_runtime_backend(conditional_graph)
-        self.assertEqual(backend, "legacy")
-        self.assertTrue(any("conditional_edges" in reason for reason in reasons), reasons)
+    def test_cycle_graph_resolves_langgraph_backend(self):
+        graph = _build_cycle_graph()
+        backend, reasons = resolve_graph_runtime_backend(graph)
+        self.assertEqual(backend, "langgraph")
+        self.assertEqual(reasons, [])
 
     @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
     @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response)
@@ -259,3 +347,26 @@ class LangGraphMigrationTests(unittest.TestCase):
         graph = _load_knowledge_base_validation_graph()
         validation = validate_graph(graph)
         self.assertTrue(validation.valid, validation.model_dump())
+
+    @patch("app.core.langgraph.runtime.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response_increment)
+    @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
+    @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
+    def test_langgraph_cycle_runtime(self):
+        graph = _build_cycle_graph()
+        validation = validate_graph(graph)
+        self.assertTrue(validation.valid, validation.model_dump())
+
+        result = execute_node_system_graph_langgraph(graph, persist_progress=False)
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["runtime_backend"], "langgraph")
+        self.assertEqual(result["state_snapshot"]["values"]["counter"], 3)
+        self.assertTrue(result["cycle_summary"]["has_cycle"])
+        self.assertEqual(result["cycle_summary"]["iteration_count"], 3)
+        self.assertEqual(result["cycle_summary"]["max_iterations"], 5)
+        self.assertEqual(result["cycle_summary"]["stop_reason"], "completed")
+        self.assertEqual(len(result["cycle_iterations"]), 3)
+        self.assertEqual(result["cycle_iterations"][0]["stop_reason"], None)
+        self.assertEqual(result["cycle_iterations"][-1]["stop_reason"], "completed")

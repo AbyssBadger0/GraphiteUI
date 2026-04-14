@@ -357,6 +357,8 @@
 
 ## Phase 7：把 cycles 从自定义调度迁到 LangGraph 语义
 
+状态：已完成
+
 ### 目标
 
 当前 cycles 虽然可用，但还是自定义 runtime 逻辑。这个阶段要把它迁到真正的 LangGraph 语义表达。

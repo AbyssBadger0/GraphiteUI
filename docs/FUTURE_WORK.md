@@ -4,17 +4,45 @@
 
 当前优先级：
 
-1. Cycles 交互与高级策略
-2. Knowledge Base 收尾与增强
-3. Memory 正式能力建设
-4. 人类在环与断点
+1. 编辑器旧视图模型收口
+2. Cycles 交互与高级策略
+3. Knowledge Base 收尾与增强
+4. Memory 正式能力建设
+5. 人类在环前端与审计闭环
+6. LangGraph Python 导出前端入口
 
-## 1. Cycles 交互与高级策略
+## 1. 编辑器旧视图模型收口
 
 当前代码现状：
 
-- runtime 已支持 cycles 的多轮执行
-- condition 已支持 `cycle` 模式，循环图会返回结构化的 `cycle_summary / cycle_iterations`
+- 后端协议、模板、图、预设、保存、校验和运行都已经切到正式 `node_system`
+- 前端接口兼容层已删除
+- 但编辑器内部仍保留一层旧视图模型壳子：
+  - `NodePresetDefinition`
+  - `PortDefinition`
+  - `StateField`
+  - `SkillAttachment`
+  - `outputBinding`
+
+后续要做：
+
+- 删除 `outputBinding`
+- 技能面板直接围绕 `string[]` 工作
+- 端口名不再保留副本，直接读取 `state.name`
+- State Panel 直接读取 canonical `state_schema`
+- NodeCard 直接围绕 canonical node 渲染
+- 预设视图层只保留最薄的 UI 投影
+
+详细拆分见：
+
+- [editor_view_model_cleanup_plan.md](/home/abyss/GraphiteUI/docs/editor_view_model_cleanup_plan.md)
+
+## 2. Cycles 交互与高级策略
+
+当前代码现状：
+
+- LangGraph runtime 已支持条件边和 cycles 执行
+- 运行结果会返回 `cycle_summary / cycle_iterations`
 - 当前循环停止条件只覆盖：
   - 显式退出分支
   - 命中最大轮次保护
@@ -33,14 +61,11 @@
   - 每轮执行路径
   - 回边
   - 终止原因
-- 明确 cycles 和 state 的正式约束：
-  - 循环中哪些 state 适合做 loop-carried state
-  - 边上传值和 state 读写的组合方式
 - 明确 cycles 和 interrupt 的衔接方式：
   - 是否允许在循环中暂停
   - 恢复后从哪一轮、哪个节点继续
 
-## 2. Knowledge Base 收尾与增强
+## 3. Knowledge Base 收尾与增强
 
 当前代码现状：
 
@@ -74,7 +99,7 @@
   - 导入失败恢复
   - 重新导入后的兼容策略
 
-## 3. Memory 正式能力建设
+## 4. Memory 正式能力建设
 
 当前代码现状：
 
@@ -93,31 +118,35 @@
   - run detail 返回哪些 memory 相关结构化字段
 - 决定是否保留独立 memory 页面；如果保留，至少要支持真实记录、检索、来源追踪和详情查看
 
-## 4. 人类在环与断点
+## 5. 人类在环前端与审计闭环
 
 当前代码现状：
 
-- runtime 目前只有 `queued / running / completed / failed`
-- 没有 breakpoint、pause、resume、approval、edit-and-continue 这类正式运行时状态
-- editor 和 run detail 也没有人为接管或恢复执行的入口
+- 后端已经有：
+  - `paused / awaiting_human / resuming`
+  - checkpoint / resume
+  - interrupt before / after
+  - `POST /api/runs/{run_id}/resume`
+- 前端还没有正式的人类在环入口和审计闭环
 
 后续要做：
 
-- 设计类似 LangGraph interrupt 的正式暂停点：
-  - 手动 breakpoint
-  - 节点前暂停
-  - 节点后暂停
-  - 条件命中后暂停
-- 扩展 run status，至少支持：
-  - `paused`
-  - `awaiting_human`
-  - `resuming`
-- 定义人为接管的数据结构：
-  - 暂停原因
-  - 当前节点
-  - 可编辑的输入 / state / 输出草稿
-  - 用户决策记录
-- 增加恢复执行能力：
+- 在 run detail 中展示等待人工输入的结构化信息
+- 增加最小恢复面板：
   - approve / reject / edit-and-continue / skip
-  - run detail 与 editor 内都可恢复
-- 明确审计轨迹，保证每次人工介入都可回溯
+- 给 editor 增加断点配置入口
+- 记录人工介入审计轨迹，保证每次恢复都可回溯
+
+## 6. LangGraph Python 导出前端入口
+
+当前代码现状：
+
+- 后端已经支持导出可执行 Python：
+  - `POST /api/graphs/export/langgraph-python`
+- 前端还没有导出入口和下载交互
+
+后续要做：
+
+- 在 editor 中增加“导出 LangGraph Python”入口
+- 提供源码预览和下载
+- 明确导出时的图校验和错误提示

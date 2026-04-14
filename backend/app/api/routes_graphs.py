@@ -7,6 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import ValidationError
 
 from app.core.compiler.validator import validate_graph
+from app.core.langgraph import execute_node_system_graph_langgraph, graph_requests_langgraph_runtime
 from app.core.runtime.node_system_executor import execute_node_system_graph
 from app.core.runtime.state import create_initial_run_state, utc_now_iso
 from app.core.schemas.node_system import (
@@ -107,6 +108,17 @@ def run_graph_endpoint(payload: dict[str, Any], background_tasks: BackgroundTask
 
 def _run_graph_worker(graph: NodeSystemGraphDocument, run_state: dict[str, Any]) -> None:
     try:
+        if graph_requests_langgraph_runtime(graph):
+            try:
+                execute_node_system_graph_langgraph(graph, run_state, persist_progress=True)
+                return
+            except NotImplementedError as exc:
+                logger.warning(
+                    "Graph %s requested LangGraph runtime but current adapter cannot execute it yet: %s. Falling back to legacy executor.",
+                    graph.graph_id,
+                    exc,
+                )
+
         execute_node_system_graph(graph, run_state, persist_progress=True)
     except Exception as exc:  # pragma: no cover - defensive runtime path
         logger.exception("Graph run %s failed: %s", run_state.get("run_id"), exc)

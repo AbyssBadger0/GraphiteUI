@@ -16,6 +16,8 @@
   - 将第一轮优化范围确定为首页与工作台，不动编辑器
   - 重做首页 hero 与入口层级，增加当前主链能力的产品快照
   - 重做工作台的摘要、最近 graph / runs 和快捷入口呈现
+  - 增强侧栏品牌区、当前上下文卡片和导航分组
+  - 收紧导航 hover / active / focus 的层级反馈
 - Files created/modified:
   - `task_plan.md`（created）
   - `findings.md`（created）
@@ -24,6 +26,7 @@
   - `frontend/app/workspace/page.tsx`（modified）
   - `frontend/components/workspace/workspace-dashboard-client.tsx`（modified）
   - `frontend/components/providers/language-provider.tsx`（modified）
+  - `frontend/components/layout-shell.tsx`（modified）
 
 ## Test Results
 

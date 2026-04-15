@@ -29,7 +29,6 @@
   - `PortDefinition`
   - `StateField`
   - `SkillAttachment`
-  - `outputBinding`
 
 关键代码位置：
 
@@ -39,19 +38,6 @@
 - [node-presets-mock.ts](/home/abyss/GraphiteUI/frontend/lib/node-presets-mock.ts)
 
 执行顺序：
-
-### Phase A：删除 `outputBinding`
-
-范围：
-
-- 删除前端类型里的 `outputBinding`
-- 删除 agent 高级面板中的对应编辑区域
-- 删除和它相关的保存、读取、默认值逻辑
-
-完成标准：
-
-- UI 上不再出现 `Output Binding`
-- 编译、保存、运行都不受影响
 
 ### Phase B：技能面板直接改为 `string[]`
 

@@ -34,13 +34,13 @@ export default async function EditorPage() {
   const { graphs, templates } = await loadEditorLandingData();
 
   return (
-    <main className="mx-auto grid max-w-7xl gap-6 px-6 py-8">
+    <div className="grid gap-6">
       <section className="rounded-[32px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,250,241,0.9)] p-8 shadow-[0_20px_60px_var(--shadow)]">
         <div className="grid gap-3">
-          <span className="text-sm uppercase tracking-[0.12em] text-[var(--accent-strong)]">Canvas First Editor</span>
-          <h1 className="text-4xl font-semibold text-[var(--text)]">新编排器入口</h1>
+          <span className="text-sm uppercase tracking-[0.12em] text-[var(--accent-strong)]">Editor Directory</span>
+          <h1 className="text-4xl font-semibold text-[var(--text)]">从模板开始，或继续已有图。</h1>
           <p className="max-w-3xl text-[0.98rem] leading-7 text-[var(--muted)]">
-            当前 editor 已按 `hello_world` 第一阶段目标重建入口。你可以新建空白图，或继续编辑已保存 graph。
+            这里是编排器的全量入口页。左侧查看和使用全部模板，右侧继续编辑已经保存的 graph。
           </p>
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
@@ -52,16 +52,19 @@ export default async function EditorPage() {
           </Link>
           <Link
             className="inline-flex items-center rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.9)] px-5 py-2.5 text-sm text-[var(--text)]"
-            href="/workspace"
+            href="/"
           >
-            返回工作台
+            返回首页
           </Link>
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-[28px] border border-[rgba(154,52,18,0.16)] bg-[rgba(255,255,255,0.78)] p-6">
-          <h2 className="text-xl font-semibold text-[var(--text)]">Available Templates</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-[var(--text)]">全部模板</h2>
+            <div className="text-sm text-[var(--muted)]">{templates.length} templates</div>
+          </div>
           <div className="mt-4 grid gap-3">
             {templates.map((template) => (
               <div key={template.template_id} className="rounded-[20px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.86)] p-4">
@@ -113,6 +116,6 @@ export default async function EditorPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

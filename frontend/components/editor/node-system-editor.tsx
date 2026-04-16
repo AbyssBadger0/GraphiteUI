@@ -52,6 +52,7 @@ import {
   type CanonicalNode,
   type EditorPresetRecord,
 } from "@/lib/node-system-canonical";
+import { projectCanonicalConfigsOntoNodes } from "@/lib/node-system-projection";
 import { EMPTY_AGENT_PRESET, getNodePresetById, NODE_PRESETS_MOCK, TEXT_INPUT_PRESET } from "@/lib/node-presets-mock";
 import {
   isValueTypeCompatible,
@@ -5136,6 +5137,8 @@ function NodeSystemCanvas({
   const graphId = canonicalGraphState.graph_id ?? null;
   const metadata = canonicalGraphState.metadata;
   const stateSchema = useMemo(() => buildEditorStateFieldsFromCanonicalGraph(canonicalGraphState), [canonicalGraphState]);
+  const projectedNodes = useMemo(() => projectCanonicalConfigsOntoNodes(nodes, canonicalGraphState), [canonicalGraphState, nodes]);
+  const projectedNodeMap = useMemo(() => new Map(projectedNodes.map((node) => [node.id, node])), [projectedNodes]);
 
   const allPresets = useMemo(
     () => [...NODE_PRESETS_MOCK, ...persistedPresets.map((preset) => preset.definition)].filter((preset) => isPresetEligibleFamily(preset.family)),
@@ -5220,12 +5223,12 @@ function NodeSystemCanvas({
       });
   }, [creationMenu?.sourceValueType, getRecommendedPresets, search]);
 
-  const nodeIds = useMemo(() => nodes.map((node) => node.id), [nodes]);
+  const nodeIds = useMemo(() => projectedNodes.map((node) => node.id), [projectedNodes]);
   const previewTextByNode = useMemo(() => {
-    return Object.fromEntries(nodes.map((node) => [node.id, createPreviewText(node, nodes, edges)]));
-  }, [edges, nodes]);
+    return Object.fromEntries(projectedNodes.map((node) => [node.id, createPreviewText(node, projectedNodes, edges)]));
+  }, [edges, projectedNodes]);
   const derivedCanonicalGraph = useMemo<CanonicalGraph>(() => {
-    const projection = buildCanonicalFlowProjection(nodes, edges);
+    const projection = buildCanonicalFlowProjection(projectedNodes, edges);
     return {
       graph_id: graphId,
       name: graphName,
@@ -5235,7 +5238,7 @@ function NodeSystemCanvas({
       conditional_edges: projection.conditional_edges,
       metadata,
     };
-  }, [canonicalGraphState.state_schema, edges, graphId, graphName, metadata, nodes]);
+  }, [canonicalGraphState.state_schema, edges, graphId, graphName, metadata, projectedNodes]);
   const canonicalGraph = canonicalGraphState;
   const canonicalGraphForSubmission = useMemo<CanonicalGraph>(() => {
     const mergedNodes = { ...derivedCanonicalGraph.nodes };
@@ -5276,7 +5279,7 @@ function NodeSystemCanvas({
   );
   const stateBindingNodeOptions = useMemo<StateBindingNodeOption[]>(
     () =>
-      nodes.map((node) => ({
+      projectedNodes.map((node) => ({
         id: node.id,
         label: getCanonicalNodeDisplayName(canonicalGraph, node.id),
         family: node.data.config.family,
@@ -5286,13 +5289,13 @@ function NodeSystemCanvas({
             ? resolvePortsForDisplay(node.data.config, "input", stateSchema)
             : resolvePortsForDisplay(node.data.config, "output", stateSchema),
       })),
-    [canonicalGraph, nodes, stateSchema],
+    [canonicalGraph, projectedNodes, stateSchema],
   );
   const stateBindingsByKey = useMemo(() => {
     const readersByKey: Record<string, StateBindingSummary[]> = {};
     const writersByKey: Record<string, StateBindingSummary[]> = {};
 
-    for (const node of nodes) {
+    for (const node of projectedNodes) {
       const nodeLabel = getCanonicalNodeDisplayName(canonicalGraph, node.id);
       const inputPorts = resolvePortsForDisplay(node.data.config, "input", stateSchema);
       const outputPorts =
@@ -5333,12 +5336,12 @@ function NodeSystemCanvas({
       readersByKey,
       writersByKey,
     };
-  }, [canonicalGraph, nodes, stateSchema]);
+  }, [canonicalGraph, projectedNodes, stateSchema]);
   const runNodeSummary = useMemo(() => summarizeRunNodeStates(nodeIds, runNodeStatusMap), [nodeIds, runNodeStatusMap]);
   const suppressOutputPreviewFallback = activeRunStatus === "queued" || activeRunStatus === "running";
   const knowledgeSkillSyncSignature = useMemo(
     () =>
-      nodes
+      projectedNodes
         .map((node) => {
           const inputs = listInputPorts(node.data.config)
             .map((port) => `${port.key}:${port.valueType}:${port.required ? "1" : "0"}`)
@@ -5349,7 +5352,7 @@ function NodeSystemCanvas({
           return `${node.id}|${node.data.config.family}|${inputs}|${outputs}`;
         })
         .join("::"),
-    [nodes],
+    [projectedNodes],
   );
   const agentRuntimeDefaults = useMemo(
     () => ({
@@ -5648,10 +5651,10 @@ function NodeSystemCanvas({
   }, [edges, nodes]);
 
   useEffect(() => {
-    const nodesById = new Map(nodes.map((node) => [node.id, node]));
+    const nodesById = new Map(projectedNodes.map((node) => [node.id, node]));
     let changed = false;
     const changedCanonicalNodes: Record<string, CanonicalGraph["nodes"][string]> = {};
-    const nextNodes = nodes.map((node) => {
+    const nextNodes = projectedNodes.map((node) => {
       if (node.data.config.family !== "agent") {
         return node;
       }
@@ -5691,7 +5694,7 @@ function NodeSystemCanvas({
         ...changedCanonicalNodes,
       },
     }));
-  }, [edges, knowledgeSkillSyncSignature, nodes, setNodes]);
+  }, [edges, knowledgeSkillSyncSignature, projectedNodes, setNodes]);
 
   useEffect(() => {
     if (!isNewFromTemplate) return;
@@ -5954,7 +5957,7 @@ function NodeSystemCanvas({
   }
 
   async function saveNodeAsPreset(nodeId: string) {
-    const targetNode = nodes.find((node) => node.id === nodeId);
+    const targetNode = projectedNodes.find((node) => node.id === nodeId);
     if (!targetNode) return;
     if (!isPresetEligibleFamily(targetNode.data.config.family)) {
       setStatusMessage("Only agent and condition nodes can be saved as presets.");
@@ -6111,7 +6114,7 @@ function NodeSystemCanvas({
 
   const focusNode = useCallback(
     (nodeId: string) => {
-      const targetNode = nodes.find((node) => node.id === nodeId);
+      const targetNode = projectedNodes.find((node) => node.id === nodeId);
       if (!targetNode) return;
 
       const width =
@@ -6137,12 +6140,12 @@ function NodeSystemCanvas({
         duration: 260,
       });
     },
-    [nodes, reactFlow, setNodes],
+    [projectedNodes, reactFlow, setNodes],
   );
 
   const syncCanonicalNodeFromLegacyConfig = useCallback(
     (nodeId: string, nextConfig: NodePresetDefinition, nodeSnapshot?: FlowNode) => {
-      const sourceNode = nodeSnapshot ?? nodes.find((node) => node.id === nodeId);
+      const sourceNode = nodeSnapshot ?? projectedNodeMap.get(nodeId);
       if (!sourceNode) return;
       const canonicalNode = buildCanonicalNodeFromFlowNode(
         {
@@ -6162,7 +6165,7 @@ function NodeSystemCanvas({
         },
       }));
     },
-    [nodes],
+    [projectedNodeMap],
   );
 
   const upsertCanonicalStateField = useCallback((field: StateField) => {
@@ -6219,10 +6222,14 @@ function NodeSystemCanvas({
         };
       });
       const readNodeIds = new Set(
-        nodes.filter((node) => (node.data.config.stateReads ?? []).some((binding) => binding.stateKey === currentKey)).map((node) => node.id),
+        projectedNodes
+          .filter((node) => (node.data.config.stateReads ?? []).some((binding) => binding.stateKey === currentKey))
+          .map((node) => node.id),
       );
       const writeNodeIds = new Set(
-        nodes.filter((node) => (node.data.config.stateWrites ?? []).some((binding) => binding.stateKey === currentKey)).map((node) => node.id),
+        projectedNodes
+          .filter((node) => (node.data.config.stateWrites ?? []).some((binding) => binding.stateKey === currentKey))
+          .map((node) => node.id),
       );
       setNodes((current) =>
         current.map((node) => ({
@@ -6249,7 +6256,7 @@ function NodeSystemCanvas({
       setStatusMessage(`Renamed state ${currentKey} -> ${normalizedKey}`);
       return true;
     },
-    [nodes, setEdges, setNodes, stateSchema],
+    [projectedNodes, setEdges, setNodes, stateSchema],
   );
 
   const renameStateName = useCallback((stateKey: string, nextName: string) => {
@@ -6273,7 +6280,7 @@ function NodeSystemCanvas({
 
   const bindStateFieldToPort = useCallback(
     (nodeId: string, side: "input" | "output", field: StateField) => {
-      const targetNode = nodes.find((node) => node.id === nodeId);
+      const targetNode = projectedNodeMap.get(nodeId);
       if (!targetNode) {
         return false;
       }
@@ -6432,7 +6439,7 @@ function NodeSystemCanvas({
 
       return false;
     },
-    [nodes, setNodes, syncCanonicalNodeFromLegacyConfig],
+    [projectedNodeMap, setNodes, syncCanonicalNodeFromLegacyConfig],
   );
 
   const createStateAndBindToPort = useCallback(
@@ -6504,7 +6511,7 @@ function NodeSystemCanvas({
 
   const addStateReadBinding = useCallback(
     (stateKey: string, nodeId: string, inputKey: string) => {
-      const targetNode = nodes.find((node) => node.id === nodeId);
+      const targetNode = projectedNodeMap.get(nodeId);
       if (!targetNode) return false;
       const inputHandleId = buildHandleId("input", inputKey);
       const hasIncomingEdge = edges.some((edge) => edge.target === nodeId && edge.targetHandle === inputHandleId);
@@ -6540,12 +6547,12 @@ function NodeSystemCanvas({
       setStatusMessage(`Bound state ${stateKey} to ${getNodeDisplayName(targetNode.data.config, targetNode.id)}.${inputKey}`);
       return true;
     },
-    [edges, nodes, setNodes, syncCanonicalNodeFromLegacyConfig],
+    [edges, projectedNodeMap, setNodes, syncCanonicalNodeFromLegacyConfig],
   );
 
   const removeStateReadBinding = useCallback(
     (stateKey: string, nodeId: string, inputKey: string) => {
-      const targetNode = nodes.find((node) => node.id === nodeId);
+      const targetNode = projectedNodeMap.get(nodeId);
       if (!targetNode) return;
       const nextConfig = withNodeStateBindings(
         targetNode.data.config,
@@ -6570,12 +6577,12 @@ function NodeSystemCanvas({
       syncCanonicalNodeFromLegacyConfig(nodeId, nextConfig, targetNode);
       setStatusMessage(`Removed reader ${nodeLabelLookup.get(nodeId) ?? nodeId}.${inputKey} from state ${stateKey}`);
     },
-    [nodeLabelLookup, nodes, setNodes, syncCanonicalNodeFromLegacyConfig],
+    [nodeLabelLookup, projectedNodeMap, setNodes, syncCanonicalNodeFromLegacyConfig],
   );
 
   const addStateWriteBinding = useCallback(
     (stateKey: string, nodeId: string, outputKey: string) => {
-      const targetNode = nodes.find((node) => node.id === nodeId);
+      const targetNode = projectedNodeMap.get(nodeId);
       if (!targetNode) return false;
       const existingBinding = (targetNode.data.config.stateWrites ?? []).find((binding) => binding.outputKey === outputKey);
       if (existingBinding) {
@@ -6605,12 +6612,12 @@ function NodeSystemCanvas({
       setStatusMessage(`Bound ${getNodeDisplayName(targetNode.data.config, targetNode.id)}.${outputKey} to state ${stateKey}`);
       return true;
     },
-    [nodes, setNodes, syncCanonicalNodeFromLegacyConfig],
+    [projectedNodeMap, setNodes, syncCanonicalNodeFromLegacyConfig],
   );
 
   const removeStateWriteBinding = useCallback(
     (stateKey: string, nodeId: string, outputKey: string) => {
-      const targetNode = nodes.find((node) => node.id === nodeId);
+      const targetNode = projectedNodeMap.get(nodeId);
       if (!targetNode) return;
       const nextConfig = withNodeStateBindings(
         targetNode.data.config,
@@ -6635,7 +6642,7 @@ function NodeSystemCanvas({
       syncCanonicalNodeFromLegacyConfig(nodeId, nextConfig, targetNode);
       setStatusMessage(`Removed writer ${nodeLabelLookup.get(nodeId) ?? nodeId}.${outputKey} from state ${stateKey}`);
     },
-    [nodeLabelLookup, nodes, setNodes, syncCanonicalNodeFromLegacyConfig],
+    [nodeLabelLookup, projectedNodeMap, setNodes, syncCanonicalNodeFromLegacyConfig],
   );
 
   return (
@@ -6657,7 +6664,7 @@ function NodeSystemCanvas({
         >
           <div className="absolute inset-0">
             <ReactFlow
-              nodes={nodes.map((node) => ({
+              nodes={projectedNodes.map((node) => ({
                 ...node,
                 data: {
                   ...node.data,
@@ -6673,7 +6680,7 @@ function NodeSystemCanvas({
                   collapsedSize: node.data.collapsedSize ?? null,
                   expandedSize: node.data.expandedSize ?? null,
                   onConfigChange: (updater: (config: NodePresetDefinition) => NodePresetDefinition) => {
-                    const targetNode = nodes.find((candidate) => candidate.id === node.id);
+                    const targetNode = projectedNodes.find((candidate) => candidate.id === node.id);
                     if (targetNode) {
                       const nextConfig = normalizeNodeConfig(updater(targetNode.data.config));
                       syncCanonicalNodeFromLegacyConfig(node.id, nextConfig, targetNode);
@@ -6837,7 +6844,7 @@ function NodeSystemCanvas({
               }}
               onConnectStart={(_, params) => {
                 if (params.handleType !== "source" || !params.nodeId || !params.handleId) return;
-                const sourceNode = nodes.find((node) => node.id === params.nodeId);
+                const sourceNode = projectedNodes.find((node) => node.id === params.nodeId);
                 const sourceValueType = sourceNode ? getPortType(sourceNode.data.config, params.handleId) : null;
                 setConnectingSourceType(sourceValueType);
                 pendingConnectRef.current = {
@@ -6848,8 +6855,8 @@ function NodeSystemCanvas({
                 };
               }}
               onConnect={(connection: Connection) => {
-                const sourceNode = nodes.find((node) => node.id === connection.source);
-                const targetNode = nodes.find((node) => node.id === connection.target);
+                const sourceNode = projectedNodes.find((node) => node.id === connection.source);
+                const targetNode = projectedNodes.find((node) => node.id === connection.target);
                 if (!sourceNode || !targetNode) return;
 
                 const sourceType = getPortType(sourceNode.data.config, connection.sourceHandle);

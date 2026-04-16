@@ -54,18 +54,34 @@ import {
 } from "@/lib/node-system-canonical";
 import {
   addEditorNodeToCanonicalGraph,
-  applyEditorConfigToCanonicalGraph,
   applyEditorConfigsToCanonicalGraph,
   applyFlowProjectionToCanonicalGraph,
   bindStateToCanonicalNode,
   buildCanonicalFlowProjectionFromEditorState,
   composeCanonicalGraphForSubmission,
   deleteStateFromCanonicalGraph,
+  removeStateFromCanonicalNode,
+  replaceCanonicalNodeReadsFromPorts,
+  replaceCanonicalNodeWritesFromPorts,
   renameStateKeyInCanonicalGraph,
+  renameCanonicalNodeDescription,
+  renameCanonicalNodeName,
   renameStateNameInCanonicalGraph,
+  updateCanonicalInputNodeStateType,
+  updateCanonicalInputNodeValue,
+  updateCanonicalNodeConfig,
+  updateCanonicalReadBindingRequired,
   upsertStateInCanonicalGraph,
 } from "@/lib/node-system-canonical-write";
 import { projectCanonicalConfigsOntoNodes } from "@/lib/node-system-projection";
+import {
+  buildDisplayPortsForCanonicalNode,
+  buildStateBindingNodeOptions,
+  buildStateBindingsByKeyFromCanonicalGraph,
+  listStateBindingNodeIdsForCanonicalState,
+  type StateBindingNodeOption,
+  type StateBindingSummary,
+} from "@/lib/node-system-state-panel";
 import { EMPTY_AGENT_PRESET, getNodePresetById, NODE_PRESETS_MOCK, TEXT_INPUT_PRESET } from "@/lib/node-presets-mock";
 import {
   isValueTypeCompatible,
@@ -138,6 +154,8 @@ type FlowNodeData = {
   config: NodePresetDefinition;
   displayName?: string;
   displayDescription?: string;
+  displayInputs?: PortDefinition[];
+  displayOutputs?: PortDefinition[];
   previewText: string;
   resolvedDisplayMode?: string;
   executionStatus?: RunNodeStatus;
@@ -146,7 +164,15 @@ type FlowNodeData = {
   collapsedSize?: NodeViewportSize | null;
   expandedSize?: NodeViewportSize | null;
   connectingSourceType?: ValueType | null;
-  onConfigChange?: (updater: (config: NodePresetDefinition) => NodePresetDefinition) => void;
+  onUpdateCanonicalNodeConfig?: (updater: (node: CanonicalNode) => CanonicalNode["config"]) => void;
+  onReplaceReadPorts?: (ports: PortDefinition[]) => void;
+  onReplaceWritePorts?: (ports: PortDefinition[]) => void;
+  onUpdateReadRequirement?: (stateKey: string, required: boolean) => void;
+  onRemoveStateRelation?: (side: "input" | "output", stateKey: string) => void;
+  onRenameNode?: (nextName: string) => void;
+  onUpdateNodeDescription?: (nextDescription: string) => void;
+  onUpdateInputBoundaryValue?: (nextValue: unknown) => void;
+  onUpdateInputBoundaryType?: (nextType: ValueType) => void;
   onResizeEnd?: (width: number, height: number, isExpanded: boolean) => void;
   onToggleExpanded?: () => void;
   onDelete?: () => void;
@@ -245,24 +271,6 @@ type CreationMenuEntry = {
   mode: "preset" | "node";
   presetId?: string;
   nodeKind?: "input" | "output";
-};
-
-type StateBindingSummary = {
-  id: string;
-  nodeId: string;
-  nodeLabel: string;
-  nodeFamily: NodeFamily;
-  portKey: string;
-  portLabel: string;
-  valid: boolean;
-};
-
-type StateBindingNodeOption = {
-  id: string;
-  label: string;
-  family: NodeFamily;
-  inputs: PortDefinition[];
-  outputs: PortDefinition[];
 };
 
 const CREATION_MENU_FAMILY_PRIORITY: Record<NodeFamily, number> = {
@@ -511,19 +519,12 @@ function stringifyStateValue(value: unknown, type: StateFieldType) {
 
 function normalizeNodeConfig<T extends NodePresetDefinition>(config: T): T {
   const normalizedName = String((config as { name?: string }).name ?? "").trim() || "Node";
-  const normalizedStateReads = config.stateReads ?? [];
-  const normalizedStateWrites = (config.stateWrites ?? []).map((binding) => ({
-    ...binding,
-    mode: binding.mode ?? "replace",
-  }));
 
   if (config.family === "input") {
     return {
       ...config,
       name: normalizedName,
       value: config.value ?? "",
-      stateReads: normalizedStateReads,
-      stateWrites: normalizedStateWrites,
     } as T;
   }
 
@@ -531,16 +532,12 @@ function normalizeNodeConfig<T extends NodePresetDefinition>(config: T): T {
     return {
       ...config,
       name: normalizedName,
-      stateReads: normalizedStateReads,
-      stateWrites: normalizedStateWrites,
     } as T;
   }
 
   const normalizedConfig = {
     ...config,
     name: normalizedName,
-    stateReads: normalizedStateReads,
-    stateWrites: normalizedStateWrites,
     modelSource: config.modelSource ?? "global",
     model: config.model ?? "",
     thinkingMode: config.thinkingMode === "off" ? "off" : "on",
@@ -555,18 +552,6 @@ function getNodeDisplayName(config: NodePresetDefinition, nodeId?: string) {
 
 function getCanonicalNodeDisplayName(canonicalGraph: CanonicalGraphPayload, nodeId: string) {
   return canonicalGraph.nodes[nodeId]?.name?.trim() || nodeId;
-}
-
-function withNodeStateBindings(
-  config: NodePresetDefinition,
-  stateReads: NodePresetDefinition["stateReads"],
-  stateWrites: NodePresetDefinition["stateWrites"],
-) {
-  return normalizeNodeConfig({
-    ...config,
-    stateReads,
-    stateWrites,
-  } as NodePresetDefinition);
 }
 
 function resolveAgentRuntimeConfig(
@@ -1222,12 +1207,12 @@ function AgentInlineRuntimeControls({
   agentRuntime,
   availableModelRefs,
   modelDisplayLookup,
-  onConfigChange,
+  onCanonicalConfigChange,
 }: {
   agentRuntime: ReturnType<typeof resolveAgentRuntimeConfig>;
   availableModelRefs: string[];
   modelDisplayLookup: Record<string, string>;
-  onConfigChange: (updater: (config: AgentNode) => AgentNode) => void;
+  onCanonicalConfigChange: (updater: (node: CanonicalNode) => CanonicalNode["config"]) => void;
 }) {
   const modelOptions = buildModelSelectOptions(agentRuntime, availableModelRefs, modelDisplayLookup);
   const thinkingOptions = buildThinkingSelectOptions();
@@ -1244,17 +1229,19 @@ function AgentInlineRuntimeControls({
         triggerLabelClassName="whitespace-nowrap"
         optionLabelClassName="whitespace-normal break-words leading-6"
         onChange={(nextValue) =>
-          onConfigChange((currentConfig) => {
-            const currentAgent = currentConfig as AgentNode;
+          onCanonicalConfigChange((node) => {
+            if (node.kind !== "agent") {
+              return node.config;
+            }
             if (nextValue === agentRuntime.globalTextModelRef) {
               return {
-                ...currentAgent,
+                ...node.config,
                 modelSource: "global",
                 model: "",
               };
             }
             return {
-              ...currentAgent,
+              ...node.config,
               modelSource: "override",
               model: nextValue,
             };
@@ -1270,10 +1257,14 @@ function AgentInlineRuntimeControls({
         triggerLabelClassName="whitespace-nowrap"
         optionLabelClassName="whitespace-normal break-words leading-6"
         onChange={(nextValue) =>
-          onConfigChange((currentConfig) => ({
-            ...(currentConfig as AgentNode),
-            thinkingMode: nextValue as AgentThinkingMode,
-          }))
+          onCanonicalConfigChange((node) =>
+            node.kind === "agent"
+              ? {
+                  ...node.config,
+                  thinkingMode: nextValue as AgentThinkingMode,
+                }
+              : node.config,
+          )
         }
       />
     </div>
@@ -1777,17 +1768,14 @@ function listStateWritablePorts(config: NodePresetDefinition) {
 
 function getBoundStateKeyForPort(config: NodePresetDefinition, side: "input" | "output", portKey: string) {
   if (side === "input") {
-    if (config.family === "agent" || config.family === "condition") {
-      return (config.stateReads ?? []).find((binding) => binding.inputKey === portKey)?.stateKey ?? portKey;
-    }
-    if (config.family === "output") {
-      return (config.stateReads ?? []).find((binding) => binding.inputKey === portKey)?.stateKey ?? portKey;
+    if (config.family === "agent" || config.family === "condition" || config.family === "output") {
+      return portKey;
     }
     return null;
   }
 
   if (config.family === "agent" || config.family === "input") {
-    return (config.stateWrites ?? []).find((binding) => binding.outputKey === portKey)?.stateKey ?? portKey;
+    return portKey;
   }
 
   return null;
@@ -2542,6 +2530,13 @@ function PortRow({
       if (nextLabel !== getStateDisplayName(boundState)) {
         onRename?.(nextLabel);
       }
+      if (side === "input" && Boolean(draftPort.required) !== Boolean(port.required)) {
+        portEditor?.onChange({
+          ...draftPort,
+          key: boundState.key,
+          label: nextLabel,
+        });
+      }
       setIsEditingPortConfig(false);
       return;
     }
@@ -3145,8 +3140,8 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const displayName = data.displayName ?? getNodeDisplayName(config, data.nodeId);
   const displayDescription = data.displayDescription?.trim() || config.description;
   const stateFields = data.stateFields ?? [];
-  const inputs = resolvePortsForDisplay(config, "input", stateFields);
-  const outputs = resolvePortsForDisplay(config, "output", stateFields);
+  const inputs = data.displayInputs ?? resolvePortsForDisplay(config, "input", stateFields);
+  const outputs = data.displayOutputs ?? resolvePortsForDisplay(config, "output", stateFields);
   const isInputNode = config.family === "input";
   const minHeight = getNodeMinHeight(config);
   const executionVisual = resolveNodeExecutionVisual(data.executionStatus, data.isCurrentRunNode);
@@ -3154,6 +3149,8 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
     const stateKey = getBoundStateKeyForPort(config, side, portKey);
     return stateKey ? getStateFieldByKey(stateFields, stateKey) ?? null : null;
   };
+  const primaryOutputState = outputs[0] ? getBoundState("output", outputs[0].key) : null;
+  const primaryOutputStateKey = primaryOutputState?.key ?? outputs[0]?.key ?? null;
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isHoveringNode, setIsHoveringNode] = useState(false);
@@ -3262,7 +3259,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   function commitLabelEdit() {
     const nextLabel = draftLabel.trim();
     if (nextLabel && nextLabel !== displayName) {
-      data.onConfigChange?.((currentConfig) => ({ ...currentConfig, name: nextLabel }));
+      data.onRenameNode?.(nextLabel);
     }
     setIsEditingLabel(false);
   }
@@ -3270,106 +3267,21 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   function commitDescriptionEdit() {
     const nextDescription = draftDescription.trim();
     if (nextDescription !== displayDescription) {
-      data.onConfigChange?.((currentConfig) => ({ ...currentConfig, description: nextDescription }));
+      data.onUpdateNodeDescription?.(nextDescription);
     }
     setIsEditingDescription(false);
+  }
+
+  function updateCanonicalConfig(updater: (node: CanonicalNode) => CanonicalNode["config"]) {
+    data.onUpdateCanonicalNodeConfig?.(updater);
   }
 
   async function handleInputFileSelection(file: File | null) {
     if (!file || config.family !== "input") return;
     const envelope = await fileToEnvelope(file);
-    data.onConfigChange?.((currentConfig) => ({
-      ...(currentConfig as InputBoundaryNode),
-      valueType: envelope.detectedType,
-      output: {
-      ...(currentConfig as InputBoundaryNode).output,
-      valueType: envelope.detectedType,
-      },
-      value: JSON.stringify(envelope),
-    }));
-  }
-
-  function updateNodePort(side: "input" | "output", portIndex: number, nextPort: PortDefinition) {
-    data.onConfigChange?.((currentConfig) => {
-      if (currentConfig.family === "agent") {
-        const currentPorts = side === "input" ? currentConfig.inputs : currentConfig.outputs;
-        const previousPort = currentPorts[portIndex];
-        const nextPorts = [...currentPorts];
-        nextPorts[portIndex] = nextPort;
-        return side === "input"
-          ? {
-              ...currentConfig,
-              inputs: nextPorts,
-              stateReads: (currentConfig.stateReads ?? []).map((binding) =>
-                binding.inputKey === previousPort?.key ? { ...binding, inputKey: nextPort.key } : binding,
-              ),
-            }
-          : {
-              ...currentConfig,
-              outputs: nextPorts,
-              stateWrites: (currentConfig.stateWrites ?? []).map((binding) =>
-                binding.outputKey === previousPort?.key ? { ...binding, outputKey: nextPort.key } : binding,
-              ),
-            };
-      }
-      if (currentConfig.family === "condition" && side === "input") {
-        const previousPort = currentConfig.inputs[portIndex];
-        const nextPorts = [...currentConfig.inputs];
-        nextPorts[portIndex] = nextPort;
-        return {
-          ...currentConfig,
-          inputs: nextPorts,
-          stateReads: (currentConfig.stateReads ?? []).map((binding) =>
-            binding.inputKey === previousPort?.key ? { ...binding, inputKey: nextPort.key } : binding,
-          ),
-        };
-      }
-      return currentConfig;
-    });
-  }
-
-  function removeNodePort(side: "input" | "output", portIndex: number) {
-    data.onConfigChange?.((currentConfig) => {
-      if (currentConfig.family === "agent") {
-        const currentPorts = side === "input" ? currentConfig.inputs : currentConfig.outputs;
-        const removedPort = currentPorts[portIndex];
-        const nextPorts = currentPorts.filter((_, index) => index !== portIndex);
-        return side === "input"
-          ? {
-              ...currentConfig,
-              inputs: nextPorts,
-              stateReads: (currentConfig.stateReads ?? []).filter((binding) => binding.inputKey !== removedPort?.key),
-            }
-          : {
-              ...currentConfig,
-              outputs: nextPorts,
-              stateWrites: (currentConfig.stateWrites ?? []).filter((binding) => binding.outputKey !== removedPort?.key),
-            };
-      }
-      if (currentConfig.family === "condition" && side === "input") {
-        const removedPort = currentConfig.inputs[portIndex];
-        return {
-          ...currentConfig,
-          inputs: currentConfig.inputs.filter((_, index) => index !== portIndex),
-          stateReads: (currentConfig.stateReads ?? []).filter((binding) => binding.inputKey !== removedPort?.key),
-        };
-      }
-      return currentConfig;
-    });
-  }
-
-  function addNodePort(side: "input" | "output", port: PortDefinition) {
-    data.onConfigChange?.((currentConfig) => {
-      if (currentConfig.family === "agent") {
-        return side === "input"
-          ? { ...currentConfig, inputs: [...currentConfig.inputs, port] }
-          : { ...currentConfig, outputs: [...currentConfig.outputs, port] };
-      }
-      if (currentConfig.family === "condition" && side === "input") {
-        return { ...currentConfig, inputs: [...currentConfig.inputs, port] };
-      }
-      return currentConfig;
-    });
+    if (!primaryOutputStateKey || !data.onUpdateInputBoundaryType || !data.onUpdateInputBoundaryValue) return;
+    data.onUpdateInputBoundaryType(envelope.detectedType);
+    data.onUpdateInputBoundaryValue(JSON.stringify(envelope));
   }
 
   return (
@@ -3622,23 +3534,23 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                             : "border-[rgba(154,52,18,0.16)] bg-[rgba(255,255,255,0.72)] text-[var(--muted)] hover:bg-[rgba(255,248,240,0.92)]",
                         )}
                         onClick={() =>
-                          data.onConfigChange?.((currentConfig) => {
-                            const prev = currentConfig as InputBoundaryNode;
-                            if (option.value === "knowledge_base") {
-                              return {
-                                ...prev,
-                                valueType: option.value,
-                                value: (data.knowledgeBases ?? [])[0]?.name ?? "",
-                                output: { ...prev.output, key: "knowledge_base", label: "Knowledge Base", valueType: option.value },
-                              };
+                          (() => {
+                            const nextValue =
+                              option.value === "knowledge_base"
+                                ? (data.knowledgeBases ?? [])[0]?.name ?? ""
+                                : option.value === "file"
+                                  ? ""
+                                  : config.valueType === "knowledge_base"
+                                    ? ""
+                                    : config.value;
+
+                            if (!primaryOutputStateKey || !data.onUpdateInputBoundaryType || !data.onUpdateInputBoundaryValue) {
+                              return;
                             }
-                            return {
-                              ...prev,
-                              valueType: option.value,
-                              value: option.value === "file" ? "" : (prev.valueType === "knowledge_base" ? "" : prev.value),
-                              output: { ...prev.output, valueType: option.value },
-                            };
-                          })
+
+                            data.onUpdateInputBoundaryType(option.value);
+                            data.onUpdateInputBoundaryValue(nextValue);
+                          })()
                         }
                       >
                         {option.icon}
@@ -3660,17 +3572,12 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     side="output"
                     editable
                     boundState={getBoundState("output", port.key)}
-                    onRename={(nextLabel) =>
-                      getBoundState("output", port.key)
-                        ? data.onRenameStateName?.(getBoundState("output", port.key)!.key, nextLabel)
-                        : data.onConfigChange?.((currentConfig) => ({
-                            ...(currentConfig as InputBoundaryNode),
-                            output: {
-                              ...(currentConfig as InputBoundaryNode).output,
-                              label: nextLabel,
-                            },
-                          }))
-                    }
+                    onRename={(nextLabel) => {
+                      const boundState = getBoundState("output", port.key);
+                      if (boundState) {
+                        data.onRenameStateName?.(boundState.key, nextLabel);
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -3681,27 +3588,34 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
             <div className="grid grid-cols-2 items-start gap-x-6">
               <div className="grid gap-1">
                 {inputs.map((port, index) => (
-                  <PortRow
-                    key={`input-${port.key}`}
-                    nodeId={data.nodeId}
-                    port={port}
-                    side="input"
-                    boundState={getBoundState("input", port.key)}
-                    onRename={(nextLabel) => {
-                      const boundState = getBoundState("input", port.key);
-                      if (boundState) {
-                        data.onRenameStateName?.(boundState.key, nextLabel);
-                      }
-                    }}
-                    portEditor={
-                      config.family === "agent" || config.family === "condition"
-                        ? {
-                            onChange: (nextPort) => updateNodePort("input", index, nextPort),
-                            onRemove: inputs.length > 1 ? () => removeNodePort("input", index) : undefined,
+                  (() => {
+                    const boundState = getBoundState("input", port.key);
+                    return (
+                      <PortRow
+                        key={`input-${port.key}`}
+                        nodeId={data.nodeId}
+                        port={port}
+                        side="input"
+                        boundState={boundState}
+                        onRename={(nextLabel) => {
+                          if (boundState) {
+                            data.onRenameStateName?.(boundState.key, nextLabel);
                           }
-                        : undefined
-                    }
-                  />
+                        }}
+                        portEditor={
+                          (config.family === "agent" || config.family === "condition") && boundState
+                            ? {
+                                onChange: (nextPort) => data.onUpdateReadRequirement?.(boundState.key, Boolean(nextPort.required)),
+                                onRemove:
+                                  inputs.length > 1
+                                    ? () => data.onRemoveStateRelation?.("input", boundState.key)
+                                    : undefined,
+                              }
+                            : undefined
+                        }
+                      />
+                    );
+                  })()
                 ))}
                 {(config.family === "agent" || config.family === "condition") && data.connectingSourceType ? (
                   <div className="group relative flex min-h-6 items-center justify-start text-[0.9rem] text-[var(--muted)]">
@@ -3721,27 +3635,34 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
               </div>
               <div className="grid gap-1">
                 {outputs.map((port, index) => (
-                  <PortRow
-                    key={`output-${port.key}`}
-                    nodeId={data.nodeId}
-                    port={port}
-                    side="output"
-                    boundState={getBoundState("output", port.key)}
-                    onRename={(nextLabel) => {
-                      const boundState = getBoundState("output", port.key);
-                      if (boundState) {
-                        data.onRenameStateName?.(boundState.key, nextLabel);
-                      }
-                    }}
-                    portEditor={
-                      config.family === "agent"
-                        ? {
-                            onChange: (nextPort) => updateNodePort("output", index, nextPort),
-                            onRemove: outputs.length > 1 ? () => removeNodePort("output", index) : undefined,
+                  (() => {
+                    const boundState = getBoundState("output", port.key);
+                    return (
+                      <PortRow
+                        key={`output-${port.key}`}
+                        nodeId={data.nodeId}
+                        port={port}
+                        side="output"
+                        boundState={boundState}
+                        onRename={(nextLabel) => {
+                          if (boundState) {
+                            data.onRenameStateName?.(boundState.key, nextLabel);
                           }
-                        : undefined
-                    }
-                  />
+                        }}
+                        portEditor={
+                          config.family === "agent" && boundState
+                            ? {
+                                onChange: () => undefined,
+                                onRemove:
+                                  outputs.length > 1
+                                    ? () => data.onRemoveStateRelation?.("output", boundState.key)
+                                    : undefined,
+                              }
+                            : undefined
+                        }
+                      />
+                    );
+                  })()
                 ))}
 {/* hover add-output button removed — use the +output pill in the skill bar instead */}
               </div>
@@ -3759,17 +3680,12 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     side="input"
                     editable
                     boundState={getBoundState("input", port.key)}
-                    onRename={(nextLabel) =>
-                      getBoundState("input", port.key)
-                        ? data.onRenameStateName?.(getBoundState("input", port.key)!.key, nextLabel)
-                        : data.onConfigChange?.((currentConfig) => ({
-                            ...(currentConfig as OutputBoundaryNode),
-                            input: {
-                              ...(currentConfig as OutputBoundaryNode).input,
-                              label: nextLabel,
-                            },
-                          }))
-                    }
+                    onRename={(nextLabel) => {
+                      const boundState = getBoundState("input", port.key);
+                      if (boundState) {
+                        data.onRenameStateName?.(boundState.key, nextLabel);
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -3785,13 +3701,14 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     config.persistEnabled ? "bg-[var(--accent)]" : "bg-[rgba(154,52,18,0.2)]",
                   )}
                   onClick={() =>
-                    data.onConfigChange?.((currentConfig) => {
-                      const outputConfig = currentConfig as OutputBoundaryNode;
-                      return {
-                        ...outputConfig,
-                        persistEnabled: !outputConfig.persistEnabled,
-                      };
-                    })
+                    updateCanonicalConfig((node) =>
+                      node.kind === "output"
+                        ? {
+                            ...node.config,
+                            persistEnabled: !node.config.persistEnabled,
+                          }
+                        : node.config,
+                    )
                   }
                 >
                   <span
@@ -3826,10 +3743,16 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     <FieldSelect
                       value={config.value}
                       onValueChange={(nextValue) =>
-                        data.onConfigChange?.((currentConfig) => ({
-                          ...(currentConfig as InputBoundaryNode),
-                          value: nextValue,
-                        }))
+                        primaryOutputState && data.onUpdateInputBoundaryValue
+                          ? data.onUpdateInputBoundaryValue(nextValue)
+                          : updateCanonicalConfig((node) =>
+                              node.kind === "input"
+                                ? {
+                                    ...node.config,
+                                    value: nextValue,
+                                  }
+                                : node.config,
+                            )
                       }
                       className="min-h-[48px] rounded-[16px] px-3 py-3 text-sm"
                       options={(data.knowledgeBases ?? []).map((kb) => ({
@@ -3848,10 +3771,16 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     value={config.value}
                     rows={6}
                     onChange={(event) =>
-                      data.onConfigChange?.((currentConfig) => ({
-                        ...(currentConfig as InputBoundaryNode),
-                        value: event.target.value,
-                      }))
+                      primaryOutputState && data.onUpdateInputBoundaryValue
+                        ? data.onUpdateInputBoundaryValue(event.target.value)
+                        : updateCanonicalConfig((node) =>
+                            node.kind === "input"
+                              ? {
+                                  ...node.config,
+                                  value: event.target.value,
+                                }
+                              : node.config,
+                          )
                     }
                     className="min-h-[132px] h-full flex-1"
                   />
@@ -3914,10 +3843,16 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                             <UploadedAssetActionButton
                               label="取消上传"
                               onClick={() =>
-                                data.onConfigChange?.((currentConfig) => ({
-                                  ...(currentConfig as InputBoundaryNode),
-                                  value: "",
-                                }))
+                                primaryOutputState && data.onUpdateInputBoundaryValue
+                                  ? data.onUpdateInputBoundaryValue("")
+                                  : updateCanonicalConfig((node) =>
+                                      node.kind === "input"
+                                        ? {
+                                            ...node.config,
+                                            value: "",
+                                          }
+                                        : node.config,
+                                    )
                               }
                             >
                               <svg viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.5">
@@ -3942,7 +3877,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                   agentRuntime={agentRuntime}
                   availableModelRefs={data.availableModelRefs ?? []}
                   modelDisplayLookup={data.modelDisplayLookup ?? {}}
-                  onConfigChange={(updater) => data.onConfigChange?.((currentConfig) => updater(currentConfig as AgentNode))}
+                  onCanonicalConfigChange={updateCanonicalConfig}
                 />
               ) : null}
               {/* ── action buttons row: +skill, +input, +output ── */}
@@ -3969,13 +3904,14 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                       error={data.skillDefinitionsError ?? null}
                       onClose={() => setIsSkillPickerOpen(false)}
                       onPick={(definition) => {
-                        data.onConfigChange?.((currentConfig) => ({
-                          ...(currentConfig as AgentNode),
-                          skills: [
-                            ...(currentConfig as AgentNode).skills,
-                            { name: definition.skillKey, skillKey: definition.skillKey, inputMapping: {}, contextBinding: {}, usage: "optional" as const },
-                          ],
-                        }));
+                        updateCanonicalConfig((node) =>
+                          node.kind === "agent"
+                            ? {
+                                ...node.config,
+                                skills: [...node.config.skills, definition.skillKey],
+                              }
+                            : node.config,
+                        );
                         setIsSkillPickerOpen(false);
                       }}
                     />
@@ -4018,7 +3954,16 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                           type="button"
                           title="Remove skill"
                           className="ml-0.5 grid h-3.5 w-3.5 place-items-center rounded-full opacity-0 transition hover:bg-[rgba(185,28,28,0.12)] hover:text-[rgb(185,28,28)] group-hover/pill:opacity-100"
-                          onClick={() => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), skills: (currentConfig as AgentNode).skills.filter((s) => s.skillKey !== skill.skillKey) }))}
+                          onClick={() =>
+                            updateCanonicalConfig((node) =>
+                              node.kind === "agent"
+                                ? {
+                                    ...node.config,
+                                    skills: node.config.skills.filter((skillKey) => skillKey !== skill.skillKey),
+                                  }
+                                : node.config,
+                            )
+                          }
                         >
                           <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2">
                             <path d="m5 5 6 6" />
@@ -4034,7 +3979,16 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                 className="min-h-20"
                 value={config.taskInstruction}
                 placeholder="描述这个节点应该做什么（可留空）"
-                onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), taskInstruction: event.target.value }))}
+                onChange={(event) =>
+                  updateCanonicalConfig((node) =>
+                    node.kind === "agent"
+                      ? {
+                          ...node.config,
+                          taskInstruction: event.target.value,
+                        }
+                      : node.config,
+                  )
+                }
               />
               <details className="text-sm text-[var(--muted)]">
                 <summary className="cursor-pointer select-none py-1 text-xs font-medium uppercase tracking-wider">Advanced</summary>
@@ -4043,14 +3997,32 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     <>
                       <label className="grid gap-1.5">
                         <span>Temperature</span>
-                        <Input type="number" min={0} max={2} step={0.1} value={String(agentRuntime.temperature)} onChange={(event) => { const v = event.target.value === "" ? DEFAULT_AGENT_TEMPERATURE : Number(event.target.value); if (Number.isFinite(v)) data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as AgentNode), temperature: normalizeAgentTemperature(v) })); }} />
+                        <Input
+                          type="number"
+                          min={0}
+                          max={2}
+                          step={0.1}
+                          value={String(agentRuntime.temperature)}
+                          onChange={(event) => {
+                            const v = event.target.value === "" ? DEFAULT_AGENT_TEMPERATURE : Number(event.target.value);
+                            if (!Number.isFinite(v)) return;
+                            updateCanonicalConfig((node) =>
+                              node.kind === "agent"
+                                ? {
+                                    ...node.config,
+                                    temperature: normalizeAgentTemperature(v),
+                                  }
+                                : node.config,
+                            );
+                          }}
+                        />
                       </label>
                     </>
                   ) : null}
                   <AdvancedJsonSection
                     sections={[
-                      { label: "Inputs JSON", value: config.inputs, onChange: (v) => data.onConfigChange?.((c) => ({ ...(c as AgentNode), inputs: v as PortDefinition[] })) },
-                      { label: "Outputs JSON", value: config.outputs, onChange: (v) => data.onConfigChange?.((c) => ({ ...(c as AgentNode), outputs: v as PortDefinition[] })) },
+                      { label: "Inputs JSON", value: config.inputs, onChange: (v) => data.onReplaceReadPorts?.(v as PortDefinition[]) },
+                      { label: "Outputs JSON", value: config.outputs, onChange: (v) => data.onReplaceWritePorts?.(v as PortDefinition[]) },
                     ]}
                   />
                 </div>
@@ -4062,51 +4034,111 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
             <>
                   <BranchEditorList
                     branches={config.branches}
-                    onChange={(nextBranches) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), branches: nextBranches }))}
+                    onChange={(nextBranches) =>
+                      updateCanonicalConfig((node) =>
+                        node.kind === "condition"
+                          ? {
+                              ...node.config,
+                              branches: nextBranches.map((branch) => branch.key),
+                            }
+                          : node.config,
+                      )
+                    }
                   />
                   <label className="grid gap-1.5 text-sm text-[var(--muted)]">
                     <span>Condition Mode</span>
                     <FieldSelect
                       value={config.conditionMode}
                       onValueChange={(nextValue) =>
-                        data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), conditionMode: nextValue as ConditionNode["conditionMode"] }))
+                        updateCanonicalConfig((node) =>
+                          node.kind === "condition"
+                            ? {
+                                ...node.config,
+                                conditionMode: nextValue as ConditionNode["conditionMode"],
+                              }
+                            : node.config,
+                        )
                       }
                       options={CONDITION_MODE_SELECT_OPTIONS}
                     />
                   </label>
                   <RuleEditor
                     rule={config.rule}
-                    onChange={(nextRule) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), rule: nextRule }))}
+                    onChange={(nextRule) =>
+                      updateCanonicalConfig((node) =>
+                        node.kind === "condition"
+                          ? {
+                              ...node.config,
+                              rule: nextRule,
+                            }
+                          : node.config,
+                      )
+                    }
                   />
                   <MappingEditor
                     title="Branch Mapping"
                     value={config.branchMapping}
                     addLabel="Add Branch Mapping"
-                    onChange={(nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), branchMapping: nextValue }))}
+                    onChange={(nextValue) =>
+                      updateCanonicalConfig((node) =>
+                        node.kind === "condition"
+                          ? {
+                              ...node.config,
+                              branchMapping: nextValue,
+                            }
+                          : node.config,
+                      )
+                    }
                   />
                   <AdvancedJsonSection
                     sections={[
                       {
                         label: "Inputs JSON",
                         value: config.inputs,
-                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), inputs: nextValue as PortDefinition[] })),
+                        onChange: (nextValue) => data.onReplaceReadPorts?.(nextValue as PortDefinition[]),
                       },
                       {
                         label: "Branches JSON",
                         value: config.branches,
-                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), branches: nextValue as ConditionNode["branches"] })),
+                        onChange: (nextValue) =>
+                          updateCanonicalConfig((node) =>
+                            node.kind === "condition"
+                              ? {
+                                  ...node.config,
+                                  branches: (nextValue as ConditionNode["branches"]).map((branch) =>
+                                    typeof branch === "string" ? branch : branch.key,
+                                  ),
+                                }
+                              : node.config,
+                          ),
                         minHeight: "min-h-24",
                       },
                       {
                         label: "Rule JSON",
                         value: config.rule,
-                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), rule: nextValue as ConditionNode["rule"] })),
+                        onChange: (nextValue) =>
+                          updateCanonicalConfig((node) =>
+                            node.kind === "condition"
+                              ? {
+                                  ...node.config,
+                                  rule: nextValue as ConditionNode["rule"],
+                                }
+                              : node.config,
+                          ),
                         minHeight: "min-h-24",
                       },
                       {
                         label: "Branch Mapping JSON",
                         value: config.branchMapping,
-                        onChange: (nextValue) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as ConditionNode), branchMapping: nextValue as Record<string, string> })),
+                        onChange: (nextValue) =>
+                          updateCanonicalConfig((node) =>
+                            node.kind === "condition"
+                              ? {
+                                  ...node.config,
+                                  branchMapping: nextValue as Record<string, string>,
+                                }
+                              : node.config,
+                          ),
                         minHeight: "min-h-24",
                       },
                     ]}
@@ -4149,10 +4181,14 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                                 : "border-[rgba(154,52,18,0.16)] bg-[rgba(255,255,255,0.72)] text-[var(--muted)] hover:bg-[rgba(255,248,240,0.92)]",
                             )}
                             onClick={() =>
-                              data.onConfigChange?.((currentConfig) => ({
-                                ...(currentConfig as OutputBoundaryNode),
-                                displayMode: option.value,
-                              }))
+                              updateCanonicalConfig((node) =>
+                                node.kind === "output"
+                                  ? {
+                                      ...node.config,
+                                      displayMode: option.value,
+                                    }
+                                  : node.config,
+                              )
                             }
                           >
                             {option.label}
@@ -4180,10 +4216,14 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                                 : "border-[rgba(154,52,18,0.16)] bg-[rgba(255,255,255,0.72)] text-[var(--muted)] hover:bg-[rgba(255,248,240,0.92)]",
                             )}
                             onClick={() =>
-                              data.onConfigChange?.((currentConfig) => ({
-                                ...(currentConfig as OutputBoundaryNode),
-                                persistFormat: option.value,
-                              }))
+                              updateCanonicalConfig((node) =>
+                                node.kind === "output"
+                                  ? {
+                                      ...node.config,
+                                      persistFormat: option.value,
+                                    }
+                                  : node.config,
+                              )
                             }
                           >
                             {option.label}
@@ -4197,7 +4237,16 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     <span className="flex-shrink-0 text-xs">FileName</span>
                     <Input
                       value={config.fileNameTemplate}
-                      onChange={(event) => data.onConfigChange?.((currentConfig) => ({ ...(currentConfig as OutputBoundaryNode), fileNameTemplate: event.target.value }))}
+                      onChange={(event) =>
+                        updateCanonicalConfig((node) =>
+                          node.kind === "output"
+                            ? {
+                                ...node.config,
+                                fileNameTemplate: event.target.value,
+                              }
+                            : node.config,
+                        )
+                      }
                       placeholder={getNodeDisplayName(config) || "Output"}
                       className="h-8 min-w-0 flex-1 text-xs"
                     />
@@ -4362,8 +4411,8 @@ function StateBindingChip({
       <button
         type="button"
         className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full border border-[rgba(154,52,18,0.14)] bg-[rgba(255,252,247,0.92)] text-[var(--muted)] transition hover:border-[rgba(185,28,28,0.22)] hover:text-[rgb(153,27,27)]"
-        title="Remove binding"
-        aria-label="Remove binding"
+        title="Remove relation"
+        aria-label="Remove relation"
         onClick={onRemove}
       >
         <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="1.8">
@@ -4425,7 +4474,7 @@ function StateBindingCreateForm({
   if (eligibleNodes.length === 0) {
     return (
       <div className="rounded-[16px] border border-dashed border-[rgba(154,52,18,0.18)] bg-[rgba(255,255,255,0.78)] px-4 py-3 text-sm leading-6 text-[var(--muted)]">
-        No eligible nodes are available for this binding type.
+        No eligible nodes are available for this state relation.
       </div>
     );
   }
@@ -4822,7 +4871,7 @@ function StatePanel({
             <div className="text-[0.72rem] uppercase tracking-[0.16em] text-[var(--accent-strong)]">Graph State</div>
             <div className="mt-2 text-xl font-semibold text-[var(--text)]">State Panel</div>
             <div className="mt-1 text-sm leading-6 text-[var(--muted)]">
-              Edit graph-level state and sync reader or writer bindings back to nodes.
+              Edit graph-level state and keep reader and writer relations in sync with nodes.
             </div>
           </div>
           <button
@@ -4957,7 +5006,6 @@ function NodeSystemCanvas({
   const metadata = canonicalGraphState.metadata;
   const stateSchema = useMemo(() => buildEditorStateFieldsFromCanonicalGraph(canonicalGraphState), [canonicalGraphState]);
   const projectedNodes = useMemo(() => projectCanonicalConfigsOntoNodes(nodes, canonicalGraphState), [canonicalGraphState, nodes]);
-  const projectedNodeMap = useMemo(() => new Map(projectedNodes.map((node) => [node.id, node])), [projectedNodes]);
 
   const allPresets = useMemo(
     () => [...NODE_PRESETS_MOCK, ...persistedPresets.map((preset) => preset.definition)].filter((preset) => isPresetEligibleFamily(preset.family)),
@@ -5079,65 +5127,12 @@ function NodeSystemCanvas({
     [stateSchema],
   );
   const stateBindingNodeOptions = useMemo<StateBindingNodeOption[]>(
-    () =>
-      projectedNodes.map((node) => ({
-        id: node.id,
-        label: getCanonicalNodeDisplayName(canonicalGraph, node.id),
-        family: node.data.config.family,
-        inputs: resolvePortsForDisplay(node.data.config, "input", stateSchema),
-        outputs:
-          node.data.config.family === "output"
-            ? resolvePortsForDisplay(node.data.config, "input", stateSchema)
-            : resolvePortsForDisplay(node.data.config, "output", stateSchema),
-      })),
-    [canonicalGraph, projectedNodes, stateSchema],
+    () => buildStateBindingNodeOptions(canonicalGraph),
+    [canonicalGraph],
   );
   const stateBindingsByKey = useMemo(() => {
-    const readersByKey: Record<string, StateBindingSummary[]> = {};
-    const writersByKey: Record<string, StateBindingSummary[]> = {};
-
-    for (const node of projectedNodes) {
-      const nodeLabel = getCanonicalNodeDisplayName(canonicalGraph, node.id);
-      const inputPorts = resolvePortsForDisplay(node.data.config, "input", stateSchema);
-      const outputPorts =
-        node.data.config.family === "output"
-          ? resolvePortsForDisplay(node.data.config, "input", stateSchema)
-          : resolvePortsForDisplay(node.data.config, "output", stateSchema);
-
-      for (const binding of node.data.config.stateReads ?? []) {
-        const matchedPort = inputPorts.find((port) => port.key === binding.inputKey);
-        const summary: StateBindingSummary = {
-          id: `${node.id}:read:${binding.inputKey}:${binding.stateKey}`,
-          nodeId: node.id,
-          nodeLabel,
-          nodeFamily: node.data.config.family,
-          portKey: binding.inputKey,
-          portLabel: matchedPort?.label ?? binding.inputKey,
-          valid: Boolean(matchedPort),
-        };
-        readersByKey[binding.stateKey] = [...(readersByKey[binding.stateKey] ?? []), summary];
-      }
-
-      for (const binding of node.data.config.stateWrites ?? []) {
-        const matchedPort = outputPorts.find((port) => port.key === binding.outputKey);
-        const summary: StateBindingSummary = {
-          id: `${node.id}:write:${binding.outputKey}:${binding.stateKey}`,
-          nodeId: node.id,
-          nodeLabel,
-          nodeFamily: node.data.config.family,
-          portKey: binding.outputKey,
-          portLabel: matchedPort?.label ?? binding.outputKey,
-          valid: Boolean(matchedPort),
-        };
-        writersByKey[binding.stateKey] = [...(writersByKey[binding.stateKey] ?? []), summary];
-      }
-    }
-
-    return {
-      readersByKey,
-      writersByKey,
-    };
-  }, [canonicalGraph, projectedNodes, stateSchema]);
+    return buildStateBindingsByKeyFromCanonicalGraph(canonicalGraph);
+  }, [canonicalGraph]);
   const runNodeSummary = useMemo(() => summarizeRunNodeStates(nodeIds, runNodeStatusMap), [nodeIds, runNodeStatusMap]);
   const suppressOutputPreviewFallback = activeRunStatus === "queued" || activeRunStatus === "running";
   const knowledgeSkillSyncSignature = useMemo(
@@ -5880,15 +5875,6 @@ function NodeSystemCanvas({
     [projectedNodes, reactFlow, setNodes],
   );
 
-  const syncCanonicalNodeFromEditorConfig = useCallback(
-    (nodeId: string, nextConfig: NodePresetDefinition, nodeSnapshot?: FlowNode) => {
-      const sourceNode = nodeSnapshot ?? projectedNodeMap.get(nodeId);
-      if (!sourceNode) return;
-      setCanonicalGraphState((current) => applyEditorConfigToCanonicalGraph(current, sourceNode, nextConfig));
-    },
-    [projectedNodeMap],
-  );
-
   const upsertCanonicalStateField = useCallback((field: StateField) => {
     const normalizedKey = field.key.trim();
     if (!normalizedKey) return;
@@ -5925,16 +5911,9 @@ function NodeSystemCanvas({
       }
 
       setCanonicalGraphState((current) => renameStateKeyInCanonicalGraph(current, currentKey, normalizedKey));
-      const readNodeIds = new Set(
-        projectedNodes
-          .filter((node) => (node.data.config.stateReads ?? []).some((binding) => binding.stateKey === currentKey))
-          .map((node) => node.id),
-      );
-      const writeNodeIds = new Set(
-        projectedNodes
-          .filter((node) => (node.data.config.stateWrites ?? []).some((binding) => binding.stateKey === currentKey))
-          .map((node) => node.id),
-      );
+      const { readerNodeIds, writerNodeIds } = listStateBindingNodeIdsForCanonicalState(canonicalGraph, currentKey);
+      const readNodeIds = new Set(readerNodeIds);
+      const writeNodeIds = new Set(writerNodeIds);
       setEdges((current) =>
         current.map((edge) => ({
           ...edge,
@@ -5951,7 +5930,7 @@ function NodeSystemCanvas({
       setStatusMessage(`Renamed state ${currentKey} -> ${normalizedKey}`);
       return true;
     },
-    [projectedNodes, setEdges, stateSchema],
+    [canonicalGraph, setEdges, stateSchema],
   );
 
   const renameStateName = useCallback((stateKey: string, nextName: string) => {
@@ -5961,16 +5940,12 @@ function NodeSystemCanvas({
 
   const bindStateFieldToPort = useCallback(
     (nodeId: string, side: "input" | "output", field: StateField) => {
-      const targetNode = projectedNodeMap.get(nodeId);
       const canonicalNode = canonicalGraph.nodes[nodeId];
-      if (!targetNode) {
-        return false;
-      }
       if (!canonicalNode) {
         return false;
       }
 
-      const displayName = getNodeDisplayName(targetNode.data.config, targetNode.id);
+      const displayName = getCanonicalNodeDisplayName(canonicalGraph, nodeId);
 
       if (side === "input") {
         if (canonicalNode.kind === "agent" || canonicalNode.kind === "condition") {
@@ -6018,7 +5993,7 @@ function NodeSystemCanvas({
 
       return false;
     },
-    [canonicalGraph.nodes, projectedNodeMap],
+    [canonicalGraph],
   );
 
   const createStateAndBindToPort = useCallback(
@@ -6060,84 +6035,60 @@ function NodeSystemCanvas({
 
   const addStateReadBinding = useCallback(
     (stateKey: string, nodeId: string, inputKey: string) => {
-      const targetNode = projectedNodeMap.get(nodeId);
-      if (!targetNode) return false;
+      const canonicalNode = canonicalGraph.nodes[nodeId];
+      if (!canonicalNode) return false;
       const inputHandleId = buildHandleId("input", inputKey);
       const hasIncomingEdge = edges.some((edge) => edge.target === nodeId && edge.targetHandle === inputHandleId);
+      const nodeLabel = nodeLabelLookup.get(nodeId) ?? nodeId;
       if (hasIncomingEdge) {
-        setStatusMessage(`Node '${getNodeDisplayName(targetNode.data.config, targetNode.id)}' input '${inputKey}' is already connected by an edge.`);
+        setStatusMessage(`Node '${nodeLabel}' input '${inputKey}' is already connected by an edge.`);
         return false;
       }
-      const existingBinding = (targetNode.data.config.stateReads ?? []).find((binding) => binding.inputKey === inputKey);
-      if (existingBinding) {
-        setStatusMessage(`Node '${getNodeDisplayName(targetNode.data.config, targetNode.id)}' input '${inputKey}' already reads state '${existingBinding.stateKey}'.`);
+      if (canonicalNode.reads.some((binding) => binding.state === stateKey)) {
+        setStatusMessage(`Node '${nodeLabel}' already reads state '${stateKey}'.`);
         return false;
       }
-      const nextConfig = withNodeStateBindings(
-        targetNode.data.config,
-        [...(targetNode.data.config.stateReads ?? []), { stateKey, inputKey, required: false }],
-        targetNode.data.config.stateWrites ?? [],
-      );
-      syncCanonicalNodeFromEditorConfig(nodeId, nextConfig, targetNode);
-      setStatusMessage(`Bound state ${stateKey} to ${getNodeDisplayName(targetNode.data.config, targetNode.id)}.${inputKey}`);
+
+      setCanonicalGraphState((current) => bindStateToCanonicalNode(current, nodeId, "input", stateKey));
+      setStatusMessage(`Bound state ${stateKey} to ${nodeLabel}.${stateKey}`);
       return true;
     },
-    [edges, projectedNodeMap, syncCanonicalNodeFromEditorConfig],
+    [canonicalGraph.nodes, edges, nodeLabelLookup],
   );
 
   const removeStateReadBinding = useCallback(
     (stateKey: string, nodeId: string, inputKey: string) => {
-      const targetNode = projectedNodeMap.get(nodeId);
-      if (!targetNode) return;
-      const nextConfig = withNodeStateBindings(
-        targetNode.data.config,
-        (targetNode.data.config.stateReads ?? []).filter(
-          (binding) => !(binding.stateKey === stateKey && binding.inputKey === inputKey),
-        ),
-        targetNode.data.config.stateWrites ?? [],
-      );
-      syncCanonicalNodeFromEditorConfig(nodeId, nextConfig, targetNode);
+      if (!canonicalGraph.nodes[nodeId]) return;
+      setCanonicalGraphState((current) => removeStateFromCanonicalNode(current, nodeId, "input", stateKey));
       setStatusMessage(`Removed reader ${nodeLabelLookup.get(nodeId) ?? nodeId}.${inputKey} from state ${stateKey}`);
     },
-    [nodeLabelLookup, projectedNodeMap, syncCanonicalNodeFromEditorConfig],
+    [canonicalGraph.nodes, nodeLabelLookup],
   );
 
   const addStateWriteBinding = useCallback(
     (stateKey: string, nodeId: string, outputKey: string) => {
-      const targetNode = projectedNodeMap.get(nodeId);
-      if (!targetNode) return false;
-      const existingBinding = (targetNode.data.config.stateWrites ?? []).find((binding) => binding.outputKey === outputKey);
-      if (existingBinding) {
-        setStatusMessage(`Node '${getNodeDisplayName(targetNode.data.config, targetNode.id)}' output '${outputKey}' already writes state '${existingBinding.stateKey}'.`);
+      const canonicalNode = canonicalGraph.nodes[nodeId];
+      if (!canonicalNode) return false;
+      const nodeLabel = nodeLabelLookup.get(nodeId) ?? nodeId;
+      if (canonicalNode.writes.some((binding) => binding.state === stateKey)) {
+        setStatusMessage(`Node '${nodeLabel}' already writes state '${stateKey}'.`);
         return false;
       }
-      const nextConfig = withNodeStateBindings(
-        targetNode.data.config,
-        targetNode.data.config.stateReads ?? [],
-        [...(targetNode.data.config.stateWrites ?? []), { stateKey, outputKey, mode: "replace" }],
-      );
-      syncCanonicalNodeFromEditorConfig(nodeId, nextConfig, targetNode);
-      setStatusMessage(`Bound ${getNodeDisplayName(targetNode.data.config, targetNode.id)}.${outputKey} to state ${stateKey}`);
+
+      setCanonicalGraphState((current) => bindStateToCanonicalNode(current, nodeId, "output", stateKey));
+      setStatusMessage(`Bound ${nodeLabel}.${stateKey} to state ${stateKey}`);
       return true;
     },
-    [projectedNodeMap, syncCanonicalNodeFromEditorConfig],
+    [canonicalGraph.nodes, nodeLabelLookup],
   );
 
   const removeStateWriteBinding = useCallback(
     (stateKey: string, nodeId: string, outputKey: string) => {
-      const targetNode = projectedNodeMap.get(nodeId);
-      if (!targetNode) return;
-      const nextConfig = withNodeStateBindings(
-        targetNode.data.config,
-        targetNode.data.config.stateReads ?? [],
-        (targetNode.data.config.stateWrites ?? []).filter(
-          (binding) => !(binding.stateKey === stateKey && binding.outputKey === outputKey),
-        ),
-      );
-      syncCanonicalNodeFromEditorConfig(nodeId, nextConfig, targetNode);
+      if (!canonicalGraph.nodes[nodeId]) return;
+      setCanonicalGraphState((current) => removeStateFromCanonicalNode(current, nodeId, "output", stateKey));
       setStatusMessage(`Removed writer ${nodeLabelLookup.get(nodeId) ?? nodeId}.${outputKey} from state ${stateKey}`);
     },
-    [nodeLabelLookup, projectedNodeMap, syncCanonicalNodeFromEditorConfig],
+    [canonicalGraph.nodes, nodeLabelLookup],
   );
 
   return (
@@ -6159,27 +6110,52 @@ function NodeSystemCanvas({
         >
           <div className="absolute inset-0">
             <ReactFlow
-              nodes={projectedNodes.map((node) => ({
-                ...node,
-                data: {
-                  ...node.data,
-                  displayName: canonicalGraph.nodes[node.id]?.name?.trim() || getNodeDisplayName(node.data.config, node.id),
-                  displayDescription: canonicalGraph.nodes[node.id]?.description ?? node.data.config.description,
-                  previewText:
-                    node.data.config.family === "output" && suppressOutputPreviewFallback
-                      ? node.data.previewText
-                      : node.data.previewText || previewTextByNode[node.id] || "",
-                  executionStatus: runNodeStatusMap[node.id],
-                  isCurrentRunNode: currentRunNodeId === node.id,
-                  isExpanded: node.data.isExpanded,
-                  collapsedSize: node.data.collapsedSize ?? null,
-                  expandedSize: node.data.expandedSize ?? null,
-                  onConfigChange: (updater: (config: NodePresetDefinition) => NodePresetDefinition) => {
-                    const targetNode = projectedNodes.find((candidate) => candidate.id === node.id);
-                    if (targetNode) {
-                      const nextConfig = normalizeNodeConfig(updater(targetNode.data.config));
-                      syncCanonicalNodeFromEditorConfig(node.id, nextConfig, targetNode);
-                    }
+              nodes={projectedNodes.map((node) => {
+                const displayPorts = buildDisplayPortsForCanonicalNode(canonicalGraph, node.id);
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    displayName: canonicalGraph.nodes[node.id]?.name?.trim() || getNodeDisplayName(node.data.config, node.id),
+                    displayDescription: canonicalGraph.nodes[node.id]?.description ?? node.data.config.description,
+                    displayInputs: displayPorts.inputs,
+                    displayOutputs: displayPorts.outputs,
+                    previewText:
+                      node.data.config.family === "output" && suppressOutputPreviewFallback
+                        ? node.data.previewText
+                        : node.data.previewText || previewTextByNode[node.id] || "",
+                    executionStatus: runNodeStatusMap[node.id],
+                    isCurrentRunNode: currentRunNodeId === node.id,
+                    isExpanded: node.data.isExpanded,
+                    collapsedSize: node.data.collapsedSize ?? null,
+                    expandedSize: node.data.expandedSize ?? null,
+                  onUpdateCanonicalNodeConfig: (updater: (node: CanonicalNode) => CanonicalNode["config"]) => {
+                    setCanonicalGraphState((current) => updateCanonicalNodeConfig(current, node.id, updater));
+                  },
+                  onReplaceReadPorts: (ports: PortDefinition[]) => {
+                    setCanonicalGraphState((current) => replaceCanonicalNodeReadsFromPorts(current, node.id, ports));
+                  },
+                  onReplaceWritePorts: (ports: PortDefinition[]) => {
+                    setCanonicalGraphState((current) => replaceCanonicalNodeWritesFromPorts(current, node.id, ports));
+                  },
+                  onUpdateReadRequirement: (stateKey: string, required: boolean) => {
+                    setCanonicalGraphState((current) => updateCanonicalReadBindingRequired(current, node.id, stateKey, required));
+                  },
+                  onRemoveStateRelation: (side: "input" | "output", stateKey: string) => {
+                    setCanonicalGraphState((current) => removeStateFromCanonicalNode(current, node.id, side, stateKey));
+                  },
+                  onRenameNode: (nextName: string) => {
+                    setCanonicalGraphState((current) => renameCanonicalNodeName(current, node.id, nextName));
+                  },
+                  onUpdateNodeDescription: (nextDescription: string) => {
+                    setCanonicalGraphState((current) => renameCanonicalNodeDescription(current, node.id, nextDescription));
+                  },
+                  onUpdateInputBoundaryValue: (nextValue: unknown) => {
+                    setCanonicalGraphState((current) => updateCanonicalInputNodeValue(current, node.id, nextValue));
+                  },
+                  onUpdateInputBoundaryType: (nextType: ValueType) => {
+                    const nextStateType = stateFieldTypeToCanonicalStateType(valueTypeToStateFieldType(nextType));
+                    setCanonicalGraphState((current) => updateCanonicalInputNodeStateType(current, node.id, nextStateType));
                   },
                   onToggleExpanded: () => {
                     setNodes((current) =>
@@ -6302,16 +6278,17 @@ function NodeSystemCanvas({
                     }
                     return bound;
                   },
-                  onCreateStateAndBindToPort: (side: "input" | "output", field: StateField) => {
-                    const created = createStateAndBindToPort(node.id, side, field);
-                    if (created) {
-                      requestAnimationFrame(() => updateNodeInternals(node.id));
-                    }
-                    return created;
+                    onCreateStateAndBindToPort: (side: "input" | "output", field: StateField) => {
+                      const created = createStateAndBindToPort(node.id, side, field);
+                      if (created) {
+                        requestAnimationFrame(() => updateNodeInternals(node.id));
+                      }
+                      return created;
+                    },
+                    onOpenStatePanel: () => setIsStatePanelOpen(true),
                   },
-                  onOpenStatePanel: () => setIsStatePanelOpen(true),
-                },
-              }))}
+                };
+              })}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}

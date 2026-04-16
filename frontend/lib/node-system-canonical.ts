@@ -205,52 +205,51 @@ function valueTypeFromCanonicalState(stateType: CanonicalStateType): ValueType {
 }
 
 function collectStateReadsByPort(config: NodePresetDefinition): Record<string, { stateKey: string; required?: boolean }> {
-  const result: Record<string, { stateKey: string; required?: boolean }> = {};
-  for (const binding of config.stateReads ?? []) {
-    result[binding.inputKey] = {
-      stateKey: binding.stateKey,
-      required: binding.required,
-    };
-  }
-
   if (config.family === "agent" || config.family === "condition") {
-    for (const input of config.inputs) {
-      if (!result[input.key]) {
-        result[input.key] = {
+    return Object.fromEntries(
+      config.inputs.map((input) => [
+        input.key,
+        {
           stateKey: input.key,
           required: input.required,
-        };
-      }
-    }
-  } else if (config.family === "output") {
-    result[config.input.key] = result[config.input.key] ?? {
-      stateKey: config.input.key,
-      required: config.input.required,
+        },
+      ]),
+    );
+  }
+
+  if (config.family === "output") {
+    return {
+      [config.input.key]: {
+        stateKey: config.input.key,
+        required: config.input.required,
+      },
     };
   }
 
-  return result;
+  return {};
 }
 
 function collectStateWritesByPort(config: NodePresetDefinition): Record<string, { stateKey: string }> {
-  const result: Record<string, { stateKey: string }> = {};
-  for (const binding of config.stateWrites ?? []) {
-    result[binding.outputKey] = {
-      stateKey: binding.stateKey,
+  if (config.family === "agent") {
+    return Object.fromEntries(
+      config.outputs.map((output) => [
+        output.key,
+        {
+          stateKey: output.key,
+        },
+      ]),
+    );
+  }
+
+  if (config.family === "input") {
+    return {
+      [config.output.key]: {
+        stateKey: config.output.key,
+      },
     };
   }
 
-  if (config.family === "agent") {
-    for (const output of config.outputs) {
-      if (!result[output.key]) {
-        result[output.key] = { stateKey: output.key };
-      }
-    }
-  } else if (config.family === "input") {
-    result[config.output.key] = result[config.output.key] ?? { stateKey: config.output.key };
-  }
-
-  return result;
+  return {};
 }
 
 export function buildCanonicalNodeFromEditorConfig(params: {
@@ -395,6 +394,7 @@ export function buildEditorNodeConfigFromCanonicalNode(
   if (node.kind === "input") {
     const outputState = node.writes[0]?.state ?? "value";
     const outputPort = buildEditorPort(outputState, stateSchema, false);
+    const stateDefinition = stateSchema[outputState];
     return {
       presetId: `node.input.${nodeId}`,
       name: stripString(node.name) || nodeId,
@@ -402,13 +402,7 @@ export function buildEditorNodeConfigFromCanonicalNode(
       family: "input",
       valueType: outputPort.valueType,
       output: outputPort,
-      value: String(node.config.value ?? ""),
-      stateReads: [],
-        stateWrites: node.writes.map((binding) => ({
-          stateKey: binding.state,
-          outputKey: binding.state,
-          mode: binding.mode,
-        })),
+      value: String(stateDefinition?.value ?? node.config.value ?? ""),
     } satisfies InputBoundaryNode;
   }
 
@@ -427,16 +421,6 @@ export function buildEditorNodeConfigFromCanonicalNode(
       model: node.config.model,
       thinkingMode: node.config.thinkingMode,
       temperature: node.config.temperature,
-      stateReads: node.reads.map((binding) => ({
-        stateKey: binding.state,
-        inputKey: binding.state,
-        required: binding.required,
-      })),
-        stateWrites: node.writes.map((binding) => ({
-          stateKey: binding.state,
-          outputKey: binding.state,
-          mode: binding.mode,
-        })),
     } satisfies AgentNode;
   }
 
@@ -451,16 +435,6 @@ export function buildEditorNodeConfigFromCanonicalNode(
       conditionMode: node.config.conditionMode,
       rule: node.config.rule,
       branchMapping: node.config.branchMapping,
-      stateReads: node.reads.map((binding) => ({
-        stateKey: binding.state,
-        inputKey: binding.state,
-        required: binding.required,
-      })),
-        stateWrites: node.writes.map((binding) => ({
-          stateKey: binding.state,
-          outputKey: binding.state,
-          mode: binding.mode,
-        })),
     } satisfies ConditionNode;
   }
 
@@ -475,12 +449,6 @@ export function buildEditorNodeConfigFromCanonicalNode(
     persistEnabled: node.config.persistEnabled,
     persistFormat: node.config.persistFormat,
     fileNameTemplate: node.config.fileNameTemplate,
-    stateReads: node.reads.map((binding) => ({
-      stateKey: binding.state,
-      inputKey: binding.state,
-      required: binding.required,
-      })),
-    stateWrites: [],
   } satisfies OutputBoundaryNode;
 }
 

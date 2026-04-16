@@ -258,6 +258,21 @@ class LangGraphMigrationTests(unittest.TestCase):
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["runtime_backend"], "langgraph")
         self.assertTrue(result["lifecycle"]["updated_at"])
+
+    @patch("app.core.langgraph.runtime.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response)
+    @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
+    @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
+    def test_hello_world_runtime_prefers_state_schema_value_for_input_nodes(self):
+        graph = _load_hello_world_graph()
+        graph.state_schema["question"].value = "来自 state_schema 的问题"
+        graph.nodes["input_question"].config.value = "来自节点 config 的旧值"
+
+        result = execute_node_system_graph_langgraph(graph, persist_progress=False)
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["final_result"], "answer_helper:来自 state_schema 的问题")
         self.assertEqual(result["checkpoint_metadata"]["available"], True)
         self.assertTrue(result["checkpoint_metadata"]["checkpoint_id"])
         self.assertEqual(result["checkpoint_metadata"]["thread_id"], result["run_id"])

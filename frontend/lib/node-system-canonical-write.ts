@@ -5,6 +5,8 @@ import {
 import type {
   GraphPosition,
   NodePresetDefinition,
+  PortDefinition,
+  ValueType,
   NodeViewportSize,
 } from "./node-system-schema.ts";
 
@@ -53,17 +55,14 @@ function getPortKeyFromHandle(handleId?: string | null) {
 
 function getBoundStateKeyForPort(config: NodePresetDefinition, side: "input" | "output", portKey: string) {
   if (side === "input") {
-    if (config.family === "agent" || config.family === "condition") {
-      return (config.stateReads ?? []).find((binding) => binding.inputKey === portKey)?.stateKey ?? portKey;
-    }
-    if (config.family === "output") {
-      return (config.stateReads ?? []).find((binding) => binding.inputKey === portKey)?.stateKey ?? portKey;
+    if (config.family === "agent" || config.family === "condition" || config.family === "output") {
+      return portKey;
     }
     return null;
   }
 
   if (config.family === "agent" || config.family === "input") {
-    return (config.stateWrites ?? []).find((binding) => binding.outputKey === portKey)?.stateKey ?? portKey;
+    return portKey;
   }
 
   return null;
@@ -76,6 +75,65 @@ function chooseStateKeyForConnection(sourceStateKey: string, targetStateKey: str
   if (sourceGeneric && !targetGeneric) return targetStateKey;
   if (targetGeneric && !sourceGeneric) return sourceStateKey;
   return targetStateKey || sourceStateKey;
+}
+
+function valueTypeToCanonicalStateType(valueType: ValueType): CanonicalGraphPayload["state_schema"][string]["type"] {
+  switch (valueType) {
+    case "json":
+      return "json";
+    case "image":
+      return "image";
+    case "audio":
+      return "audio";
+    case "video":
+      return "video";
+    case "file":
+      return "file";
+    case "knowledge_base":
+      return "knowledge_base";
+    case "text":
+    case "any":
+    default:
+      return "text";
+  }
+}
+
+function defaultCanonicalStateValue(type: CanonicalGraphPayload["state_schema"][string]["type"]): unknown {
+  switch (type) {
+    case "number":
+      return 0;
+    case "boolean":
+      return false;
+    case "object":
+    case "json":
+      return {};
+    case "array":
+    case "file_list":
+      return [];
+    default:
+      return "";
+  }
+}
+
+function upsertCanonicalStatesFromPorts<T extends CanonicalGraphPayload>(graph: T, ports: PortDefinition[]): T {
+  let nextGraph = graph;
+
+  for (const port of ports) {
+    const currentDefinition = nextGraph.state_schema[port.key];
+    const nextType = valueTypeToCanonicalStateType(port.valueType);
+    const nextName = port.label.trim() || port.key;
+    const nextDefinition = {
+      name: nextName,
+      description: currentDefinition?.description ?? "",
+      type: nextType,
+      value: currentDefinition?.value ?? defaultCanonicalStateValue(nextType),
+      color: currentDefinition?.color ?? "",
+    };
+
+    nextGraph = upsertStateInCanonicalGraph(nextGraph, port.key, nextDefinition);
+  }
+
+  return nextGraph;
 }
 
 export function buildCanonicalNodeFromEditorState(
@@ -530,6 +588,242 @@ export function renameStateNameInCanonicalGraph<T extends CanonicalGraphPayload>
   };
 }
 
+export function renameCanonicalNodeName<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  nextName: string,
+): T {
+  const node = graph.nodes[nodeId];
+  if (!node) {
+    return graph;
+  }
+
+  const normalizedName = nextName.trim() || nodeId;
+  if (node.name === normalizedName) {
+    return graph;
+  }
+
+  return {
+    ...graph,
+    nodes: {
+      ...graph.nodes,
+      [nodeId]: {
+        ...node,
+        name: normalizedName,
+      },
+    },
+  };
+}
+
+export function renameCanonicalNodeDescription<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  nextDescription: string,
+): T {
+  const node = graph.nodes[nodeId];
+  if (!node) {
+    return graph;
+  }
+
+  const normalizedDescription = nextDescription.trim();
+  if ((node.description ?? "") === normalizedDescription) {
+    return graph;
+  }
+
+  return {
+    ...graph,
+    nodes: {
+      ...graph.nodes,
+      [nodeId]: {
+        ...node,
+        description: normalizedDescription,
+      },
+    },
+  };
+}
+
+export function updateCanonicalInputNodeValue<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  nextValue: unknown,
+): T {
+  const node = graph.nodes[nodeId];
+  if (!node || node.kind !== "input") {
+    return graph;
+  }
+
+  const boundStateKey = node.writes[0]?.state;
+  const boundState = boundStateKey ? graph.state_schema[boundStateKey] : null;
+  const nodeValueUnchanged = serializeNode(node.config.value) === serializeNode(nextValue);
+  const stateValueUnchanged = !boundState || serializeNode(boundState.value) === serializeNode(nextValue);
+
+  if (nodeValueUnchanged && stateValueUnchanged) {
+    return graph;
+  }
+
+  return {
+    ...graph,
+    state_schema:
+      boundStateKey && boundState
+        ? {
+            ...graph.state_schema,
+            [boundStateKey]: {
+              ...boundState,
+              value: nextValue,
+            },
+          }
+        : graph.state_schema,
+    nodes: {
+      ...graph.nodes,
+      [nodeId]: {
+        ...node,
+        config: {
+          ...node.config,
+          value: nextValue,
+        },
+      },
+    },
+  };
+}
+
+export function updateCanonicalInputNodeStateType<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  nextType: T["state_schema"][string]["type"],
+): T {
+  const node = graph.nodes[nodeId];
+  if (!node || node.kind !== "input") {
+    return graph;
+  }
+
+  const boundStateKey = node.writes[0]?.state;
+  const boundState = boundStateKey ? graph.state_schema[boundStateKey] : null;
+  if (!boundStateKey || !boundState || boundState.type === nextType) {
+    return graph;
+  }
+
+  return {
+    ...graph,
+    state_schema: {
+      ...graph.state_schema,
+      [boundStateKey]: {
+        ...boundState,
+        type: nextType,
+      },
+    },
+  };
+}
+
+export function updateCanonicalNode<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  updater: (node: T["nodes"][string]) => T["nodes"][string],
+): T {
+  const node = graph.nodes[nodeId] as T["nodes"][string] | undefined;
+  if (!node) {
+    return graph;
+  }
+
+  const nextNode = updater(node);
+  if (serializeNode(node) === serializeNode(nextNode)) {
+    return graph;
+  }
+
+  return {
+    ...graph,
+    nodes: {
+      ...graph.nodes,
+      [nodeId]: nextNode,
+    },
+  };
+}
+
+export function updateCanonicalNodeConfig<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  updater: (node: T["nodes"][string]) => T["nodes"][string]["config"],
+): T {
+  return updateCanonicalNode(graph, nodeId, (node) => {
+    const nextConfig = updater(node);
+    if (serializeNode(node.config) === serializeNode(nextConfig)) {
+      return node;
+    }
+
+    return {
+      ...node,
+      config: nextConfig,
+    } as T["nodes"][string];
+  });
+}
+
+export function updateCanonicalReadBindingRequired<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  stateKey: string,
+  required: boolean,
+): T {
+  return updateCanonicalNode(graph, nodeId, (node) => {
+    const nextReads = node.reads.map((binding) =>
+      binding.state === stateKey ? { ...binding, required } : binding,
+    );
+
+    if (serializeNode(node.reads) === serializeNode(nextReads)) {
+      return node;
+    }
+
+    return {
+      ...node,
+      reads: nextReads,
+    };
+  });
+}
+
+export function replaceCanonicalNodeReadsFromPorts<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  ports: PortDefinition[],
+): T {
+  const graphWithStates = upsertCanonicalStatesFromPorts(graph, ports);
+  return updateCanonicalNode(graphWithStates, nodeId, (node) => {
+    const nextReads = ports.map((port) => ({
+      state: port.key,
+      required: Boolean(port.required),
+    }));
+
+    if (serializeNode(node.reads) === serializeNode(nextReads)) {
+      return node;
+    }
+
+    return {
+      ...node,
+      reads: nextReads,
+    };
+  });
+}
+
+export function replaceCanonicalNodeWritesFromPorts<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  ports: PortDefinition[],
+): T {
+  const graphWithStates = upsertCanonicalStatesFromPorts(graph, ports);
+  return updateCanonicalNode(graphWithStates, nodeId, (node) => {
+    const nextWrites = ports.map((port) => ({
+      state: port.key,
+      mode: "replace" as const,
+    }));
+
+    if (serializeNode(node.writes) === serializeNode(nextWrites)) {
+      return node;
+    }
+
+    return {
+      ...node,
+      writes: nextWrites,
+    };
+  });
+}
+
 export function deleteStateFromCanonicalGraph<T extends CanonicalGraphPayload>(
   graph: T,
   stateKey: string,
@@ -565,13 +859,28 @@ export function composeCanonicalGraphForSubmission<T extends CanonicalGraphPaylo
 
   for (const [nodeId, currentNode] of Object.entries(current.nodes)) {
     const derivedNode = projection.nodes[nodeId];
-    mergedNodes[nodeId] = derivedNode
+    const mergedNode = derivedNode
       ? ({
           ...derivedNode,
           ...currentNode,
           ui: derivedNode.ui,
         } as T["nodes"][string])
       : (currentNode as T["nodes"][string]);
+
+    if (mergedNode.kind === "input") {
+      const boundStateKey = mergedNode.writes[0]?.state;
+      const boundState = boundStateKey ? current.state_schema[boundStateKey] : null;
+      mergedNodes[nodeId] = {
+        ...mergedNode,
+        config: {
+          ...mergedNode.config,
+          value: boundState?.value ?? mergedNode.config.value,
+        },
+      } as T["nodes"][string];
+      continue;
+    }
+
+    mergedNodes[nodeId] = mergedNode;
   }
 
   return {

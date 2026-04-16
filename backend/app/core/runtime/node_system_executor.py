@@ -280,7 +280,7 @@ def _execute_input_node(
     outputs: dict[str, Any] = {}
     for binding in node.writes:
         definition = state_schema[binding.state]
-        raw_value = node.config.value
+        raw_value = definition.value
         value = _coerce_input_boundary_value(raw_value, definition.type)
         outputs[binding.state] = value
 

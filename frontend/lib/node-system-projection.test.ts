@@ -51,8 +51,6 @@ test("projectCanonicalConfigsOntoNodes refreshes mirrored node config from canon
       valueType: "text",
     },
     value: "stale value",
-    stateReads: [],
-    stateWrites: [{ stateKey: "question", outputKey: "question", mode: "replace" }],
   };
 
   const nodes = [
@@ -72,6 +70,68 @@ test("projectCanonicalConfigsOntoNodes refreshes mirrored node config from canon
   assert.equal(projected.description, "Collect the user question.");
   assert.equal(projected.output.label, "Question");
   assert.equal(projected.value, "What is GraphiteUI?");
+});
+
+test("projectCanonicalConfigsOntoNodes prefers canonical state default over stale input node config value", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: "graph_test",
+    name: "Projection Test",
+    state_schema: {
+      question: {
+        name: "Question",
+        description: "User question",
+        type: "text",
+        value: "Value from state schema",
+        color: "#d97706",
+      },
+    },
+    nodes: {
+      input_question: {
+        kind: "input",
+        name: "Input Question",
+        description: "Collect the user question.",
+        ui: {
+          position: { x: 0, y: 0 },
+          collapsed: false,
+        },
+        reads: [],
+        writes: [{ state: "question", mode: "replace" }],
+        config: {
+          value: "stale node config value",
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const next = projectCanonicalConfigsOntoNodes(
+    [
+      {
+        id: "input_question",
+        data: {
+          config: {
+            presetId: "node.input.input_question",
+            family: "input" as const,
+            name: "Input Question",
+            description: "Collect the user question.",
+            valueType: "text" as const,
+            output: {
+              key: "question",
+              label: "Question",
+              valueType: "text" as const,
+            },
+            value: "older mirrored value",
+          },
+        },
+      },
+    ],
+    graph,
+  );
+
+  const projected = next[0]?.data.config as InputBoundaryNode;
+  assert.equal(projected.value, "Value from state schema");
 });
 
 test("projectCanonicalConfigsOntoNodes is a no-op when mirrored config already matches canonical graph", () => {
@@ -131,8 +191,6 @@ test("projectCanonicalConfigsOntoNodes is a no-op when mirrored config already m
             persistEnabled: false,
             persistFormat: "auto" as const,
             fileNameTemplate: "",
-            stateReads: [{ stateKey: "answer", inputKey: "answer", required: true }],
-            stateWrites: [],
           },
         },
       },

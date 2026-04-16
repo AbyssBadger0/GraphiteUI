@@ -24,16 +24,18 @@
 - 后端模板、图、保存、校验、运行、LangGraph 导出都已经以正式 `node_system` schema 为边界
 - `/api/templates`、`/api/graphs/*` 和 LangGraph runtime 直接消费正式协议
 - 前端在接口边界上已经提交正式协议
-- 但编辑器内部仍保留一层独立于正式协议的编辑视图模型：
+- 前端已经完成这几项收口：
+  - 节点与 state 的正式读写关系完全以 canonical `reads / writes` 为准
+  - `stateReads / stateWrites` 已从前端正式节点类型和主转换链移除
+  - 节点卡片、State Panel、输入节点值同步、运行前提交都已 canonical-first
+  - 后端已经拒绝 `defaultValue`，前后端正式字段边界一致
+- 当前剩余问题主要集中在编辑器内部仍保留一层视图壳：
   - `NodePresetDefinition`
   - `PortDefinition`
   - `StateField`
   - `SkillAttachment`
-- 当前仍存在明确的兼容/回退逻辑：
-  - `label` 回退
-  - `defaultValue` 回退
-  - `text -> string` 类型映射
-  - 从旧 `stateReads/stateWrites` 与端口结构推导 canonical `reads/writes`
+  - `EditorPresetRecord`
+- ReactFlow `nodes` 里仍然保留 `data.config` 镜像，编辑器仍通过投影层把 canonical 图转换成前端视图对象
 
 目标：
 
@@ -51,88 +53,54 @@
 
 执行顺序：
 
-### Phase A：明确唯一业务数据源
+### Phase A：删掉 ReactFlow `data.config` 业务镜像
 
 范围：
 
-- `canonicalGraphState` 成为节点、state、边、条件边的唯一业务真相
-- ReactFlow 里的 `nodes / edges` 只保留渲染所需字段：
+- ReactFlow 节点只保留渲染信息：
   - 位置
   - 折叠状态
   - 框体尺寸
   - 局部 UI 暂态
-- 节点卡片、State Panel、运行前保存逻辑都直接围绕 canonical graph 读写
+- `NodeCard` 与相关编辑弹层不再依赖 `data.config`
+- `projectCanonicalConfigsOntoNodes` 不再承担主业务投影职责
 
 完成标准：
 
-- 业务字段只有一份主存储
-- 节点编辑不会再先改旧视图模型、再投影回 canonical
-- 保存、校验、运行继续直接提交正式协议
-- 视觉效果不变
-
-### Phase B：节点与 State Panel 直接围绕 canonical 渲染
-
-范围：
-
-- `NodeCard` 直接读取 canonical node
-- `StatePanel` 直接读取 canonical `state_schema`
-- reader / writer 摘要直接从 canonical `reads / writes` 派生
-- 节点标题、描述、state 展示都不再依赖旧壳类型做二次搬运
-
-完成标准：
-
-- state、端口、节点显示信息的源头唯一
-- State Panel 改名、节点端口改名都直接改正式数据源
+- ReactFlow 层不再保存第二份节点业务协议
+- 节点编辑直接改 canonical graph
 - 不引入新的视觉差异
 
-### Phase C：端口语义去副本
+### Phase B：技能与预设围绕 canonical 收口
 
 范围：
 
-- 删除或降级 `PortDefinition.label`
-- state 绑定端口的显示名统一直接取 `state.name`
-- 双击端口改名时，直接修改对应 state
-- 只有 condition 的 branch 分支名保留独立语义；普通 state 绑定端口不再维护第二份名称
+- 继续压缩 `SkillAttachment` 的业务职责
+- agent 技能区显示元数据通过 `skillDefinitions` 查表补充，而不是靠本地壳对象承载主语义
+- preset 主链改成以 canonical preset 为唯一持久化结构
+- 删除 `EditorPresetRecord` 中只为兼容旧编辑协议存在的 definition 壳
 
 完成标准：
 
-- 端口名没有第二份业务副本
-- state 改名和端口改名完全共用同一源数据
-- 不再需要为端口名做额外同步逻辑
-
-### Phase D：技能与预设围绕 canonical 收口
-
-范围：
-
-- 去掉 `SkillAttachment` 作为主业务结构
-- agent 的技能主存储直接收口为 `string[]`
-- 技能显示元数据通过 `skillDefinitions` 查表补充
-- preset 主链以 canonical preset 为基础
-- 删除 `EditorPresetRecord` 中不必要的旧 definition 壳子
-
-完成标准：
-
-- 技能区显示不变
-- 自动挂载知识库 skill 逻辑不变
+- 技能显示与知识库自动挂载行为不变
 - 创建节点、保存预设、加载预设不再要求旧编辑协议做中转
+- preset 与 graph 的保存/恢复都直接围绕正式协议
 
-### Phase E：删除旧字段兼容与历史回退
+### Phase C：删除剩余历史映射与无用 helper
 
 范围：
 
-- 删除前端的 `label` / `defaultValue` 回退
-- 删除后端 schema 对 `defaultValue` 的兼容接收
-- 删除 `text -> string` 的历史映射
-- 删除旧 `extractLegacyStateReads / extractLegacyStateWrites` 路径
-- 删除不再使用的 helper / 类型 / 映射函数
+- 删除剩余的 `text -> string` 映射和不再必要的转换辅助
+- 清理只为历史编辑模型服务的 helper、类型和中转函数
+- 检查并删除已经失去调用方的旧逻辑
 
 完成标准：
 
 - 编辑器内部不再依赖旧字段兜底
-- 正式协议字段集合在前后端保持一致
-- 兼容层退场后，保存/运行/导出结果不变
+- 不再保留无主的兼容函数和僵尸类型
+- 保存/运行/导出结果保持不变
 
-### Phase F：零视觉回归验收
+### Phase D：零视觉回归验收
 
 范围：
 

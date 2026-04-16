@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import type { CanonicalGraphPayload } from "./node-system-canonical.ts";
-import type { AgentNode, OutputBoundaryNode } from "./node-system-schema.ts";
+import type { AgentNode, ConditionNode, InputBoundaryNode, OutputBoundaryNode, PortDefinition } from "./node-system-schema.ts";
 import {
   addEditorNodeToCanonicalGraph,
   applyEditorConfigToCanonicalGraph,
@@ -13,8 +13,17 @@ import {
   applyFlowProjectionToCanonicalGraph,
   deleteStateFromCanonicalGraph,
   removeStateFromCanonicalNode,
+  renameCanonicalNodeDescription,
+  renameCanonicalNodeName,
   renameStateKeyInCanonicalGraph,
   renameStateNameInCanonicalGraph,
+  updateCanonicalReadBindingRequired,
+  updateCanonicalNodeConfig,
+  updateCanonicalNode,
+  updateCanonicalInputNodeStateType,
+  updateCanonicalInputNodeValue,
+  replaceCanonicalNodeReadsFromPorts,
+  replaceCanonicalNodeWritesFromPorts,
   upsertStateInCanonicalGraph,
 } from "./node-system-canonical-write.ts";
 
@@ -72,8 +81,6 @@ test("applyEditorConfigToCanonicalGraph updates canonical node from editor confi
     persistEnabled: true,
     persistFormat: "json",
     fileNameTemplate: "answer.json",
-    stateReads: [{ stateKey: "answer", inputKey: "answer", required: true }],
-    stateWrites: [],
   };
 
   const next = applyEditorConfigToCanonicalGraph(graph, {
@@ -160,11 +167,161 @@ test("applyEditorConfigToCanonicalGraph returns the same graph when canonical no
       valueType: "text",
     },
     value: "What is GraphiteUI?",
-    stateReads: [],
-    stateWrites: [{ stateKey: "question", outputKey: "question", mode: "replace" }],
   });
 
   assert.equal(next, graph);
+});
+
+test("applyEditorConfigToCanonicalGraph ignores legacy output state mirror fields and derives reads from the input port", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: "graph_test",
+    name: "Legacy Read Mirror Test",
+    state_schema: {
+      answer: {
+        name: "Answer",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#d97706",
+      },
+      stale_answer: {
+        name: "Stale Answer",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#7c3aed",
+      },
+    },
+    nodes: {
+      output_answer: {
+        kind: "output",
+        name: "Output Answer",
+        description: "",
+        ui: {
+          position: { x: 0, y: 0 },
+          collapsed: false,
+        },
+        reads: [{ state: "answer", required: true }],
+        writes: [],
+        config: {
+          displayMode: "auto",
+          persistEnabled: false,
+          persistFormat: "auto",
+          fileNameTemplate: "",
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const nextConfig = {
+    presetId: "node.output.output_answer",
+    family: "output" as const,
+    name: "Output Answer",
+    description: "",
+    input: {
+      key: "answer",
+      label: "Answer",
+      valueType: "text" as const,
+      required: true,
+    },
+    displayMode: "auto" as const,
+    persistEnabled: false,
+    persistFormat: "auto" as const,
+    fileNameTemplate: "",
+    stateReads: [{ stateKey: "stale_answer", inputKey: "answer", required: true }],
+  } satisfies OutputBoundaryNode & {
+    stateReads: Array<{ stateKey: string; inputKey: string; required?: boolean }>;
+  };
+
+  const next = applyEditorConfigToCanonicalGraph(
+    graph,
+    {
+      id: "output_answer",
+      position: { x: 0, y: 0 },
+      data: {
+        isExpanded: true,
+      },
+    },
+    nextConfig,
+  );
+
+  assert.deepEqual(next.nodes.output_answer.reads, [{ state: "answer", required: true }]);
+});
+
+test("applyEditorConfigToCanonicalGraph ignores legacy input state mirror fields and derives writes from the output port", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: "graph_test",
+    name: "Legacy Write Mirror Test",
+    state_schema: {
+      question: {
+        name: "Question",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#d97706",
+      },
+      stale_question: {
+        name: "Stale Question",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#7c3aed",
+      },
+    },
+    nodes: {
+      input_question: {
+        kind: "input",
+        name: "Input Question",
+        description: "",
+        ui: {
+          position: { x: 0, y: 0 },
+          collapsed: false,
+        },
+        reads: [],
+        writes: [{ state: "question", mode: "replace" }],
+        config: {
+          value: "",
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const nextConfig = {
+    presetId: "node.input.input_question",
+    family: "input" as const,
+    name: "Input Question",
+    description: "",
+    valueType: "text" as const,
+    output: {
+      key: "question",
+      label: "Question",
+      valueType: "text" as const,
+    },
+    value: "",
+    stateWrites: [{ stateKey: "stale_question", outputKey: "question", mode: "replace" as const }],
+  } satisfies InputBoundaryNode & {
+    stateWrites: Array<{ stateKey: string; outputKey: string; mode?: "replace" }>;
+  };
+
+  const next = applyEditorConfigToCanonicalGraph(
+    graph,
+    {
+      id: "input_question",
+      position: { x: 0, y: 0 },
+      data: {
+        isExpanded: true,
+      },
+    },
+    nextConfig,
+  );
+
+  assert.deepEqual(next.nodes.input_question.writes, [{ state: "question", mode: "replace" }]);
 });
 
 test("renameStateKeyInCanonicalGraph renames state schema, node bindings, and edge handles together", () => {
@@ -318,8 +475,6 @@ test("applyEditorConfigsToCanonicalGraph updates multiple canonical nodes in one
         description: "",
         inputs: [],
         outputs: [],
-        stateReads: [],
-        stateWrites: [],
         skills: [
           {
             skillKey: "search_knowledge_base",
@@ -354,8 +509,6 @@ test("applyEditorConfigsToCanonicalGraph updates multiple canonical nodes in one
         description: "",
         inputs: [],
         outputs: [],
-        stateReads: [],
-        stateWrites: [],
         skills: [
           {
             skillKey: "search_knowledge_base",
@@ -424,8 +577,6 @@ test("addEditorNodeToCanonicalGraph inserts a new canonical node from editor con
     persistEnabled: false,
     persistFormat: "auto",
     fileNameTemplate: "",
-    stateReads: [{ stateKey: "summary", inputKey: "summary", required: true }],
-    stateWrites: [],
   });
 
   assert.notEqual(next, graph);
@@ -553,8 +704,6 @@ test("buildCanonicalFlowProjectionFromEditorState projects regular and condition
               valueType: "text",
             },
             value: "",
-            stateReads: [],
-            stateWrites: [{ stateKey: "question", outputKey: "question", mode: "replace" }],
           },
         },
       },
@@ -584,8 +733,6 @@ test("buildCanonicalFlowProjectionFromEditorState projects regular and condition
                 label: "",
               },
             ],
-            stateReads: [{ stateKey: "question", inputKey: "question", required: true }],
-            stateWrites: [],
             conditionMode: "rule",
             branchMapping: {},
             rule: {
@@ -618,8 +765,6 @@ test("buildCanonicalFlowProjectionFromEditorState projects regular and condition
             persistEnabled: false,
             persistFormat: "auto",
             fileNameTemplate: "",
-            stateReads: [{ stateKey: "question", inputKey: "question", required: true }],
-            stateWrites: [],
           },
         },
       },
@@ -1007,5 +1152,655 @@ test("composeCanonicalGraphForSubmission keeps canonical node content while taki
   assert.deepEqual(next.nodes.agent_a.ui, {
     position: { x: 320, y: 128 },
     collapsed: true,
+  });
+});
+
+test("composeCanonicalGraphForSubmission keeps input node config values aligned with state schema defaults", () => {
+  const current: CanonicalGraphPayload = {
+    graph_id: "graph_saved",
+    name: "Current Graph",
+    state_schema: {
+      question: {
+        name: "Question",
+        description: "User question",
+        type: "text",
+        value: "value from state schema",
+        color: "#d97706",
+      },
+    },
+    nodes: {
+      input_question: {
+        kind: "input",
+        name: "Input Question",
+        description: "",
+        ui: {
+          position: { x: 40, y: 60 },
+          collapsed: false,
+        },
+        reads: [],
+        writes: [{ state: "question", mode: "replace" }],
+        config: {
+          value: "stale node config value",
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const projection = {
+    nodes: {
+      input_question: {
+        ...current.nodes.input_question,
+        ui: {
+          position: { x: 90, y: 120 },
+          collapsed: false,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+  } satisfies Pick<CanonicalGraphPayload, "nodes" | "edges" | "conditional_edges">;
+
+  const next = composeCanonicalGraphForSubmission(current, projection);
+
+  assert.equal(next.nodes.input_question.kind, "input");
+  if (next.nodes.input_question.kind !== "input") {
+    assert.fail("expected input node");
+  }
+  assert.equal(next.nodes.input_question.config.value, "value from state schema");
+  assert.deepEqual(next.nodes.input_question.ui, {
+    position: { x: 90, y: 120 },
+    collapsed: false,
+  });
+});
+
+test("renameCanonicalNodeName updates only the targeted canonical node name", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Node Metadata Graph",
+    state_schema: {},
+    nodes: {
+      alpha: {
+        kind: "input",
+        name: "Alpha",
+        description: "Alpha node",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: { value: "" },
+      },
+      beta: {
+        kind: "output",
+        name: "Beta",
+        description: "Beta node",
+        ui: { position: { x: 100, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          displayMode: "auto",
+          persistEnabled: false,
+          persistFormat: "auto",
+          fileNameTemplate: "",
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const next = renameCanonicalNodeName(graph, "beta", "Renamed Beta");
+
+  assert.equal(next.nodes.beta.name, "Renamed Beta");
+  assert.equal(next.nodes.alpha.name, "Alpha");
+});
+
+test("renameCanonicalNodeDescription trims and updates only the targeted canonical node description", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Node Metadata Graph",
+    state_schema: {},
+    nodes: {
+      alpha: {
+        kind: "input",
+        name: "Alpha",
+        description: "Alpha node",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: { value: "" },
+      },
+      beta: {
+        kind: "output",
+        name: "Beta",
+        description: "Beta node",
+        ui: { position: { x: 100, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          displayMode: "auto",
+          persistEnabled: false,
+          persistFormat: "auto",
+          fileNameTemplate: "",
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const next = renameCanonicalNodeDescription(graph, "beta", "  Updated beta description  ");
+
+  assert.equal(next.nodes.beta.description, "Updated beta description");
+  assert.equal(next.nodes.alpha.description, "Alpha node");
+});
+
+test("updateCanonicalInputNodeValue keeps the input node value and bound state default in sync", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Input Graph",
+    state_schema: {
+      question: {
+        name: "Question",
+        description: "User question",
+        type: "text",
+        value: "old",
+        color: "#d97706",
+      },
+    },
+    nodes: {
+      input_question: {
+        kind: "input",
+        name: "Input Question",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [{ state: "question", mode: "replace" }],
+        config: { value: "old" },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const next = updateCanonicalInputNodeValue(graph, "input_question", "new question");
+
+  const inputNode = next.nodes.input_question;
+  assert.equal(inputNode.kind, "input");
+  if (inputNode.kind !== "input") {
+    assert.fail("expected input node");
+  }
+  assert.equal(inputNode.config.value, "new question");
+  assert.equal(next.state_schema.question.value, "new question");
+});
+
+test("updateCanonicalInputNodeStateType updates the bound state type for input nodes", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Input Graph",
+    state_schema: {
+      question: {
+        name: "Question",
+        description: "User question",
+        type: "text",
+        value: "old",
+        color: "#d97706",
+      },
+    },
+    nodes: {
+      input_question: {
+        kind: "input",
+        name: "Input Question",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [{ state: "question", mode: "replace" }],
+        config: { value: "old" },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const next = updateCanonicalInputNodeStateType(graph, "input_question", "json");
+
+  assert.equal(next.state_schema.question.type, "json");
+  const inputNode = next.nodes.input_question;
+  assert.equal(inputNode.kind, "input");
+  if (inputNode.kind !== "input") {
+    assert.fail("expected input node");
+  }
+  assert.equal(inputNode.config.value, "old");
+});
+
+test("updateCanonicalNode updates canonical node config without touching other nodes", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Node Update Graph",
+    state_schema: {},
+    nodes: {
+      output_answer: {
+        kind: "output",
+        name: "Output Answer",
+        description: "Show answer",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          displayMode: "auto",
+          persistEnabled: false,
+          persistFormat: "auto",
+          fileNameTemplate: "",
+        },
+      },
+      output_other: {
+        kind: "output",
+        name: "Output Other",
+        description: "Other output",
+        ui: { position: { x: 120, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          displayMode: "plain",
+          persistEnabled: true,
+          persistFormat: "txt",
+          fileNameTemplate: "other.txt",
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const next = updateCanonicalNode(graph, "output_answer", (node) => {
+    if (node.kind !== "output") {
+      return node;
+    }
+
+    return {
+      ...node,
+      config: {
+        ...node.config,
+        displayMode: "json",
+        persistEnabled: true,
+      },
+    };
+  });
+
+  assert.equal(next.nodes.output_answer.kind, "output");
+  if (next.nodes.output_answer.kind !== "output") {
+    assert.fail("expected output node");
+  }
+  assert.equal(next.nodes.output_answer.config.displayMode, "json");
+  assert.equal(next.nodes.output_answer.config.persistEnabled, true);
+  assert.equal(next.nodes.output_other.kind, "output");
+  if (next.nodes.output_other.kind !== "output") {
+    assert.fail("expected output node");
+  }
+  assert.equal(next.nodes.output_other.config.displayMode, "plain");
+  assert.equal(next.nodes.output_other.config.persistEnabled, true);
+});
+
+test("updateCanonicalNodeConfig updates agent config fields without touching other nodes", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Agent Config Graph",
+    state_schema: {},
+    nodes: {
+      onboarding_helper: {
+        kind: "agent",
+        name: "Onboarding Helper",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          skills: [],
+          systemInstruction: "",
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+      output_answer: {
+        kind: "output",
+        name: "Output Answer",
+        description: "",
+        ui: { position: { x: 120, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          displayMode: "auto",
+          persistEnabled: false,
+          persistFormat: "auto",
+          fileNameTemplate: "",
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const next = updateCanonicalNodeConfig(graph, "onboarding_helper", (node) => {
+    if (node.kind !== "agent") {
+      return node.config;
+    }
+
+    return {
+      ...node.config,
+      skills: ["search_knowledge_base"],
+      taskInstruction: "Answer the user with the current context.",
+      temperature: 0.7,
+    };
+  });
+
+  assert.equal(next.nodes.onboarding_helper.kind, "agent");
+  if (next.nodes.onboarding_helper.kind !== "agent") {
+    assert.fail("expected agent node");
+  }
+  assert.deepEqual(next.nodes.onboarding_helper.config.skills, ["search_knowledge_base"]);
+  assert.equal(next.nodes.onboarding_helper.config.taskInstruction, "Answer the user with the current context.");
+  assert.equal(next.nodes.onboarding_helper.config.temperature, 0.7);
+  assert.equal(next.nodes.output_answer.kind, "output");
+  if (next.nodes.output_answer.kind !== "output") {
+    assert.fail("expected output node");
+  }
+  assert.equal(next.nodes.output_answer.config.displayMode, "auto");
+});
+
+test("updateCanonicalNodeConfig updates condition and output config fields in place", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Condition Output Graph",
+    state_schema: {},
+    nodes: {
+      route_result: {
+        kind: "condition",
+        name: "Route Result",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          branches: ["done"],
+          conditionMode: "rule",
+          branchMapping: {},
+          rule: {
+            source: "answer",
+            operator: "exists",
+            value: null,
+          },
+        },
+      },
+      output_answer: {
+        kind: "output",
+        name: "Output Answer",
+        description: "",
+        ui: { position: { x: 120, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          displayMode: "auto",
+          persistEnabled: false,
+          persistFormat: "auto",
+          fileNameTemplate: "",
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const withCondition = updateCanonicalNodeConfig(graph, "route_result", (node) => {
+    if (node.kind !== "condition") {
+      return node.config;
+    }
+
+    return {
+      ...node.config,
+      branches: ["approved", "rejected"],
+      conditionMode: "cycle",
+      branchMapping: {
+        approved: "output_answer",
+      },
+      rule: {
+        source: "answer",
+        operator: "==",
+        value: "ok",
+      } satisfies ConditionNode["rule"],
+    };
+  });
+
+  const next = updateCanonicalNodeConfig(withCondition, "output_answer", (node) => {
+    if (node.kind !== "output") {
+      return node.config;
+    }
+
+    return {
+      ...node.config,
+      displayMode: "markdown",
+      persistEnabled: true,
+      persistFormat: "md",
+      fileNameTemplate: "answer.md",
+    };
+  });
+
+  assert.equal(next.nodes.route_result.kind, "condition");
+  if (next.nodes.route_result.kind !== "condition") {
+    assert.fail("expected condition node");
+  }
+  assert.deepEqual(next.nodes.route_result.config.branches, ["approved", "rejected"]);
+  assert.equal(next.nodes.route_result.config.conditionMode, "cycle");
+  assert.deepEqual(next.nodes.route_result.config.branchMapping, { approved: "output_answer" });
+  assert.deepEqual(next.nodes.route_result.config.rule, {
+    source: "answer",
+    operator: "==",
+    value: "ok",
+  });
+
+  assert.equal(next.nodes.output_answer.kind, "output");
+  if (next.nodes.output_answer.kind !== "output") {
+    assert.fail("expected output node");
+  }
+  assert.equal(next.nodes.output_answer.config.displayMode, "markdown");
+  assert.equal(next.nodes.output_answer.config.persistEnabled, true);
+  assert.equal(next.nodes.output_answer.config.persistFormat, "md");
+  assert.equal(next.nodes.output_answer.config.fileNameTemplate, "answer.md");
+});
+
+test("updateCanonicalReadBindingRequired updates only the targeted read binding", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Read Binding Graph",
+    state_schema: {
+      question: {
+        name: "Question",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#d97706",
+      },
+      context: {
+        name: "Context",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#2563eb",
+      },
+    },
+    nodes: {
+      answer_helper: {
+        kind: "agent",
+        name: "Answer Helper",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [
+          { state: "question", required: false },
+          { state: "context", required: true },
+        ],
+        writes: [],
+        config: {
+          skills: [],
+          systemInstruction: "",
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const next = updateCanonicalReadBindingRequired(graph, "answer_helper", "question", true);
+
+  assert.equal(next.nodes.answer_helper.kind, "agent");
+  if (next.nodes.answer_helper.kind !== "agent") {
+    assert.fail("expected agent node");
+  }
+  assert.deepEqual(next.nodes.answer_helper.reads, [
+    { state: "question", required: true },
+    { state: "context", required: true },
+  ]);
+});
+
+test("replaceCanonicalNodeReadsFromPorts rewrites reads and upserts missing states from port definitions", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Replace Reads Graph",
+    state_schema: {
+      question: {
+        name: "Question",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#d97706",
+      },
+    },
+    nodes: {
+      answer_helper: {
+        kind: "agent",
+        name: "Answer Helper",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [{ state: "question", required: false }],
+        writes: [],
+        config: {
+          skills: [],
+          systemInstruction: "",
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const nextPorts: PortDefinition[] = [
+    { key: "question", label: "User Question", valueType: "text", required: true },
+    { key: "context_blob", label: "Context Blob", valueType: "json", required: false },
+  ];
+
+  const next = replaceCanonicalNodeReadsFromPorts(graph, "answer_helper", nextPorts);
+
+  assert.deepEqual(next.nodes.answer_helper.reads, [
+    { state: "question", required: true },
+    { state: "context_blob", required: false },
+  ]);
+  assert.deepEqual(next.state_schema.question, {
+    name: "User Question",
+    description: "",
+    type: "text",
+    value: "",
+    color: "#d97706",
+  });
+  assert.deepEqual(next.state_schema.context_blob, {
+    name: "Context Blob",
+    description: "",
+    type: "json",
+    value: {},
+    color: "",
+  });
+});
+
+test("replaceCanonicalNodeWritesFromPorts rewrites writes and upserts missing output states", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: null,
+    name: "Replace Writes Graph",
+    state_schema: {
+      answer: {
+        name: "Answer",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#d97706",
+      },
+    },
+    nodes: {
+      answer_helper: {
+        kind: "agent",
+        name: "Answer Helper",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [{ state: "answer", mode: "replace" }],
+        config: {
+          skills: [],
+          systemInstruction: "",
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const nextPorts: PortDefinition[] = [
+    { key: "answer", label: "Final Answer", valueType: "text" },
+    { key: "supporting_image", label: "Supporting Image", valueType: "image" },
+  ];
+
+  const next = replaceCanonicalNodeWritesFromPorts(graph, "answer_helper", nextPorts);
+
+  assert.deepEqual(next.nodes.answer_helper.writes, [
+    { state: "answer", mode: "replace" },
+    { state: "supporting_image", mode: "replace" },
+  ]);
+  assert.deepEqual(next.state_schema.answer, {
+    name: "Final Answer",
+    description: "",
+    type: "text",
+    value: "",
+    color: "#d97706",
+  });
+  assert.deepEqual(next.state_schema.supporting_image, {
+    name: "Supporting Image",
+    description: "",
+    type: "image",
+    value: "",
+    color: "",
   });
 });

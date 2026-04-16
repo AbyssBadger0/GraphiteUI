@@ -19,18 +19,6 @@ export type AgentModelSource = "global" | "override";
 export type AgentThinkingMode = "off" | "on";
 export type StateWriteMode = "replace";
 
-export type StateReadBinding = {
-  stateKey: string;
-  inputKey: string;
-  required?: boolean;
-};
-
-export type StateWriteBinding = {
-  stateKey: string;
-  outputKey: string;
-  mode?: StateWriteMode;
-};
-
 export type StateFieldType =
   | "string"
   | "number"
@@ -59,12 +47,7 @@ export type StateField = {
   ui?: StateFieldUi;
 };
 
-type NodeStateBindings = {
-  stateReads?: StateReadBinding[];
-  stateWrites?: StateWriteBinding[];
-};
-
-export type InputBoundaryNode = NodeStateBindings & {
+export type InputBoundaryNode = {
   presetId: string;
   name?: string;
   description: string;
@@ -74,7 +57,7 @@ export type InputBoundaryNode = NodeStateBindings & {
   value: string;
 };
 
-export type AgentNode = NodeStateBindings & {
+export type AgentNode = {
   presetId: string;
   name?: string;
   description: string;
@@ -101,7 +84,7 @@ export type BranchDefinition = {
   label: string;
 };
 
-export type ConditionNode = NodeStateBindings & {
+export type ConditionNode = {
   presetId: string;
   name?: string;
   description: string;
@@ -113,7 +96,7 @@ export type ConditionNode = NodeStateBindings & {
   branchMapping: Record<string, string>;
 };
 
-export type OutputBoundaryNode = NodeStateBindings & {
+export type OutputBoundaryNode = {
   presetId: string;
   name?: string;
   description: string;

@@ -31,12 +31,12 @@
   - 后端已经拒绝 `defaultValue`，前后端正式字段边界一致
   - 后端已删除 `legacy runtime` 选择与 fallback 分支，只保留 LangGraph 支持性检查
   - 前端已删除 `applyEditorConfigToCanonicalGraph / applyEditorConfigsToCanonicalGraph` 历史桥接
+  - 持久化 preset 已改成以 canonical preset 为前端主存储，不再通过 `EditorPresetRecord.definition` 中转
+  - agent skill 已直接以 canonical `skills: string[]` 作为前端编辑主语义
 - 当前剩余问题主要集中在编辑器内部仍保留一层视图壳：
   - `NodePresetDefinition`
   - `PortDefinition`
   - `StateField`
-  - `SkillAttachment`
-  - `EditorPresetRecord`
 - ReactFlow `nodes` 里仍然保留 `data.config` 镜像，编辑器仍通过投影层把 canonical 图转换成前端视图对象
 
 目标：
@@ -77,10 +77,8 @@
 
 范围：
 
-- 继续压缩 `SkillAttachment` 的业务职责
 - agent 技能区显示元数据通过 `skillDefinitions` 查表补充，而不是靠本地壳对象承载主语义
-- preset 主链改成以 canonical preset 为唯一持久化结构
-- 删除 `EditorPresetRecord` 中只为兼容旧编辑协议存在的 definition 壳
+- 检查 preset 创建、保存、加载链中是否还存在多余的 editor-side 中转对象
 
 完成标准：
 

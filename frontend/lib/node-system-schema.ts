@@ -7,14 +7,6 @@ export type PortDefinition = {
   required?: boolean;
 };
 
-export type SkillAttachment = {
-  name: string;
-  skillKey: string;
-  inputMapping: Record<string, string>;
-  contextBinding: Record<string, string>;
-  usage?: "required" | "optional";
-};
-
 export type AgentModelSource = "global" | "override";
 export type AgentThinkingMode = "off" | "on";
 export type StateWriteMode = "replace";
@@ -66,7 +58,7 @@ export type AgentNode = {
   outputs: PortDefinition[];
   systemInstruction: string;
   taskInstruction: string;
-  skills: SkillAttachment[];
+  skills: string[];
   modelSource?: AgentModelSource;
   model?: string;
   thinkingMode?: AgentThinkingMode;

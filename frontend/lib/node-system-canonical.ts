@@ -168,15 +168,6 @@ export type CanonicalPresetDocument = {
   updatedAt?: string | null;
 };
 
-export type EditorPresetRecord = {
-  presetId: string;
-  sourcePresetId?: string | null;
-  definition: NodePresetDefinition;
-  stateSchema: StateField[];
-  createdAt?: string | null;
-  updatedAt?: string | null;
-};
-
 function stripString(value: unknown): string {
   return String(value ?? "").trim();
 }
@@ -296,7 +287,7 @@ export function buildCanonicalNodeFromEditorConfig(params: {
       reads: Object.values(readsByPort).map((binding) => ({ state: binding.stateKey, required: binding.required })),
       writes: Object.values(writesByPort).map((binding) => ({ state: binding.stateKey, mode: "replace" })),
       config: {
-        skills: config.skills.map((skill) => skill.skillKey),
+        skills: [...config.skills],
         systemInstruction: config.systemInstruction,
         taskInstruction: config.taskInstruction,
         modelSource: config.modelSource ?? "global",
@@ -341,8 +332,10 @@ export function buildCanonicalNodeFromEditorConfig(params: {
   };
 }
 
-export function buildEditorStateFieldsFromCanonicalGraph(graph: CanonicalGraphPayload): StateField[] {
-  return Object.entries(graph.state_schema).map(([key, definition]) => ({
+export function buildEditorStateFieldsFromCanonicalStateSchema(
+  stateSchema: Record<string, CanonicalStateDefinition>,
+): StateField[] {
+  return Object.entries(stateSchema).map(([key, definition]) => ({
     key,
     name: stripString(definition.name) || key,
     description: definition.description,
@@ -352,6 +345,10 @@ export function buildEditorStateFieldsFromCanonicalGraph(graph: CanonicalGraphPa
       color: definition.color,
     },
   }));
+}
+
+export function buildEditorStateFieldsFromCanonicalGraph(graph: CanonicalGraphPayload): StateField[] {
+  return buildEditorStateFieldsFromCanonicalStateSchema(graph.state_schema);
 }
 
 function buildEditorPort(
@@ -374,16 +371,6 @@ function buildEditorConditionBranches(branches: string[]): BranchDefinition[] {
     key: branch,
     label: "",
   }));
-}
-
-function createEditorSkillAttachment(skillKey: string) {
-  return {
-    name: skillKey,
-    skillKey,
-    inputMapping: {},
-    contextBinding: {},
-    usage: "optional" as const,
-  };
 }
 
 export function buildEditorNodeConfigFromCanonicalNode(
@@ -416,7 +403,7 @@ export function buildEditorNodeConfigFromCanonicalNode(
       outputs: node.writes.map((binding) => buildEditorPort(binding.state, stateSchema, false)),
       systemInstruction: node.config.systemInstruction,
       taskInstruction: node.config.taskInstruction,
-      skills: node.config.skills.map((skillKey) => createEditorSkillAttachment(skillKey)),
+      skills: [...node.config.skills],
       modelSource: node.config.modelSource,
       model: node.config.model,
       thinkingMode: node.config.thinkingMode,
@@ -452,7 +439,7 @@ export function buildEditorNodeConfigFromCanonicalNode(
   } satisfies OutputBoundaryNode;
 }
 
-export function buildEditorPresetRecordFromCanonicalPreset(preset: CanonicalPresetDocument): EditorPresetRecord {
+export function buildEditorNodeConfigFromCanonicalPreset(preset: CanonicalPresetDocument): NodePresetDefinition {
   const nodeId = "preset_node";
   const presetNode = {
     ...preset.definition.node,
@@ -462,26 +449,9 @@ export function buildEditorPresetRecordFromCanonicalPreset(preset: CanonicalPres
     },
   } satisfies CanonicalNode;
   return {
+    ...buildEditorNodeConfigFromCanonicalNode(nodeId, presetNode, preset.definition.state_schema),
     presetId: preset.presetId,
-    sourcePresetId: preset.sourcePresetId ?? null,
-    definition: {
-      ...buildEditorNodeConfigFromCanonicalNode(nodeId, presetNode, preset.definition.state_schema),
-      presetId: preset.presetId,
-      name: preset.definition.node.name || nodeId,
-      description: preset.definition.description || preset.definition.node.description,
-    },
-    stateSchema: buildEditorStateFieldsFromCanonicalGraph({
-      graph_id: null,
-      name: preset.definition.label || preset.definition.node.name || preset.presetId,
-      state_schema: preset.definition.state_schema,
-      nodes: {
-        [nodeId]: presetNode,
-      },
-      edges: [],
-      conditional_edges: [],
-      metadata: {},
-    }),
-    createdAt: preset.createdAt ?? null,
-    updatedAt: preset.updatedAt ?? null,
+    name: preset.definition.node.name || nodeId,
+    description: preset.definition.description || preset.definition.node.description,
   };
 }

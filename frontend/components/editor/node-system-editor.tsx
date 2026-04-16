@@ -44,13 +44,13 @@ import { cn } from "@/lib/cn";
 import { createEditorSeedGraph } from "@/lib/editor-graph-defaults";
 import {
   buildEditorNodeConfigFromCanonicalNode,
-  buildEditorPresetRecordFromCanonicalPreset,
+  buildEditorNodeConfigFromCanonicalPreset,
   buildEditorStateFieldsFromCanonicalGraph,
+  buildEditorStateFieldsFromCanonicalStateSchema,
   type CanonicalPresetDocument,
   type CanonicalGraphPayload,
   type CanonicalTemplateRecord,
   type CanonicalNode,
-  type EditorPresetRecord,
 } from "@/lib/node-system-canonical";
 import {
   addEditorNodeToCanonicalGraph,
@@ -97,7 +97,6 @@ import {
   type PortDefinition,
   type RunNodeStatus,
   type RunStatus,
-  type SkillAttachment,
   type StateField,
   type StateFieldType,
   type ValueType,
@@ -282,7 +281,6 @@ const DEFAULT_EDITOR_TEXT_MODEL_REF = "local/lm-local";
 const DEFAULT_AGENT_THINKING_ENABLED = true;
 const DEFAULT_AGENT_TEMPERATURE = 0.2;
 const KNOWLEDGE_BASE_SKILL_KEY = "search_knowledge_base";
-const KNOWLEDGE_BASE_SKILL_LIMIT = "4";
 const TYPE_COLORS: Record<ValueType, string> = {
   text: "#d97706",
   json: "#2563eb",
@@ -1834,13 +1832,13 @@ function createAutoInputPort(existingPorts: PortDefinition[], sourceType: ValueT
   };
 }
 
-function isKnowledgeBaseSkill(skill: SkillAttachment) {
-  return skill.skillKey === KNOWLEDGE_BASE_SKILL_KEY;
+function isKnowledgeBaseSkill(skillKey: string) {
+  return skillKey === KNOWLEDGE_BASE_SKILL_KEY;
 }
 
-function areSkillAttachmentsEqual(left: SkillAttachment[], right: SkillAttachment[]) {
+function areSkillKeyListsEqual(left: string[], right: string[]) {
   if (left.length !== right.length) return false;
-  return left.every((skill, index) => JSON.stringify(skill) === JSON.stringify(right[index]));
+  return left.every((skillKey, index) => skillKey === right[index]);
 }
 
 function pickAgentKnowledgeQueryInputKey(config: AgentNode, knowledgeBaseInputKey: string) {
@@ -1863,18 +1861,10 @@ function pickAgentKnowledgeQueryInputKey(config: AgentNode, knowledgeBaseInputKe
   return candidateInputs.find((port) => port.required)?.key ?? candidateInputs[0]?.key ?? null;
 }
 
-function createKnowledgeBaseSkillAttachment(knowledgeBaseInputKey: string, queryInputKey: string): SkillAttachment {
-  return {
-    name: KNOWLEDGE_BASE_SKILL_KEY,
-    skillKey: KNOWLEDGE_BASE_SKILL_KEY,
-    inputMapping: {
-      knowledge_base: `$inputs.${knowledgeBaseInputKey}`,
-      query: `$inputs.${queryInputKey}`,
-      limit: KNOWLEDGE_BASE_SKILL_LIMIT,
-    },
-    contextBinding: {},
-    usage: "optional",
-  };
+function createKnowledgeBaseSkillKey(knowledgeBaseInputKey: string, queryInputKey: string): string {
+  void knowledgeBaseInputKey;
+  void queryInputKey;
+  return KNOWLEDGE_BASE_SKILL_KEY;
 }
 
 function collectAgentKnowledgeBaseBindings(agentNode: FlowNode, nodesById: Map<string, FlowNode>, edges: Edge[]) {
@@ -1900,10 +1890,10 @@ function syncKnowledgeBaseSkillOnAgent(
 ): AgentNode {
   const config = agentNode.data.config as AgentNode;
   const knowledgeBaseInputKeys = collectAgentKnowledgeBaseBindings(agentNode, nodesById, edges);
-  const skillsWithoutKnowledgeBase = config.skills.filter((skill) => !isKnowledgeBaseSkill(skill));
+  const skillsWithoutKnowledgeBase = config.skills.filter((skillKey) => !isKnowledgeBaseSkill(skillKey));
 
   if (knowledgeBaseInputKeys.length !== 1) {
-    return areSkillAttachmentsEqual(skillsWithoutKnowledgeBase, config.skills)
+    return areSkillKeyListsEqual(skillsWithoutKnowledgeBase, config.skills)
       ? config
       : normalizeNodeConfig({
           ...config,
@@ -1914,7 +1904,7 @@ function syncKnowledgeBaseSkillOnAgent(
   const knowledgeBaseInputKey = knowledgeBaseInputKeys[0];
   const queryInputKey = pickAgentKnowledgeQueryInputKey(config, knowledgeBaseInputKey);
   if (!queryInputKey) {
-    return areSkillAttachmentsEqual(skillsWithoutKnowledgeBase, config.skills)
+    return areSkillKeyListsEqual(skillsWithoutKnowledgeBase, config.skills)
       ? config
       : normalizeNodeConfig({
           ...config,
@@ -1922,9 +1912,9 @@ function syncKnowledgeBaseSkillOnAgent(
         } satisfies AgentNode);
   }
 
-  const nextKnowledgeBaseSkill = createKnowledgeBaseSkillAttachment(knowledgeBaseInputKey, queryInputKey);
+  const nextKnowledgeBaseSkill = createKnowledgeBaseSkillKey(knowledgeBaseInputKey, queryInputKey);
   const nextSkills = [...skillsWithoutKnowledgeBase, nextKnowledgeBaseSkill];
-  return areSkillAttachmentsEqual(nextSkills, config.skills)
+  return areSkillKeyListsEqual(nextSkills, config.skills)
     ? config
     : normalizeNodeConfig({
         ...config,
@@ -3175,7 +3165,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
         })
       : null;
   const [isSkillPickerOpen, setIsSkillPickerOpen] = useState(false);
-  const attachedSkillKeys = useMemo(() => new Set((config.family === "agent" ? config.skills : []).map((skill) => skill.skillKey)), [config]);
+  const attachedSkillKeys = useMemo(() => new Set(config.family === "agent" ? config.skills : []), [config]);
   const availableSkillDefinitions = useMemo(
     () => (data.skillDefinitions ?? []).filter((definition) => !attachedSkillKeys.has(definition.skillKey)),
     [attachedSkillKeys, data.skillDefinitions],
@@ -3935,19 +3925,19 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
               {/* ── attached skill pills ── */}
               {config.skills.length > 0 ? (
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {config.skills.map((skill) => {
-                    const def = (data.skillDefinitions ?? []).find((d) => d.skillKey === skill.skillKey);
+                  {config.skills.map((skillKey) => {
+                    const def = (data.skillDefinitions ?? []).find((d) => d.skillKey === skillKey);
                     return (
                       <span
-                        key={skill.skillKey}
-                        title={def?.description ?? skill.skillKey}
+                        key={skillKey}
+                        title={def?.description ?? skillKey}
                         className="group/pill inline-flex items-center gap-1 rounded-full border border-[rgba(37,99,235,0.18)] bg-[rgba(239,246,255,0.88)] px-2.5 py-0.5 text-[0.68rem] font-medium text-[#2563eb]"
                       >
                         <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.6">
                           <path d="M8 2.5v4l2.5 1.5" />
                           <circle cx="8" cy="8" r="5.5" />
                         </svg>
-                        {def?.label ?? skill.name}
+                        {def?.label ?? skillKey}
                         <button
                           type="button"
                           title="Remove skill"
@@ -3957,7 +3947,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                               node.kind === "agent"
                                 ? {
                                     ...node.config,
-                                    skills: node.config.skills.filter((skillKey) => skillKey !== skill.skillKey),
+                                    skills: node.config.skills.filter((candidateKey) => candidateKey !== skillKey),
                                   }
                                 : node.config,
                             )
@@ -4968,7 +4958,7 @@ function NodeSystemCanvas({
   const [isStatePanelOpen, setIsStatePanelOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusMessage, setStatusMessage] = useState("Node system phase 4: skill definitions connected.");
-  const [persistedPresets, setPersistedPresets] = useState<EditorPresetRecord[]>([]);
+  const [persistedPresets, setPersistedPresets] = useState<CanonicalPresetDocument[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(true);
   const [presetsError, setPresetsError] = useState<string | null>(null);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -5031,7 +5021,10 @@ function NodeSystemCanvas({
   );
 
   const allPresets = useMemo(
-    () => [...NODE_PRESETS_MOCK, ...persistedPresets.map((preset) => preset.definition)].filter((preset) => isPresetEligibleFamily(preset.family)),
+    () =>
+      [...NODE_PRESETS_MOCK, ...persistedPresets.map((preset) => buildEditorNodeConfigFromCanonicalPreset(preset))].filter((preset) =>
+        isPresetEligibleFamily(preset.family),
+      ),
     [persistedPresets],
   );
   const getRecommendedPresets = useCallback(
@@ -5440,12 +5433,11 @@ function NodeSystemCanvas({
           continue;
         }
 
-        const nextSkillKeys = nextConfig.skills.map((skill) => skill.skillKey);
         nextGraph = updateCanonicalNodeConfig(nextGraph, node.id, (canonicalNode) =>
           canonicalNode.kind === "agent"
             ? {
                 ...canonicalNode.config,
-                skills: nextSkillKeys,
+                skills: [...nextConfig.skills],
               }
             : canonicalNode.config,
         );
@@ -5507,8 +5499,7 @@ function NodeSystemCanvas({
         if (!active) return;
         setPersistedPresets(
           payload
-            .map(buildEditorPresetRecordFromCanonicalPreset)
-            .filter((item) => isPresetEligibleFamily(item.definition.family)),
+            .filter((item) => isPresetEligibleFamily(buildEditorNodeConfigFromCanonicalPreset(item).family)),
         );
       } catch (error) {
         if (!active) return;
@@ -5642,11 +5633,11 @@ function NodeSystemCanvas({
   function addNodeFromPresetId(presetId: string, position: { x: number; y: number }, connectionSource?: { sourceNodeId?: string; sourceHandle?: string; sourceValueType?: ValueType | null }) {
     const staticPreset = getNodePresetById(presetId);
     const persistedPreset = persistedPresets.find((item) => item.presetId === presetId);
-    const preset = staticPreset ?? persistedPreset?.definition;
+    const preset = staticPreset ?? (persistedPreset ? buildEditorNodeConfigFromCanonicalPreset(persistedPreset) : undefined);
     if (!preset) return;
 
     if (persistedPreset) {
-      ensurePresetStateFields(persistedPreset.stateSchema);
+      ensurePresetStateFields(buildEditorStateFieldsFromCanonicalStateSchema(persistedPreset.definition.state_schema));
     }
 
     const nextNode = createNodeFromPreset(preset, position);
@@ -5743,7 +5734,7 @@ function NodeSystemCanvas({
         })
         .filter((entry): entry is readonly [string, (typeof canonicalGraphForSubmission.state_schema)[string]] => Boolean(entry)),
     );
-    const editorPresetRecord = buildEditorPresetRecordFromCanonicalPreset({
+    const canonicalPreset: CanonicalPresetDocument = {
       presetId,
       sourcePresetId: targetNode.data.config.presetId,
       definition: {
@@ -5759,7 +5750,7 @@ function NodeSystemCanvas({
           },
         },
       },
-    });
+    };
     try {
       await apiPost<{ presetId: string; updatedAt?: string | null }>("/api/presets", {
         presetId,
@@ -5778,7 +5769,7 @@ function NodeSystemCanvas({
           },
         },
       });
-      setPersistedPresets((current) => [editorPresetRecord, ...current.filter((item) => item.presetId !== presetId)]);
+      setPersistedPresets((current) => [canonicalPreset, ...current.filter((item) => item.presetId !== presetId)]);
       setStatusMessage(`Saved preset ${presetId}`);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Failed to save preset.");

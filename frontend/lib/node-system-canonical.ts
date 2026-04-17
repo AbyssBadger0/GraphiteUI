@@ -123,8 +123,6 @@ export type CanonicalNode =
 export type CanonicalEdge = {
   source: string;
   target: string;
-  sourceHandle: string;
-  targetHandle: string;
 };
 
 export type CanonicalConditionalEdge = {

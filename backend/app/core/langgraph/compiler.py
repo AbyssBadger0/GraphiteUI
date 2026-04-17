@@ -8,6 +8,7 @@ from app.core.langgraph.build_plan import (
     LangGraphNodePlan,
     LangGraphRuntimeRequirements,
 )
+from app.core.ordinary_edge_resolution import resolve_ordinary_edge_shared_state
 from app.core.schemas.node_system import (
     NodeSystemAgentNode,
     NodeSystemGraphPayload,
@@ -36,10 +37,10 @@ def compile_graph_to_langgraph_plan(graph: NodeSystemGraphPayload) -> LangGraphB
 
     graph_edges: list[LangGraphEdgePlan] = []
     for edge in graph.edges:
-        state_name = _parse_handle_state(edge.source_handle)
-        if not state_name or state_name != _parse_handle_state(edge.target_handle):
+        state_name = resolve_ordinary_edge_shared_state(graph, edge.source, edge.target)
+        if not state_name:
             unsupported_reasons.append(
-                f"edge {edge.source}.{edge.source_handle} -> {edge.target}.{edge.target_handle} does not resolve to a single shared state."
+                f"edge {edge.source} -> {edge.target} does not resolve to a single shared state."
             )
             continue
         graph_edges.append(
@@ -47,8 +48,8 @@ def compile_graph_to_langgraph_plan(graph: NodeSystemGraphPayload) -> LangGraphB
                 source=edge.source,
                 target=edge.target,
                 state=state_name,
-                sourceHandle=edge.source_handle,
-                targetHandle=edge.target_handle,
+                sourceHandle=f"write:{state_name}",
+                targetHandle=f"read:{state_name}",
             )
         )
 
@@ -108,10 +109,3 @@ def compile_graph_to_langgraph_plan(graph: NodeSystemGraphPayload) -> LangGraphB
             unsupported_reasons=list(dict.fromkeys(unsupported_reasons)),
         ),
     )
-
-
-def _parse_handle_state(handle: str) -> str | None:
-    if ":" not in handle:
-        return None
-    _prefix, state_name = handle.split(":", 1)
-    return state_name.strip() or None

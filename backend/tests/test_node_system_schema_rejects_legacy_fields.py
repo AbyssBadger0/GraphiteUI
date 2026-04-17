@@ -8,7 +8,12 @@ from pydantic import ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.core.schemas.node_system import NodeSystemConditionConfig, NodeSystemInputConfig, NodeSystemStateDefinition
+from app.core.schemas.node_system import (
+    NodeSystemConditionConfig,
+    NodeSystemGraphDocument,
+    NodeSystemInputConfig,
+    NodeSystemStateDefinition,
+)
 
 
 class NodeSystemSchemaLegacyFieldRejectionTests(unittest.TestCase):

@@ -34,18 +34,8 @@ type EditorFlowEdgeSnapshot = {
   targetHandle?: string | null;
 };
 
-const GENERIC_STATE_KEYS = new Set(["value", "input", "output", "result", "text"]);
-
 function serializeNode(value: unknown) {
   return JSON.stringify(value);
-}
-
-function replaceStateHandleKey(handle: string, currentKey: string, nextKey: string) {
-  const [side, key] = handle.split(":", 2);
-  if (!side || key !== currentKey) {
-    return handle;
-  }
-  return `${side}:${nextKey}`;
 }
 
 function getPortKeyFromHandle(handleId?: string | null) {
@@ -54,58 +44,6 @@ function getPortKeyFromHandle(handleId?: string | null) {
   return key ?? null;
 }
 
-function getBoundStateKeyForCanonicalPort(node: CanonicalNode, side: "input" | "output", portKey: string) {
-  if (side === "input") {
-    if (node.kind === "agent" || node.kind === "condition" || node.kind === "output") {
-      return portKey;
-    }
-    return null;
-  }
-
-  if (node.kind === "agent" || node.kind === "input") {
-    return portKey;
-  }
-
-  return null;
-}
-
-function listProjectionStateKeys(node: CanonicalNode, side: "input" | "output"): string[] {
-  if (side === "input") {
-    if (node.kind === "agent" || node.kind === "condition" || node.kind === "output") {
-      return node.reads.map((binding) => binding.state);
-    }
-    return [];
-  }
-
-  if (node.kind === "agent" || node.kind === "input") {
-    return node.writes.map((binding) => binding.state);
-  }
-  if (node.kind === "condition") {
-    return node.config.branches;
-  }
-  return [];
-}
-
-function resolveProjectionStateKey(node: CanonicalNode, side: "input" | "output", portKey: string) {
-  const stateKeys = listProjectionStateKeys(node, side);
-  const matchedKey = stateKeys.find((stateKey) => stateKey === portKey);
-  if (matchedKey) {
-    return getBoundStateKeyForCanonicalPort(node, side, matchedKey) ?? matchedKey;
-  }
-  if (stateKeys.length === 1) {
-    return getBoundStateKeyForCanonicalPort(node, side, stateKeys[0]) ?? stateKeys[0];
-  }
-  return portKey;
-}
-
-function chooseStateKeyForConnection(sourceStateKey: string, targetStateKey: string) {
-  if (sourceStateKey === targetStateKey) return sourceStateKey;
-  const sourceGeneric = GENERIC_STATE_KEYS.has(sourceStateKey);
-  const targetGeneric = GENERIC_STATE_KEYS.has(targetStateKey);
-  if (sourceGeneric && !targetGeneric) return targetStateKey;
-  if (targetGeneric && !sourceGeneric) return sourceStateKey;
-  return targetStateKey || sourceStateKey;
-}
 
 function valueTypeToCanonicalStateType(valueType: ValueType): CanonicalGraphPayload["state_schema"][string]["type"] {
   switch (valueType) {
@@ -230,17 +168,10 @@ export function buildCanonicalFlowProjectionFromEditorState(
   const canonicalEdges: CanonicalGraphPayload["edges"] = [];
 
   for (const edge of edges) {
-    const sourceNode = flowNodeMap.get(edge.source);
-    const targetNode = flowNodeMap.get(edge.target);
-    if (!sourceNode || !targetNode) continue;
-    const sourceCanonicalNode = resolvedNodes.get(edge.source);
-    const targetCanonicalNode = resolvedNodes.get(edge.target);
-    if (!sourceCanonicalNode || !targetCanonicalNode) continue;
-
+    if (!flowNodeMap.has(edge.source) || !flowNodeMap.has(edge.target)) continue;
     const sourcePortKey = getPortKeyFromHandle(edge.sourceHandle);
-    const targetPortKey = getPortKeyFromHandle(edge.targetHandle);
-
-    if (sourceCanonicalNode.kind === "condition") {
+    const sourceCanonicalNode = resolvedNodes.get(edge.source);
+    if (sourceCanonicalNode?.kind === "condition") {
       if (sourcePortKey) {
         conditionalEdgesBySource[edge.source] = {
           ...(conditionalEdgesBySource[edge.source] ?? {}),
@@ -250,18 +181,7 @@ export function buildCanonicalFlowProjectionFromEditorState(
       continue;
     }
 
-    if (!sourcePortKey || !targetPortKey) continue;
-
-    const sourceStateKey = resolveProjectionStateKey(sourceCanonicalNode, "output", sourcePortKey);
-    const targetStateKey = resolveProjectionStateKey(targetCanonicalNode, "input", targetPortKey);
-    const stateKey = chooseStateKeyForConnection(sourceStateKey, targetStateKey);
-
-    canonicalEdges.push({
-      source: edge.source,
-      target: edge.target,
-      sourceHandle: `write:${stateKey}`,
-      targetHandle: `read:${stateKey}`,
-    });
+    canonicalEdges.push({ source: edge.source, target: edge.target });
   }
 
   return {
@@ -375,15 +295,12 @@ export function renameStateKeyInCanonicalGraph<T extends CanonicalGraphPayload>(
   }
 
   const { [currentKey]: _, ...restStateSchema } = graph.state_schema;
-  const readNodeIds = new Set<string>();
-  const writeNodeIds = new Set<string>();
   const nextNodes = Object.fromEntries(
     Object.entries(graph.nodes).map(([nodeId, node]) => {
       const nextReads = node.reads.map((binding) => {
         if (binding.state !== currentKey) {
           return binding;
         }
-        readNodeIds.add(nodeId);
         return {
           ...binding,
           state: nextKey,
@@ -393,7 +310,6 @@ export function renameStateKeyInCanonicalGraph<T extends CanonicalGraphPayload>(
         if (binding.state !== currentKey) {
           return binding;
         }
-        writeNodeIds.add(nodeId);
         return {
           ...binding,
           state: nextKey,
@@ -408,29 +324,10 @@ export function renameStateKeyInCanonicalGraph<T extends CanonicalGraphPayload>(
               ...node,
               reads: nextReads,
               writes: nextWrites,
-            },
+        },
       ];
     }),
   ) as T["nodes"];
-
-  const nextEdges = graph.edges.map((edge) => {
-    const nextSourceHandle = writeNodeIds.has(edge.source)
-      ? replaceStateHandleKey(edge.sourceHandle, currentKey, nextKey)
-      : edge.sourceHandle;
-    const nextTargetHandle = readNodeIds.has(edge.target)
-      ? replaceStateHandleKey(edge.targetHandle, currentKey, nextKey)
-      : edge.targetHandle;
-
-    if (nextSourceHandle === edge.sourceHandle && nextTargetHandle === edge.targetHandle) {
-      return edge;
-    }
-
-    return {
-      ...edge,
-      sourceHandle: nextSourceHandle,
-      targetHandle: nextTargetHandle,
-    };
-  }) as T["edges"];
 
   return {
     ...graph,
@@ -442,7 +339,6 @@ export function renameStateKeyInCanonicalGraph<T extends CanonicalGraphPayload>(
       },
     },
     nodes: nextNodes,
-    edges: nextEdges,
   };
 }
 

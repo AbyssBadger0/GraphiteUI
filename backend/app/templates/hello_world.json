@@ -77,15 +77,11 @@
   "edges": [
     {
       "source": "input_question",
-      "target": "answer_helper",
-      "sourceHandle": "write:question",
-      "targetHandle": "read:question"
+      "target": "answer_helper"
     },
     {
       "source": "answer_helper",
-      "target": "output_answer",
-      "sourceHandle": "write:answer",
-      "targetHandle": "read:answer"
+      "target": "output_answer"
     }
   ],
   "conditional_edges": [],

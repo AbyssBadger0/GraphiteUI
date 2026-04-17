@@ -205,18 +205,8 @@ def _build_cycle_graph() -> NodeSystemGraphPayload:
                 },
             },
             "edges": [
-                {
-                    "source": "seed_counter",
-                    "target": "increment_counter",
-                    "sourceHandle": "write:counter",
-                    "targetHandle": "read:counter",
-                },
-                {
-                    "source": "increment_counter",
-                    "target": "continue_check",
-                    "sourceHandle": "write:counter",
-                    "targetHandle": "read:counter",
-                },
+                {"source": "seed_counter", "target": "increment_counter"},
+                {"source": "increment_counter", "target": "continue_check"},
             ],
             "conditional_edges": [
                 {
@@ -410,6 +400,189 @@ class LangGraphMigrationTests(unittest.TestCase):
         graph = _load_cycle_counter_demo_graph()
         validation = validate_graph(graph)
         self.assertTrue(validation.valid, validation.model_dump())
+
+    def test_plain_edge_graph_validates_without_handle_fields(self):
+        graph = NodeSystemGraphPayload.model_validate(
+            {
+                "name": "Plain Edge Graph",
+                "state_schema": {
+                    "question": {
+                        "name": "Question",
+                        "description": "",
+                        "type": "text",
+                        "value": "",
+                        "color": "",
+                    }
+                },
+                "nodes": {
+                    "input_question": {
+                        "kind": "input",
+                        "name": "Input Question",
+                        "description": "",
+                        "ui": {"position": {"x": 0, "y": 0}},
+                        "reads": [],
+                        "writes": [{"state": "question", "mode": "replace"}],
+                        "config": {"value": "What is GraphiteUI?"},
+                    },
+                    "answer_helper": {
+                        "kind": "agent",
+                        "name": "Answer Helper",
+                        "description": "",
+                        "ui": {"position": {"x": 240, "y": 0}},
+                        "reads": [{"state": "question", "required": True}],
+                        "writes": [{"state": "question", "mode": "replace"}],
+                        "config": {
+                            "skills": [],
+                            "systemInstruction": "",
+                            "taskInstruction": "",
+                            "modelSource": "global",
+                            "model": "",
+                            "thinkingMode": "on",
+                            "temperature": 0.2,
+                        },
+                    },
+                },
+                "edges": [{"source": "input_question", "target": "answer_helper"}],
+                "conditional_edges": [],
+                "metadata": {},
+            }
+        )
+
+        validation = validate_graph(graph)
+        self.assertTrue(validation.valid, validation.model_dump())
+        plan = compile_graph_to_langgraph_plan(graph)
+        self.assertEqual([edge.state for edge in plan.edges], ["question"])
+
+    def test_plain_edge_graph_rejects_zero_shared_states_cleanly(self):
+        graph = NodeSystemGraphPayload.model_validate(
+            {
+                "name": "Plain Edge Zero Shared States",
+                "state_schema": {
+                    "question": {
+                        "name": "Question",
+                        "description": "",
+                        "type": "text",
+                        "value": "",
+                        "color": "",
+                    },
+                    "answer": {
+                        "name": "Answer",
+                        "description": "",
+                        "type": "text",
+                        "value": "",
+                        "color": "",
+                    },
+                },
+                "nodes": {
+                    "input_question": {
+                        "kind": "input",
+                        "name": "Input Question",
+                        "description": "",
+                        "ui": {"position": {"x": 0, "y": 0}},
+                        "reads": [],
+                        "writes": [{"state": "question", "mode": "replace"}],
+                        "config": {"value": "What is GraphiteUI?"},
+                    },
+                    "output_answer": {
+                        "kind": "output",
+                        "name": "Output Answer",
+                        "description": "",
+                        "ui": {"position": {"x": 240, "y": 0}},
+                        "reads": [{"state": "answer", "required": True}],
+                        "writes": [],
+                        "config": {
+                            "displayMode": "auto",
+                            "persistEnabled": False,
+                            "persistFormat": "auto",
+                            "fileNameTemplate": "",
+                        },
+                    },
+                },
+                "edges": [{"source": "input_question", "target": "output_answer"}],
+                "conditional_edges": [],
+                "metadata": {},
+            }
+        )
+
+        validation = validate_graph(graph)
+        self.assertFalse(validation.valid)
+        self.assertTrue(any(issue.code == "edge_state_mismatch" for issue in validation.issues))
+        plan = compile_graph_to_langgraph_plan(graph)
+        self.assertTrue(any("does not resolve to a single shared state" in reason for reason in plan.requirements.unsupported_reasons))
+
+    def test_plain_edge_graph_rejects_multiple_shared_states_cleanly(self):
+        graph = NodeSystemGraphPayload.model_validate(
+            {
+                "name": "Plain Edge Multiple Shared States",
+                "state_schema": {
+                    "alpha": {
+                        "name": "Alpha",
+                        "description": "",
+                        "type": "text",
+                        "value": "",
+                        "color": "",
+                    },
+                    "beta": {
+                        "name": "Beta",
+                        "description": "",
+                        "type": "text",
+                        "value": "",
+                        "color": "",
+                    },
+                },
+                "nodes": {
+                    "source_node": {
+                        "kind": "agent",
+                        "name": "Source Node",
+                        "description": "",
+                        "ui": {"position": {"x": 0, "y": 0}},
+                        "reads": [],
+                        "writes": [
+                            {"state": "alpha", "mode": "replace"},
+                            {"state": "beta", "mode": "replace"},
+                        ],
+                        "config": {
+                            "skills": [],
+                            "systemInstruction": "",
+                            "taskInstruction": "",
+                            "modelSource": "global",
+                            "model": "",
+                            "thinkingMode": "on",
+                            "temperature": 0.2,
+                        },
+                    },
+                    "target_node": {
+                        "kind": "agent",
+                        "name": "Target Node",
+                        "description": "",
+                        "ui": {"position": {"x": 240, "y": 0}},
+                        "reads": [
+                            {"state": "alpha", "required": True},
+                            {"state": "beta", "required": True},
+                        ],
+                        "writes": [],
+                        "config": {
+                            "skills": [],
+                            "systemInstruction": "",
+                            "taskInstruction": "",
+                            "modelSource": "global",
+                            "model": "",
+                            "thinkingMode": "on",
+                            "temperature": 0.2,
+                        },
+                    },
+                },
+                "edges": [{"source": "source_node", "target": "target_node"}],
+                "conditional_edges": [],
+                "metadata": {},
+            }
+        )
+
+        validation = validate_graph(graph)
+        self.assertFalse(validation.valid)
+        self.assertTrue(any(issue.code == "edge_state_ambiguous" for issue in validation.issues))
+        plan = compile_graph_to_langgraph_plan(graph)
+        self.assertTrue(any("does not resolve to a single shared state" in reason for reason in plan.requirements.unsupported_reasons))
 
     def test_explicit_system_instruction_still_keeps_graph_state_inputs_in_agent_prompt(self):
         graph = _load_cycle_counter_demo_graph()

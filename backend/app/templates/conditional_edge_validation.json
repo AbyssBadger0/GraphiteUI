@@ -136,9 +136,7 @@
   "edges": [
     {
       "source": "input_score",
-      "target": "score_gate",
-      "sourceHandle": "write:score",
-      "targetHandle": "read:score"
+      "target": "score_gate"
     }
   ],
   "conditional_edges": [

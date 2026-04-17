@@ -28,7 +28,7 @@ import {
   upsertStateInCanonicalGraph,
 } from "./node-system-canonical-write.ts";
 
-test("renameStateKeyInCanonicalGraph renames state schema, node bindings, and edge handles together", () => {
+test("renameStateKeyInCanonicalGraph renames state schema and node bindings together", () => {
   const graph: CanonicalGraphPayload = {
     graph_id: "graph_test",
     name: "Rename State Test",
@@ -78,8 +78,6 @@ test("renameStateKeyInCanonicalGraph renames state schema, node bindings, and ed
       {
         source: "input_question",
         target: "output_answer",
-        sourceHandle: "output:question",
-        targetHandle: "input:question",
       },
     ],
     conditional_edges: [],
@@ -103,8 +101,6 @@ test("renameStateKeyInCanonicalGraph renames state schema, node bindings, and ed
     {
       source: "input_question",
       target: "output_answer",
-      sourceHandle: "output:user_question",
-      targetHandle: "input:user_question",
     },
   ]);
 });
@@ -437,8 +433,6 @@ test("applyFlowProjectionToCanonicalGraph updates ui, removes missing nodes, and
       {
         source: "agent_a",
         target: "output_b",
-        sourceHandle: "write:result",
-        targetHandle: "read:result",
       },
     ],
     conditional_edges: [
@@ -592,8 +586,6 @@ test("buildCanonicalFlowProjectionFromEditorState prefers canonical graph semant
     {
       source: "input_question",
       target: "condition_route",
-      sourceHandle: "write:question",
-      targetHandle: "read:question",
     },
   ]);
   assert.deepEqual(projection.conditional_edges, [
@@ -936,8 +928,6 @@ test("composeCanonicalGraphForSubmission keeps canonical node content while taki
       {
         source: "agent_a",
         target: "agent_a",
-        sourceHandle: "write:answer",
-        targetHandle: "read:answer",
       },
     ],
     conditional_edges: [],

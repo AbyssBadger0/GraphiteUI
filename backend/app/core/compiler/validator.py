@@ -13,6 +13,7 @@ from app.core.schemas.node_system import (
     NodeSystemStateType,
     ValidationIssue,
 )
+from app.core.ordinary_edge_resolution import resolve_ordinary_edge_shared_state
 from app.skills.registry import get_skill_registry
 
 KNOWLEDGE_BASE_SKILL_KEY = "search_knowledge_base"
@@ -24,44 +25,19 @@ def validate_graph(graph: NodeSystemGraphDocument) -> GraphValidationResponse:
 
     nodes_by_name = graph.nodes
     state_schema = graph.state_schema
-    edge_counts = Counter(
-        (
-            edge.source,
-            edge.target,
-            edge.source_handle,
-            edge.target_handle,
-        )
-        for edge in graph.edges
-    )
+    edge_counts = Counter((edge.source, edge.target) for edge in graph.edges)
 
     for edge_key, count in edge_counts.items():
         if count <= 1:
             continue
-        source, target, source_handle, target_handle = edge_key
+        source, target = edge_key
         issues.append(
             ValidationIssue(
                 code="duplicate_edge",
-                message=(
-                    f"Duplicate edge '{source}.{source_handle} -> {target}.{target_handle}' detected. "
-                    "Keep a single explicit connection."
-                ),
+                message=f"Duplicate edge '{source} -> {target}' detected. Keep a single explicit connection.",
                 path="edges",
             )
         )
-
-    incoming_target_handle_counts = Counter((edge.target, edge.target_handle) for edge in graph.edges)
-    for (target, target_handle), count in incoming_target_handle_counts.items():
-        if count > 1:
-            issues.append(
-                ValidationIssue(
-                    code="duplicate_incoming_target_handle",
-                    message=(
-                        f"Node '{target}' input '{target_handle}' is targeted by more than one edge. "
-                        "Use a single incoming edge per state reader."
-                    ),
-                    path="edges",
-                )
-            )
 
     for node_name, node in nodes_by_name.items():
         issues.extend(_validate_node_shape(node_name, node))
@@ -298,7 +274,7 @@ def _validate_edge(index: int, edge: NodeSystemGraphEdge, graph: NodeSystemGraph
         issues.append(
             ValidationIssue(
                 code="edge_source_missing",
-                message=f"Edge '{edge.sourceHandle}->{edge.targetHandle}' references missing source node '{edge.source}'.",
+                message=f"Edge '{edge.source} -> {edge.target}' references missing source node '{edge.source}'.",
                 path=f"edges.{index}.source",
             )
         )
@@ -307,62 +283,43 @@ def _validate_edge(index: int, edge: NodeSystemGraphEdge, graph: NodeSystemGraph
         issues.append(
             ValidationIssue(
                 code="edge_target_missing",
-                message=f"Edge '{edge.sourceHandle}->{edge.targetHandle}' references missing target node '{edge.target}'.",
+                message=f"Edge '{edge.source} -> {edge.target}' references missing target node '{edge.target}'.",
                 path=f"edges.{index}.target",
             )
         )
         return issues
 
-    source_kind, source_state = _parse_handle(edge.source_handle)
-    target_kind, target_state = _parse_handle(edge.target_handle)
-
-    if source_kind != "write":
+    shared_state = resolve_ordinary_edge_shared_state(graph, edge.source, edge.target)
+    if shared_state is None:
+        source_states = {binding.state for binding in source_node.writes}
+        target_states = {binding.state for binding in target_node.reads}
+        shared_states = sorted(source_states & target_states)
         issues.append(
             ValidationIssue(
-                code="edge_source_handle_invalid",
-                message=f"Edge source handle '{edge.source_handle}' must reference a write handle.",
-                path=f"edges.{index}.sourceHandle",
-            )
-        )
-    if target_kind != "read":
-        issues.append(
-            ValidationIssue(
-                code="edge_target_handle_invalid",
-                message=f"Edge target handle '{edge.target_handle}' must reference a read handle.",
-                path=f"edges.{index}.targetHandle",
-            )
-        )
-
-    if source_state != target_state:
-        issues.append(
-            ValidationIssue(
-                code="edge_state_mismatch",
+                code="edge_state_ambiguous" if len(shared_states) > 1 else "edge_state_mismatch",
                 message=(
-                    f"Edge '{edge.source}.{edge.source_handle} -> {edge.target}.{edge.target_handle}' must reference the same state."
+                    f"Edge '{edge.source} -> {edge.target}' does not resolve to a single shared state."
                 ),
                 path=f"edges.{index}",
             )
         )
+        return issues
 
-    if source_state and source_state not in {binding.state for binding in source_node.writes}:
+    if shared_state not in {binding.state for binding in source_node.writes}:
         issues.append(
             ValidationIssue(
                 code="edge_source_state_not_written",
-                message=(
-                    f"Node '{edge.source}' does not write state '{source_state}', so it cannot expose '{edge.source_handle}'."
-                ),
-                path=f"edges.{index}.sourceHandle",
+                message=f"Node '{edge.source}' does not write state '{shared_state}'.",
+                path=f"edges.{index}",
             )
         )
 
-    if target_state and target_state not in {binding.state for binding in target_node.reads}:
+    if shared_state not in {binding.state for binding in target_node.reads}:
         issues.append(
             ValidationIssue(
                 code="edge_target_state_not_read",
-                message=(
-                    f"Node '{edge.target}' does not read state '{target_state}', so it cannot accept '{edge.target_handle}'."
-                ),
-                path=f"edges.{index}.targetHandle",
+                message=f"Node '{edge.target}' does not read state '{shared_state}'.",
+                path=f"edges.{index}",
             )
         )
 
@@ -416,10 +373,3 @@ def _validate_conditional_edge(
             )
 
     return issues
-
-
-def _parse_handle(handle: str) -> tuple[str | None, str | None]:
-    if ":" not in handle:
-        return None, None
-    prefix, state_name = handle.split(":", 1)
-    return prefix, state_name

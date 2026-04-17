@@ -92,15 +92,11 @@
   "edges": [
     {
       "source": "seed_counter",
-      "target": "increment_counter",
-      "sourceHandle": "write:counter",
-      "targetHandle": "read:counter"
+      "target": "increment_counter"
     },
     {
       "source": "increment_counter",
-      "target": "continue_check",
-      "sourceHandle": "write:counter",
-      "targetHandle": "read:counter"
+      "target": "continue_check"
     }
   ],
   "conditional_edges": [

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.core.model_catalog import get_default_text_model_ref, normalize_model_ref, resolve_runtime_model_name
+from app.core.ordinary_edge_resolution import resolve_ordinary_edge_shared_state
 from app.core.runtime.output_boundary_utils import save_output_value
 from app.core.runtime.knowledge_retrieval import retrieve_knowledge_base_context
 from app.core.runtime.state import touch_run_lifecycle, utc_now_iso
@@ -17,7 +18,6 @@ from app.core.schemas.node_system import (
     NodeSystemAgentNode,
     NodeSystemConditionNode,
     NodeSystemGraphDocument,
-    NodeSystemGraphEdge,
     NodeSystemInputNode,
     NodeSystemOutputNode,
     NodeSystemStateDefinition,
@@ -223,10 +223,10 @@ def _apply_state_writes(
 def _build_execution_edges(graph: NodeSystemGraphDocument) -> list[ExecutionEdge]:
     execution_edges: list[ExecutionEdge] = []
     for edge in graph.edges:
-        state_name = _parse_handle_state(edge.source_handle)
+        state_name = resolve_ordinary_edge_shared_state(graph, edge.source, edge.target)
         execution_edges.append(
             ExecutionEdge(
-                id=_build_regular_edge_id(edge),
+                id=_build_regular_edge_id(edge.source, edge.target, state_name),
                 source=edge.source,
                 target=edge.target,
                 kind="edge",
@@ -740,21 +740,14 @@ def _parse_llm_json_response(content: str, output_keys: list[str]) -> dict[str, 
     return {key: cleaned for key in output_keys}
 
 
-def _build_regular_edge_id(edge: NodeSystemGraphEdge) -> str:
-    return f"edge:{edge.source}:{edge.source_handle}->{edge.target}:{edge.target_handle}"
+def _build_regular_edge_id(source: str, target: str, state: str | None) -> str:
+    if state:
+        return f"edge:{source}:output:{state}:{target}:input:{state}"
+    return f"edge:{source}:{target}"
 
 
 def _build_conditional_edge_id(source: str, branch: str, target: str) -> str:
     return f"conditional:{source}:{branch}->{target}"
-
-
-def _parse_handle_state(handle: str) -> str | None:
-    if ":" not in handle:
-        return None
-    _prefix, state_name = handle.split(":", 1)
-    return state_name
-
-
 def _build_knowledge_summary(skill_outputs: list[dict[str, Any]]) -> str:
     lines: list[str] = []
     for skill_output in skill_outputs:

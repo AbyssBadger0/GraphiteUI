@@ -41,10 +41,13 @@ import { Input } from "@/components/ui/input";
 import { RichContent, formatRichContentValue, resolveRichContentDisplayMode } from "@/components/ui/rich-content";
 import { apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { NodeSystemRouteEdge } from "@/components/editor/node-system-route-edge";
 import { createEditorSeedGraph } from "@/lib/editor-graph-defaults";
 import { decorateFlowEdges } from "@/lib/node-system-edge-visuals";
 import { collectCycleBackEdgeIds } from "@/lib/node-system-cycle-edges";
+import { resolveCanonicalOrdinaryEdgePresentation } from "@/lib/node-system-ordinary-edge";
 import { getNodePortSectionPresentation } from "@/lib/node-system-node-card-presentation";
+import { resolveRouteEdgeSourceOffset } from "@/lib/node-system-route-edge-path";
 import {
   listConditionBranchMappingKeys,
   parseConditionBranchMappingDraft,
@@ -1658,7 +1661,7 @@ async function fileToEnvelope(file: File): Promise<UploadedAssetEnvelope> {
 function buildInitialFlowState(initialGraph: GraphPayload) {
   const nodes = Object.entries(initialGraph.nodes).map(([nodeId, node]) => createFlowNodeFromCanonicalNode(nodeId, node));
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
-  const edges = createFlowEdgesFromCanonicalGraph(initialGraph, nodesById);
+  const edges = createFlowEdgesFromCanonicalGraph(initialGraph);
   return { nodes, edges };
 }
 
@@ -1696,18 +1699,19 @@ function createFlowNodeFromCanonicalNode(
 function createFlowEdgeFromCanonicalEdge(
   edge: CanonicalGraphPayload["edges"][number],
   graph: CanonicalGraphPayload,
-  nodesById: Map<string, FlowNode>,
 ): Edge {
-  const flowSourceHandle = `output:${edge.sourceHandle.split(":", 2)[1] ?? edge.sourceHandle}`;
-  const flowTargetHandle = `input:${edge.targetHandle.split(":", 2)[1] ?? edge.targetHandle}`;
-  const sourceType = getPortTypeFromCanonicalGraph(graph, edge.source, flowSourceHandle) ?? "any";
+  const presentation = resolveCanonicalOrdinaryEdgePresentation(graph, edge);
+  const sourceType = presentation.sharedState
+    ? getPortTypeFromCanonicalGraph(graph, edge.source, `output:${presentation.sharedState}`) ?? "any"
+    : "any";
   const color = TYPE_COLORS[sourceType ?? "any"];
   return {
-    id: buildFlowEdgeId(edge.source, edge.sourceHandle, edge.target, edge.targetHandle),
+    id: presentation.id,
     source: edge.source,
     target: edge.target,
-    sourceHandle: flowSourceHandle,
-    targetHandle: flowTargetHandle,
+    type: "default",
+    sourceHandle: presentation.sourceHandle ?? undefined,
+    targetHandle: presentation.targetHandle ?? undefined,
     markerEnd: { type: MarkerType.ArrowClosed, color },
     style: {
       stroke: color,
@@ -1720,8 +1724,21 @@ function buildFlowEdgeId(source: string, sourceHandle: string, target: string, t
   return `edge:${source}:${sourceHandle}:${target}:${targetHandle}`;
 }
 
-function createFlowEdgesFromCanonicalGraph(graph: CanonicalGraphPayload, nodesById: Map<string, FlowNode>): Edge[] {
-  const edges = graph.edges.map((edge) => createFlowEdgeFromCanonicalEdge(edge, graph, nodesById));
+function resolveConditionBranchRouteSourceOffset(
+  graph: CanonicalGraphPayload,
+  nodeId: string,
+  branchKey: string,
+) {
+  const node = graph.nodes[nodeId];
+  if (!node || node.kind !== "condition") {
+    return resolveRouteEdgeSourceOffset(0);
+  }
+  const branchIndex = Math.max(0, node.config.branches.indexOf(branchKey));
+  return resolveRouteEdgeSourceOffset(branchIndex);
+}
+
+function createFlowEdgesFromCanonicalGraph(graph: CanonicalGraphPayload): Edge[] {
+  const edges = graph.edges.map((edge) => createFlowEdgeFromCanonicalEdge(edge, graph));
   for (const conditionalEdge of graph.conditional_edges) {
     for (const [branchKey, target] of Object.entries(conditionalEdge.branches)) {
       const sourceType = getPortTypeFromCanonicalGraph(graph, conditionalEdge.source, `output:${branchKey}`) ?? "any";
@@ -1730,8 +1747,12 @@ function createFlowEdgesFromCanonicalGraph(graph: CanonicalGraphPayload, nodesBy
         id: `conditional:${conditionalEdge.source}:${branchKey}:${target}`,
         source: conditionalEdge.source,
         target,
+        type: "route",
         sourceHandle: `output:${branchKey}`,
         targetHandle: ROUTE_TARGET_HANDLE,
+        data: {
+          routeSourceOffset: resolveConditionBranchRouteSourceOffset(graph, conditionalEdge.source, branchKey),
+        },
         markerEnd: { type: MarkerType.ArrowClosed, color },
         style: {
           stroke: color,
@@ -4376,6 +4397,10 @@ const nodeTypes = {
   default: NodeCard,
 };
 
+const edgeTypes = {
+  route: NodeSystemRouteEdge,
+};
+
 function StateDefaultValueEditor({
   field,
   onChange,
@@ -6654,6 +6679,14 @@ function NodeSystemCanvas({
                 const edgeColor = connectionKind === "route"
                   ? "var(--accent-strong)"
                   : TYPE_COLORS[sourceType ?? "any"];
+                const routeSourceOffset =
+                  connectionKind === "route"
+                    ? resolveConditionBranchRouteSourceOffset(
+                        canonicalGraph,
+                        connection.source ?? "",
+                        getPortKeyFromHandle(connection.sourceHandle) ?? "",
+                      )
+                    : null;
 
                 pendingConnectRef.current.completed = true;
                 setConnectingSourceType(null);
@@ -6678,8 +6711,10 @@ function NodeSystemCanvas({
                       ),
                       source: connection.source ?? "",
                       target: connection.target ?? "",
+                      type: connectionKind === "route" ? "route" : "default",
                       sourceHandle: connection.sourceHandle ?? null,
                       targetHandle: nextTargetHandle,
+                      data: connectionKind === "route" ? { routeSourceOffset } : undefined,
                       markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor },
                       style: {
                         stroke: edgeColor,
@@ -6733,6 +6768,7 @@ function NodeSystemCanvas({
               maxZoom={1.8}
               defaultViewport={{ x: 0, y: 0, zoom: 0.9 }}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               className="bg-[linear-gradient(180deg,rgba(247,241,231,0.72)_0%,rgba(237,228,210,0.72)_100%)]"
             >
               <Background id="editor-grid" color="#cfb58f" gap={24} size={1.4} variant={BackgroundVariant.Dots} />

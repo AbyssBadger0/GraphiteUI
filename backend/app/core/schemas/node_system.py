@@ -296,14 +296,12 @@ NodeSystemNodeConfig = NodeSystemNode
 class NodeSystemGraphEdge(BaseModel):
     source: str = Field(..., min_length=1)
     target: str = Field(..., min_length=1)
-    source_handle: str = Field(..., alias="sourceHandle", min_length=1)
-    target_handle: str = Field(..., alias="targetHandle", min_length=1)
 
-    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
+    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True, extra="forbid")
 
     @field_validator("source", "target")
     @classmethod
-    def validate_node_name(cls, value: str) -> str:
+    def validate_node_ref(cls, value: str) -> str:
         return _validate_identifier(value, label="Node name")
 
 

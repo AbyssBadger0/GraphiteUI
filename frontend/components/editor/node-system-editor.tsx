@@ -44,7 +44,6 @@ import { cn } from "@/lib/cn";
 import { createEditorSeedGraph } from "@/lib/editor-graph-defaults";
 import {
   buildCanonicalNodeFromEditorConfig,
-  buildEditorNodeConfigFromCanonicalNode,
   buildEditorNodeConfigFromCanonicalPreset,
   findFirstCompatibleInputHandleFromCanonicalNode,
   buildEditorStateFieldsFromCanonicalGraph,
@@ -67,8 +66,6 @@ import {
   composeCanonicalGraphForSubmission,
   deleteStateFromCanonicalGraph,
   removeStateFromCanonicalNode,
-  replaceCanonicalNodeReadsFromPorts,
-  replaceCanonicalNodeWritesFromPorts,
   renameStateKeyInCanonicalGraph,
   renameCanonicalNodeDescription,
   renameCanonicalNodeName,
@@ -77,6 +74,8 @@ import {
   updateCanonicalInputNodeValue,
   updateCanonicalNodeConfig,
   updateCanonicalReadBindingRequired,
+  replaceCanonicalNodeReads,
+  replaceCanonicalNodeWrites,
   upsertStateInCanonicalGraph,
 } from "@/lib/node-system-canonical-write";
 import {
@@ -169,8 +168,8 @@ type FlowNodeData = {
   expandedSize?: NodeViewportSize | null;
   connectingSourceType?: ValueType | null;
   onUpdateCanonicalNodeConfig?: (updater: (node: CanonicalNode) => CanonicalNode["config"]) => void;
-  onReplaceReadPorts?: (ports: PortDefinition[]) => void;
-  onReplaceWritePorts?: (ports: PortDefinition[]) => void;
+  onReplaceReadBindings?: (reads: CanonicalNode["reads"]) => void;
+  onReplaceWriteBindings?: (writes: CanonicalNode["writes"]) => void;
   onUpdateReadRequirement?: (stateKey: string, required: boolean) => void;
   onRemoveStateRelation?: (side: "input" | "output", stateKey: string) => void;
   onRenameNode?: (nextName: string) => void;
@@ -1571,6 +1570,10 @@ function buildInputBoundaryPresetConfig(preset: CanonicalPresetDocument): InputB
   return config;
 }
 
+function getCanonicalPresetDisplayName(preset: CanonicalPresetDocument) {
+  return preset.definition.node.name.trim() || preset.definition.label.trim() || preset.presetId;
+}
+
 function createGenericInputNodeConfig(): InputBoundaryNode {
   const baseConfig = deepClonePreset(buildInputBoundaryPresetConfig(TEXT_INPUT_PRESET));
   return {
@@ -1632,7 +1635,7 @@ async function fileToEnvelope(file: File): Promise<UploadedAssetEnvelope> {
 }
 
 function buildInitialFlowState(initialGraph: GraphPayload) {
-  const nodes = Object.entries(initialGraph.nodes).map(([nodeId, node]) => createFlowNodeFromCanonicalNode(nodeId, node, initialGraph.state_schema));
+  const nodes = Object.entries(initialGraph.nodes).map(([nodeId, node]) => createFlowNodeFromCanonicalNode(nodeId, node));
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
   const edges = createFlowEdgesFromCanonicalGraph(initialGraph, nodesById);
   return { nodes, edges };
@@ -1645,7 +1648,6 @@ function serializeCanonicalGraph(graph: CanonicalGraph) {
 function createFlowNodeFromCanonicalNode(
   nodeId: string,
   node: CanonicalNode,
-  stateSchema: CanonicalGraphPayload["state_schema"],
 ): FlowNode {
   const isExpanded = node.kind === "input" ? true : !Boolean(node.ui.collapsed);
   const collapsedSize = normalizeViewportSize(node.ui.collapsedSize);
@@ -2713,6 +2715,65 @@ function createDraftStateFromQuery(query: string, existingKeys: string[]): State
       color: "",
     },
   };
+}
+
+function coerceCanonicalReadBindings(value: unknown): CanonicalNode["reads"] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
+      const state = String((entry as { state?: unknown }).state ?? "").trim();
+      if (!state) {
+        return null;
+      }
+      return {
+        state,
+        required: Boolean((entry as { required?: unknown }).required),
+      };
+    })
+    .filter((entry): entry is CanonicalNode["reads"][number] => Boolean(entry));
+}
+
+function coerceCanonicalWriteBindings(value: unknown): CanonicalNode["writes"] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
+      const state = String((entry as { state?: unknown }).state ?? "").trim();
+      if (!state) {
+        return null;
+      }
+      return {
+        state,
+        mode: "replace" as const,
+      };
+    })
+    .filter((entry): entry is CanonicalNode["writes"][number] => Boolean(entry));
+}
+
+function coerceConditionBranchKeys(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => {
+      if (typeof entry === "string") {
+        return entry.trim();
+      }
+      if (entry && typeof entry === "object") {
+        return String((entry as { key?: unknown }).key ?? "").trim();
+      }
+      return "";
+    })
+    .filter((entry) => entry.length > 0);
 }
 
 function StatePortCreateButton({
@@ -3898,8 +3959,16 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                   ) : null}
                   <AdvancedJsonSection
                     sections={[
-                      { label: "Inputs JSON", value: inputs, onChange: (v) => data.onReplaceReadPorts?.(v as PortDefinition[]) },
-                      { label: "Outputs JSON", value: outputs, onChange: (v) => data.onReplaceWritePorts?.(v as PortDefinition[]) },
+                      {
+                        label: "Inputs JSON",
+                        value: canonicalNode?.reads ?? [],
+                        onChange: (nextValue) => data.onReplaceReadBindings?.(coerceCanonicalReadBindings(nextValue)),
+                      },
+                      {
+                        label: "Outputs JSON",
+                        value: canonicalNode?.writes ?? [],
+                        onChange: (nextValue) => data.onReplaceWriteBindings?.(coerceCanonicalWriteBindings(nextValue)),
+                      },
                     ]}
                   />
                 </div>
@@ -3971,20 +4040,18 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                     sections={[
                       {
                         label: "Inputs JSON",
-                        value: inputs,
-                        onChange: (nextValue) => data.onReplaceReadPorts?.(nextValue as PortDefinition[]),
+                        value: canonicalNode?.reads ?? [],
+                        onChange: (nextValue) => data.onReplaceReadBindings?.(coerceCanonicalReadBindings(nextValue)),
                       },
                       {
                         label: "Branches JSON",
-                        value: conditionBranches,
+                        value: conditionConfig?.branches ?? [],
                         onChange: (nextValue) =>
                           updateCanonicalConfig((node) =>
                             node.kind === "condition"
                               ? {
                                   ...node.config,
-                                  branches: (nextValue as ConditionNode["branches"]).map((branch) =>
-                                    typeof branch === "string" ? branch : branch.key,
-                                  ),
+                                  branches: coerceConditionBranchKeys(nextValue),
                                 }
                               : node.config,
                           ),
@@ -4902,37 +4969,31 @@ function NodeSystemCanvas({
     [canonicalGraphState, nodes],
   );
 
-  const emptyAgentPreset = useMemo(() => buildEditorNodeConfigFromCanonicalPreset(EMPTY_AGENT_PRESET), []);
-
   const allPresets = useMemo(
-    () =>
-      [...NODE_PRESETS_MOCK, ...persistedPresets].map((preset) => buildEditorNodeConfigFromCanonicalPreset(preset)).filter((preset) =>
-        isPresetEligibleFamily(preset.family),
-      ),
+    () => [...NODE_PRESETS_MOCK, ...persistedPresets].filter((preset) => isPresetEligibleFamily(preset.definition.node.kind)),
     [persistedPresets],
   );
   const getRecommendedPresets = useCallback(
     (sourceType: ValueType | null) => {
       if (!sourceType) {
-        return [emptyAgentPreset, ...allPresets.filter((preset) => preset.presetId !== emptyAgentPreset.presetId)];
+        return [EMPTY_AGENT_PRESET, ...allPresets.filter((preset) => preset.presetId !== EMPTY_AGENT_PRESET.presetId)];
       }
 
-      const supportsType = (preset: NodePresetDefinition) => {
-        if (preset.family === "agent") {
-          return preset.inputs.some((input) => input.valueType === "any" || input.valueType === sourceType);
+      const supportsType = (preset: CanonicalPresetDocument) => {
+        const node = preset.definition.node;
+        const inputs = listEditorInputPortsFromCanonicalNode(node, preset.definition.state_schema);
+        if (node.kind === "agent" || node.kind === "condition") {
+          return inputs.some((input) => input.valueType === "any" || input.valueType === sourceType);
         }
-        if (preset.family === "condition") {
-          return preset.inputs.some((input) => input.valueType === "any" || input.valueType === sourceType);
-        }
-        if (preset.family === "output") {
-          return preset.input.valueType === "any" || preset.input.valueType === sourceType;
+        if (node.kind === "output") {
+          return inputs.some((input) => input.valueType === "any" || input.valueType === sourceType);
         }
         return false;
       };
 
-      return [emptyAgentPreset, ...allPresets.filter((preset) => preset.presetId !== emptyAgentPreset.presetId && supportsType(preset))];
+      return [EMPTY_AGENT_PRESET, ...allPresets.filter((preset) => preset.presetId !== EMPTY_AGENT_PRESET.presetId && supportsType(preset))];
     },
-    [allPresets, emptyAgentPreset],
+    [allPresets],
   );
 
   const nodePalette = useMemo(() => {
@@ -4969,9 +5030,9 @@ function NodeSystemCanvas({
         ];
     const presetEntries: CreationMenuEntry[] = getRecommendedPresets(sourceType).map((preset) => ({
       id: `preset-${preset.presetId}`,
-      family: preset.family,
-      label: getNodeDisplayName(preset, preset.presetId),
-      description: preset.description,
+      family: preset.definition.node.kind,
+      label: getCanonicalPresetDisplayName(preset),
+      description: preset.definition.description || preset.definition.node.description,
       mode: "preset",
       presetId: preset.presetId,
     }));
@@ -5383,7 +5444,7 @@ function NodeSystemCanvas({
         if (!active) return;
         setPersistedPresets(
           payload
-            .filter((item) => isPresetEligibleFamily(buildEditorNodeConfigFromCanonicalPreset(item).family)),
+            .filter((item) => isPresetEligibleFamily(item.definition.node.kind)),
         );
       } catch (error) {
         if (!active) return;
@@ -5446,9 +5507,28 @@ function NodeSystemCanvas({
     } satisfies FlowNode;
   }
 
-  function createNodeFromPreset(preset: NodePresetDefinition, position: { x: number; y: number }) {
-    const config = deepClonePreset(preset);
-    return createNodeFromConfig(config, position);
+  function createNodeFromCanonicalPreset(preset: CanonicalPresetDocument, position: { x: number; y: number }) {
+    const id = `${preset.definition.node.kind}_${crypto.randomUUID().slice(0, 8)}`;
+    const defaultWidth = getDefaultNodeWidth();
+    const canonicalNode = {
+      ...preset.definition.node,
+      ui: {
+        ...preset.definition.node.ui,
+        position,
+        collapsed: false,
+        collapsedSize: null,
+        expandedSize: preset.definition.node.ui.expandedSize ?? { width: defaultWidth },
+      },
+    } satisfies CanonicalNode;
+    const flowNode = createFlowNodeFromCanonicalNode(id, canonicalNode);
+    return {
+      ...flowNode,
+      position,
+      data: {
+        ...flowNode.data,
+        canonicalNode,
+      },
+    } satisfies FlowNode;
   }
 
   function ensurePresetStateFields(stateFieldsToMerge: StateField[]) {
@@ -5569,8 +5649,7 @@ function NodeSystemCanvas({
       ensurePresetStateFields(buildEditorStateFieldsFromCanonicalStateSchema(presetDocument.definition.state_schema));
     }
 
-    const preset = buildEditorNodeConfigFromCanonicalPreset(presetDocument);
-    const nextNode = createNodeFromPreset(preset, position);
+    const nextNode = createNodeFromCanonicalPreset(presetDocument, position);
     setNodes((current) => current.concat(nextNode));
     const nextCanonicalNode = nextNode.data.canonicalNode ?? null;
     const initialTargetHandle =
@@ -5610,7 +5689,7 @@ function NodeSystemCanvas({
       });
     }
     setSelectedNodeId(nextNode.id);
-    setStatusMessage(`Added ${getNodeDisplayName(preset, preset.presetId)}`);
+    setStatusMessage(`Added ${getCanonicalPresetDisplayName(presetDocument)}`);
 
     if (connectionSource?.sourceNodeId && connectionSource.sourceHandle && connectionSource.sourceValueType) {
       const targetHandle = connectionStateField
@@ -6099,11 +6178,11 @@ function NodeSystemCanvas({
                   onUpdateCanonicalNodeConfig: (updater: (node: CanonicalNode) => CanonicalNode["config"]) => {
                     setCanonicalGraphState((current) => updateCanonicalNodeConfig(current, node.id, updater));
                   },
-                  onReplaceReadPorts: (ports: PortDefinition[]) => {
-                    setCanonicalGraphState((current) => replaceCanonicalNodeReadsFromPorts(current, node.id, ports));
+                  onReplaceReadBindings: (reads: CanonicalNode["reads"]) => {
+                    setCanonicalGraphState((current) => replaceCanonicalNodeReads(current, node.id, reads));
                   },
-                  onReplaceWritePorts: (ports: PortDefinition[]) => {
-                    setCanonicalGraphState((current) => replaceCanonicalNodeWritesFromPorts(current, node.id, ports));
+                  onReplaceWriteBindings: (writes: CanonicalNode["writes"]) => {
+                    setCanonicalGraphState((current) => replaceCanonicalNodeWrites(current, node.id, writes));
                   },
                   onUpdateReadRequirement: (stateKey: string, required: boolean) => {
                     setCanonicalGraphState((current) => updateCanonicalReadBindingRequired(current, node.id, stateKey, required));

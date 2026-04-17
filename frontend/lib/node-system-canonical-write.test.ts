@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import type { CanonicalGraphPayload } from "./node-system-canonical.ts";
-import type { AgentNode, ConditionNode, InputBoundaryNode, OutputBoundaryNode, PortDefinition } from "./node-system-schema.ts";
+import type { AgentNode, ConditionNode, InputBoundaryNode, OutputBoundaryNode } from "./node-system-schema.ts";
 import {
   addCanonicalNodeToGraph,
   addEditorNodeToCanonicalGraph,
@@ -21,8 +21,8 @@ import {
   updateCanonicalNode,
   updateCanonicalInputNodeStateType,
   updateCanonicalInputNodeValue,
-  replaceCanonicalNodeReadsFromPorts,
-  replaceCanonicalNodeWritesFromPorts,
+  replaceCanonicalNodeReads,
+  replaceCanonicalNodeWrites,
   upsertStateInCanonicalGraph,
 } from "./node-system-canonical-write.ts";
 
@@ -1313,7 +1313,7 @@ test("updateCanonicalReadBindingRequired updates only the targeted read binding"
   ]);
 });
 
-test("replaceCanonicalNodeReadsFromPorts rewrites reads and upserts missing states from port definitions", () => {
+test("replaceCanonicalNodeReads rewrites reads and ensures referenced states exist", () => {
   const graph: CanonicalGraphPayload = {
     graph_id: null,
     name: "Replace Reads Graph",
@@ -1350,34 +1350,34 @@ test("replaceCanonicalNodeReadsFromPorts rewrites reads and upserts missing stat
     metadata: {},
   };
 
-  const nextPorts: PortDefinition[] = [
-    { key: "question", label: "User Question", valueType: "text", required: true },
-    { key: "context_blob", label: "Context Blob", valueType: "json", required: false },
+  const nextReads = [
+    { state: "question", required: true },
+    { state: "context_blob", required: false },
   ];
 
-  const next = replaceCanonicalNodeReadsFromPorts(graph, "answer_helper", nextPorts);
+  const next = replaceCanonicalNodeReads(graph, "answer_helper", nextReads);
 
   assert.deepEqual(next.nodes.answer_helper.reads, [
     { state: "question", required: true },
     { state: "context_blob", required: false },
   ]);
   assert.deepEqual(next.state_schema.question, {
-    name: "User Question",
+    name: "Question",
     description: "",
     type: "text",
     value: "",
     color: "#d97706",
   });
   assert.deepEqual(next.state_schema.context_blob, {
-    name: "Context Blob",
+    name: "context_blob",
     description: "",
-    type: "json",
-    value: {},
+    type: "text",
+    value: "",
     color: "",
   });
 });
 
-test("replaceCanonicalNodeWritesFromPorts rewrites writes and upserts missing output states", () => {
+test("replaceCanonicalNodeWrites rewrites writes and ensures referenced states exist", () => {
   const graph: CanonicalGraphPayload = {
     graph_id: null,
     name: "Replace Writes Graph",
@@ -1414,28 +1414,28 @@ test("replaceCanonicalNodeWritesFromPorts rewrites writes and upserts missing ou
     metadata: {},
   };
 
-  const nextPorts: PortDefinition[] = [
-    { key: "answer", label: "Final Answer", valueType: "text" },
-    { key: "supporting_image", label: "Supporting Image", valueType: "image" },
+  const nextWrites = [
+    { state: "answer", mode: "replace" as const },
+    { state: "supporting_image", mode: "replace" as const },
   ];
 
-  const next = replaceCanonicalNodeWritesFromPorts(graph, "answer_helper", nextPorts);
+  const next = replaceCanonicalNodeWrites(graph, "answer_helper", nextWrites);
 
   assert.deepEqual(next.nodes.answer_helper.writes, [
     { state: "answer", mode: "replace" },
     { state: "supporting_image", mode: "replace" },
   ]);
   assert.deepEqual(next.state_schema.answer, {
-    name: "Final Answer",
+    name: "Answer",
     description: "",
     type: "text",
     value: "",
     color: "#d97706",
   });
   assert.deepEqual(next.state_schema.supporting_image, {
-    name: "Supporting Image",
+    name: "supporting_image",
     description: "",
-    type: "image",
+    type: "text",
     value: "",
     color: "",
   });

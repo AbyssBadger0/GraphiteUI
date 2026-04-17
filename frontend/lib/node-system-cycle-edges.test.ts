@@ -3,7 +3,10 @@ import test from "node:test";
 
 import type { CanonicalGraphPayload } from "./node-system-canonical.ts";
 import { collectCycleBackEdgeIds } from "./node-system-cycle-edges.ts";
-import { resolveCanonicalOrdinaryEdgePresentation } from "./node-system-ordinary-edge.ts";
+import {
+  buildCanonicalOrdinaryEdgeId,
+  resolveCanonicalOrdinaryEdgePresentation,
+} from "./node-system-ordinary-edge.ts";
 
 function createGraph(overrides: Partial<CanonicalGraphPayload> = {}): CanonicalGraphPayload {
   return {
@@ -103,6 +106,16 @@ test("collectCycleBackEdgeIds also marks conditional branches that loop back", (
   });
 
   assert.deepEqual([...collectCycleBackEdgeIds(graph)], ["conditional:b:retry:a"]);
+});
+
+test("buildCanonicalOrdinaryEdgeId matches the hydrated ordinary-edge presentation id", () => {
+  const graph = createGraph({
+    edges: [{ source: "c", target: "a" }],
+  });
+
+  const edge = { source: "c", target: "a" };
+  assert.equal(buildCanonicalOrdinaryEdgeId(graph, edge), resolveCanonicalOrdinaryEdgePresentation(graph, edge).id);
+  assert.equal(buildCanonicalOrdinaryEdgeId(graph, edge), "edge:c:output:result:a:input:result");
 });
 
 test("resolveCanonicalOrdinaryEdgePresentation leaves ambiguous ordinary edges generic", () => {

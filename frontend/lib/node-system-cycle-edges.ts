@@ -1,5 +1,5 @@
 import type { CanonicalGraphPayload } from "./node-system-canonical.ts";
-import { resolveCanonicalOrdinaryEdgePresentation } from "./node-system-ordinary-edge.ts";
+import { buildCanonicalOrdinaryEdgeId } from "./node-system-ordinary-edge.ts";
 
 type TraversalEdge = {
   id: string;
@@ -9,14 +9,11 @@ type TraversalEdge = {
 
 function collectTraversalEdges(graph: CanonicalGraphPayload): TraversalEdge[] {
   return [
-    ...graph.edges.map((edge) => {
-      const presentation = resolveCanonicalOrdinaryEdgePresentation(graph, edge);
-      return {
-        id: presentation.id,
-        source: edge.source,
-        target: edge.target,
-      };
-    }),
+    ...graph.edges.map((edge) => ({
+      id: buildCanonicalOrdinaryEdgeId(graph, edge),
+      source: edge.source,
+      target: edge.target,
+    })),
     ...graph.conditional_edges.flatMap((edge) =>
       Object.entries(edge.branches).map(([branchKey, target]) => ({
         id: `conditional:${edge.source}:${branchKey}:${target}`,

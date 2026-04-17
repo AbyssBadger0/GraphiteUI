@@ -600,6 +600,174 @@ test("buildCanonicalFlowProjectionFromEditorState prefers canonical graph semant
   assert.deepEqual(projection.nodes.output_answer.ui.position, { x: 480, y: 0 });
 });
 
+test("buildCanonicalFlowProjectionFromEditorState preserves unresolved ordinary edges with zero shared states", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: "graph_test",
+    name: "Zero Shared Edge Preservation Test",
+    state_schema: {
+      alpha: {
+        name: "Alpha",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#d97706",
+      },
+      beta: {
+        name: "Beta",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#2563eb",
+      },
+    },
+    nodes: {
+      source_node: {
+        kind: "agent",
+        name: "Source Node",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [{ state: "alpha", mode: "replace" }],
+        config: {
+          skills: [],
+          systemInstruction: "",
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+      target_node: {
+        kind: "agent",
+        name: "Target Node",
+        description: "",
+        ui: { position: { x: 240, y: 0 }, collapsed: false },
+        reads: [{ state: "beta", required: true }],
+        writes: [],
+        config: {
+          skills: [],
+          systemInstruction: "",
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const projection = buildCanonicalFlowProjectionFromEditorState(
+    [
+      {
+        id: "source_node",
+        position: { x: 0, y: 0 },
+        data: { isExpanded: true, expandedSize: null, collapsedSize: null },
+      },
+      {
+        id: "target_node",
+        position: { x: 240, y: 0 },
+        data: { isExpanded: true, expandedSize: null, collapsedSize: null },
+      },
+    ],
+    graph,
+    [{ source: "source_node", target: "target_node" }],
+  );
+
+  assert.deepEqual(projection.edges, [{ source: "source_node", target: "target_node" }]);
+});
+
+test("buildCanonicalFlowProjectionFromEditorState preserves unresolved ordinary edges with multiple shared states", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: "graph_test",
+    name: "Multiple Shared Edge Preservation Test",
+    state_schema: {
+      alpha: {
+        name: "Alpha",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#d97706",
+      },
+      beta: {
+        name: "Beta",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#2563eb",
+      },
+    },
+    nodes: {
+      source_node: {
+        kind: "agent",
+        name: "Source Node",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [
+          { state: "alpha", mode: "replace" },
+          { state: "beta", mode: "replace" },
+        ],
+        config: {
+          skills: [],
+          systemInstruction: "",
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+      target_node: {
+        kind: "agent",
+        name: "Target Node",
+        description: "",
+        ui: { position: { x: 240, y: 0 }, collapsed: false },
+        reads: [
+          { state: "alpha", required: true },
+          { state: "beta", required: true },
+        ],
+        writes: [],
+        config: {
+          skills: [],
+          systemInstruction: "",
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const projection = buildCanonicalFlowProjectionFromEditorState(
+    [
+      {
+        id: "source_node",
+        position: { x: 0, y: 0 },
+        data: { isExpanded: true, expandedSize: null, collapsedSize: null },
+      },
+      {
+        id: "target_node",
+        position: { x: 240, y: 0 },
+        data: { isExpanded: true, expandedSize: null, collapsedSize: null },
+      },
+    ],
+    graph,
+    [{ source: "source_node", target: "target_node" }],
+  );
+
+  assert.deepEqual(projection.edges, [{ source: "source_node", target: "target_node" }]);
+});
+
 test("upsertStateInCanonicalGraph creates or updates a canonical state definition", () => {
   const graph: CanonicalGraphPayload = {
     graph_id: "graph_test",

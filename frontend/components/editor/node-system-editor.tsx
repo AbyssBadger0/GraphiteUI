@@ -45,7 +45,10 @@ import { NodeSystemRouteEdge } from "@/components/editor/node-system-route-edge"
 import { createEditorSeedGraph } from "@/lib/editor-graph-defaults";
 import { decorateFlowEdges } from "@/lib/node-system-edge-visuals";
 import { collectCycleBackEdgeIds } from "@/lib/node-system-cycle-edges";
-import { resolveCanonicalOrdinaryEdgePresentation } from "@/lib/node-system-ordinary-edge";
+import {
+  buildCanonicalOrdinaryEdgeId,
+  resolveCanonicalOrdinaryEdgePresentation,
+} from "@/lib/node-system-ordinary-edge";
 import { getNodePortSectionPresentation } from "@/lib/node-system-node-card-presentation";
 import { resolveRouteEdgeSourceOffset } from "@/lib/node-system-route-edge-path";
 import {
@@ -1706,7 +1709,7 @@ function createFlowEdgeFromCanonicalEdge(
     : "any";
   const color = TYPE_COLORS[sourceType ?? "any"];
   return {
-    id: presentation.id,
+    id: buildCanonicalOrdinaryEdgeId(graph, edge),
     source: edge.source,
     target: edge.target,
     type: "default",
@@ -5817,7 +5820,10 @@ function NodeSystemCanvas({
       if (targetHandle) {
         setEdges((current) =>
           current.concat({
-            id: buildFlowEdgeId(connectionSource.sourceNodeId ?? "", connectionSource.sourceHandle ?? "", nextNode.id, targetHandle),
+            id: buildCanonicalOrdinaryEdgeId(canonicalGraph, {
+              source: connectionSource.sourceNodeId ?? "",
+              target: nextNode.id,
+            }),
             source: connectionSource.sourceNodeId ?? "",
             target: nextNode.id,
             sourceHandle: connectionSource.sourceHandle ?? null,
@@ -5895,7 +5901,10 @@ function NodeSystemCanvas({
       if (targetHandle) {
         setEdges((current) =>
           current.concat({
-            id: buildFlowEdgeId(connectionSource.sourceNodeId ?? "", connectionSource.sourceHandle ?? "", nextNode.id, targetHandle),
+            id: buildCanonicalOrdinaryEdgeId(canonicalGraph, {
+              source: connectionSource.sourceNodeId ?? "",
+              target: nextNode.id,
+            }),
             source: connectionSource.sourceNodeId ?? "",
             target: nextNode.id,
             sourceHandle: connectionSource.sourceHandle ?? null,
@@ -6703,12 +6712,18 @@ function NodeSystemCanvas({
                         ),
                     )
                     .concat({
-                      id: buildFlowEdgeId(
-                        connection.source ?? "",
-                        connection.sourceHandle ?? "",
-                        connection.target ?? "",
-                        nextTargetHandle ?? "",
-                      ),
+                      id:
+                        connectionKind === "route"
+                          ? buildFlowEdgeId(
+                              connection.source ?? "",
+                              connection.sourceHandle ?? "",
+                              connection.target ?? "",
+                              nextTargetHandle ?? "",
+                            )
+                          : buildCanonicalOrdinaryEdgeId(canonicalGraph, {
+                              source: connection.source ?? "",
+                              target: connection.target ?? "",
+                            }),
                       source: connection.source ?? "",
                       target: connection.target ?? "",
                       type: connectionKind === "route" ? "route" : "default",

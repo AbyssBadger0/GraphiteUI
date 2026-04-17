@@ -35,7 +35,7 @@ export function resolveCanonicalOrdinaryEdgePresentation(
   const sharedState = resolveCanonicalOrdinaryEdgeSharedState(graph, edge);
   if (!sharedState) {
     return {
-      id: `edge:${edge.source}:${edge.target}`,
+      id: buildCanonicalOrdinaryEdgeIdFromState(edge.source, edge.target, null),
       sourceHandle: null,
       targetHandle: null,
       sharedState: null,
@@ -43,9 +43,20 @@ export function resolveCanonicalOrdinaryEdgePresentation(
   }
 
   return {
-    id: `edge:${edge.source}:output:${sharedState}:${edge.target}:input:${sharedState}`,
+    id: buildCanonicalOrdinaryEdgeIdFromState(edge.source, edge.target, sharedState),
     sourceHandle: `output:${sharedState}`,
     targetHandle: `input:${sharedState}`,
     sharedState,
   };
+}
+
+export function buildCanonicalOrdinaryEdgeId(
+  graph: CanonicalGraphPayload,
+  edge: Pick<CanonicalEdge, "source" | "target">,
+): string {
+  return buildCanonicalOrdinaryEdgeIdFromState(edge.source, edge.target, resolveCanonicalOrdinaryEdgeSharedState(graph, edge));
+}
+
+function buildCanonicalOrdinaryEdgeIdFromState(source: string, target: string, state: string | null): string {
+  return state ? `edge:${source}:output:${state}:${target}:input:${state}` : `edge:${source}:${target}`;
 }

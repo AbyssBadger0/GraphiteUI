@@ -1,3 +1,3 @@
 <template>
-  <main>GraphiteUI Vue frontend bootstrap</main>
+  <RouterView />
 </template>

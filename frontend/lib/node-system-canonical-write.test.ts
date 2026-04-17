@@ -15,6 +15,7 @@ import {
   renameCanonicalNodeDescription,
   renameCanonicalNodeName,
   renameConditionBranchKeyInCanonicalGraph,
+  updateConditionBranchInCanonicalGraph,
   renameStateKeyInCanonicalGraph,
   renameStateNameInCanonicalGraph,
   updateCanonicalReadBindingRequired,
@@ -215,6 +216,62 @@ test("renameConditionBranchKeyInCanonicalGraph keeps condition config and condit
       },
     },
   ]);
+});
+
+test("updateConditionBranchInCanonicalGraph updates branch name and mapping values together", () => {
+  const graph: CanonicalGraphPayload = {
+    graph_id: "graph_test",
+    name: "Update Condition Branch Test",
+    state_schema: {},
+    nodes: {
+      route_result: {
+        kind: "condition",
+        name: "Route Result",
+        description: "",
+        ui: {
+          position: { x: 0, y: 0 },
+          collapsed: false,
+        },
+        reads: [],
+        writes: [],
+        config: {
+          branches: ["continue", "retry"],
+          conditionMode: "rule",
+          rule: {
+            source: "result",
+            operator: "exists",
+            value: null,
+          },
+          branchMapping: {
+            true: "continue",
+            false: "retry",
+          },
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [
+      {
+        source: "route_result",
+        branches: {
+          continue: "next_agent",
+          retry: "retry_agent",
+        },
+      },
+    ],
+    metadata: {},
+  };
+
+  const next = updateConditionBranchInCanonicalGraph(graph, "route_result", "retry", "retry", ["false", "maybe"]);
+
+  assert.equal(next.nodes.route_result.kind, "condition");
+  const nextConditionNode = next.nodes.route_result;
+  assert.deepEqual(nextConditionNode.config.branches, ["continue", "retry"]);
+  assert.deepEqual(nextConditionNode.config.branchMapping, {
+    true: "continue",
+    false: "retry",
+    maybe: "retry",
+  });
 });
 
 test("addEditorNodeToCanonicalGraph inserts a new canonical node from editor config", () => {

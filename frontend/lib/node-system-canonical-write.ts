@@ -3,6 +3,7 @@ import {
   type CanonicalNode,
   type CanonicalGraphPayload,
 } from "./node-system-canonical.ts";
+import { applyConditionBranchMapping } from "./node-system-condition-branch-mapping.ts";
 import type {
   GraphPosition,
   NodePresetDefinition,
@@ -681,6 +682,63 @@ export function renameConditionBranchKeyInCanonicalGraph<T extends CanonicalGrap
       },
     },
     conditional_edges: nextConditionalEdges,
+  };
+}
+
+export function updateConditionBranchInCanonicalGraph<T extends CanonicalGraphPayload>(
+  graph: T,
+  nodeId: string,
+  currentKey: string,
+  nextKey: string,
+  mappingKeys: string[],
+): T {
+  const node = graph.nodes[nodeId];
+  if (!node || node.kind !== "condition") {
+    return graph;
+  }
+
+  const normalizedNextKey = nextKey.trim();
+  if (!normalizedNextKey) {
+    return graph;
+  }
+
+  if (normalizedNextKey !== currentKey && node.config.branches.includes(normalizedNextKey)) {
+    return graph;
+  }
+
+  const graphWithBranchKey =
+    normalizedNextKey === currentKey
+      ? graph
+      : renameConditionBranchKeyInCanonicalGraph(graph, nodeId, currentKey, normalizedNextKey);
+
+  const nextNode = graphWithBranchKey.nodes[nodeId];
+  if (!nextNode || nextNode.kind !== "condition") {
+    return graphWithBranchKey;
+  }
+
+  const nextBranchMapping = applyConditionBranchMapping(
+    nextNode.config.branchMapping,
+    currentKey,
+    normalizedNextKey,
+    mappingKeys,
+  );
+
+  if (serializeNode(nextNode.config.branchMapping) === serializeNode(nextBranchMapping)) {
+    return graphWithBranchKey;
+  }
+
+  return {
+    ...graphWithBranchKey,
+    nodes: {
+      ...graphWithBranchKey.nodes,
+      [nodeId]: {
+        ...nextNode,
+        config: {
+          ...nextNode.config,
+          branchMapping: nextBranchMapping,
+        },
+      },
+    },
   };
 }
 

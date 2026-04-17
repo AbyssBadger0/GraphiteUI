@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildEditorNodeConfigFromCanonicalPreset } from "./node-system-canonical.ts";
-import { EMPTY_AGENT_PRESET, TEXT_INPUT_PRESET, getNodePresetById } from "./node-presets-mock.ts";
+import { EMPTY_AGENT_PRESET, EMPTY_CONDITION_PRESET, TEXT_INPUT_PRESET, getNodePresetById } from "./node-presets-mock.ts";
 
 test("static presets are stored as canonical preset documents", () => {
   const preset = getNodePresetById(TEXT_INPUT_PRESET.presetId);
@@ -16,6 +16,7 @@ test("static presets are stored as canonical preset documents", () => {
 test("static canonical presets still derive usable editor configs", () => {
   const inputConfig = buildEditorNodeConfigFromCanonicalPreset(TEXT_INPUT_PRESET);
   const agentConfig = buildEditorNodeConfigFromCanonicalPreset(EMPTY_AGENT_PRESET);
+  const conditionConfig = buildEditorNodeConfigFromCanonicalPreset(EMPTY_CONDITION_PRESET);
 
   assert.equal(inputConfig.family, "input");
   assert.equal(inputConfig.output.key, "value");
@@ -23,4 +24,10 @@ test("static canonical presets still derive usable editor configs", () => {
   assert.equal(agentConfig.family, "agent");
   assert.deepEqual(agentConfig.inputs, []);
   assert.deepEqual(agentConfig.outputs, []);
+  assert.equal(conditionConfig.family, "condition");
+  assert.deepEqual(conditionConfig.branches.map((branch) => branch.key), ["continue", "retry"]);
+  assert.deepEqual(conditionConfig.branchMapping, {
+    true: "continue",
+    false: "retry",
+  });
 });

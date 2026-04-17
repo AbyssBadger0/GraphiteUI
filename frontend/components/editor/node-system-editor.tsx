@@ -47,6 +47,10 @@ import { collectCycleBackEdgeIds } from "@/lib/node-system-cycle-edges";
 import { resolveCycleMaxIterations, writeCycleMaxIterations } from "@/lib/node-system-graph-metadata";
 import { getNodePortSectionPresentation } from "@/lib/node-system-node-card-presentation";
 import {
+  listConditionBranchMappingKeys,
+  parseConditionBranchMappingDraft,
+} from "@/lib/node-system-condition-branch-mapping";
+import {
   ROUTE_TARGET_HANDLE,
   canNodeAcceptRouteTarget,
   classifyEditorConnection,
@@ -76,13 +80,13 @@ import {
   composeCanonicalGraphForSubmission,
   deleteStateFromCanonicalGraph,
   removeStateFromCanonicalNode,
-  renameConditionBranchKeyInCanonicalGraph,
   renameStateKeyInCanonicalGraph,
   renameCanonicalNodeDescription,
   renameCanonicalNodeName,
   renameStateNameInCanonicalGraph,
   updateCanonicalInputNodeStateType,
   updateCanonicalInputNodeValue,
+  updateConditionBranchInCanonicalGraph,
   updateCanonicalNodeConfig,
   updateCanonicalReadBindingRequired,
   replaceCanonicalNodeReads,
@@ -183,7 +187,7 @@ type FlowNodeData = {
   onReplaceWriteBindings?: (writes: CanonicalNode["writes"]) => void;
   onUpdateReadRequirement?: (stateKey: string, required: boolean) => void;
   onRemoveStateRelation?: (side: "input" | "output", stateKey: string) => void;
-  onRenameConditionBranch?: (currentKey: string, nextKey: string) => void;
+  onUpdateConditionBranch?: (currentKey: string, nextKey: string, mappingKeys: string[]) => void;
   onRenameNode?: (nextName: string) => void;
   onUpdateNodeDescription?: (nextDescription: string) => void;
   onUpdateInputBoundaryValue?: (nextValue: unknown) => void;
@@ -1988,76 +1992,6 @@ function SkillPickerPanel({
   );
 }
 
-function MappingEditor({
-  title,
-  value,
-  onChange,
-  addLabel,
-}: {
-  title: string;
-  value: Record<string, string>;
-  onChange: (nextValue: Record<string, string>) => void;
-  addLabel: string;
-}) {
-  const entries = Object.entries(value);
-
-  return (
-    <PanelSection title={title}>
-      {entries.map(([entryKey, entryValue], index) => (
-        <div key={`${entryKey}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 rounded-[16px] border border-[rgba(154,52,18,0.12)] bg-[rgba(255,250,241,0.72)] p-3">
-          <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-            <span>Key</span>
-            <Input
-              value={entryKey}
-              onChange={(event) => {
-                const nextEntries = [...entries];
-                nextEntries[index] = [event.target.value, entryValue];
-                onChange(Object.fromEntries(nextEntries));
-              }}
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm text-[var(--muted)]">
-            <span>Value</span>
-            <Input
-              value={entryValue}
-              onChange={(event) => {
-                const nextEntries = [...entries];
-                nextEntries[index] = [entryKey, event.target.value];
-                onChange(Object.fromEntries(nextEntries));
-              }}
-            />
-          </label>
-          <div className="flex items-end justify-end">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                const nextEntries = entries.filter((_, entryIndex) => entryIndex !== index);
-                onChange(Object.fromEntries(nextEntries));
-              }}
-            >
-              Remove
-            </Button>
-          </div>
-        </div>
-      ))}
-      <div className="flex justify-start">
-        <Button
-          variant="ghost"
-          onClick={() => {
-            const nextKey = `key_${entries.length + 1}`;
-            onChange({
-              ...value,
-              [nextKey]: "",
-            });
-          }}
-        >
-          {addLabel}
-        </Button>
-      </div>
-    </PanelSection>
-  );
-}
-
 function RuleEditor({
   rule,
   onChange,
@@ -2623,23 +2557,40 @@ function PortRow({
 
 function BranchRow({
   branchKey,
-  onRename,
+  mappingKeys,
+  onUpdate,
 }: {
   branchKey: string;
-  onRename?: (nextKey: string) => void;
+  mappingKeys: string[];
+  onUpdate?: (nextKey: string, nextMappingKeys: string[]) => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftBranchKey, setDraftBranchKey] = useState(branchKey);
+  const [draftMappingKeys, setDraftMappingKeys] = useState(mappingKeys.join(", "));
   const labelRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     setDraftBranchKey(branchKey);
   }, [branchKey]);
 
+  useEffect(() => {
+    setDraftMappingKeys(mappingKeys.join(", "));
+  }, [mappingKeys]);
+
   function commitEditing() {
     const nextKey = draftBranchKey.trim();
-    if (nextKey && nextKey !== branchKey) {
-      onRename?.(nextKey);
+    if (!nextKey) {
+      setDraftBranchKey(branchKey);
+      setDraftMappingKeys(mappingKeys.join(", "));
+      setIsEditing(false);
+      return;
+    }
+    const nextMappingKeys = parseConditionBranchMappingDraft(draftMappingKeys);
+    if (
+      nextKey !== branchKey ||
+      JSON.stringify(nextMappingKeys) !== JSON.stringify(mappingKeys)
+    ) {
+      onUpdate?.(nextKey, nextMappingKeys);
     }
     setIsEditing(false);
   }
@@ -2649,8 +2600,9 @@ function BranchRow({
       <span
         ref={labelRef}
         className="inline-flex max-w-full cursor-text items-center gap-1.5 truncate rounded-full border border-[rgba(154,52,18,0.16)] bg-[rgba(255,248,240,0.84)] px-2.5 py-0.5 text-right text-[0.76rem] font-medium tracking-[0.02em]"
-        onDoubleClick={() => {
+        onClick={() => {
           setDraftBranchKey(branchKey);
+          setDraftMappingKeys(mappingKeys.join(", "));
           setIsEditing(true);
         }}
       >
@@ -2670,7 +2622,7 @@ function BranchRow({
         open={isEditing}
         placement="bottom-end"
         title="Edit Branch"
-        widthClassName="w-[320px]"
+        widthClassName="w-[340px]"
       >
         <label className="grid gap-1.5 text-sm text-[var(--muted)]">
           <span>Branch Key</span>
@@ -2683,6 +2635,23 @@ function BranchRow({
               if (event.key === "Enter") commitEditing();
               if (event.key === "Escape") {
                 setDraftBranchKey(branchKey);
+                setDraftMappingKeys(mappingKeys.join(", "));
+                setIsEditing(false);
+              }
+            }}
+          />
+        </label>
+        <label className="grid gap-1.5 text-sm text-[var(--muted)]">
+          <span>Match Values</span>
+          <Input
+            value={draftMappingKeys}
+            placeholder="true, false"
+            onChange={(event) => setDraftMappingKeys(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") commitEditing();
+              if (event.key === "Escape") {
+                setDraftBranchKey(branchKey);
+                setDraftMappingKeys(mappingKeys.join(", "));
                 setIsEditing(false);
               }
             }}
@@ -2693,6 +2662,7 @@ function BranchRow({
             label="Cancel"
             onClick={() => {
               setDraftBranchKey(branchKey);
+              setDraftMappingKeys(mappingKeys.join(", "));
               setIsEditing(false);
             }}
           >
@@ -3685,7 +3655,8 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                       <BranchRow
                         key={`branch-${port.key}`}
                         branchKey={port.key}
-                        onRename={(nextKey) => data.onRenameConditionBranch?.(port.key, nextKey)}
+                        mappingKeys={listConditionBranchMappingKeys(conditionConfig?.branchMapping ?? {}, port.key)}
+                        onUpdate={(nextKey, nextMappingKeys) => data.onUpdateConditionBranch?.(port.key, nextKey, nextMappingKeys)}
                       />
                     ))
                   : outputs.map((port) => {
@@ -4135,21 +4106,6 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
                       ? {
                           ...node.config,
                           rule: nextRule,
-                        }
-                      : node.config,
-                  )
-                }
-              />
-              <MappingEditor
-                title="Branch Mapping"
-                value={conditionConfig?.branchMapping ?? {}}
-                addLabel="Add Branch Mapping"
-                onChange={(nextValue) =>
-                  updateCanonicalConfig((node) =>
-                    node.kind === "condition"
-                      ? {
-                          ...node.config,
-                          branchMapping: nextValue,
                         }
                       : node.config,
                   )
@@ -6392,36 +6348,35 @@ function NodeSystemCanvas({
                   onRemoveStateRelation: (side: "input" | "output", stateKey: string) => {
                     setCanonicalGraphState((current) => removeStateFromCanonicalNode(current, node.id, side, stateKey));
                   },
-                  onRenameConditionBranch: (currentKey: string, nextKey: string) => {
+                  onUpdateConditionBranch: (currentKey: string, nextKey: string, mappingKeys: string[]) => {
                     const normalizedNextKey = nextKey.trim();
                     const currentNode = canonicalGraph.nodes[node.id];
                     if (!normalizedNextKey || currentNode?.kind !== "condition") {
                       return;
                     }
-                    if (normalizedNextKey === currentKey) {
-                      return;
-                    }
-                    if (currentNode.config.branches.includes(normalizedNextKey)) {
+                    if (normalizedNextKey !== currentKey && currentNode.config.branches.includes(normalizedNextKey)) {
                       setStatusMessage(`Branch '${normalizedNextKey}' already exists.`);
                       return;
                     }
                     setCanonicalGraphState((current) =>
-                      renameConditionBranchKeyInCanonicalGraph(current, node.id, currentKey, normalizedNextKey),
+                      updateConditionBranchInCanonicalGraph(current, node.id, currentKey, normalizedNextKey, mappingKeys),
                     );
-                    const currentSourceHandle = buildHandleId("output", currentKey);
-                    const nextSourceHandle = buildHandleId("output", normalizedNextKey);
-                    setEdges((current) =>
-                      current.map((edge) =>
-                        edge.source === node.id && edge.sourceHandle === currentSourceHandle
-                          ? {
-                              ...edge,
-                              id: buildFlowEdgeId(edge.source, nextSourceHandle, edge.target, edge.targetHandle ?? ROUTE_TARGET_HANDLE),
-                              sourceHandle: nextSourceHandle,
-                            }
-                          : edge,
-                      ),
-                    );
-                    requestAnimationFrame(() => updateNodeInternals(node.id));
+                    if (normalizedNextKey !== currentKey) {
+                      const currentSourceHandle = buildHandleId("output", currentKey);
+                      const nextSourceHandle = buildHandleId("output", normalizedNextKey);
+                      setEdges((current) =>
+                        current.map((edge) =>
+                          edge.source === node.id && edge.sourceHandle === currentSourceHandle
+                            ? {
+                                ...edge,
+                                id: buildFlowEdgeId(edge.source, nextSourceHandle, edge.target, edge.targetHandle ?? ROUTE_TARGET_HANDLE),
+                                sourceHandle: nextSourceHandle,
+                              }
+                            : edge,
+                        ),
+                      );
+                      requestAnimationFrame(() => updateNodeInternals(node.id));
+                    }
                   },
                   onRenameNode: (nextName: string) => {
                     setCanonicalGraphState((current) => renameCanonicalNodeName(current, node.id, nextName));

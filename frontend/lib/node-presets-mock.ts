@@ -35,6 +35,39 @@ export const EMPTY_AGENT_PRESET = createCanonicalPresetDocument({
   },
 });
 
+export const EMPTY_CONDITION_PRESET = createCanonicalPresetDocument({
+  presetId: "preset.condition.empty.v0",
+  definition: {
+    label: "Condition Node",
+    description: "Route the workflow to the next node based on the current graph state.",
+    state_schema: {},
+    node: {
+      kind: "condition",
+      name: "Condition Node",
+      description: "Route the workflow to the next node based on the current graph state.",
+      ui: {
+        position: DEFAULT_PRESET_POSITION,
+        collapsed: false,
+      },
+      reads: [],
+      writes: [],
+      config: {
+        branches: ["continue", "retry"],
+        conditionMode: "rule",
+        branchMapping: {
+          true: "continue",
+          false: "retry",
+        },
+        rule: {
+          source: "result",
+          operator: "exists",
+          value: null,
+        },
+      },
+    },
+  },
+});
+
 export const TEXT_INPUT_PRESET = createCanonicalPresetDocument({
   presetId: "preset.input.text.v1",
   definition: {
@@ -164,6 +197,7 @@ export const TEXT_OUTPUT_PRESET = createCanonicalPresetDocument({
 
 export const NODE_PRESETS_MOCK = [
   EMPTY_AGENT_PRESET,
+  EMPTY_CONDITION_PRESET,
 ] satisfies CanonicalPresetDocument[];
 
 const STATIC_NODE_DEFINITIONS = [

@@ -58,5 +58,5 @@ export function buildCanonicalOrdinaryEdgeId(
 }
 
 function buildCanonicalOrdinaryEdgeIdFromState(source: string, target: string, state: string | null): string {
-  return state ? `edge:${source}:output:${state}:${target}:input:${state}` : `edge:${source}:${target}`;
+  return state ? `edge:${source}:output:${state}->${target}:input:${state}` : `edge:${source}:${target}`;
 }

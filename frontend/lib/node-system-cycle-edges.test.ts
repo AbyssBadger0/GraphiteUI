@@ -96,7 +96,7 @@ test("collectCycleBackEdgeIds marks plain edges that close a cycle", () => {
     ],
   });
 
-  assert.deepEqual([...collectCycleBackEdgeIds(graph)], ["edge:c:output:result:a:input:result"]);
+  assert.deepEqual([...collectCycleBackEdgeIds(graph)], ["edge:c:output:result->a:input:result"]);
 });
 
 test("collectCycleBackEdgeIds also marks conditional branches that loop back", () => {
@@ -115,7 +115,7 @@ test("buildCanonicalOrdinaryEdgeId matches the hydrated ordinary-edge presentati
 
   const edge = { source: "c", target: "a" };
   assert.equal(buildCanonicalOrdinaryEdgeId(graph, edge), resolveCanonicalOrdinaryEdgePresentation(graph, edge).id);
-  assert.equal(buildCanonicalOrdinaryEdgeId(graph, edge), "edge:c:output:result:a:input:result");
+  assert.equal(buildCanonicalOrdinaryEdgeId(graph, edge), "edge:c:output:result->a:input:result");
 });
 
 test("resolveCanonicalOrdinaryEdgePresentation leaves ambiguous ordinary edges generic", () => {

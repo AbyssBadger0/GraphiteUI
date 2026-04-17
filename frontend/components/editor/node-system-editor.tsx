@@ -6160,22 +6160,48 @@ function NodeSystemCanvas({
         return false;
       }
 
+      const nextCanonicalGraph = renameStateKeyInCanonicalGraph(canonicalGraph, currentKey, normalizedKey);
       setCanonicalGraphState((current) => renameStateKeyInCanonicalGraph(current, currentKey, normalizedKey));
       const { readerNodeIds, writerNodeIds } = listStateBindingNodeIdsForCanonicalState(canonicalGraph, currentKey);
       const readNodeIds = new Set(readerNodeIds);
       const writeNodeIds = new Set(writerNodeIds);
       setEdges((current) =>
-        current.map((edge) => ({
-          ...edge,
-          sourceHandle:
+        current.map((edge) => {
+          const nextSourceHandle =
             edge.sourceHandle && writeNodeIds.has(edge.source) && getPortKeyFromHandle(edge.sourceHandle) === currentKey
               ? buildHandleId("output", normalizedKey)
-              : edge.sourceHandle,
-          targetHandle:
+              : edge.sourceHandle;
+          const nextTargetHandle =
             edge.targetHandle && readNodeIds.has(edge.target) && getPortKeyFromHandle(edge.targetHandle) === currentKey
               ? buildHandleId("input", normalizedKey)
-              : edge.targetHandle,
-        })),
+              : edge.targetHandle;
+
+          if (edge.type === "route") {
+            if (nextSourceHandle === edge.sourceHandle && nextTargetHandle === edge.targetHandle) {
+              return edge;
+            }
+            return {
+              ...edge,
+              id: buildFlowEdgeId(edge.source, nextSourceHandle ?? "", edge.target, nextTargetHandle ?? ROUTE_TARGET_HANDLE),
+              sourceHandle: nextSourceHandle,
+              targetHandle: nextTargetHandle,
+            };
+          }
+
+          if (nextSourceHandle === edge.sourceHandle && nextTargetHandle === edge.targetHandle) {
+            return edge;
+          }
+
+          return {
+            ...edge,
+            id: buildCanonicalOrdinaryEdgeId(nextCanonicalGraph, {
+              source: edge.source,
+              target: edge.target,
+            }),
+            sourceHandle: nextSourceHandle,
+            targetHandle: nextTargetHandle,
+          };
+        }),
       );
       setStatusMessage(`Renamed state ${currentKey} -> ${normalizedKey}`);
       return true;

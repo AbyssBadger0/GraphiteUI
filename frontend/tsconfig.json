@@ -5,6 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "strict": true,
+    "allowImportingTsExtensions": true,
     "jsx": "preserve",
     "resolveJsonModule": true,
     "isolatedModules": true,

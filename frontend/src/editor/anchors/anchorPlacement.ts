@@ -26,6 +26,8 @@ export type PlacedAnchorSet = {
   routeOutputs: PlacedAnchor[];
 };
 
+const EDGE_PORT_INSET = 6;
+
 export function placeAnchors(model: NodeAnchorModel, frame: NodeFrame): PlacedAnchorSet {
   return {
     flowIn: placeAnchor(model.flowIn, frame),
@@ -54,11 +56,14 @@ function placeAnchor(anchor: AnchorDescriptor | null, frame: NodeFrame): PlacedA
 }
 
 function resolveX(anchor: AnchorDescriptor, frame: NodeFrame): number {
-  if (anchor.side === "left" || anchor.side === "top") {
-    return frame.x;
+  if (anchor.side === "left") {
+    return frame.x + EDGE_PORT_INSET;
+  }
+  if (anchor.side === "top") {
+    return frame.x + frame.width / 2;
   }
   if (anchor.side === "right") {
-    return frame.x + frame.width;
+    return frame.x + frame.width - EDGE_PORT_INSET;
   }
   const count = Math.max(anchor.row + 2, 2);
   return frame.x + (frame.width / count) * (anchor.row + 1);

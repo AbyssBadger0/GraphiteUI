@@ -2,6 +2,7 @@
   <section
     ref="canvasRef"
     class="editor-canvas"
+    :style="canvasSurfaceStyle"
     tabindex="0"
     @pointerdown="handleCanvasPointerDown"
     @pointermove="handleCanvasPointerMove"
@@ -42,6 +43,7 @@
           :key="edge.id"
           :d="edge.path"
           class="editor-canvas__edge"
+          :style="edgeStyle(edge)"
           :class="{
             'editor-canvas__edge--route': edge.kind === 'route',
             'editor-canvas__edge--data': edge.kind === 'data',
@@ -58,21 +60,6 @@
                   : 'url(#editor-canvas-arrow-flow)'
           "
           @pointerdown.stop="handleEdgePointerDown(edge)"
-        />
-        <circle
-          v-for="anchor in projectedAnchors"
-          :key="anchor.id"
-          :cx="anchor.x"
-          :cy="anchor.y"
-          class="editor-canvas__anchor"
-          :class="{
-            'editor-canvas__anchor--state': anchor.kind === 'state-in' || anchor.kind === 'state-out',
-            'editor-canvas__anchor--route': anchor.kind === 'route-out',
-            'editor-canvas__anchor--connect-source': activeConnectionSourceAnchorId === anchor.id,
-            'editor-canvas__anchor--connect-target': eligibleTargetAnchorIds.has(anchor.id),
-          }"
-          r="5.5"
-          @pointerdown.stop="handleAnchorPointerDown(anchor)"
         />
       </svg>
       <div
@@ -118,6 +105,35 @@
           @update-output-config="emit('update-output-config', $event)"
         />
       </div>
+      <div class="editor-canvas__edge-labels" aria-hidden="true">
+        <div
+          v-for="edge in projectedEdges.filter((candidate) => candidate.label)"
+          :key="`label-${edge.id}`"
+          class="editor-canvas__edge-label"
+          :style="edgeLabelStyle(edge)"
+        >
+          <span class="editor-canvas__edge-label-dot" />
+          <span class="editor-canvas__edge-label-text">{{ edge.label }}</span>
+        </div>
+      </div>
+      <svg class="editor-canvas__anchors" viewBox="0 0 4000 3000" preserveAspectRatio="none" aria-hidden="true">
+        <circle
+          v-for="anchor in projectedAnchors"
+          :key="anchor.id"
+          :cx="anchor.x"
+          :cy="anchor.y"
+          class="editor-canvas__anchor"
+          :style="anchorStyle(anchor)"
+          :class="{
+            'editor-canvas__anchor--state': anchor.kind === 'state-in' || anchor.kind === 'state-out',
+            'editor-canvas__anchor--route': anchor.kind === 'route-out',
+            'editor-canvas__anchor--connect-source': activeConnectionSourceAnchorId === anchor.id,
+            'editor-canvas__anchor--connect-target': eligibleTargetAnchorIds.has(anchor.id),
+          }"
+          r="5.5"
+          @pointerdown.stop="handleAnchorPointerDown(anchor)"
+        />
+      </svg>
     </div>
   </section>
 </template>
@@ -130,6 +146,7 @@ import { projectCanvasAnchors, projectCanvasEdges, type ProjectedCanvasAnchor, t
 import { buildPendingConnectionPreviewPath } from "@/editor/canvas/connectionPreviewPath";
 import { resolveEdgeRunPresentation } from "@/editor/canvas/runEdgePresentation";
 import { resolveNodeRunPresentation } from "@/editor/canvas/runNodePresentation";
+import { resolveCanvasSurfaceStyle } from "@/editor/canvas/canvasSurfaceStyle";
 import { canCompleteGraphConnection, canStartGraphConnection, type PendingGraphConnection } from "@/lib/graph-connections";
 import { resolveFocusedViewport } from "@/editor/canvas/focusNodeViewport";
 import { useNodeSelectionFocus, type NodeFocusRequest } from "./useNodeSelectionFocus";
@@ -314,6 +331,7 @@ const connectionPreview = computed(() => {
     }),
   };
 });
+const canvasSurfaceStyle = computed(() => resolveCanvasSurfaceStyle(viewport.viewport));
 const viewportStyle = computed(() => ({
   transform: `translate(${viewport.viewport.x}px, ${viewport.viewport.y}px) scale(${viewport.viewport.scale})`,
 }));
@@ -330,6 +348,35 @@ watch(projectedEdges, (edges) => {
 function nodeStyle(position: GraphPosition) {
   return {
     transform: `translate(${position.x}px, ${position.y}px)`,
+  };
+}
+
+function edgeStyle(edge: ProjectedCanvasEdge) {
+  if (!edge.color) {
+    return undefined;
+  }
+  return {
+    "--editor-edge-stroke": edge.color,
+  };
+}
+
+function edgeLabelStyle(edge: ProjectedCanvasEdge) {
+  if (typeof edge.labelX !== "number" || typeof edge.labelY !== "number") {
+    return undefined;
+  }
+  return {
+    left: `${edge.labelX}px`,
+    top: `${edge.labelY}px`,
+    "--editor-edge-label-accent": edge.labelColor ?? edge.color ?? "rgba(217, 119, 6, 0.88)",
+  };
+}
+
+function anchorStyle(anchor: ProjectedCanvasAnchor) {
+  if (!anchor.color) {
+    return undefined;
+  }
+  return {
+    "--editor-anchor-fill": anchor.color,
   };
 }
 
@@ -653,15 +700,33 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 .editor-canvas__edges {
   position: absolute;
   inset: 0;
+  z-index: 0;
   width: 4000px;
   height: 3000px;
   overflow: visible;
   pointer-events: none;
 }
 
+.editor-canvas__anchors {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 4000px;
+  height: 3000px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.editor-canvas__edge-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
 .editor-canvas__edge {
   fill: none;
-  stroke: rgba(217, 119, 6, 0.88);
+  stroke: var(--editor-edge-stroke, rgba(217, 119, 6, 0.88));
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -679,9 +744,39 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 }
 
 .editor-canvas__edge--data {
-  stroke: rgba(217, 119, 6, 0.44);
+  stroke: var(--editor-edge-stroke, rgba(217, 119, 6, 0.56));
   stroke-width: 1.7;
-  stroke-dasharray: 4 8;
+  stroke-dasharray: 0;
+  opacity: 0.92;
+}
+
+.editor-canvas__edge-label {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transform: translate(-50%, -100%) translateY(-4px);
+  border: 1px solid color-mix(in srgb, var(--editor-edge-label-accent) 22%, rgba(154, 52, 18, 0.08));
+  border-radius: 999px;
+  background: rgba(255, 250, 241, 0.96);
+  box-shadow: 0 10px 24px rgba(120, 53, 15, 0.12);
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.editor-canvas__edge-label-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--editor-edge-label-accent, rgba(217, 119, 6, 0.88));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--editor-edge-label-accent) 18%, transparent);
+}
+
+.editor-canvas__edge-label-text {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(60, 41, 20, 0.88);
 }
 
 .editor-canvas__edge--preview {
@@ -705,10 +800,12 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 }
 
 .editor-canvas__anchor {
-  fill: rgba(154, 52, 18, 0.92);
+  fill: var(--editor-anchor-fill, rgba(154, 52, 18, 0.92));
   stroke: rgba(255, 250, 241, 0.96);
   stroke-width: 2;
   cursor: crosshair;
+  pointer-events: auto;
+  filter: drop-shadow(0 4px 8px rgba(120, 53, 15, 0.18));
   transition:
     transform 120ms ease,
     fill 120ms ease,
@@ -717,20 +814,20 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 }
 
 .editor-canvas__anchor--state {
-  fill: rgba(217, 119, 6, 0.92);
+  stroke-width: 2.2;
 }
 
 .editor-canvas__anchor--route {
-  fill: rgba(124, 58, 237, 0.92);
+  --editor-anchor-fill: rgba(124, 58, 237, 0.92);
 }
 
 .editor-canvas__anchor--connect-source {
-  fill: rgba(37, 99, 235, 0.96);
+  --editor-anchor-fill: rgba(37, 99, 235, 0.96);
   stroke: rgba(219, 234, 254, 0.98);
 }
 
 .editor-canvas__anchor--connect-target {
-  fill: rgba(34, 197, 94, 0.92);
+  --editor-anchor-fill: rgba(34, 197, 94, 0.92);
   stroke: rgba(220, 252, 231, 0.98);
 }
 
@@ -738,10 +835,9 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   position: absolute;
   top: 0;
   left: 0;
+  z-index: 1;
   isolation: isolate;
-  transition:
-    filter 180ms ease,
-    transform 180ms ease;
+  transition: filter 180ms ease;
 }
 
 .editor-canvas__node-halo {

@@ -7,7 +7,22 @@ import type { GraphPayload } from "../../types/node-system.ts";
 const graph: GraphPayload = {
   graph_id: null,
   name: "Hello World",
-  state_schema: {},
+  state_schema: {
+    question: {
+      name: "question",
+      description: "",
+      type: "text",
+      value: "",
+      color: "#d97706",
+    },
+    answer: {
+      name: "answer",
+      description: "",
+      type: "text",
+      value: "",
+      color: "#a855f7",
+    },
+  },
   nodes: {
     input_question: {
       kind: "input",
@@ -71,8 +86,8 @@ test("projectCanvasEdges creates projected flow edges from graph edges", () => {
       { id: "data:answer_helper:answer->output_answer", kind: "data", source: "answer_helper", target: "output_answer", state: "answer" },
     ],
   );
-  assert.match(projected[0]!.path, /^M /);
-  assert.match(projected[1]!.path, /^M /);
+  assert.match(projected[0]!.path, /^M .* C /);
+  assert.match(projected[1]!.path, /^M .* C /);
 });
 
 test("projectCanvasAnchors returns flow and state dots for visible nodes", () => {
@@ -80,8 +95,17 @@ test("projectCanvasAnchors returns flow and state dots for visible nodes", () =>
 
   assert.ok(anchors.some((anchor) => anchor.kind === "flow-out" && anchor.nodeId === "input_question"));
   assert.ok(anchors.some((anchor) => anchor.kind === "flow-in" && anchor.nodeId === "answer_helper"));
-  assert.ok(anchors.some((anchor) => anchor.kind === "state-out" && anchor.stateKey === "question"));
-  assert.ok(anchors.some((anchor) => anchor.kind === "state-in" && anchor.stateKey === "question"));
+  assert.ok(anchors.some((anchor) => anchor.kind === "state-out" && anchor.stateKey === "question" && anchor.color === "#d97706"));
+  assert.ok(anchors.some((anchor) => anchor.kind === "state-in" && anchor.stateKey === "question" && anchor.color === "#d97706"));
+});
+
+test("projectCanvasEdges colors data links from the state schema", () => {
+  const projected = projectCanvasEdges(graph);
+  const dataEdge = projected.find((edge) => edge.kind === "data" && edge.state === "answer");
+
+  assert.ok(dataEdge);
+  assert.equal(dataEdge?.color, "#a855f7");
+  assert.match(dataEdge?.path ?? "", /^M .* C /);
 });
 
 test("projectCanvasEdges skips ambiguous data writers", () => {

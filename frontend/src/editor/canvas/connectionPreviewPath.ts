@@ -1,3 +1,4 @@
+import { buildConnectorCurvePath } from "./connectionCurvePath.ts";
 import { buildRouteEdgePath, resolveRouteEdgeSourceOffset } from "./routeEdgePath.ts";
 
 export function buildPendingConnectionPreviewPath(input: {
@@ -18,6 +19,12 @@ export function buildPendingConnectionPreviewPath(input: {
     });
   }
 
-  const midX = input.sourceX + (input.targetX - input.sourceX) / 2;
-  return `M ${input.sourceX} ${input.sourceY} L ${midX} ${input.sourceY} L ${midX} ${input.targetY} L ${input.targetX} ${input.targetY}`;
+  return buildConnectorCurvePath({
+    sourceX: input.sourceX,
+    sourceY: input.sourceY,
+    targetX: input.targetX,
+    targetY: input.targetY,
+    sourceSide: "right",
+    targetSide: "left",
+  });
 }

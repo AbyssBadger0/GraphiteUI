@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app.core.schemas.node_system import NodeSystemTemplate
+from app.templates.loader import list_template_records
+
+
+NODE_WIDTH = 460
+NODE_HEIGHT_BY_KIND = {
+    "input": 320,
+    "agent": 460,
+    "output": 400,
+    "condition": 380,
+}
+NODE_GUTTER = 32
+
+
+def _resolve_node_height(node_kind: str) -> int:
+    return NODE_HEIGHT_BY_KIND.get(node_kind, 360)
+
+
+def _rectangles_overlap_with_gutter(left: dict, right: dict) -> bool:
+    left_x = left["x"]
+    left_y = left["y"]
+    left_right = left_x + left["width"]
+    left_bottom = left_y + left["height"]
+
+    right_x = right["x"]
+    right_y = right["y"]
+    right_right = right_x + right["width"]
+    right_bottom = right_y + right["height"]
+
+    horizontal_overlap = left_x < right_right + NODE_GUTTER and right_x < left_right + NODE_GUTTER
+    vertical_overlap = left_y < right_bottom + NODE_GUTTER and right_y < left_bottom + NODE_GUTTER
+    return horizontal_overlap and vertical_overlap
+
+
+class TemplateLayoutTests(unittest.TestCase):
+    def test_templates_have_non_overlapping_initial_node_layouts(self):
+        failures: list[str] = []
+
+        for record in list_template_records():
+            template = NodeSystemTemplate.model_validate(record)
+            rectangles = []
+            for node_id, node in template.nodes.items():
+                rectangles.append(
+                    {
+                        "node_id": node_id,
+                        "kind": node.kind,
+                        "x": node.ui.position.x,
+                        "y": node.ui.position.y,
+                        "width": NODE_WIDTH,
+                        "height": _resolve_node_height(node.kind),
+                    }
+                )
+
+            for index, left in enumerate(rectangles):
+                for right in rectangles[index + 1 :]:
+                    if _rectangles_overlap_with_gutter(left, right):
+                        failures.append(
+                            f"{template.template_id}: {left['node_id']} overlaps {right['node_id']}"
+                        )
+
+        self.assertEqual(failures, [], "\n".join(failures))

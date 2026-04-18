@@ -40,7 +40,7 @@
       "name": "answer_helper",
       "description": "Answer the question directly without external tools.",
       "ui": {
-        "position": { "x": 520, "y": 220 },
+        "position": { "x": 760, "y": 220 },
         "collapsed": false
       },
       "reads": [
@@ -60,7 +60,7 @@
       "name": "output_answer",
       "description": "Preview the final answer.",
       "ui": {
-        "position": { "x": 980, "y": 220 },
+        "position": { "x": 1440, "y": 220 },
         "collapsed": false
       },
       "reads": [

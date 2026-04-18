@@ -7,29 +7,6 @@
 
     <p class="node-card__description">{{ view.description }}</p>
 
-    <div
-      v-if="view.stateSummary && (view.stateSummary.reads.length > 0 || view.stateSummary.writes.length > 0)"
-      class="node-card__state-summary"
-    >
-      <div v-if="view.stateSummary.reads.length > 0" class="node-card__state-group">
-        <span class="node-card__state-group-label">Reads</span>
-        <div class="node-card__state-token-list">
-          <span v-for="stateLabel in view.stateSummary.reads" :key="`read-${stateLabel}`" class="node-card__state-token node-card__state-token--read">
-            {{ stateLabel }}
-          </span>
-        </div>
-      </div>
-
-      <div v-if="view.stateSummary.writes.length > 0" class="node-card__state-group">
-        <span class="node-card__state-group-label">Writes</span>
-        <div class="node-card__state-token-list">
-          <span v-for="stateLabel in view.stateSummary.writes" :key="`write-${stateLabel}`" class="node-card__state-token node-card__state-token--write">
-            {{ stateLabel }}
-          </span>
-        </div>
-      </div>
-    </div>
-
     <section v-if="view.body.kind === 'input'" class="node-card__body node-card__body--input">
       <div class="node-card__port-row node-card__port-row--single">
         <span class="node-card__port-spacer" />

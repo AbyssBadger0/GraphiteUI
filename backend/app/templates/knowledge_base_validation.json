@@ -39,7 +39,7 @@
       "name": "input_question",
       "description": "Provide the onboarding question that will be answered by downstream agents.",
       "ui": {
-        "position": { "x": 80, "y": 160 },
+        "position": { "x": 80, "y": 120 },
         "collapsed": false
       },
       "writes": [
@@ -54,7 +54,7 @@
       "name": "input_knowledge_base",
       "description": "Choose the knowledge base that grounds the onboarding answers.",
       "ui": {
-        "position": { "x": 80, "y": 540 },
+        "position": { "x": 80, "y": 680 },
         "collapsed": false
       },
       "writes": [
@@ -69,7 +69,7 @@
       "name": "onboarding_helper",
       "description": "Use the selected knowledge base to produce an onboarding answer.",
       "ui": {
-        "position": { "x": 560, "y": 80 },
+        "position": { "x": 760, "y": 120 },
         "collapsed": false
       },
       "reads": [
@@ -90,7 +90,7 @@
       "name": "markdown_formatter",
       "description": "Rewrite the onboarding answer into a cleaner markdown response.",
       "ui": {
-        "position": { "x": 560, "y": 480 },
+        "position": { "x": 760, "y": 680 },
         "collapsed": false
       },
       "reads": [
@@ -111,7 +111,7 @@
       "name": "output_raw_answer",
       "description": "Show the helper agent's raw answer before any formatting pass.",
       "ui": {
-        "position": { "x": 1040, "y": 80 },
+        "position": { "x": 1440, "y": 120 },
         "collapsed": false
       },
       "reads": [
@@ -129,7 +129,7 @@
       "name": "output_formatted_answer",
       "description": "Show the markdown-formatted onboarding answer.",
       "ui": {
-        "position": { "x": 1040, "y": 480 },
+        "position": { "x": 1440, "y": 680 },
         "collapsed": false
       },
       "reads": [

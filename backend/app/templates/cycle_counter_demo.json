@@ -33,7 +33,7 @@
       "name": "increment_counter",
       "description": "Increment the counter by one.",
       "ui": {
-        "position": { "x": 460, "y": 220 },
+        "position": { "x": 760, "y": 220 },
         "collapsed": false
       },
       "reads": [
@@ -53,7 +53,7 @@
       "name": "continue_check",
       "description": "Continue looping until the counter reaches three.",
       "ui": {
-        "position": { "x": 820, "y": 220 },
+        "position": { "x": 1440, "y": 220 },
         "collapsed": false
       },
       "reads": [
@@ -75,7 +75,7 @@
       "name": "output_counter",
       "description": "Show the final counter value.",
       "ui": {
-        "position": { "x": 1180, "y": 220 },
+        "position": { "x": 2120, "y": 220 },
         "collapsed": false
       },
       "reads": [

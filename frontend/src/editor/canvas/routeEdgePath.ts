@@ -1,3 +1,5 @@
+import { buildConnectorCurvePath } from "./connectionCurvePath.ts";
+
 export type RouteEdgeWaypoint = {
   x: number;
   y: number;
@@ -112,8 +114,16 @@ export function buildRouteEdgeWaypoints({
 }
 
 export function buildRouteEdgePath({
-  cornerRadius = 14,
   ...input
 }: RouteEdgePathInput) {
-  return buildRoundedOrthogonalPath(buildRouteEdgeWaypoints(input), cornerRadius);
+  return buildConnectorCurvePath({
+    sourceX: input.sourceX,
+    sourceY: input.sourceY,
+    targetX: input.targetX,
+    targetY: input.targetY,
+    sourceSide: "bottom",
+    targetSide: "left",
+    sourceOffset: input.sourceOffset,
+    targetOffset: input.laneOffset ? input.laneOffset * 2.5 : undefined,
+  });
 }

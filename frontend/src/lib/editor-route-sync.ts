@@ -17,10 +17,17 @@ export function resolveEditorRouteInstruction(params: {
   routeMode: "root" | "new" | "existing";
   routeGraphId: string | null;
   defaultTemplateId: string | null;
+  activeTabRouteSignature: string | null;
   routeSignature: string;
   handledRouteSignature: string | null;
 }): EditorRouteInstruction {
   if (params.handledRouteSignature === params.routeSignature) {
+    return {
+      type: "noop",
+    };
+  }
+
+  if (params.activeTabRouteSignature === params.routeSignature) {
     return {
       type: "noop",
     };

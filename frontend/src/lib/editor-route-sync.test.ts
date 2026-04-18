@@ -8,6 +8,7 @@ test("resolveEditorRouteInstruction opens a new draft on initial /editor/new loa
     routeMode: "new",
     routeGraphId: null,
     defaultTemplateId: null,
+    activeTabRouteSignature: null,
     routeSignature: "new:",
     handledRouteSignature: null,
   });
@@ -24,6 +25,7 @@ test("resolveEditorRouteInstruction opens a template draft on initial /editor/ne
     routeMode: "new",
     routeGraphId: null,
     defaultTemplateId: "hello_world",
+    activeTabRouteSignature: null,
     routeSignature: "new:hello_world",
     handledRouteSignature: null,
   });
@@ -40,6 +42,7 @@ test("resolveEditorRouteInstruction opens an existing graph when /editor/:graphI
     routeMode: "existing",
     routeGraphId: "graph_123",
     defaultTemplateId: null,
+    activeTabRouteSignature: null,
     routeSignature: "existing:graph_123",
     handledRouteSignature: null,
   });
@@ -56,8 +59,39 @@ test("resolveEditorRouteInstruction does nothing when the route signature was al
     routeMode: "new",
     routeGraphId: null,
     defaultTemplateId: "hello_world",
+    activeTabRouteSignature: null,
     routeSignature: "new:hello_world",
     handledRouteSignature: "new:hello_world",
+  });
+
+  assert.deepEqual(instruction, {
+    type: "noop",
+  });
+});
+
+test("resolveEditorRouteInstruction does nothing when the active tab already matches an unsaved route", () => {
+  const instruction = resolveEditorRouteInstruction({
+    routeMode: "new",
+    routeGraphId: null,
+    defaultTemplateId: null,
+    activeTabRouteSignature: "new:",
+    routeSignature: "new:",
+    handledRouteSignature: "existing:graph_123",
+  });
+
+  assert.deepEqual(instruction, {
+    type: "noop",
+  });
+});
+
+test("resolveEditorRouteInstruction does nothing when the active tab already matches a template route", () => {
+  const instruction = resolveEditorRouteInstruction({
+    routeMode: "new",
+    routeGraphId: null,
+    defaultTemplateId: "hello_world",
+    activeTabRouteSignature: "new:hello_world",
+    routeSignature: "new:hello_world",
+    handledRouteSignature: "existing:graph_123",
   });
 
   assert.deepEqual(instruction, {

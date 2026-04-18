@@ -3,16 +3,20 @@
     <div class="editor-tab-bar__inner">
       <div class="editor-tab-bar__tabs-shell">
         <div class="editor-tab-bar__tabs">
-          <button
+          <div
             v-for="tab in tabs"
             :key="tab.tabId"
-            type="button"
-            class="editor-tab-bar__tab"
-            :class="{ 'editor-tab-bar__tab--active': tab.tabId === activeTabId }"
-            :title="buildEditorTabHint(tab, copy)"
-            @click="$emit('activate-tab', tab.tabId)"
+            class="editor-tab-bar__tab-shell"
+            :class="{ 'editor-tab-bar__tab-shell--active': tab.tabId === activeTabId }"
           >
-            <span class="editor-tab-bar__tab-title">{{ tab.title }}</span>
+            <button
+              type="button"
+              class="editor-tab-bar__tab-activate"
+              :title="buildEditorTabHint(tab, copy)"
+              @click="$emit('activate-tab', tab.tabId)"
+            >
+              <span class="editor-tab-bar__tab-title">{{ tab.title }}</span>
+            </button>
             <span class="editor-tab-bar__tab-status">
               <span v-if="tab.dirty" class="editor-tab-bar__dirty-dot" />
               <button
@@ -25,7 +29,7 @@
                 ×
               </button>
             </span>
-          </button>
+          </div>
         </div>
       </div>
 
@@ -218,7 +222,7 @@ function cancelGraphNameEdit() {
   gap: 6px;
 }
 
-.editor-tab-bar__tab {
+.editor-tab-bar__tab-shell {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -229,18 +233,28 @@ function cancelGraphNameEdit() {
   padding: 0 14px;
   background: rgba(255, 250, 241, 0.64);
   color: #3c2914;
-  cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.editor-tab-bar__tab:hover {
+.editor-tab-bar__tab-shell:hover {
   background: rgba(255, 255, 255, 0.84);
 }
 
-.editor-tab-bar__tab--active {
+.editor-tab-bar__tab-shell--active {
   border-color: rgba(154, 52, 18, 0.22);
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 8px 18px rgba(154, 52, 18, 0.08);
+}
+
+.editor-tab-bar__tab-activate {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
 }
 
 .editor-tab-bar__tab-title {
@@ -275,8 +289,8 @@ function cancelGraphNameEdit() {
   transition: opacity 150ms ease;
 }
 
-.editor-tab-bar__tab:hover .editor-tab-bar__dirty-dot,
-.editor-tab-bar__tab--active .editor-tab-bar__dirty-dot {
+.editor-tab-bar__tab-shell:hover .editor-tab-bar__dirty-dot,
+.editor-tab-bar__tab-shell--active .editor-tab-bar__dirty-dot {
   opacity: 0;
 }
 
@@ -296,7 +310,7 @@ function cancelGraphNameEdit() {
   transition: opacity 150ms ease, transform 150ms ease, background-color 150ms ease;
 }
 
-.editor-tab-bar__tab:hover .editor-tab-bar__close,
+.editor-tab-bar__tab-shell:hover .editor-tab-bar__close,
 .editor-tab-bar__close--visible {
   opacity: 1;
   transform: scale(1);

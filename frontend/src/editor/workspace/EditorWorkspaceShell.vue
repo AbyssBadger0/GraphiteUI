@@ -268,6 +268,18 @@ const activeStatePanelOpen = computed(() => {
   const tab = activeTab.value;
   return tab ? statePanelOpenByTabId.value[tab.tabId] ?? false : false;
 });
+const activeTabRouteSignature = computed(() => {
+  const tab = activeTab.value;
+  if (!tab) {
+    return null;
+  }
+
+  if (tab.graphId) {
+    return `existing:${tab.graphId}`;
+  }
+
+  return `new:${tab.templateId ?? tab.defaultTemplateId ?? ""}`;
+});
 const routeSignature = computed(() => {
   if (props.routeMode === "existing") {
     return `existing:${props.routeGraphId ?? ""}`;
@@ -409,6 +421,7 @@ function applyCurrentRouteInstruction() {
     routeMode: props.routeMode,
     routeGraphId: props.routeGraphId ?? null,
     defaultTemplateId: props.defaultTemplateId ?? null,
+    activeTabRouteSignature: activeTabRouteSignature.value,
     routeSignature: routeSignature.value,
     handledRouteSignature: handledRouteSignature.value,
   });

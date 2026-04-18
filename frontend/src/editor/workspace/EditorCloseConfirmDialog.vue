@@ -1,62 +1,79 @@
 <template>
-  <div v-if="tab" class="editor-close-dialog__backdrop">
-    <div class="editor-close-dialog">
-      <div class="editor-close-dialog__eyebrow">Tab</div>
-      <h2 class="editor-close-dialog__title">关闭未保存的标签页？</h2>
-      <p class="editor-close-dialog__body">
-        这个标签页有未保存修改。你可以先保存，再关闭；也可以直接丢弃。
-        <span class="editor-close-dialog__tab-title">{{ tab.title }}</span>
-      </p>
-      <div v-if="error" class="editor-close-dialog__error">{{ error }}</div>
-      <div class="editor-close-dialog__actions" :class="{ 'editor-close-dialog__actions--busy': busy }">
-        <button type="button" class="editor-close-dialog__button editor-close-dialog__button--ghost" @click="$emit('cancel')">
-          取消
-        </button>
-        <button type="button" class="editor-close-dialog__button editor-close-dialog__button--ghost" @click="$emit('discard')">
-          不保存，直接关闭
-        </button>
-        <button type="button" class="editor-close-dialog__button" @click="$emit('save-and-close')">保存并关闭</button>
-      </div>
-    </div>
-  </div>
+  <AlertDialogRoot :open="Boolean(tab)" @update:open="handleOpenChange">
+    <AlertDialogPortal>
+      <AlertDialogOverlay class="editor-close-dialog__overlay" />
+      <AlertDialogContent class="editor-close-dialog__content">
+        <div class="editor-close-dialog__eyebrow">Tab</div>
+        <AlertDialogTitle class="editor-close-dialog__title">关闭未保存的标签页？</AlertDialogTitle>
+        <AlertDialogDescription class="editor-close-dialog__body">
+          这个标签页有未保存修改。你可以先保存，再关闭；也可以直接丢弃。
+          <span class="editor-close-dialog__tab-title">{{ tab?.title }}</span>
+        </AlertDialogDescription>
+
+        <div v-if="error" class="editor-close-dialog__error">{{ error }}</div>
+
+        <div class="editor-close-dialog__actions" :class="{ 'editor-close-dialog__actions--busy': busy }">
+          <button type="button" class="editor-close-dialog__button editor-close-dialog__button--ghost" @click="$emit('cancel')">
+            取消
+          </button>
+
+          <button type="button" class="editor-close-dialog__button editor-close-dialog__button--ghost" @click="$emit('discard')">
+            不保存，直接关闭
+          </button>
+
+          <button type="button" class="editor-close-dialog__button" @click="$emit('save-and-close')">保存并关闭</button>
+        </div>
+      </AlertDialogContent>
+    </AlertDialogPortal>
+  </AlertDialogRoot>
 </template>
 
 <script setup lang="ts">
+import { AlertDialogContent, AlertDialogDescription, AlertDialogOverlay, AlertDialogPortal, AlertDialogRoot, AlertDialogTitle } from "reka-ui";
+
 import type { EditorWorkspaceTab } from "@/lib/editor-workspace";
 
-defineProps<{
+const props = defineProps<{
   tab: EditorWorkspaceTab | null;
   busy: boolean;
   error?: string | null;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   (event: "save-and-close"): void;
   (event: "discard"): void;
   (event: "cancel"): void;
 }>();
+
+function handleOpenChange(open: boolean) {
+  if (!open && props.tab) {
+    emit("cancel");
+  }
+}
 </script>
 
 <style scoped>
-.editor-close-dialog__backdrop {
-  position: absolute;
+.editor-close-dialog__overlay {
+  position: fixed;
   inset: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  z-index: 80;
   background: rgba(66, 31, 17, 0.18);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
 }
 
-.editor-close-dialog {
-  width: min(100%, 520px);
+.editor-close-dialog__content {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 81;
+  width: min(calc(100vw - 32px), 520px);
+  transform: translate(-50%, -50%);
   border: 1px solid rgba(154, 52, 18, 0.18);
   border-radius: 28px;
   padding: 24px;
   background: rgba(255, 250, 241, 0.98);
   box-shadow: 0 28px 80px rgba(66, 31, 17, 0.18);
+  outline: none;
 }
 
 .editor-close-dialog__eyebrow {
@@ -69,6 +86,7 @@ defineEmits<{
 .editor-close-dialog__title {
   margin: 10px 0 8px;
   font-size: 1.9rem;
+  line-height: 1.15;
 }
 
 .editor-close-dialog__body {
@@ -112,6 +130,12 @@ defineEmits<{
   background: rgba(255, 248, 240, 0.96);
   color: rgb(154, 52, 18);
   cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+.editor-close-dialog__button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(154, 52, 18, 0.24);
 }
 
 .editor-close-dialog__button--ghost {

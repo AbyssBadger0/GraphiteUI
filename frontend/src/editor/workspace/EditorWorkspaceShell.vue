@@ -61,7 +61,7 @@
             <EditorStatePanel
               v-if="documentsByTabId[tab.tabId]"
               :open="isStatePanelOpen(tab.tabId)"
-              :state-schema="documentsByTabId[tab.tabId]!.state_schema"
+              :document="documentsByTabId[tab.tabId]!"
               @toggle="toggleStatePanel(tab.tabId)"
             />
           </div>

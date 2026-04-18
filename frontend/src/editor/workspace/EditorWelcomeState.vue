@@ -15,7 +15,7 @@
           <h3>从模板创建</h3>
           <span>{{ filteredTemplates.length }} / {{ templates.length }}</span>
         </div>
-        <input v-model="templateQuery" class="editor-welcome__search" placeholder="搜索模板名、描述或 template_id" />
+        <WorkspaceSearchField v-model="templateQuery" placeholder="搜索模板名、描述或 template_id" />
         <div class="editor-welcome__panel-body">
           <button
             v-for="template in filteredTemplates"
@@ -24,9 +24,12 @@
             class="editor-welcome__card"
             @click="$emit('open-template', template.template_id)"
           >
-            <span class="editor-welcome__card-id">{{ template.template_id }}</span>
-            <strong>{{ template.label }}</strong>
-            <p>{{ template.description }}</p>
+            <div class="editor-welcome__card-copy">
+              <span class="editor-welcome__card-id">{{ template.template_id }}</span>
+              <strong>{{ template.label }}</strong>
+              <p>{{ template.description }}</p>
+            </div>
+            <span class="editor-welcome__card-action">打开模板</span>
           </button>
           <div v-if="templates.length === 0" class="editor-welcome__empty">当前没有可用模板。</div>
           <div v-else-if="filteredTemplates.length === 0" class="editor-welcome__empty">没有匹配的模板结果。</div>
@@ -38,7 +41,7 @@
           <h3>打开已有图</h3>
           <span>{{ filteredGraphs.length }} / {{ graphs.length }}</span>
         </div>
-        <input v-model="graphQuery" class="editor-welcome__search" placeholder="搜索图名或 graph_id" />
+        <WorkspaceSearchField v-model="graphQuery" placeholder="搜索图名或 graph_id" />
         <div class="editor-welcome__panel-body">
           <button
             v-for="graph in filteredGraphs"
@@ -54,6 +57,7 @@
               </div>
               <span>{{ graphNodeCount(graph) }} nodes / {{ graphEdgeCount(graph) }} edges</span>
             </div>
+            <span class="editor-welcome__card-action">打开图</span>
           </button>
           <div v-if="graphs.length === 0" class="editor-welcome__empty">当前没有已保存图。</div>
           <div v-else-if="filteredGraphs.length === 0" class="editor-welcome__empty">没有匹配的图结果。</div>
@@ -64,9 +68,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 import type { GraphDocument, TemplateRecord } from "@/types/node-system";
+import {
+  EDITOR_WELCOME_SEARCH_DEBOUNCE_MS,
+  filterWelcomeGraphs,
+  filterWelcomeTemplates,
+} from "./editorWelcomeSearch";
+import WorkspaceSearchField from "./WorkspaceSearchField.vue";
 
 const props = defineProps<{
   templates: TemplateRecord[];
@@ -81,26 +91,27 @@ defineEmits<{
 
 const templateQuery = ref("");
 const graphQuery = ref("");
+const debouncedTemplateQuery = ref("");
+const debouncedGraphQuery = ref("");
 
-const filteredTemplates = computed(() => {
-  const query = templateQuery.value.trim().toLowerCase();
-  if (!query) {
-    return props.templates;
-  }
-  return props.templates.filter((template) =>
-    [template.template_id, template.label, template.description].some((value) => value.toLowerCase().includes(query)),
-  );
+watch(templateQuery, (nextValue, _previousValue, onCleanup) => {
+  const timeoutId = window.setTimeout(() => {
+    debouncedTemplateQuery.value = nextValue;
+  }, EDITOR_WELCOME_SEARCH_DEBOUNCE_MS);
+
+  onCleanup(() => window.clearTimeout(timeoutId));
 });
 
-const filteredGraphs = computed(() => {
-  const query = graphQuery.value.trim().toLowerCase();
-  if (!query) {
-    return props.graphs;
-  }
-  return props.graphs.filter((graph) =>
-    [graph.graph_id, graph.name].some((value) => value.toLowerCase().includes(query)),
-  );
+watch(graphQuery, (nextValue, _previousValue, onCleanup) => {
+  const timeoutId = window.setTimeout(() => {
+    debouncedGraphQuery.value = nextValue;
+  }, EDITOR_WELCOME_SEARCH_DEBOUNCE_MS);
+
+  onCleanup(() => window.clearTimeout(timeoutId));
 });
+
+const filteredTemplates = computed(() => filterWelcomeTemplates(props.templates, debouncedTemplateQuery.value));
+const filteredGraphs = computed(() => filterWelcomeGraphs(props.graphs, debouncedGraphQuery.value));
 
 function graphNodeCount(graph: GraphDocument) {
   return Object.keys(graph.nodes).length;
@@ -186,15 +197,6 @@ function graphEdgeCount(graph: GraphDocument) {
   color: rgba(60, 41, 20, 0.62);
 }
 
-.editor-welcome__search {
-  margin-top: 16px;
-  border: 1px solid rgba(154, 52, 18, 0.16);
-  border-radius: 16px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.82);
-  color: inherit;
-}
-
 .editor-welcome__panel-body {
   margin-top: 16px;
   min-height: 0;
@@ -214,9 +216,20 @@ function graphEdgeCount(graph: GraphDocument) {
 }
 
 .editor-welcome__card {
+  display: grid;
+  align-content: space-between;
+  gap: 16px;
   text-align: left;
   color: inherit;
   cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.editor-welcome__card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(154, 52, 18, 0.2);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 24px rgba(154, 52, 18, 0.08);
 }
 
 .editor-welcome__card-id {
@@ -240,6 +253,10 @@ function graphEdgeCount(graph: GraphDocument) {
   line-height: 1.5;
 }
 
+.editor-welcome__graph-id {
+  margin-top: 4px;
+}
+
 .editor-welcome__graph-head {
   display: flex;
   align-items: start;
@@ -250,6 +267,18 @@ function graphEdgeCount(graph: GraphDocument) {
 .editor-welcome__graph-head span {
   color: rgba(60, 41, 20, 0.62);
   font-size: 0.88rem;
+}
+
+.editor-welcome__card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(154, 52, 18, 0.88);
+  font-size: 0.9rem;
+}
+
+.editor-welcome__card-action::after {
+  content: "→";
 }
 
 .editor-welcome__graph-id {

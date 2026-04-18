@@ -49,6 +49,31 @@
 
           <p v-if="row.description" class="editor-state-panel__card-description">{{ row.description }}</p>
 
+          <div class="editor-state-panel__card-bindings">
+            <span class="editor-state-panel__binding-chip editor-state-panel__binding-chip--readers">{{ row.readerCount }} readers</span>
+            <span class="editor-state-panel__binding-chip editor-state-panel__binding-chip--writers">{{ row.writerCount }} writers</span>
+          </div>
+
+          <div v-if="row.readers.length > 0 || row.writers.length > 0" class="editor-state-panel__binding-groups">
+            <div v-if="row.readers.length > 0" class="editor-state-panel__binding-group">
+              <div class="editor-state-panel__binding-group-title">Readers</div>
+              <div class="editor-state-panel__binding-list">
+                <span v-for="binding in row.readers" :key="`reader-${binding.nodeId}`" class="editor-state-panel__binding-token">
+                  {{ binding.nodeLabel }}
+                </span>
+              </div>
+            </div>
+
+            <div v-if="row.writers.length > 0" class="editor-state-panel__binding-group">
+              <div class="editor-state-panel__binding-group-title">Writers</div>
+              <div class="editor-state-panel__binding-list">
+                <span v-for="binding in row.writers" :key="`writer-${binding.nodeId}`" class="editor-state-panel__binding-token">
+                  {{ binding.nodeLabel }}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div class="editor-state-panel__card-value">
             <div class="editor-state-panel__card-value-label">Value</div>
             <pre class="editor-state-panel__card-value-preview">{{ row.valuePreview }}</pre>
@@ -63,18 +88,18 @@
 import { computed } from "vue";
 
 import { buildStatePanelViewModel } from "./statePanelViewModel";
-import type { StateDefinition } from "@/types/node-system";
+import type { GraphDocument, GraphPayload } from "@/types/node-system";
 
 const props = defineProps<{
   open: boolean;
-  stateSchema: Record<string, StateDefinition>;
+  document: GraphPayload | GraphDocument;
 }>();
 
 defineEmits<{
   (event: "toggle"): void;
 }>();
 
-const view = computed(() => buildStatePanelViewModel(props.stateSchema));
+const view = computed(() => buildStatePanelViewModel(props.document));
 </script>
 
 <style scoped>
@@ -256,6 +281,72 @@ const view = computed(() => buildStatePanelViewModel(props.stateSchema));
   margin-top: 4px;
   font-size: 0.82rem;
   color: rgba(60, 41, 20, 0.62);
+}
+
+.editor-state-panel__card-bindings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editor-state-panel__binding-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  padding: 0 10px;
+  font-size: 0.78rem;
+  color: rgba(60, 41, 20, 0.72);
+  background: rgba(255, 250, 241, 0.92);
+}
+
+.editor-state-panel__binding-chip--readers {
+  border-color: rgba(37, 99, 235, 0.16);
+  color: rgba(37, 99, 235, 0.88);
+  background: rgba(239, 246, 255, 0.9);
+}
+
+.editor-state-panel__binding-chip--writers {
+  border-color: rgba(217, 119, 6, 0.16);
+  color: rgba(217, 119, 6, 0.9);
+  background: rgba(255, 247, 237, 0.92);
+}
+
+.editor-state-panel__binding-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.editor-state-panel__binding-group {
+  display: grid;
+  gap: 6px;
+}
+
+.editor-state-panel__binding-group-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(154, 52, 18, 0.74);
+}
+
+.editor-state-panel__binding-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editor-state-panel__binding-token {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  padding: 0 10px;
+  font-size: 0.78rem;
+  color: rgba(60, 41, 20, 0.82);
+  background: rgba(255, 250, 241, 0.92);
 }
 
 .editor-state-panel__card-type {

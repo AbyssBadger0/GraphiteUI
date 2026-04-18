@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { resolveWorkspaceSelectTriggerLabel } from "./workspaceSelectModel.ts";
+import {
+  buildWorkspaceSelectOptions,
+  hasWorkspaceSelectOptions,
+  resolveWorkspaceSelectTriggerLabel,
+} from "./workspaceSelectModel.ts";
 
 test("resolveWorkspaceSelectTriggerLabel prefers selected option label", () => {
   assert.equal(
@@ -26,4 +30,22 @@ test("resolveWorkspaceSelectTriggerLabel falls back to placeholder when empty", 
     }),
     "从模板创建",
   );
+});
+
+test("buildWorkspaceSelectOptions maps records to stable workspace options", () => {
+  assert.deepEqual(
+    buildWorkspaceSelectOptions([
+      { value: "hello_world", label: "Hello World" },
+      { value: "knowledge_base", label: "知识库验证" },
+    ]),
+    [
+      { value: "hello_world", label: "Hello World" },
+      { value: "knowledge_base", label: "知识库验证" },
+    ],
+  );
+});
+
+test("hasWorkspaceSelectOptions reports disabled state from option length", () => {
+  assert.equal(hasWorkspaceSelectOptions([]), false);
+  assert.equal(hasWorkspaceSelectOptions([{ value: "hello_world", label: "Hello World" }]), true);
 });

@@ -32,6 +32,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   SelectContent,
   SelectIcon,
@@ -45,7 +46,7 @@ import {
   SelectViewport,
 } from "reka-ui";
 
-import type { WorkspaceSelectOption } from "./workspaceSelectModel";
+import { hasWorkspaceSelectOptions, type WorkspaceSelectOption } from "./workspaceSelectModel";
 
 const props = defineProps<{
   modelValue: string;
@@ -58,7 +59,7 @@ const emit = defineEmits<{
   (event: "update:modelValue", value: string): void;
 }>();
 
-const disabled = props.options.length === 0;
+const disabled = computed(() => !hasWorkspaceSelectOptions(props.options));
 
 function handleValueChange(value: string) {
   emit("update:modelValue", value);

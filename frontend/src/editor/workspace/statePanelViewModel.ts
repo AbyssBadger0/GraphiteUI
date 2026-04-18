@@ -1,4 +1,4 @@
-import type { StateDefinition } from "@/types/node-system";
+import type { GraphDocument, GraphPayload } from "@/types/node-system";
 
 export type StatePanelRowViewModel = {
   key: string;
@@ -7,6 +7,17 @@ export type StatePanelRowViewModel = {
   typeLabel: string;
   valuePreview: string;
   color: string;
+  readerCount: number;
+  writerCount: number;
+  bindingSummary: string;
+  readers: StatePanelBindingViewModel[];
+  writers: StatePanelBindingViewModel[];
+};
+
+export type StatePanelBindingViewModel = {
+  nodeId: string;
+  nodeLabel: string;
+  portLabel: string;
 };
 
 export type StatePanelViewModel = {
@@ -16,8 +27,9 @@ export type StatePanelViewModel = {
   emptyBody: string;
 };
 
-export function buildStatePanelViewModel(stateSchema: Record<string, StateDefinition>): StatePanelViewModel {
-  const rows = Object.entries(stateSchema)
+export function buildStatePanelViewModel(document: GraphPayload | GraphDocument): StatePanelViewModel {
+  const bindingsByState = summarizeBindingsByState(document);
+  const rows = Object.entries(document.state_schema)
     .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
     .map(([key, state]) => ({
       key,
@@ -26,6 +38,11 @@ export function buildStatePanelViewModel(stateSchema: Record<string, StateDefini
       typeLabel: state.type.trim() || "unknown",
       valuePreview: formatStateValue(state.value),
       color: state.color,
+      readerCount: bindingsByState[key]?.readerCount ?? 0,
+      writerCount: bindingsByState[key]?.writerCount ?? 0,
+      bindingSummary: formatBindingSummary(bindingsByState[key]?.readerCount ?? 0, bindingsByState[key]?.writerCount ?? 0),
+      readers: bindingsByState[key]?.readers ?? [],
+      writers: bindingsByState[key]?.writers ?? [],
     }));
 
   return {
@@ -34,6 +51,51 @@ export function buildStatePanelViewModel(stateSchema: Record<string, StateDefini
     emptyTitle: "No State Yet",
     emptyBody: "Graph state objects will appear here once the graph defines them.",
   };
+}
+
+function summarizeBindingsByState(document: GraphPayload | GraphDocument) {
+  const summary = Object.entries(document.nodes).reduce<
+    Record<string, { readerCount: number; writerCount: number; readers: StatePanelBindingViewModel[]; writers: StatePanelBindingViewModel[] }>
+  >((acc, [nodeId, node]) => {
+    const nodeLabel = node.name.trim() || nodeId;
+
+    for (const read of node.reads) {
+      const current = acc[read.state] ?? { readerCount: 0, writerCount: 0, readers: [], writers: [] };
+      current.readerCount += 1;
+      current.readers.push({
+        nodeId,
+        nodeLabel,
+        portLabel: read.state,
+      });
+      acc[read.state] = current;
+    }
+
+    for (const write of node.writes) {
+      const current = acc[write.state] ?? { readerCount: 0, writerCount: 0, readers: [], writers: [] };
+      current.writerCount += 1;
+      current.writers.push({
+        nodeId,
+        nodeLabel,
+        portLabel: write.state,
+      });
+      acc[write.state] = current;
+    }
+
+    return acc;
+  }, {});
+
+  for (const entry of Object.values(summary)) {
+    entry.readers.sort((left, right) => left.nodeLabel.localeCompare(right.nodeLabel) || left.nodeId.localeCompare(right.nodeId));
+    entry.writers.sort((left, right) => left.nodeLabel.localeCompare(right.nodeLabel) || left.nodeId.localeCompare(right.nodeId));
+  }
+
+  return summary;
+}
+
+function formatBindingSummary(readerCount: number, writerCount: number) {
+  const readerLabel = `${readerCount} ${readerCount === 1 ? "reader" : "readers"}`;
+  const writerLabel = `${writerCount} ${writerCount === 1 ? "writer" : "writers"}`;
+  return `${readerLabel} · ${writerLabel}`;
 }
 
 function formatStateValue(value: unknown) {

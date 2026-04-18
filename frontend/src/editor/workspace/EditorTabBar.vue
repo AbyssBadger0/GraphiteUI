@@ -11,8 +11,20 @@
       >
         <span class="editor-tab-bar__tab-title">{{ tab.title }}</span>
         <span class="editor-tab-bar__tab-status">
-          <span v-if="tab.dirty" class="editor-tab-bar__dirty-dot" />
-          <button type="button" class="editor-tab-bar__close" @click.stop="$emit('close-tab', tab.tabId)">×</button>
+          <span
+            v-if="tab.dirty"
+            class="editor-tab-bar__dirty-dot"
+            :class="{ 'editor-tab-bar__dirty-dot--hidden': tab.tabId === activeTabId }"
+          />
+          <button
+            type="button"
+            class="editor-tab-bar__close"
+            :class="{ 'editor-tab-bar__close--visible': tab.tabId === activeTabId }"
+            aria-label="关闭标签页"
+            @click.stop="$emit('close-tab', tab.tabId)"
+          >
+            ×
+          </button>
         </span>
       </button>
     </div>
@@ -67,12 +79,12 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 
 import type { EditorWorkspaceTab } from "@/lib/editor-workspace";
 import type { GraphDocument, TemplateRecord } from "@/types/node-system";
 import WorkspaceSelect from "./WorkspaceSelect.vue";
-import type { WorkspaceSelectOption } from "./workspaceSelectModel";
+import { buildWorkspaceSelectOptions } from "./workspaceSelectModel";
 
 const props = defineProps<{
   tabs: EditorWorkspaceTab[];
@@ -103,15 +115,23 @@ const isEditingGraphName = ref(false);
 const draftGraphName = ref(props.activeGraphName);
 const graphNameInput = ref<HTMLInputElement | null>(null);
 
-const templateOptions: WorkspaceSelectOption[] = props.templates.map((template) => ({
-  value: template.template_id,
-  label: template.label,
-}));
+const templateOptions = computed(() =>
+  buildWorkspaceSelectOptions(
+    props.templates.map((template) => ({
+      value: template.template_id,
+      label: template.label,
+    })),
+  ),
+);
 
-const graphOptions: WorkspaceSelectOption[] = props.graphs.map((graph) => ({
-  value: graph.graph_id,
-  label: graph.name,
-}));
+const graphOptions = computed(() =>
+  buildWorkspaceSelectOptions(
+    props.graphs.map((graph) => ({
+      value: graph.graph_id,
+      label: graph.name,
+    })),
+  ),
+);
 
 watch(
   () => props.activeGraphName,
@@ -181,6 +201,7 @@ function cancelGraphNameEdit() {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  position: relative;
   height: 38px;
   border: 1px solid rgba(154, 52, 18, 0.1);
   border-radius: 14px;
@@ -205,9 +226,12 @@ function cancelGraphNameEdit() {
 }
 
 .editor-tab-bar__tab-status {
+  position: relative;
   display: inline-flex;
+  width: 20px;
+  height: 20px;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
 }
 
 .editor-tab-bar__dirty-dot {
@@ -215,9 +239,16 @@ function cancelGraphNameEdit() {
   height: 8px;
   border-radius: 999px;
   background: rgb(154, 52, 18);
+  transition: opacity 140ms ease;
+}
+
+.editor-tab-bar__dirty-dot--hidden,
+.editor-tab-bar__tab:hover .editor-tab-bar__dirty-dot {
+  opacity: 0;
 }
 
 .editor-tab-bar__close {
+  position: absolute;
   border: none;
   border-radius: 999px;
   width: 20px;
@@ -225,6 +256,19 @@ function cancelGraphNameEdit() {
   background: transparent;
   color: rgb(154, 52, 18);
   cursor: pointer;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 140ms ease, transform 140ms ease, background-color 140ms ease;
+}
+
+.editor-tab-bar__tab:hover .editor-tab-bar__close,
+.editor-tab-bar__close--visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.editor-tab-bar__close:hover {
+  background: rgba(154, 52, 18, 0.08);
 }
 
 .editor-tab-bar__controls {

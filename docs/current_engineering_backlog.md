@@ -1,115 +1,123 @@
 # Current Engineering Backlog
 
-这份文件只保留当前仍未完成、并且从主分支代码现状出发依然成立的事项。
+这份文件只保留当前 `vue-frontend-rebuild` 这条迁移线里仍然有效的信息。
 
 使用原则：
 
-- 已完成的迁移、阶段计划、讨论稿不再保留
-- 以主分支代码和当前测试结果为准
-- 只记录还需要继续做的工作
+- 已完成的阶段计划、已放弃的 React 前端方向、以及已经偏离当前路线的视觉实验文档都不再保留
+- 旧 React 前端在 `87d3d6e` 提交上的行为逻辑，仍然是当前 Vue 迁移的产品参考
+- 当前后端不改；所有剩余工作都围绕 Vue 前端恢复旧逻辑并继续迭代
+
+## 当前总体状态
+
+### 已完成
+
+- Vue 3 + Vite + Pinia + Vue Router 前端骨架已建立
+- `/editor` 欢迎页、`/editor/new` 新图、`/editor/:graphId` 已有图 这三类路由语义已经恢复
+- 工作区 tabs、关闭脏 tab 确认框、关闭最后一个 tab 回欢迎页，这条主链已经接通
+- 基础画布可打开，节点拖拽、基础锚点与控制流边投影已接上
+- `structuredClone` 对 Vue 响应式 graph 的 `DataCloneError` 已根因修复
+- 编辑态已经回到“左侧独立侧栏 + 右侧全高工作区”的旧前端大框架
+- 顶部工作区 chrome 已恢复到旧前端主逻辑：
+  - 图标签切换
+  - 图名编辑
+  - 新建图 / 从模板创建 / 打开已有图
+  - Save / Validate / Run 主入口
+- 右侧 `State` 面板主链已恢复：
+  - 顶部 `State` 按钮可开关
+  - 面板按 tab 记住开合状态
+  - 面板可浏览 graph state 对象、类型与当前值摘要
+- Vue 前端外围 UI 的实现方向已经明确：
+  - 画布 / 节点 / 连线继续自定义
+  - 工作区 chrome、面板、下拉、弹层改走 `Reka UI` / `shadcn-vue` 思路
+
+### 当前主要问题
+
+- Vue 版图编辑器本体仍然只恢复到基础版，距离旧前端完整体验还有明显差距
+- 顶部工作区 chrome 主链已恢复，但细节质感与组件化程度还不够
+- 节点卡片细节、状态面板深层交互、画布交互、运行反馈等还没有完全迁回旧逻辑
+- 文档需要围绕当前 Vue 路线持续收口，避免混入旧 React 方案和已废弃设计
 
 ## 当前优先级
 
-1. Cycles 高级策略与终止语义
-2. Knowledge Base 收尾与增强
-3. Memory 正式能力建设
-4. 人类在环前端与审计闭环
-5. LangGraph Python 导出前端入口
+1. 恢复旧前端图编辑器本体
+2. 用现代 Vue UI 基元提升工作区 chrome 和外围面板
+3. 恢复编辑器内部交互与面板逻辑
+4. 恢复辅助页面到可用水平
+5. 收口并清理 Vue 迁移文档
 
-## 1. Cycles 高级策略与终止语义
+## 1. 恢复旧前端图编辑器本体
 
-当前代码现状：
+当前现状：
 
-- LangGraph runtime 已支持 cycles 执行
-- 运行结果会返回 `cycle_summary / cycle_iterations`
-- 回边高亮、active edge 强调、逐轮 iteration 详情已经具备
-- 当前循环上限已收口到 `condition.config.loopLimit`
-- 当前已支持一类安全停止策略：
-  - 无状态变化停止（`no_state_change`）
-  - 空轮次停止（`empty_iteration`）
-- run detail 已能展示更明确的终止原因说明
+- `AppShell`、`EditorWorkspaceShell`、`EditorTabBar` 已回到旧前端的大框架方向
+- `EditorCanvas` 不再是一个大卡片，但节点/边/控件仍是 Vue 基础实现
+- `NodeCard` 已有 richer view model，但与旧前端 `node-system-editor.tsx` 的结构和细节还不一致
 
 后续要做：
 
-- 增加更完整的停止策略：
-  - 按 state 或输出变化量停止
-- 明确 cycles 与 interrupt 的衔接方式
+- 继续按旧前端 `node-system-editor.tsx` 的逻辑迁移：
+  - 节点卡片结构
+  - 端口排布
+  - 条件节点 branch 呈现
+  - 画布中的节点/边层级
+- 把“能看到一个 Vue 图”推进到“旧前端那套图编辑器在 Vue 里重新活起来”
 
-## 2. Knowledge Base 收尾与增强
+## 2. 用现代 Vue UI 基元提升工作区 chrome 和外围面板
 
-当前代码现状：
+当前现状：
 
-- knowledge base 已是正式资源层
-- 已有离线导入、本地索引、SQLite FTS 检索主链
-- `search_knowledge_base` 已进入正式执行主链
-
-后续要做：
-
-- 增加知识库导入、更新、删除、重建索引和状态查看能力
-- 增强检索质量：
-  - query 归一化
-  - rerank
-  - 向量检索或混合检索
-- 扩展使用方式：
-  - 多 knowledge base
-  - 更细的 query mapping
-  - 更清晰的 citation 展示
-- 明确知识库管理边界：
-  - 本地缓存
-  - 版本刷新
-  - 导入失败恢复
-
-## 3. Memory 正式能力建设
-
-当前代码现状：
-
-- `/memories` 页面和 `/api/memories` 仍是只读占位
-- 当前没有正式的 memory 写入链路、召回策略、生命周期管理和运行时集成
+- `State` 面板已经回到工作区主链
+- 顶部工具栏里的模板 / 已有图选择器已经不再使用原生 `select`
+- 当前已经开始接入 `Reka UI`
 
 后续要做：
 
-- 定义 memory 的写入时机、读取时机和淘汰策略
-- 明确 memory schema、来源、作用域和权限边界
-- 决定 memory 挂在哪个维度：
-  - run
-  - graph
-  - workspace
-  - project
-- 明确 memory 和 runtime 的正式契约
-- 决定是否保留独立 memory 页面
+- 继续把欢迎页、顶部 tab bar、面板和弹层统一到现代 Vue 交互基元上
+- 默认采用：
+  - `Reka UI` 作为可访问性交互底座
+  - `shadcn-vue` 风格的 open-code 组件方法作为外围 UI 方向
+- 保持边界：
+  - 图编辑器画布和节点系统继续自定义
+  - 不把图编辑器本体交给通用 flow / UI 库
 
-## 4. 人类在环前端与审计闭环
+## 3. 恢复编辑器内部交互与面板逻辑
 
-当前代码现状：
+当前现状：
 
-- 后端已经有：
-  - `paused / awaiting_human / resuming`
-  - checkpoint / resume
-  - interrupt before / after
-  - `POST /api/runs/{run_id}/resume`
-- 前端还没有正式的人类在环入口和审计闭环
+- 基础拖拽、保存、校验、运行入口已经在 workspace shell 上接通
+- `State` 面板已接通，但目前仍是第一版浏览态
+- 编辑器内部仍缺少旧前端的完整交互节奏
 
 后续要做：
 
-- 在 run detail 中展示等待人工输入的结构化信息
-- 增加最小恢复面板：
-  - approve
-  - reject
-  - edit-and-continue
-  - skip
-- 给 editor 增加断点配置入口
-- 记录人工介入审计轨迹，保证每次恢复都可回溯
+- 恢复图名编辑、状态面板、编辑器 chrome 的完整行为
+- 恢复节点内编辑交互、运行反馈、错误提示的旧逻辑节奏
+- 继续修正“看起来能用，但手感不像旧前端”的部分
 
-## 5. LangGraph Python 导出前端入口
+## 4. 恢复辅助页面到可用水平
 
-当前代码现状：
+当前现状：
 
-- 后端已经支持导出可执行 Python：
-  - `POST /api/graphs/export/langgraph-python`
-- 前端还没有导出入口和下载交互
+- `/runs`、`/settings` 已经有基础接线
+- 首页和工作区入口已经开始恢复旧逻辑
 
 后续要做：
 
-- 在 editor 中增加“导出 LangGraph Python”入口
-- 提供源码预览和下载
-- 明确导出时的图校验和错误提示
+- 把首页、运行记录、设置页继续收回到旧前端的完整产品逻辑
+- 保持这些页面和新的 Vue 工作区模型一致
+
+## 5. 收口并清理 Vue 迁移文档
+
+当前现状：
+
+- Vue 前端重建设计仍然有效
+- 编辑器逻辑恢复计划仍然有效
+- `Reka UI` / `shadcn-vue` 方向已经成为当前外围 UI 的明确路线
+- 一些旧 React 时代的视觉实验文档已经不再适用
+
+后续要做：
+
+- 继续删除已经失效或已完成的过时文档
+- 在阶段完成后，把 backlog 和 docs 索引更新到当前真实状态
+- 保证 `docs/` 始终只保留当前还在指导实现的文档

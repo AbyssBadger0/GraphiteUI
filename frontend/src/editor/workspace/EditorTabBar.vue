@@ -31,21 +31,31 @@
         {{ activeGraphName }}
       </button>
 
+      <button
+        type="button"
+        class="editor-tab-bar__state-pill"
+        :class="{ 'editor-tab-bar__state-pill--active': isStatePanelOpen }"
+        @click="$emit('toggle-state-panel')"
+      >
+        <span>State</span>
+        <span class="editor-tab-bar__state-count">{{ activeStateCount }}</span>
+      </button>
+
       <button type="button" class="editor-tab-bar__action" @click="$emit('create-new')">新建图</button>
 
-      <select v-model="selectedTemplateId" class="editor-tab-bar__select" @change="handleTemplateSelection">
-        <option value="">从模板创建</option>
-        <option v-for="template in templates" :key="template.template_id" :value="template.template_id">
-          {{ template.label }}
-        </option>
-      </select>
+      <WorkspaceSelect
+        v-model="selectedTemplateId"
+        :options="templateOptions"
+        placeholder="从模板创建"
+        min-width-class-name="editor-tab-bar__select"
+      />
 
-      <select v-model="selectedGraphId" class="editor-tab-bar__select" @change="handleGraphSelection">
-        <option value="">打开已有图</option>
-        <option v-for="graph in graphs" :key="graph.graph_id" :value="graph.graph_id">
-          {{ graph.name }}
-        </option>
-      </select>
+      <WorkspaceSelect
+        v-model="selectedGraphId"
+        :options="graphOptions"
+        placeholder="打开已有图"
+        min-width-class-name="editor-tab-bar__select editor-tab-bar__select--wide"
+      />
 
       <button type="button" class="editor-tab-bar__action" @click="$emit('save-active-graph')">Save</button>
       <button type="button" class="editor-tab-bar__action" @click="$emit('validate-active-graph')">Validate</button>
@@ -61,6 +71,8 @@ import { nextTick, ref, watch } from "vue";
 
 import type { EditorWorkspaceTab } from "@/lib/editor-workspace";
 import type { GraphDocument, TemplateRecord } from "@/types/node-system";
+import WorkspaceSelect from "./WorkspaceSelect.vue";
+import type { WorkspaceSelectOption } from "./workspaceSelectModel";
 
 const props = defineProps<{
   tabs: EditorWorkspaceTab[];
@@ -68,6 +80,8 @@ const props = defineProps<{
   templates: TemplateRecord[];
   graphs: GraphDocument[];
   activeGraphName: string;
+  activeStateCount: number;
+  isStatePanelOpen: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -77,6 +91,7 @@ const emit = defineEmits<{
   (event: "create-from-template", templateId: string): void;
   (event: "open-graph", graphId: string): void;
   (event: "rename-active-graph", name: string): void;
+  (event: "toggle-state-panel"): void;
   (event: "save-active-graph"): void;
   (event: "validate-active-graph"): void;
   (event: "run-active-graph"): void;
@@ -88,6 +103,16 @@ const isEditingGraphName = ref(false);
 const draftGraphName = ref(props.activeGraphName);
 const graphNameInput = ref<HTMLInputElement | null>(null);
 
+const templateOptions: WorkspaceSelectOption[] = props.templates.map((template) => ({
+  value: template.template_id,
+  label: template.label,
+}));
+
+const graphOptions: WorkspaceSelectOption[] = props.graphs.map((graph) => ({
+  value: graph.graph_id,
+  label: graph.name,
+}));
+
 watch(
   () => props.activeGraphName,
   (nextName) => {
@@ -97,19 +122,21 @@ watch(
   },
 );
 
-function handleTemplateSelection() {
-  if (selectedTemplateId.value) {
-    emit("create-from-template", selectedTemplateId.value);
-    selectedTemplateId.value = "";
+watch(selectedTemplateId, (nextValue) => {
+  if (!nextValue) {
+    return;
   }
-}
+  emit("create-from-template", nextValue);
+  selectedTemplateId.value = "";
+});
 
-function handleGraphSelection() {
-  if (selectedGraphId.value) {
-    emit("open-graph", selectedGraphId.value);
-    selectedGraphId.value = "";
+watch(selectedGraphId, (nextValue) => {
+  if (!nextValue) {
+    return;
   }
-}
+  emit("open-graph", nextValue);
+  selectedGraphId.value = "";
+});
 
 async function startGraphNameEdit() {
   isEditingGraphName.value = true;
@@ -209,6 +236,7 @@ function cancelGraphNameEdit() {
 
 .editor-tab-bar__graph-name,
 .editor-tab-bar__name-input,
+.editor-tab-bar__state-pill,
 .editor-tab-bar__select,
 .editor-tab-bar__action {
   min-height: 38px;
@@ -229,8 +257,40 @@ function cancelGraphNameEdit() {
   cursor: pointer;
 }
 
+.editor-tab-bar__state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.editor-tab-bar__state-pill--active {
+  border-color: rgba(154, 52, 18, 0.24);
+  background: rgba(255, 244, 240, 0.94);
+  color: rgba(154, 52, 18, 0.92);
+}
+
+.editor-tab-bar__state-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid rgba(154, 52, 18, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 250, 241, 0.92);
+  color: rgba(60, 41, 20, 0.7);
+  font-size: 0.72rem;
+}
+
 .editor-tab-bar__select {
   min-width: 180px;
+}
+
+.editor-tab-bar__select--wide {
+  min-width: 200px;
 }
 
 .editor-tab-bar__action {

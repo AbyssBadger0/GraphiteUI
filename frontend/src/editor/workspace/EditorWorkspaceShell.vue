@@ -18,12 +18,15 @@
           :templates="templates"
           :graphs="graphs"
           :active-graph-name="activeTabTitle"
+          :active-state-count="activeStateCount"
+          :is-state-panel-open="activeStatePanelOpen"
           @activate-tab="activateTab"
           @close-tab="requestCloseTab"
           @create-new="openNewTab(null)"
           @create-from-template="openNewTab"
           @open-graph="openExistingGraph"
           @rename-active-graph="renameActiveGraph"
+          @toggle-state-panel="toggleActiveStatePanel"
           @save-active-graph="saveActiveGraph"
           @validate-active-graph="validateActiveGraph"
           @run-active-graph="runActiveGraph"
@@ -37,20 +40,31 @@
           class="editor-workspace-shell__editor"
           :class="{ 'editor-workspace-shell__editor--active': tab.tabId === workspace.activeTabId }"
         >
-          <div v-if="loadingByTabId[tab.tabId]" class="editor-workspace-shell__status-card">
-            <div class="editor-workspace-shell__status-eyebrow">Graph</div>
-            <h2>Loading saved graph…</h2>
+          <div class="editor-workspace-shell__editor-grid" :style="editorGridStyle(tab.tabId)">
+            <div class="editor-workspace-shell__editor-main">
+              <div v-if="loadingByTabId[tab.tabId]" class="editor-workspace-shell__status-card">
+                <div class="editor-workspace-shell__status-eyebrow">Graph</div>
+                <h2>Loading saved graph…</h2>
+              </div>
+              <div v-else-if="errorByTabId[tab.tabId]" class="editor-workspace-shell__status-card">
+                <div class="editor-workspace-shell__status-eyebrow">Graph</div>
+                <h2>{{ tab.title }}</h2>
+                <p>{{ errorByTabId[tab.tabId] }}</p>
+              </div>
+              <EditorCanvas
+                v-else-if="documentsByTabId[tab.tabId]"
+                :document="documentsByTabId[tab.tabId]!"
+                @update:node-position="(payload) => handleNodePositionUpdate(tab.tabId, payload)"
+              />
+            </div>
+
+            <EditorStatePanel
+              v-if="documentsByTabId[tab.tabId]"
+              :open="isStatePanelOpen(tab.tabId)"
+              :state-schema="documentsByTabId[tab.tabId]!.state_schema"
+              @toggle="toggleStatePanel(tab.tabId)"
+            />
           </div>
-          <div v-else-if="errorByTabId[tab.tabId]" class="editor-workspace-shell__status-card">
-            <div class="editor-workspace-shell__status-eyebrow">Graph</div>
-            <h2>{{ tab.title }}</h2>
-            <p>{{ errorByTabId[tab.tabId] }}</p>
-          </div>
-          <EditorCanvas
-            v-else-if="documentsByTabId[tab.tabId]"
-            :document="documentsByTabId[tab.tabId]!"
-            @update:node-position="(payload) => handleNodePositionUpdate(tab.tabId, payload)"
-          />
         </div>
       </div>
     </template>
@@ -90,6 +104,7 @@ import { useGraphDocumentStore } from "@/stores/graphDocument";
 import type { GraphDocument, GraphPayload, GraphPosition, TemplateRecord } from "@/types/node-system";
 
 import EditorCloseConfirmDialog from "./EditorCloseConfirmDialog.vue";
+import EditorStatePanel from "./EditorStatePanel.vue";
 import EditorTabBar from "./EditorTabBar.vue";
 import EditorWelcomeState from "./EditorWelcomeState.vue";
 
@@ -117,6 +132,7 @@ const pendingCloseTabId = ref<string | null>(null);
 const closeBusy = ref(false);
 const closeError = ref<string | null>(null);
 const handledRouteSignature = ref<string | null>(null);
+const statePanelOpenByTabId = ref<Record<string, boolean>>({});
 
 const templateById = computed(() => new Map(props.templates.map((template) => [template.template_id, template])));
 const graphById = computed(() => new Map(props.graphs.map((graph) => [graph.graph_id, graph])));
@@ -125,6 +141,21 @@ const pendingCloseTab = computed(() =>
   pendingCloseTabId.value ? workspace.value.tabs.find((tab) => tab.tabId === pendingCloseTabId.value) ?? null : null,
 );
 const activeTabTitle = computed(() => activeTab.value?.title ?? "Untitled Graph");
+const activeStateCount = computed(() => {
+  const tab = activeTab.value;
+  if (!tab) {
+    return 0;
+  }
+  const document = documentsByTabId.value[tab.tabId];
+  if (!document) {
+    return 0;
+  }
+  return Object.keys(document.state_schema ?? {}).length;
+});
+const activeStatePanelOpen = computed(() => {
+  const tab = activeTab.value;
+  return tab ? statePanelOpenByTabId.value[tab.tabId] ?? false : false;
+});
 const routeSignature = computed(() => {
   if (props.routeMode === "existing") {
     return `existing:${props.routeGraphId ?? ""}`;
@@ -208,9 +239,12 @@ function clearTabRuntime(tabId: string) {
   delete nextDocuments[tabId];
   delete nextLoading[tabId];
   delete nextErrors[tabId];
+  const nextPanels = { ...statePanelOpenByTabId.value };
+  delete nextPanels[tabId];
   documentsByTabId.value = nextDocuments;
   loadingByTabId.value = nextLoading;
   errorByTabId.value = nextErrors;
+  statePanelOpenByTabId.value = nextPanels;
 }
 
 function createDraftForTab(tab: EditorWorkspaceTab): GraphPayload {
@@ -372,6 +406,30 @@ function setDocumentForTab(tabId: string, nextDocument: GraphPayload | GraphDocu
   documentsByTabId.value = {
     ...documentsByTabId.value,
     [tabId]: nextDocument,
+  };
+}
+
+function isStatePanelOpen(tabId: string) {
+  return statePanelOpenByTabId.value[tabId] ?? false;
+}
+
+function toggleStatePanel(tabId: string) {
+  statePanelOpenByTabId.value = {
+    ...statePanelOpenByTabId.value,
+    [tabId]: !isStatePanelOpen(tabId),
+  };
+}
+
+function toggleActiveStatePanel() {
+  if (!activeTab.value) {
+    return;
+  }
+  toggleStatePanel(activeTab.value.tabId);
+}
+
+function editorGridStyle(tabId: string) {
+  return {
+    gridTemplateColumns: isStatePanelOpen(tabId) ? "minmax(0, 1fr) 380px" : "minmax(0,1fr) 56px",
   };
 }
 
@@ -616,6 +674,18 @@ onMounted(() => {
   visibility: visible;
   pointer-events: auto;
   opacity: 1;
+}
+
+.editor-workspace-shell__editor-grid {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  transition: grid-template-columns 220ms ease;
+}
+
+.editor-workspace-shell__editor-main {
+  min-width: 0;
+  min-height: 0;
 }
 
 .editor-workspace-shell__status-card {

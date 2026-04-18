@@ -47,6 +47,22 @@ This migration does not:
 - Vue Router
 - custom canvas / node rendering system
 
+### Chosen UI direction
+
+- `Reka UI` for accessible, headless interaction primitives
+- `shadcn-vue` as the preferred open-code reference for workspace chrome and surrounding UI patterns
+
+This direction applies to:
+
+- tab bars
+- dropdowns
+- dialogs
+- panels
+- form controls
+- welcome/workspace chrome
+
+It does **not** replace the custom editor canvas. The graph editor body remains custom.
+
 ### Rejected alternatives
 
 #### Vue + existing flow library
@@ -234,6 +250,12 @@ The project should learn from ComfyUI in these ways:
 - editor as a first-class workspace rather than a page widget
 
 It should not blindly copy ComfyUI's old LiteGraph assumptions.
+
+For component strategy, the project should also learn from the broader modern Vue ecosystem:
+
+- use headless primitives where accessibility and customization matter
+- prefer open-code component approaches for workspace chrome
+- avoid heavy black-box UI kits in the editor core
 
 GraphiteUI must preserve its own semantics:
 

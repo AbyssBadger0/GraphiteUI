@@ -19,7 +19,7 @@ test("EditorTabBar keeps the close control outside the tab activation button", (
 test("EditorTabBar renames graphs inline from the tab strip instead of a separate toolbar control", () => {
   assert.doesNotMatch(componentSource, /editor-tab-bar__graph-name/);
   assert.match(componentSource, /editor-tab-bar__tab-name-input/);
-  assert.match(componentSource, /@dblclick="startTabRename\(tab\)"/);
+  assert.match(componentSource, /@dblclick(?:\.stop)?="startTabRename\(tab\)"/);
 });
 
 test("EditorTabBar keeps the workspace controls on a single horizontal row", () => {
@@ -35,40 +35,52 @@ test("EditorTabBar exposes browser-like tab interactions", () => {
   assert.match(componentSource, /scrollIntoView\(/);
 });
 
-test("EditorTabBar avoids trapezoid clipping and rounds only the active tab top edge", () => {
-  assert.doesNotMatch(componentSource, /clip-path:\s*polygon/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*border-radius:\s*14px 14px 0 0;/);
+test("EditorTabBar is built on Element Plus tabs instead of reka-ui primitives", () => {
+  assert.match(componentSource, /import \{[\s\S]*ElTabPane,[\s\S]*ElTabs[\s\S]*\} from "element-plus";/);
+  assert.match(componentSource, /<ElTabs[\s\S]*type="card"/);
+  assert.match(componentSource, /@tab-change="handleTabChange"/);
+  assert.match(componentSource, /<ElTabPane[\s\S]*v-for="tab in tabs"/);
+  assert.doesNotMatch(componentSource, /from "reka-ui"/);
 });
 
-test("EditorTabBar keeps the tab rail on the warm workspace palette", () => {
-  assert.doesNotMatch(componentSource, /rgba\(226,\s*234,\s*244/);
-  assert.match(componentSource, /\.editor-tab-bar \{[\s\S]*rgba\(255,\s*250,\s*241/);
-  assert.match(componentSource, /\.editor-tab-bar__tabs-shell \{[\s\S]*background:/);
+test("EditorTabBar keeps Element Plus card tabs on a single toolbar row", () => {
+  assert.match(componentSource, /\.editor-tab-bar__tabs \{[\s\S]*flex:\s*1 1 auto;/);
+  assert.match(componentSource, /\.editor-tab-bar__inner \{[\s\S]*align-items:\s*center;/);
+  assert.match(componentSource, /\.editor-tab-bar__controls \{[\s\S]*flex-wrap:\s*nowrap;/);
 });
 
-test("EditorTabBar lets the active tab bridge into the content plane", () => {
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*z-index:\s*2;/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*border-bottom:\s*none;/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active::before \{/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active::after \{/);
+test("EditorTabBar normalizes Element Plus tab spacing with shared size variables", () => {
+  assert.match(componentSource, /--editor-tab-width:\s*\d+px;/);
+  assert.match(componentSource, /--editor-tab-height:\s*\d+px;/);
+  assert.match(componentSource, /--editor-tab-gap:\s*\d+px;/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__nav\) \{[\s\S]*gap:\s*var\(--editor-tab-gap\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__nav-wrap\),[\s\S]*padding:\s*\d+px var\(--editor-tab-gap\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item\) \{[\s\S]*margin:\s*0 !important;/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item\) \{[\s\S]*width:\s*var\(--editor-tab-width\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item\) \{[\s\S]*flex:\s*0 0 var\(--editor-tab-width\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item:nth-child\(2\)\),[\s\S]*padding-left:\s*0 !important;/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item:nth-child\(2\)\),[\s\S]*padding-right:\s*0 !important;/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*width:\s*var\(--editor-tab-width\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*height:\s*var\(--editor-tab-height\);/);
 });
 
-test("EditorTabBar uses one shared rail band and tab body height for every tab state", () => {
-  assert.match(componentSource, /--editor-tab-rail-band-size:\s*\d+px;/);
-  assert.match(componentSource, /--editor-tab-body-height:\s*\d+px;/);
-  assert.match(componentSource, /\.editor-tab-bar__tabs-shell \{[\s\S]*padding:\s*var\(--editor-tab-rail-band-size\) 0;/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*height:\s*var\(--editor-tab-body-height\);/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*box-sizing:\s*border-box;/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*height:\s*var\(--editor-tab-body-height\);/);
+test("EditorTabBar keeps the warm project palette instead of the default blue Element Plus theme", () => {
+  assert.match(componentSource, /\.editor-tab-bar \{[\s\S]*rgba\(244,\s*237,\s*225/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*border-radius:\s*14px;/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item\.is-active\) \{/);
 });
 
-test("EditorTabBar keeps inactive tabs full-width while only revealing their shell on hover", () => {
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*min-width:\s*var\(--editor-tab-min-width\);/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*background:\s*transparent;/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*border:\s*none;/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell:not\(\.editor-tab-bar__tab-shell--active\):hover \{[\s\S]*border-radius:\s*12px;/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell:not\(\.editor-tab-bar__tab-shell--active\):hover \{[\s\S]*background:/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell:not\(\.editor-tab-bar__tab-shell--active\)::before \{/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell:hover \+ \.editor-tab-bar__tab-shell::before \{/);
-  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \+ \.editor-tab-bar__tab-shell::before \{/);
+test("EditorTabBar removes the old lower seam layers and keeps the active tab on one plane", () => {
+  assert.doesNotMatch(componentSource, /\.editor-tab-bar__tab-shell--active::after \{/);
+  assert.doesNotMatch(componentSource, /\.editor-tab-bar__tab-shell--active::before \{/);
+  assert.doesNotMatch(componentSource, /\.editor-tab-bar__tabs-shell::before \{/);
+  assert.doesNotMatch(componentSource, /\.editor-tab-bar__tabs-shell::after \{/);
+});
+
+test("EditorTabBar uses a restrained paper-warm palette instead of heavy gold gradients", () => {
+  assert.match(componentSource, /\.editor-tab-bar__tabs-shell \{[\s\S]*background:\s*rgba\(236,\s*219,\s*190,\s*0\.95\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*linear-gradient\(180deg,\s*rgba\(250,\s*242,\s*228,\s*0\.98\)/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*linear-gradient\(180deg,\s*rgba\(255,\s*250,\s*242,\s*1\)/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*color:\s*rgba\(111,\s*52,\s*22,\s*1\);/);
+  assert.match(componentSource, /rgba\(208,\s*177,\s*138,\s*0\.\d+\)/);
 });

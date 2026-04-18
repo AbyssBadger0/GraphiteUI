@@ -2,59 +2,63 @@
   <header class="editor-tab-bar">
     <div class="editor-tab-bar__inner">
       <div class="editor-tab-bar__tabs-shell" @wheel.prevent="handleTabsWheel" @dragleave="handleTabsShellDragLeave">
-        <div class="editor-tab-bar__tabs">
-          <div
-            v-for="tab in tabs"
-            :key="tab.tabId"
-            class="editor-tab-bar__tab-shell"
-            :ref="(element) => setTabShellRef(tab.tabId, element)"
-            :class="{
-              'editor-tab-bar__tab-shell--active': tab.tabId === activeTabId,
-              'editor-tab-bar__tab-shell--dragging': tab.tabId === draggedTabId,
-              'editor-tab-bar__tab-shell--drop-before': tab.tabId === dropTargetTabId && dropPlacement === 'before',
-              'editor-tab-bar__tab-shell--drop-after': tab.tabId === dropTargetTabId && dropPlacement === 'after',
-            }"
-            draggable="true"
-            @auxclick="handleTabAuxClick(tab, $event)"
-            @dragstart="handleTabDragStart(tab, $event)"
-            @dragover.prevent="handleTabDragOver(tab, $event)"
-            @drop.prevent="handleTabDrop(tab, $event)"
-            @dragend="handleTabDragEnd"
-          >
-            <input
-              v-if="editingTabId === tab.tabId"
-              :ref="setTabNameInput"
-              v-model="draftGraphName"
-              class="editor-tab-bar__tab-name-input"
-              :aria-label="`重命名 ${tab.title}`"
-              @blur="commitGraphName"
-              @keydown.enter.prevent="commitGraphName"
-              @keydown.esc.prevent="cancelGraphNameEdit"
-            />
-            <button
-              v-else
-              type="button"
-              class="editor-tab-bar__tab-activate"
-              :title="buildEditorTabHint(tab, copy)"
-              @click="$emit('activate-tab', tab.tabId)"
-              @dblclick="startTabRename(tab)"
-            >
-              <span class="editor-tab-bar__tab-title">{{ tab.title }}</span>
-            </button>
-            <span class="editor-tab-bar__tab-status">
-              <span v-if="tab.dirty" class="editor-tab-bar__dirty-dot" />
-              <button
-                type="button"
-                class="editor-tab-bar__close"
-                :class="{ 'editor-tab-bar__close--visible': tab.tabId === activeTabId }"
-                aria-label="关闭标签页"
-                @click.stop="$emit('close-tab', tab.tabId)"
+        <ElTabs
+          class="editor-tab-bar__tabs"
+          type="card"
+          :model-value="activeTabId ?? undefined"
+          @tab-change="handleTabChange"
+        >
+          <ElTabPane v-for="tab in tabs" :key="tab.tabId" :name="tab.tabId">
+            <template #label>
+              <div
+                class="editor-tab-bar__tab-shell"
+                :ref="(element) => setTabShellRef(tab.tabId, element)"
+                :class="{
+                  'editor-tab-bar__tab-shell--active': tab.tabId === activeTabId,
+                  'editor-tab-bar__tab-shell--dragging': tab.tabId === draggedTabId,
+                  'editor-tab-bar__tab-shell--drop-before': tab.tabId === dropTargetTabId && dropPlacement === 'before',
+                  'editor-tab-bar__tab-shell--drop-after': tab.tabId === dropTargetTabId && dropPlacement === 'after',
+                }"
+                draggable="true"
+                @auxclick="handleTabAuxClick(tab, $event)"
+                @dragstart="handleTabDragStart(tab, $event)"
+                @dragover.prevent="handleTabDragOver(tab, $event)"
+                @drop.prevent="handleTabDrop(tab, $event)"
+                @dragend="handleTabDragEnd"
               >
-                ×
-              </button>
-            </span>
-          </div>
-        </div>
+                <input
+                  v-if="editingTabId === tab.tabId"
+                  :ref="setTabNameInput"
+                  v-model="draftGraphName"
+                  class="editor-tab-bar__tab-name-input"
+                  :aria-label="`重命名 ${tab.title}`"
+                  @click.stop
+                  @blur="commitGraphName"
+                  @keydown.enter.prevent="commitGraphName"
+                  @keydown.esc.prevent="cancelGraphNameEdit"
+                />
+
+                <div v-else class="editor-tab-bar__tab-activate" :title="buildEditorTabHint(tab, copy)" @dblclick.stop="startTabRename(tab)">
+                  <span class="editor-tab-bar__tab-title">{{ tab.title }}</span>
+                </div>
+
+                <span class="editor-tab-bar__tab-status">
+                  <span v-if="tab.dirty" class="editor-tab-bar__dirty-dot" />
+                  <button
+                    type="button"
+                    class="editor-tab-bar__close"
+                    :class="{ 'editor-tab-bar__close--visible': tab.tabId === activeTabId }"
+                    aria-label="关闭标签页"
+                    @mousedown.stop.prevent
+                    @click.stop="$emit('close-tab', tab.tabId)"
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
+            </template>
+          </ElTabPane>
+        </ElTabs>
       </div>
 
       <div class="editor-tab-bar__controls">
@@ -95,18 +99,19 @@
 </template>
 
 <script setup lang="ts">
+import { ElTabPane, ElTabs } from "element-plus";
 import { computed, nextTick, ref, watch, type ComponentPublicInstance } from "vue";
 
 import type { EditorWorkspaceTab } from "@/lib/editor-workspace";
 import type { GraphDocument, TemplateRecord } from "@/types/node-system";
 import WorkspaceSelect from "./WorkspaceSelect.vue";
-import { buildWorkspaceSelectOptions } from "./workspaceSelectModel";
 import {
   buildEditorTabHint,
   resolveEditorTabBarSelectPlaceholders,
   resolveEditorTabDropPlacement,
   ZH_EDITOR_TAB_BAR_COPY,
 } from "./editorTabBarModel";
+import { buildWorkspaceSelectOptions } from "./workspaceSelectModel";
 
 const props = defineProps<{
   tabs: EditorWorkspaceTab[];
@@ -239,6 +244,12 @@ async function scrollTabIntoView(tabId: string) {
   });
 }
 
+function handleTabChange(value: string | number) {
+  if (typeof value === "string") {
+    emit("activate-tab", value);
+  }
+}
+
 async function startTabRename(tab: EditorWorkspaceTab) {
   emit("activate-tab", tab.tabId);
   editingTabId.value = tab.tabId;
@@ -350,181 +361,165 @@ function handleTabsWheel(event: WheelEvent) {
     return;
   }
 
-  currentTarget.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+  const scrollContainer = currentTarget.querySelector(".el-tabs__nav-wrap");
+  if (!(scrollContainer instanceof HTMLElement)) {
+    return;
+  }
+
+  scrollContainer.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
 }
 </script>
 
 <style scoped>
 .editor-tab-bar {
-  --editor-tab-rail-band-size: 4px;
-  --editor-tab-body-height: 36px;
-  --editor-tab-min-width: 168px;
-  --editor-tab-max-width: 232px;
+  --editor-tab-width: 176px;
+  --editor-tab-height: 40px;
+  --editor-tab-gap: 12px;
   position: relative;
-  border-bottom: 1px solid rgba(154, 52, 18, 0.14);
-  background:
-    radial-gradient(circle at top left, rgba(191, 78, 39, 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(255, 250, 241, 0.98) 0%, rgba(248, 237, 219, 0.96) 100%);
+  background: linear-gradient(180deg, rgba(244, 237, 225, 0.98) 0%, rgba(255, 248, 236, 0.98) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 10px 24px rgba(154, 52, 18, 0.08);
-}
-
-.editor-tab-bar::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: rgba(154, 52, 18, 0.12);
+    inset 0 1px 0 rgba(255, 255, 255, 0.64),
+    0 8px 22px rgba(92, 58, 28, 0.06);
 }
 
 .editor-tab-bar__inner {
   display: flex;
   min-width: 0;
   flex-wrap: nowrap;
-  align-items: flex-end;
+  align-items: center;
   gap: 14px;
-  padding: 8px 16px 0;
+  padding: 10px 16px 12px;
 }
 
 .editor-tab-bar__tabs-shell {
   min-width: 0;
-  flex: 1;
-  overflow-x: auto;
-  padding: var(--editor-tab-rail-band-size) 0;
-  border-top: 1px solid rgba(132, 101, 72, 0.22);
-  border-bottom: 1px solid rgba(78, 52, 30, 0.34);
-  background: linear-gradient(180deg, rgba(122, 88, 58, 0.98) 0%, rgba(106, 74, 46, 0.98) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 246, 230, 0.08),
-    inset 0 -1px 0 rgba(61, 39, 20, 0.22);
-  scrollbar-width: none;
-}
-
-.editor-tab-bar__tabs-shell::-webkit-scrollbar,
-.editor-tab-bar__controls::-webkit-scrollbar {
-  display: none;
+  flex: 1 1 auto;
 }
 
 .editor-tab-bar__tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__header) {
+  margin: 0;
+  border-bottom: none;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__content) {
+  display: none;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__nav-wrap),
+.editor-tab-bar__tabs :deep(.el-tabs__nav-wrap.is-scrollable) {
+  overflow: auto;
+  padding: 8px var(--editor-tab-gap);
+  border: 1px solid rgba(208, 177, 138, 0.88);
+  border-radius: 20px;
+  background: rgba(236, 219, 190, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 252, 247, 0.58),
+    0 1px 0 rgba(255, 255, 255, 0.2);
+  scrollbar-width: none;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__nav-wrap::-webkit-scrollbar) {
+  display: none;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__nav-wrap::after),
+.editor-tab-bar__tabs :deep(.el-tabs__nav-prev),
+.editor-tab-bar__tabs :deep(.el-tabs__nav-next) {
+  display: none;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__nav-scroll) {
+  overflow: visible;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__nav) {
   display: flex;
-  min-width: max-content;
-  align-items: flex-end;
-  gap: 0;
-  padding: 0 12px 0 0;
-  min-height: var(--editor-tab-body-height);
+  align-items: center;
+  gap: var(--editor-tab-gap);
+  border: none;
+  padding: 0;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__item) {
+  box-sizing: border-box;
+  display: block;
+  width: var(--editor-tab-width);
+  min-width: var(--editor-tab-width);
+  max-width: var(--editor-tab-width);
+  flex: 0 0 var(--editor-tab-width);
+  height: auto;
+  line-height: normal;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none;
+  background: transparent !important;
+  color: inherit;
+  overflow: visible;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__item:nth-child(2)),
+.editor-tab-bar__tabs :deep(.el-tabs__item:last-child) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__item:hover) {
+  color: inherit;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__item.is-active) {
+  color: inherit;
 }
 
 .editor-tab-bar__tab-shell {
   position: relative;
-  isolation: isolate;
   box-sizing: border-box;
-  flex: 0 0 auto;
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr) 22px;
+  width: var(--editor-tab-width);
+  min-width: var(--editor-tab-width);
+  max-width: var(--editor-tab-width);
+  height: var(--editor-tab-height);
   align-items: center;
-  gap: 8px;
-  min-width: var(--editor-tab-min-width);
-  max-width: var(--editor-tab-max-width);
-  height: var(--editor-tab-body-height);
-  padding: 0 16px 0 18px;
-  overflow: visible;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: rgba(255, 242, 226, 0.86);
-  box-shadow: none;
+  gap: 10px;
+  padding: 0 14px 0 16px;
+  border: 1px solid rgba(208, 177, 138, 0.88);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(250, 242, 228, 0.98) 0%, rgba(245, 233, 212, 0.95) 100%);
+  color: rgba(96, 63, 36, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 251, 244, 0.58),
+    0 1px 0 rgba(92, 58, 28, 0.04);
   transition:
     background-color 160ms ease,
     border-color 160ms ease,
     box-shadow 160ms ease,
     color 160ms ease,
-    transform 160ms ease;
-}
-
-.editor-tab-bar__tab-shell:not(.editor-tab-bar__tab-shell--active)::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 1px;
-  height: 18px;
-  background: rgba(154, 52, 18, 0.18);
-  transform: translateY(-50%);
-}
-
-.editor-tab-bar__tab-shell:first-child:not(.editor-tab-bar__tab-shell--active)::before {
-  content: none;
+    transform 160ms ease,
+    opacity 160ms ease;
 }
 
 .editor-tab-bar__tab-shell:hover {
-  color: rgba(37, 24, 14, 0.92);
-}
-
-.editor-tab-bar__tab-shell:not(.editor-tab-bar__tab-shell--active):hover {
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(240, 225, 206, 0.88) 0%, rgba(228, 206, 180, 0.84) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 250, 241, 0.56),
-    0 2px 8px rgba(154, 52, 18, 0.05);
-}
-
-.editor-tab-bar__tab-shell:not(.editor-tab-bar__tab-shell--active):hover::before {
-  opacity: 0;
-}
-
-.editor-tab-bar__tab-shell:hover + .editor-tab-bar__tab-shell::before {
-  opacity: 0;
-}
-
-.editor-tab-bar__tab-shell--active + .editor-tab-bar__tab-shell::before {
-  opacity: 0;
+  background: linear-gradient(180deg, rgba(255, 248, 237, 0.99) 0%, rgba(249, 237, 218, 0.97) 100%);
+  border-color: rgba(177, 105, 46, 0.22);
+  color: rgba(104, 55, 24, 0.98);
+  transform: none;
 }
 
 .editor-tab-bar__tab-shell--active {
-  z-index: 2;
-  height: var(--editor-tab-body-height);
-  min-width: var(--editor-tab-min-width);
-  margin: 0 8px 0 10px;
-  padding: 0 16px 0 18px;
-  border: 1px solid rgba(154, 52, 18, 0.18);
-  border-bottom: none;
-  border-radius: 14px 14px 0 0;
-  background: linear-gradient(180deg, rgba(255, 252, 247, 1) 0%, rgba(248, 237, 219, 0.99) 100%);
-  color: #2d1f12;
+  z-index: 1;
+  border-color: rgba(154, 52, 18, 0.3);
+  background: linear-gradient(180deg, rgba(255, 250, 242, 1) 0%, rgba(250, 236, 214, 1) 100%);
+  color: rgba(111, 52, 22, 1);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 8px 18px rgba(154, 52, 18, 0.1);
-}
-
-.editor-tab-bar__tab-shell--active::before,
-.editor-tab-bar__tab-shell--active::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-}
-
-.editor-tab-bar__tab-shell--active::before {
-  z-index: -1;
-  left: -1px;
-  right: -1px;
-  bottom: calc(-1 * var(--editor-tab-rail-band-size));
-  height: var(--editor-tab-rail-band-size);
-  background: rgba(248, 237, 219, 0.99);
-}
-
-.editor-tab-bar__tab-shell--active::after {
-  left: -14px;
-  right: -14px;
-  bottom: calc(-1 * var(--editor-tab-rail-band-size));
-  height: 12px;
-  background:
-    radial-gradient(circle at left top, transparent 10px, rgba(248, 237, 219, 0.99) 10.5px) left top / 14px 12px no-repeat,
-    radial-gradient(circle at right top, transparent 10px, rgba(248, 237, 219, 0.99) 10.5px) right top / 14px 12px no-repeat;
-  pointer-events: none;
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 18px rgba(154, 52, 18, 0.13),
+    0 0 0 1px rgba(255, 242, 224, 0.55);
 }
 
 .editor-tab-bar__tab-shell--active:hover {
@@ -537,63 +532,59 @@ function handleTabsWheel(event: WheelEvent) {
 }
 
 .editor-tab-bar__tab-shell--drop-before {
-  box-shadow: inset 3px 0 0 rgba(191, 78, 39, 0.96);
+  box-shadow:
+    inset 3px 0 0 rgba(154, 52, 18, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .editor-tab-bar__tab-shell--drop-after {
-  box-shadow: inset -3px 0 0 rgba(191, 78, 39, 0.96);
+  box-shadow:
+    inset -3px 0 0 rgba(154, 52, 18, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .editor-tab-bar__tab-activate {
   display: inline-flex;
-  flex: 1;
   min-width: 0;
-  position: relative;
-  z-index: 1;
+  flex: 1;
   align-items: center;
-  border: none;
-  background: transparent;
-  padding: 0;
-  color: inherit;
-  text-align: left;
   cursor: pointer;
 }
 
 .editor-tab-bar__tab-name-input {
-  min-width: 180px;
+  min-width: 0;
   width: 100%;
-  position: relative;
-  z-index: 1;
-  border: 1px solid rgba(191, 78, 39, 0.28);
-  border-radius: 12px;
-  background: rgba(255, 252, 247, 0.98);
+  border: 1px solid rgba(154, 52, 18, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 250, 241, 0.98);
   padding: 5px 10px;
   color: inherit;
   font: inherit;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(191, 78, 39, 0.1);
+  box-shadow: 0 0 0 3px rgba(246, 211, 184, 0.35);
 }
 
 .editor-tab-bar__tab-title {
   max-width: 100%;
   overflow: hidden;
-  font-size: 0.9rem;
-  font-weight: 450;
+  font-size: 0.88rem;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .editor-tab-bar__tab-shell--active .editor-tab-bar__tab-title {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .editor-tab-bar__tab-status {
   position: relative;
-  z-index: 1;
   display: inline-flex;
   width: 22px;
   height: 22px;
   flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
 }
 
 .editor-tab-bar__dirty-dot {
@@ -605,7 +596,7 @@ function handleTabsWheel(event: WheelEvent) {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #c56b14;
+  background: #9a3412;
   transform: translate(-50%, -50%);
   transition: opacity 150ms ease;
 }
@@ -623,8 +614,8 @@ function handleTabsWheel(event: WheelEvent) {
   justify-content: center;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 252, 247, 0.22);
-  color: rgba(88, 55, 30, 0.82);
+  background: rgba(246, 211, 184, 0.34);
+  color: rgba(124, 45, 18, 0.76);
   cursor: pointer;
   opacity: 0;
   transform: scale(0.92);
@@ -638,7 +629,7 @@ function handleTabsWheel(event: WheelEvent) {
 }
 
 .editor-tab-bar__close:hover {
-  background: rgba(154, 52, 18, 0.12);
+  background: rgba(246, 211, 184, 0.56);
 }
 
 .editor-tab-bar__controls {
@@ -648,22 +639,26 @@ function handleTabsWheel(event: WheelEvent) {
   align-items: center;
   gap: 8px;
   overflow-x: auto;
-  padding: 0 0 9px;
+  padding: 0;
   scrollbar-width: none;
+}
+
+.editor-tab-bar__controls::-webkit-scrollbar {
+  display: none;
 }
 
 .editor-tab-bar__state-pill,
 .editor-tab-bar__action {
   flex: 0 0 auto;
   min-height: 36px;
-  border: 1px solid rgba(139, 120, 99, 0.18);
+  border: 1px solid rgba(193, 151, 106, 0.28);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 249, 239, 0.94);
   padding: 8px 13px;
-  color: #3c2914;
+  color: rgba(90, 58, 34, 0.96);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 1px 0 rgba(255, 255, 255, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.52),
+    0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .editor-tab-bar__state-pill {
@@ -676,14 +671,15 @@ function handleTabsWheel(event: WheelEvent) {
   transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
 }
 
-.editor-tab-bar__state-pill:hover {
-  background: white;
+.editor-tab-bar__state-pill:hover,
+.editor-tab-bar__action:hover {
+  background: rgba(255, 250, 242, 0.99);
 }
 
 .editor-tab-bar__state-pill--active {
-  border-color: rgba(217, 119, 6, 0.26);
-  background: rgba(255, 244, 240, 0.94);
-  color: rgba(154, 52, 18, 0.94);
+  border-color: rgba(154, 52, 18, 0.24);
+  background: rgba(246, 211, 184, 0.42);
+  color: rgba(124, 45, 18, 0.98);
 }
 
 .editor-tab-bar__state-count {
@@ -692,10 +688,10 @@ function handleTabsWheel(event: WheelEvent) {
   justify-content: center;
   min-width: 24px;
   padding: 2px 8px;
-  border: 1px solid rgba(154, 52, 18, 0.16);
+  border: 1px solid rgba(208, 177, 138, 0.7);
   border-radius: 999px;
-  background: rgba(255, 250, 241, 0.92);
-  color: rgba(60, 41, 20, 0.72);
+  background: rgba(255, 247, 235, 0.96);
+  color: rgba(120, 88, 58, 0.9);
   font-size: 0.68rem;
 }
 
@@ -712,30 +708,22 @@ function handleTabsWheel(event: WheelEvent) {
   transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
 }
 
-.editor-tab-bar__action:hover {
-  background: white;
-}
-
 .editor-tab-bar__action--primary {
-  border-color: rgba(154, 52, 18, 0.92);
-  background: linear-gradient(180deg, rgba(191, 78, 39, 0.98) 0%, rgba(154, 52, 18, 0.98) 100%);
-  color: rgba(255, 250, 241, 0.98);
-  box-shadow: none;
+  border-color: rgba(154, 52, 18, 0.24);
+  background: rgba(246, 211, 184, 0.56);
+  color: rgba(124, 45, 18, 0.98);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 2px 6px rgba(154, 52, 18, 0.08);
 }
 
 .editor-tab-bar__action--primary:hover {
-  background: linear-gradient(180deg, rgba(174, 65, 27, 0.98) 0%, rgba(141, 46, 14, 0.98) 100%);
+  background: rgba(246, 211, 184, 0.72);
 }
 
 @media (max-width: 1100px) {
-  .editor-tab-bar__tab-name-input {
-    min-width: 140px;
-    width: 180px;
-  }
-
-  .editor-tab-bar__tab-shell {
-    min-width: 146px;
-    max-width: 190px;
+  .editor-tab-bar {
+    --editor-tab-width: 156px;
   }
 }
 </style>

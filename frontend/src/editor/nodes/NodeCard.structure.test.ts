@@ -235,6 +235,8 @@ test("NodeCard reveals state pills on hover and opens state editing only after a
   assert.match(componentSource, /node-card__port-pill--revealed/);
   assert.match(componentSource, /node-card__port-pill--confirm/);
   assert.match(componentSource, /node-card__port-pill-confirm-icon/);
+  assert.match(componentSource, /node-card__port-pill-label-text/);
+  assert.match(componentSource, /node-card__port-pill-label--confirm/);
   assert.match(componentSource, /:width="320"/);
   assert.match(componentSource, /:show-arrow="false"/);
   assert.match(componentSource, /:popper-style="stateEditorPopoverStyle"/);
@@ -254,8 +256,16 @@ test("NodeCard reveals state pills on hover and opens state editing only after a
   assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*background:\s*transparent;/);
   assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*padding:\s*0;/);
   assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*box-shadow:\s*none;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*transition:/);
-  assert.match(componentSource, /\.node-card__port-pill-row:hover .node-card__port-pill,\n\.node-card__port-pill--revealed \{[\s\S]*border:\s*1px solid rgba\(154,\s*52,\s*18,\s*0\.14\);/);
+  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*position:\s*relative;/);
+  assert.match(componentSource, /\.node-card__port-pill::before \{[\s\S]*inset:\s*-6px -12px;/);
+  assert.match(
+    componentSource,
+    /\.node-card__port-pill-row:hover .node-card__port-pill::before,\n\.node-card__port-pill--revealed::before \{[\s\S]*border-color:\s*rgba\(154,\s*52,\s*18,\s*0\.14\);/,
+  );
+  assert.doesNotMatch(componentSource, /\.node-card__port-pill-row:hover .node-card__port-pill,\n\.node-card__port-pill--revealed \{[\s\S]*padding:/);
+  assert.doesNotMatch(componentSource, /\.node-card__port-pill--confirm \{[\s\S]*min-width:/);
+  assert.match(componentSource, /\.node-card__port-pill-label--confirm .node-card__port-pill-label-text \{[\s\S]*opacity:\s*0;/);
+  assert.match(componentSource, /\.node-card__port-pill-label--confirm .node-card__port-pill-confirm-icon \{[\s\S]*opacity:\s*1;/);
 });
 
 test("NodeCard opens dedicated warm popovers for title and description editing on double click", () => {

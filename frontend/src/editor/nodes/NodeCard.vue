@@ -216,9 +216,12 @@
                 @pointerdown.stop
                 @click.stop="handleStateEditorActionClick(`input-primary-output:${view.body.primaryOutput.key}`, view.body.primaryOutput.key)"
               >
-                <span class="node-card__port-pill-label">
-                  <ElIcon v-if="isStateEditorConfirmOpen(`input-primary-output:${view.body.primaryOutput.key}`)" class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
-                  <template v-else>{{ view.body.primaryOutput.label }}</template>
+                <span
+                  class="node-card__port-pill-label"
+                  :class="{ 'node-card__port-pill-label--confirm': isStateEditorConfirmOpen(`input-primary-output:${view.body.primaryOutput.key}`) }"
+                >
+                  <span class="node-card__port-pill-label-text">{{ view.body.primaryOutput.label }}</span>
+                  <ElIcon class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
                 </span>
                 <span
                   class="node-card__port-pill-anchor-slot"
@@ -392,9 +395,12 @@
                     :data-anchor-slot-id="`${nodeId}:state-in:${port.key}`"
                     aria-hidden="true"
                   />
-                  <span class="node-card__port-pill-label">
-                    <ElIcon v-if="isStateEditorConfirmOpen(`agent-input:${port.key}`)" class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
-                    <template v-else>{{ port.label }}</template>
+                  <span
+                    class="node-card__port-pill-label"
+                    :class="{ 'node-card__port-pill-label--confirm': isStateEditorConfirmOpen(`agent-input:${port.key}`) }"
+                  >
+                    <span class="node-card__port-pill-label-text">{{ port.label }}</span>
+                    <ElIcon class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
                   </span>
                 </span>
               </template>
@@ -437,9 +443,12 @@
                   @pointerdown.stop
                   @click.stop="handleStateEditorActionClick(`agent-output:${port.key}`, port.key)"
                 >
-                  <span class="node-card__port-pill-label">
-                    <ElIcon v-if="isStateEditorConfirmOpen(`agent-output:${port.key}`)" class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
-                    <template v-else>{{ port.label }}</template>
+                  <span
+                    class="node-card__port-pill-label"
+                    :class="{ 'node-card__port-pill-label--confirm': isStateEditorConfirmOpen(`agent-output:${port.key}`) }"
+                  >
+                    <span class="node-card__port-pill-label-text">{{ port.label }}</span>
+                    <ElIcon class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
                   </span>
                   <span
                     class="node-card__port-pill-anchor-slot"
@@ -750,9 +759,12 @@
                 :data-anchor-slot-id="`${nodeId}:state-in:${view.body.connectedStateKey}`"
                 aria-hidden="true"
               />
-              <span class="node-card__port-pill-label">
-                <ElIcon v-if="isStateEditorConfirmOpen(`output-input:${view.body.connectedStateKey}`)" class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
-                <template v-else>{{ view.body.connectedStateLabel }}</template>
+              <span
+                class="node-card__port-pill-label"
+                :class="{ 'node-card__port-pill-label--confirm': isStateEditorConfirmOpen(`output-input:${view.body.connectedStateKey}`) }"
+              >
+                <span class="node-card__port-pill-label-text">{{ view.body.connectedStateLabel }}</span>
+                <ElIcon class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
               </span>
             </span>
           </template>
@@ -825,9 +837,12 @@
                     :data-anchor-slot-id="`${nodeId}:state-in:${port.key}`"
                     aria-hidden="true"
                   />
-                  <span class="node-card__port-pill-label">
-                    <ElIcon v-if="isStateEditorConfirmOpen(`condition-input:${port.key}`)" class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
-                    <template v-else>{{ port.label }}</template>
+                  <span
+                    class="node-card__port-pill-label"
+                    :class="{ 'node-card__port-pill-label--confirm': isStateEditorConfirmOpen(`condition-input:${port.key}`) }"
+                  >
+                    <span class="node-card__port-pill-label-text">{{ port.label }}</span>
+                    <ElIcon class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
                   </span>
                 </span>
               </template>
@@ -2689,6 +2704,8 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
 
 .node-card__port-pill {
   --node-card-port-accent: rgba(217, 119, 6, 0.92);
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
@@ -2701,26 +2718,32 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   padding: 0;
   box-shadow: none;
   cursor: pointer;
+}
+
+.node-card__port-pill::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -6px -12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
   transition:
+    opacity 140ms ease,
     border-color 140ms ease,
     background 140ms ease,
-    box-shadow 140ms ease,
-    border-radius 140ms ease,
-    padding 140ms ease;
+    box-shadow 140ms ease;
 }
 
-.node-card__port-pill-row:hover .node-card__port-pill,
-.node-card__port-pill--revealed {
-  border: 1px solid rgba(154, 52, 18, 0.14);
-  border-radius: 999px;
+.node-card__port-pill-row:hover .node-card__port-pill::before,
+.node-card__port-pill--revealed::before {
+  opacity: 1;
+  border-color: rgba(154, 52, 18, 0.14);
   background: rgba(255, 250, 241, 0.94);
-  padding: 6px 12px;
   box-shadow: 0 10px 22px rgba(60, 41, 20, 0.08);
-}
-
-.node-card__port-pill--confirm {
-  justify-content: center;
-  min-width: 44px;
 }
 
 .node-card__port-pill--output {
@@ -2741,6 +2764,9 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
 }
 
 .node-card__port-pill-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   overflow: visible;
   text-overflow: clip;
   white-space: nowrap;
@@ -2750,8 +2776,27 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   cursor: pointer;
 }
 
+.node-card__port-pill-label-text {
+  transition: opacity 140ms ease;
+}
+
+.node-card__port-pill-label--confirm .node-card__port-pill-label-text {
+  opacity: 0;
+}
+
 .node-card__port-pill-confirm-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   font-size: 1rem;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 140ms ease;
+  pointer-events: none;
+}
+
+.node-card__port-pill-label--confirm .node-card__port-pill-confirm-icon {
+  opacity: 1;
 }
 
 .node-card__port-pill-anchor-slot {

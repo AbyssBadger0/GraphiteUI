@@ -12,7 +12,7 @@
         <span class="node-card__port-spacer" />
         <div v-if="view.body.primaryOutput" class="node-card__port-pill-row node-card__port-pill-row--right">
           <span
-            class="node-card__port-pill node-card__port-pill--output"
+            class="node-card__port-pill node-card__port-pill--output node-card__port-pill--dock-end"
             :style="{ '--node-card-port-accent': view.body.primaryOutput.stateColor }"
           >
             <span class="node-card__port-pill-label">{{ view.body.primaryOutput.label }}</span>
@@ -161,7 +161,7 @@
         <div class="node-card__port-column">
           <div v-for="port in view.inputs" :key="port.key" class="node-card__port-pill-row">
             <span
-              class="node-card__port-pill node-card__port-pill--input"
+              class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start"
               :style="{ '--node-card-port-accent': port.stateColor }"
             >
               <span
@@ -177,7 +177,7 @@
         <div class="node-card__port-column node-card__port-column--right">
           <div v-for="port in view.outputs" :key="port.key" class="node-card__port-pill-row node-card__port-pill-row--right">
             <span
-              class="node-card__port-pill node-card__port-pill--output"
+              class="node-card__port-pill node-card__port-pill--output node-card__port-pill--dock-end"
               :style="{ '--node-card-port-accent': port.stateColor }"
             >
               <span class="node-card__port-pill-label">{{ port.label }}</span>
@@ -479,7 +479,7 @@
       <div class="node-card__output-toolbar">
         <span
           v-if="view.body.connectedStateKey && view.body.connectedStateLabel"
-          class="node-card__port-pill node-card__port-pill--input"
+          class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start"
           :style="{ '--node-card-port-accent': stateSchema[view.body.connectedStateKey]?.color ?? '#2563eb' }"
         >
           <span
@@ -568,7 +568,7 @@
         <div class="node-card__port-column">
           <div v-for="port in view.inputs" :key="port.key" class="node-card__port-pill-row">
             <span
-              class="node-card__port-pill node-card__port-pill--input"
+              class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start"
               :style="{ '--node-card-port-accent': port.stateColor }"
             >
               <span
@@ -1576,6 +1576,7 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
 
 <style scoped>
 .node-card {
+  --node-card-inline-padding: 24px;
   width: 460px;
   min-height: 260px;
   border: 1px solid rgba(154, 52, 18, 0.18);
@@ -1595,7 +1596,7 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 24px 8px;
+  padding: 18px var(--node-card-inline-padding) 8px;
 }
 
 .node-card__eyebrow {
@@ -1618,7 +1619,7 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
 
 .node-card__description {
   margin: 0;
-  padding: 0 24px 20px;
+  padding: 0 var(--node-card-inline-padding) 20px;
   font-size: 0.98rem;
   line-height: 1.55;
   color: rgba(60, 41, 20, 0.74);
@@ -1675,7 +1676,7 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
 
 .node-card__body {
   border-top: 1px solid rgba(154, 52, 18, 0.14);
-  padding: 18px 24px 24px;
+  padding: 18px var(--node-card-inline-padding) 24px;
   display: grid;
   gap: 14px;
 }
@@ -1759,6 +1760,14 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   justify-content: flex-start;
   color: #1d4ed8;
   padding: 0 16px 0 10px;
+}
+
+.node-card__port-pill--dock-start {
+  margin-left: calc(var(--node-card-inline-padding) * -1);
+}
+
+.node-card__port-pill--dock-end {
+  margin-right: calc(var(--node-card-inline-padding) * -1);
 }
 
 .node-card__port-pill-label {

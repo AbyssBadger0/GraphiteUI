@@ -15,7 +15,7 @@ test("NodeCard does not render the reads and writes summary block", () => {
 });
 
 test("NodeCard renders output state pills with an integrated anchor slot", () => {
-  assert.match(componentSource, /class="node-card__port-pill node-card__port-pill--output"/);
+  assert.match(componentSource, /class="node-card__port-pill[\s\S]*node-card__port-pill--output/);
   assert.match(componentSource, /class="node-card__port-pill-anchor-slot"/);
   assert.match(componentSource, /data-anchor-slot-id=/);
   assert.doesNotMatch(componentSource, /class="node-card__port-pill-anchor"/);
@@ -28,7 +28,15 @@ test("NodeCard renders output state pills with an integrated anchor slot", () =>
 });
 
 test("NodeCard renders input state pills with leading anchor slots", () => {
-  assert.match(componentSource, /class="node-card__port-pill node-card__port-pill--input"/);
+  assert.match(componentSource, /class="node-card__port-pill[\s\S]*node-card__port-pill--input/);
   assert.match(componentSource, /data-anchor-slot-id="\`\$\{nodeId\}:state-in:/);
   assert.match(componentSource, /class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"/);
+});
+
+test("NodeCard docks state pills against the card edges", () => {
+  assert.match(componentSource, /node-card__port-pill--dock-start/);
+  assert.match(componentSource, /node-card__port-pill--dock-end/);
+  assert.match(componentSource, /\.node-card \{[\s\S]*--node-card-inline-padding:\s*24px;/);
+  assert.match(componentSource, /\.node-card__port-pill--dock-start \{[\s\S]*margin-left:\s*calc\(var\(--node-card-inline-padding\) \* -1\);/);
+  assert.match(componentSource, /\.node-card__port-pill--dock-end \{[\s\S]*margin-right:\s*calc\(var\(--node-card-inline-padding\) \* -1\);/);
 });

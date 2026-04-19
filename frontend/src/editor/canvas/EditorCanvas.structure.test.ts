@@ -18,6 +18,11 @@ test("EditorCanvas does not animate node transforms while dragging", () => {
   assert.doesNotMatch(componentSource, /\.editor-canvas__node \{[\s\S]*transform 180ms ease/);
 });
 
+test("EditorCanvas raises hovered and selected nodes above sibling cards", () => {
+  assert.match(componentSource, /:class="\[resolveRunNodeClassList\(nodeId\), \{ 'editor-canvas__node--selected': selection\.selectedNodeId\.value === nodeId \}\]"/);
+  assert.match(componentSource, /\.editor-canvas__node:hover,\n\.editor-canvas__node:focus-within,\n\.editor-canvas__node--selected \{[\s\S]*z-index:\s*8;/);
+});
+
 test("EditorCanvas styles typed anchors and edges from projected state colors", () => {
   assert.match(componentSource, /:style="edgeStyle\(edge\)"/);
   assert.match(componentSource, /:style="anchorStyle\(anchor\)"/);

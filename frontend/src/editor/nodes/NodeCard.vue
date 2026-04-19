@@ -15,7 +15,7 @@
         popper-class="node-card__action-popover"
       >
         <template #reference>
-          <ElButton circle class="node-card__top-action-button node-card__top-action-button--advanced" @click.stop="toggleAdvancedPanel">
+          <ElButton round class="node-card__top-action-button node-card__top-action-button--advanced" @click.stop="toggleAdvancedPanel">
             <ElIcon><Operation /></ElIcon>
           </ElButton>
         </template>
@@ -86,7 +86,7 @@
       >
         <template #reference>
           <ElButton
-            circle
+            round
             data-top-action-surface="true"
             class="node-card__top-action-button node-card__top-action-button--preset"
             :class="{ 'node-card__top-action-button--confirm node-card__top-action-button--confirm-success': activeTopAction === 'preset' }"
@@ -107,7 +107,7 @@
       >
         <template #reference>
           <ElButton
-            circle
+            round
             data-top-action-surface="true"
             class="node-card__top-action-button node-card__top-action-button--delete"
             :class="{ 'node-card__top-action-button--confirm node-card__top-action-button--confirm-danger': activeTopAction === 'delete' }"
@@ -2158,14 +2158,28 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   position: absolute;
   top: 0;
   right: 18px;
-  z-index: 6;
+  z-index: 12;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 250, 241, 0.94);
+  box-shadow: none;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-50%);
+  transform: translateY(calc(-100% - 8px));
   transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.node-card__top-actions::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: -12px;
+  height: 12px;
 }
 
 .node-card:hover .node-card__top-actions,
@@ -2175,14 +2189,24 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   pointer-events: auto;
 }
 
+.node-card__top-actions:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .node-card__top-action-button {
   --el-color-primary: #c96b1f;
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 40px;
   border: 1px solid rgba(154, 52, 18, 0.14);
   background: rgba(255, 252, 247, 0.94);
   color: rgba(90, 58, 28, 0.82);
-  box-shadow: 0 14px 28px rgba(60, 41, 20, 0.12);
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.node-card__top-action-button :deep(.el-icon) {
+  font-size: 1.18rem;
 }
 
 .node-card__top-action-button:hover {

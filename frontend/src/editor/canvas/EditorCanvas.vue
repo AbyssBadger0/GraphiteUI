@@ -82,7 +82,7 @@
         :key="nodeId"
         :ref="(element) => registerNodeRef(nodeId, element)"
         class="editor-canvas__node"
-        :class="resolveRunNodeClassList(nodeId)"
+        :class="[resolveRunNodeClassList(nodeId), { 'editor-canvas__node--selected': selection.selectedNodeId.value === nodeId }]"
         :style="nodeStyle(node.ui.position)"
         @pointerenter="setHoveredNode(nodeId)"
         @pointerleave="clearHoveredNode(nodeId)"
@@ -1386,6 +1386,12 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   z-index: 1;
   isolation: isolate;
   transition: filter 180ms ease;
+}
+
+.editor-canvas__node:hover,
+.editor-canvas__node:focus-within,
+.editor-canvas__node--selected {
+  z-index: 8;
 }
 
 .editor-canvas__node-halo {

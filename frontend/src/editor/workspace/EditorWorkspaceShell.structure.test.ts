@@ -38,6 +38,7 @@ test("EditorWorkspaceShell routes menu selections and dropped files through the 
   assert.match(componentSource, /const result = createNodeFromCreationEntry\(document, \{/);
   assert.match(componentSource, /const result = await createNodeFromDroppedFile\(document, \{/);
   assert.match(componentSource, /markDocumentDirty\(tabId, result\.document\)/);
-  assert.match(componentSource, /focusNodeForTab\(tabId, result\.createdNodeId\)/);
+  assert.doesNotMatch(componentSource, /focusNodeForTab\(tabId, result\.createdNodeId\)/);
+  assert.doesNotMatch(componentSource, /requestNodeFocusForTab\(tabId, result\.createdNodeId\)/);
   assert.match(componentSource, /closeNodeCreationMenu\(tabId\)/);
 });

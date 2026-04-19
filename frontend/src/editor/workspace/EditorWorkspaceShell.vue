@@ -862,8 +862,6 @@ function createNodeFromMenuForTab(tabId: string, _entry: NodeCreationEntry) {
       persistedPresets: persistedPresets.value,
     });
     markDocumentDirty(tabId, result.document);
-    focusNodeForTab(tabId, result.createdNodeId);
-    requestNodeFocusForTab(tabId, result.createdNodeId);
     setMessageFeedbackForTab(tabId, {
       tone: "neutral",
       message: `Created ${result.document.nodes[result.createdNodeId]?.name ?? _entry.label}.`,
@@ -890,8 +888,6 @@ async function createNodeFromFileForTab(tabId: string, _payload: { file: File; p
       position: _payload.position,
     });
     markDocumentDirty(tabId, result.document);
-    focusNodeForTab(tabId, result.createdNodeId);
-    requestNodeFocusForTab(tabId, result.createdNodeId);
     setMessageFeedbackForTab(tabId, {
       tone: "neutral",
       message: `Created ${result.document.nodes[result.createdNodeId]?.name ?? "input node"} from ${_payload.file.name}.`,

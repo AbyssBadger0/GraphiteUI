@@ -74,3 +74,18 @@ test("EditorCanvas opens the creation flow when output drags end on empty canvas
   assert.match(componentSource, /activeConnection\.value\.sourceKind === "route-out"/);
   assert.match(componentSource, /openCreationMenuFromPendingConnection\(event\)/);
 });
+
+test("EditorCanvas disables text selection while a connection drag is active", () => {
+  assert.match(componentSource, /'editor-canvas--connecting': Boolean\(pendingConnection\)/);
+  assert.match(componentSource, /window\.getSelection\(\)\?\.removeAllRanges\(\)/);
+  assert.match(componentSource, /\.editor-canvas--connecting,\n\.editor-canvas--connecting \* \{[\s\S]*user-select:\s*none;/);
+});
+
+test("EditorCanvas keeps canvas panning alive outside the viewport and disables selection while panning", () => {
+  assert.doesNotMatch(componentSource, /@pointerleave="handleCanvasPointerUp"/);
+  assert.match(componentSource, /@pointercancel="handleCanvasPointerUp"/);
+  assert.match(componentSource, /'editor-canvas--panning': viewport\.isPanning\.value/);
+  assert.match(componentSource, /canvasRef\.value\?\.setPointerCapture\(event\.pointerId\)/);
+  assert.match(componentSource, /releasePointerCapture\(event\.pointerId\)/);
+  assert.match(componentSource, /\.editor-canvas--panning,\n\.editor-canvas--panning \* \{[\s\S]*user-select:\s*none;/);
+});

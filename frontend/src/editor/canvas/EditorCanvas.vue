@@ -2,13 +2,17 @@
   <section
     ref="canvasRef"
     class="editor-canvas"
+    :class="{
+      'editor-canvas--connecting': Boolean(pendingConnection),
+      'editor-canvas--panning': viewport.isPanning.value,
+    }"
     :style="canvasSurfaceStyle"
     tabindex="0"
     @dblclick="handleCanvasDoubleClick"
     @pointerdown="handleCanvasPointerDown"
     @pointermove="handleCanvasPointerMove"
     @pointerup="handleCanvasPointerUp"
-    @pointerleave="handleCanvasPointerUp"
+    @pointercancel="handleCanvasPointerUp"
     @keydown.delete.prevent="handleSelectedEdgeDelete"
     @keydown.backspace.prevent="handleSelectedEdgeDelete"
     @wheel.prevent="handleWheel"
@@ -134,7 +138,7 @@
           }"
           @pointerenter="setHoveredFlowHandleNode(anchor.nodeId)"
           @pointerleave="clearHoveredFlowHandleNode(anchor.nodeId)"
-          @pointerdown.stop="handleAnchorPointerDown(anchor)"
+          @pointerdown.prevent.stop="handleAnchorPointerDown(anchor)"
         />
       </div>
       <svg class="editor-canvas__anchors" viewBox="0 0 4000 3000" preserveAspectRatio="none" aria-hidden="true">
@@ -152,7 +156,7 @@
             'editor-canvas__anchor--connect-target': eligibleTargetAnchorIds.has(anchor.id),
           }"
           r="5.5"
-          @pointerdown.stop="handleAnchorPointerDown(anchor)"
+          @pointerdown.prevent.stop="handleAnchorPointerDown(anchor)"
         />
       </svg>
     </div>
@@ -640,6 +644,9 @@ function roundMeasuredOffset(value: number) {
 
 function handleCanvasPointerDown(event: PointerEvent) {
   canvasRef.value?.focus();
+  event.preventDefault();
+  window.getSelection()?.removeAllRanges();
+  canvasRef.value?.setPointerCapture(event.pointerId);
   pendingConnection.value = null;
   pendingConnectionPoint.value = null;
   selectedEdgeId.value = null;
@@ -667,6 +674,9 @@ function handleCanvasPointerMove(event: PointerEvent) {
 }
 
 function handleCanvasPointerUp(event: PointerEvent) {
+  if (canvasRef.value?.hasPointerCapture(event.pointerId)) {
+    canvasRef.value.releasePointerCapture(event.pointerId);
+  }
   if (activeConnection.value) {
     openCreationMenuFromPendingConnection(event);
   }
@@ -806,6 +816,7 @@ function handleAnchorPointerDown(anchor: ProjectedCanvasAnchor) {
     return;
   }
 
+  window.getSelection()?.removeAllRanges();
   const nextPendingConnection = createPendingConnection(anchor);
   if (!nextPendingConnection) {
     return;
@@ -1051,6 +1062,18 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
     linear-gradient(180deg, rgba(255, 250, 241, 0.98) 0%, rgba(248, 237, 219, 0.96) 100%);
   cursor: grab;
   outline: none;
+}
+
+.editor-canvas--connecting,
+.editor-canvas--connecting * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.editor-canvas--panning,
+.editor-canvas--panning * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .editor-canvas__viewport {

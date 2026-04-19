@@ -2,10 +2,7 @@
   <div
     v-if="open && position"
     class="editor-node-creation-menu"
-    :style="{
-      left: `${position.x}px`,
-      top: `${position.y}px`,
-    }"
+    :style="menuStyle"
   >
     <div class="editor-node-creation-menu__header">
       <div>
@@ -42,17 +39,40 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { ElInput } from "element-plus";
 
 import type { NodeCreationContext, NodeCreationEntry } from "@/types/node-system";
 
-defineProps<{
+const props = defineProps<{
   open: boolean;
   entries: NodeCreationEntry[];
   context: NodeCreationContext | null;
   query: string;
   position: { x: number; y: number } | null;
 }>();
+
+const menuStyle = computed(() => {
+  if (!props.position) {
+    return {};
+  }
+
+  const viewportPadding = 12;
+  const menuWidth = 320;
+  const left =
+    typeof window === "undefined"
+      ? props.position.x
+      : Math.min(Math.max(props.position.x, viewportPadding), window.innerWidth - menuWidth - viewportPadding);
+  const top =
+    typeof window === "undefined"
+      ? props.position.y
+      : Math.min(Math.max(props.position.y, viewportPadding), window.innerHeight - viewportPadding);
+
+  return {
+    left: `${left}px`,
+    top: `${top}px`,
+  };
+});
 
 defineEmits<{
   (event: "update:query", value: string): void;
@@ -63,10 +83,12 @@ defineEmits<{
 
 <style scoped>
 .editor-node-creation-menu {
-  position: absolute;
+  position: fixed;
   z-index: 20;
   width: 320px;
-  transform: translate(-20px, -20px);
+  max-width: calc(100vw - 24px);
+  max-height: min(70vh, 420px);
+  overflow: auto;
   border: 1px solid rgba(154, 52, 18, 0.18);
   border-radius: 20px;
   background: rgba(255, 250, 241, 0.98);

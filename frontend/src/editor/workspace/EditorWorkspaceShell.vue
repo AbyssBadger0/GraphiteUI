@@ -196,6 +196,7 @@ import {
   removeConditionBranchFromDocument,
   removeFlowEdgeFromDocument,
   removeNodeFromDocument,
+  pruneUnreferencedStateSchemaInDocument,
   syncKnowledgeBaseSkillsInDocument,
   updateAgentNodeConfigInDocument,
   updateConditionBranchInDocument,
@@ -1450,7 +1451,8 @@ async function saveTab(tabId: string) {
   }
 
   try {
-    const response = await saveGraph(document);
+    const documentToSave = pruneUnreferencedStateSchemaInDocument(document);
+    const response = await saveGraph(documentToSave);
     const savedGraph = await fetchGraph(response.graph_id);
     registerDocumentForTab(tabId, savedGraph);
 

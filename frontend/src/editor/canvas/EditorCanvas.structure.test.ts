@@ -73,6 +73,8 @@ test("EditorCanvas renders hover-only flow hotspots and distinguishes flowing fl
   assert.match(componentSource, /\.editor-canvas__edge-hitarea \{[\s\S]*stroke-width:\s*18px;/);
   assert.match(componentSource, /\.editor-canvas__edge-hitarea \{[\s\S]*pointer-events:\s*stroke;/);
   assert.match(componentSource, /\.editor-canvas__edge-hitarea \{[\s\S]*cursor:\s*pointer;/);
+  assert.match(componentSource, /v-for="edge in projectedEdges"/);
+  assert.match(componentSource, /'editor-canvas__edge-hitarea--data': edge\.kind === 'data'/);
   assert.match(componentSource, /\.editor-canvas__edge \{[\s\S]*pointer-events:\s*none;/);
 });
 
@@ -96,6 +98,40 @@ test("EditorCanvas shows a clicked-position delete confirm for flow edges before
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight--active \{[\s\S]*stroke:\s*rgba\(220,\s*38,\s*38,\s*0\.34\);/);
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight--active \{[\s\S]*stroke-width:\s*12px;/);
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight \{[\s\S]*pointer-events:\s*none;/);
+});
+
+test("EditorCanvas gives data edges the same two-step state editing entry pattern as state ports", () => {
+  assert.match(componentSource, /import StateEditorPopover from "@\/editor\/nodes\/StateEditorPopover\.vue";/);
+  assert.match(componentSource, /const activeDataEdgeStateConfirm = ref<\{/);
+  assert.match(componentSource, /const activeDataEdgeStateEditor = ref<\{/);
+  assert.match(componentSource, /const dataEdgeStateDraft = ref<StateFieldDraft \| null>\(null\);/);
+  assert.match(componentSource, /const dataEdgeStateError = ref<string \| null>\(null\);/);
+  assert.match(componentSource, /const dataEdgeStateColorOptions = computed\(\(\) => resolveStateColorOptions\(dataEdgeStateDraft\.value\?\.definition\.color \?\? ""\)\);/);
+  assert.match(componentSource, /function startDataEdgeStateConfirm\(edge: ProjectedCanvasEdge, event: PointerEvent\)/);
+  assert.match(componentSource, /function openDataEdgeStateEditor\(\)/);
+  assert.match(componentSource, /function syncDataEdgeStateDraft\(nextDraft: StateFieldDraft\)/);
+  assert.match(componentSource, /function removeDataEdgeSourceBinding\(\)/);
+  assert.match(componentSource, /function removeDataEdgeTargetBinding\(\)/);
+  assert.match(componentSource, /if \(edge\.kind === "data"\) \{[\s\S]*startDataEdgeStateConfirm\(edge, event\);[\s\S]*return;/);
+  assert.match(componentSource, /<div[\s\S]*v-if="activeDataEdgeStateConfirm"[\s\S]*class="editor-canvas__edge-state-confirm"/);
+  assert.match(componentSource, /<div class="editor-canvas__confirm-hint editor-canvas__confirm-hint--state">Edit state\?<\/div>/);
+  assert.match(componentSource, /class="editor-canvas__edge-state-button"/);
+  assert.match(componentSource, /@click\.stop="openDataEdgeStateEditor"/);
+  assert.match(componentSource, /<div[\s\S]*v-if="activeDataEdgeStateEditor && dataEdgeStateDraft"[\s\S]*class="editor-canvas__edge-state-editor-shell"/);
+  assert.match(componentSource, /<StateEditorPopover[\s\S]*:draft="dataEdgeStateDraft"[\s\S]*:error="dataEdgeStateError"[\s\S]*:type-options="stateTypeOptions"[\s\S]*:color-options="dataEdgeStateColorOptions"/);
+  assert.match(componentSource, /@update:key="handleDataEdgeStateEditorKeyInput"/);
+  assert.match(componentSource, /@update:name="handleDataEdgeStateEditorNameInput"/);
+  assert.match(componentSource, /@update:type="handleDataEdgeStateEditorTypeValue"/);
+  assert.match(componentSource, /@update:color="handleDataEdgeStateEditorColorInput"/);
+  assert.match(componentSource, /@update:description="handleDataEdgeStateEditorDescriptionInput"/);
+  assert.match(componentSource, /class="editor-canvas__edge-state-editor-action"/);
+  assert.match(componentSource, /Remove source ref/);
+  assert.match(componentSource, /Remove target ref/);
+  assert.match(componentSource, /class="editor-canvas__edge-state-editor-action editor-canvas__edge-state-editor-action--danger"/);
+  assert.match(componentSource, /Remove both refs/);
+  assert.match(componentSource, /function removeDataEdgeBindings\(\)/);
+  assert.match(componentSource, /emit\("remove-port-state", \{[\s\S]*nodeId: activeDataEdgeStateEditor\.value\.source,[\s\S]*side: "output",[\s\S]*stateKey: activeDataEdgeStateEditor\.value\.stateKey,[\s\S]*\}\);/);
+  assert.match(componentSource, /emit\("remove-port-state", \{[\s\S]*nodeId: activeDataEdgeStateEditor\.value\.target,[\s\S]*side: "input",[\s\S]*stateKey: activeDataEdgeStateEditor\.value\.stateKey,[\s\S]*\}\);/);
 });
 
 test("EditorCanvas restores empty-canvas onboarding copy for node creation", () => {

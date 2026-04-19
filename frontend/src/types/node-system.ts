@@ -3,6 +3,8 @@ export type GraphPosition = {
   y: number;
 };
 
+export type NodeFamily = "input" | "output" | "agent" | "condition";
+
 export type NodeViewportSize = {
   width?: number | null;
   height?: number | null;
@@ -154,6 +156,43 @@ export type TemplateRecord = {
   edges: GraphEdge[];
   conditional_edges: ConditionalEdge[];
   metadata: Record<string, unknown>;
+};
+
+export type PresetDefinition = {
+  label: string;
+  description: string;
+  state_schema: Record<string, StateDefinition>;
+  node: GraphNode;
+};
+
+export type PresetDocument = {
+  presetId: string;
+  sourcePresetId: string | null;
+  definition: PresetDefinition;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type NodeCreationContext = {
+  position: GraphPosition;
+  sourceNodeId?: string;
+  sourceAnchorKind?: "flow-out" | "route-out" | "state-out";
+  sourceStateKey?: string;
+  sourceValueType?: string | null;
+  clientX?: number;
+  clientY?: number;
+};
+
+export type NodeCreationEntry = {
+  id: string;
+  family: NodeFamily;
+  label: string;
+  description: string;
+  mode: "node" | "preset";
+  origin?: "builtin" | "persisted";
+  nodeKind?: "input" | "output";
+  presetId?: string;
+  acceptsValueTypes?: string[] | null;
 };
 
 export type ActiveDocument =

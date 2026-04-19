@@ -10,6 +10,7 @@ const builtins = [
     label: "Input",
     description: "Create a workflow input boundary.",
     mode: "node",
+    origin: "builtin",
     nodeKind: "input",
   },
   {
@@ -18,6 +19,7 @@ const builtins = [
     label: "Output",
     description: "Create a workflow output boundary.",
     mode: "node",
+    origin: "builtin",
     nodeKind: "output",
   },
   {
@@ -26,6 +28,7 @@ const builtins = [
     label: "Empty Agent Node",
     description: "Blank agent node.",
     mode: "preset",
+    origin: "builtin",
     presetId: "preset.agent.empty.v0",
   },
   {
@@ -34,6 +37,7 @@ const builtins = [
     label: "Condition Node",
     description: "Branch based on state.",
     mode: "preset",
+    origin: "builtin",
     presetId: "preset.condition.empty.v0",
   },
 ] as const;
@@ -160,6 +164,7 @@ test("supportsCreationSourceType rejects text-only agent presets for knowledge b
     label: "Answer Text",
     description: "Answer a text question.",
     mode: "preset",
+    origin: "persisted",
     presetId: "preset.agent.answer_text",
     acceptsValueTypes: ["text"],
   } as const;

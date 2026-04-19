@@ -96,6 +96,7 @@ backend/data/outputs/
 # Claude Code / Dev tools
 .claude/
 .superpowers/
+docs/superpowers/
 .worktrees/
 .graphite/
 .dev_*.log

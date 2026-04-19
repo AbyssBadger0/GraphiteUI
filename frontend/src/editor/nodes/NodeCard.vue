@@ -125,24 +125,40 @@
     <header class="node-card__header">
       <div class="node-card__eyebrow">{{ view.kindLabel }}</div>
       <ElPopover
-        :visible="activeTextEditor === 'title'"
-        placement="bottom-start"
-        :width="360"
+        :visible="isTextEditorOpen('title') || isTextEditorConfirmOpen('title')"
+        :placement="isTextEditorOpen('title') ? 'bottom-start' : 'top-start'"
+        :width="isTextEditorOpen('title') ? textEditorWidth('title') : undefined"
         :show-arrow="false"
-        :popper-style="stateEditorPopoverStyle"
+        :popper-style="isTextEditorOpen('title') ? stateEditorPopoverStyle : confirmPopoverStyle"
         popper-class="node-card__text-editor-popper"
       >
         <template #reference>
-          <h3 class="node-card__title" @dblclick.stop="openTextEditor('title')">{{ view.title }}</h3>
+          <span
+            class="node-card__text-trigger node-card__text-trigger--title"
+            :class="{ 'node-card__text-trigger--confirm': isTextEditorConfirmOpen('title') }"
+            role="button"
+            tabindex="0"
+            data-text-editor-trigger="true"
+            @pointerdown.stop
+            @click.stop="handleTextEditorAction('title')"
+            @keydown.enter.prevent="handleTextEditorAction('title')"
+            @keydown.space.prevent="handleTextEditorAction('title')"
+          >
+            <span class="node-card__text-trigger-content" :class="{ 'node-card__text-trigger-content--confirm': isTextEditorConfirmOpen('title') }">
+              <h3 class="node-card__title">{{ view.title }}</h3>
+              <ElIcon class="node-card__text-trigger-confirm-icon"><Check /></ElIcon>
+            </span>
+          </span>
         </template>
-        <div class="node-card__text-editor" data-node-popup-surface="true">
-          <div class="node-card__text-editor-title">Edit Name</div>
+        <div v-if="isTextEditorConfirmOpen('title')" class="node-card__confirm-hint node-card__confirm-hint--text">Edit name?</div>
+        <div v-else-if="isTextEditorOpen('title')" class="node-card__text-editor" data-node-popup-surface="true">
+          <div class="node-card__text-editor-title">{{ textEditorTitle('title') }}</div>
           <ElInput
-            :model-value="titleEditorDraft"
-            autofocus
-            @update:model-value="handleTitleEditorDraftInput"
-            @blur="commitTitleEdit"
-            @keydown.enter.prevent="commitTitleEdit"
+            ref="titleEditorInputRef"
+            :model-value="textEditorDraftValue('title')"
+            @update:model-value="handleTextEditorDraftInput('title', $event)"
+            @blur="commitTextEditor('title')"
+            @keydown.enter.prevent="commitTextEditor('title')"
             @keydown.esc.prevent="closeTextEditor()"
           />
         </div>
@@ -150,27 +166,43 @@
     </header>
 
     <ElPopover
-      :visible="activeTextEditor === 'description'"
-      placement="bottom-start"
-      :width="420"
+      :visible="isTextEditorOpen('description') || isTextEditorConfirmOpen('description')"
+      :placement="isTextEditorOpen('description') ? 'bottom-start' : 'top-start'"
+      :width="isTextEditorOpen('description') ? textEditorWidth('description') : undefined"
       :show-arrow="false"
-      :popper-style="stateEditorPopoverStyle"
+      :popper-style="isTextEditorOpen('description') ? stateEditorPopoverStyle : confirmPopoverStyle"
       popper-class="node-card__text-editor-popper"
     >
       <template #reference>
-        <p class="node-card__description" @dblclick.stop="openTextEditor('description')">{{ view.description }}</p>
+        <div
+          class="node-card__text-trigger node-card__text-trigger--description"
+          :class="{ 'node-card__text-trigger--confirm': isTextEditorConfirmOpen('description') }"
+          role="button"
+          tabindex="0"
+          data-text-editor-trigger="true"
+          @pointerdown.stop
+          @click.stop="handleTextEditorAction('description')"
+          @keydown.enter.prevent="handleTextEditorAction('description')"
+          @keydown.space.prevent="handleTextEditorAction('description')"
+        >
+          <div class="node-card__text-trigger-content" :class="{ 'node-card__text-trigger-content--confirm': isTextEditorConfirmOpen('description') }">
+            <p class="node-card__description">{{ view.description }}</p>
+            <ElIcon class="node-card__text-trigger-confirm-icon"><Check /></ElIcon>
+          </div>
+        </div>
       </template>
-      <div class="node-card__text-editor" data-node-popup-surface="true">
-        <div class="node-card__text-editor-title">Edit Description</div>
+      <div v-if="isTextEditorConfirmOpen('description')" class="node-card__confirm-hint node-card__confirm-hint--text">Edit description?</div>
+      <div v-else-if="isTextEditorOpen('description')" class="node-card__text-editor" data-node-popup-surface="true">
+        <div class="node-card__text-editor-title">{{ textEditorTitle('description') }}</div>
         <ElInput
-          :model-value="descriptionEditorDraft"
+          ref="descriptionEditorInputRef"
+          :model-value="textEditorDraftValue('description')"
           type="textarea"
           :autosize="{ minRows: 4, maxRows: 7 }"
-          autofocus
-          @update:model-value="handleDescriptionEditorDraftInput"
-          @blur="commitDescriptionEdit"
-          @keydown.ctrl.enter.prevent="commitDescriptionEdit"
-          @keydown.meta.enter.prevent="commitDescriptionEdit"
+          @update:model-value="handleTextEditorDraftInput('description', $event)"
+          @blur="commitTextEditor('description')"
+          @keydown.ctrl.enter.prevent="commitTextEditor('description')"
+          @keydown.meta.enter.prevent="commitTextEditor('description')"
           @keydown.esc.prevent="closeTextEditor()"
         />
       </div>
@@ -1008,7 +1040,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ElButton, ElIcon, ElInput, ElPopover } from "element-plus";
 import { Check, Collection, CollectionTag, Delete, Document, FolderOpened, Operation, Opportunity } from "@element-plus/icons-vue";
 
@@ -1034,6 +1066,8 @@ import {
   type StateFieldDraft,
   type StateFieldType,
 } from "@/editor/workspace/statePanelFields";
+
+type TextEditorField = "title" | "description";
 
 const props = defineProps<{
   nodeId: string;
@@ -1145,9 +1179,13 @@ const portStateError = ref<string | null>(null);
 const agentModelSelectRef = ref<{ blur?: () => void; toggleMenu?: () => void; expanded?: boolean } | null>(null);
 const activeTopAction = ref<"advanced" | "delete" | "preset" | null>(null);
 const topActionTimeoutRef = ref<number | null>(null);
-const activeTextEditor = ref<"title" | "description" | null>(null);
+const activeTextEditor = ref<TextEditorField | null>(null);
+const activeTextEditorConfirmField = ref<TextEditorField | null>(null);
+const textEditorConfirmTimeoutRef = ref<number | null>(null);
 const titleEditorDraft = ref("");
 const descriptionEditorDraft = ref("");
+const titleEditorInputRef = ref<{ focus?: () => void } | null>(null);
+const descriptionEditorInputRef = ref<{ focus?: () => void } | null>(null);
 const activeStateEditorConfirmAnchorId = ref<string | null>(null);
 const hoveredStateEditorPillAnchorId = ref<string | null>(null);
 const stateEditorConfirmTimeoutRef = ref<number | null>(null);
@@ -1342,6 +1380,7 @@ const isTopActionVisible = computed(() => props.selected || activeTopAction.valu
 const hasFloatingPanelOpen = computed(
   () =>
     activeTopAction.value !== null ||
+    activeTextEditorConfirmField.value !== null ||
     activeTextEditor.value !== null ||
     activeStateEditorConfirmAnchorId.value !== null ||
     activeStateEditorAnchorId.value !== null ||
@@ -1379,6 +1418,7 @@ watch(
     }
     clearTopActionTimeout();
     activeTopAction.value = null;
+    clearTextEditorConfirmState();
     hoveredStateEditorPillAnchorId.value = null;
     clearStateEditorConfirmState();
     closeStateEditor();
@@ -1388,6 +1428,7 @@ watch(
 onBeforeUnmount(() => {
   removeGlobalFloatingPanelListeners();
   clearTopActionTimeout();
+  clearTextEditorConfirmTimeout();
   clearStateEditorConfirmTimeout();
 });
 
@@ -1520,6 +1561,7 @@ function toggleSkillPicker() {
   }
   clearTopActionTimeout();
   activeTopAction.value = null;
+  clearTextEditorConfirmState();
   clearStateEditorConfirmState();
   commitOpenTextEditorIfNeeded();
   closeStateEditor();
@@ -1548,6 +1590,7 @@ function removeAgentSkill(skillKey: string) {
 function openPortPicker(side: "input" | "output") {
   clearTopActionTimeout();
   activeTopAction.value = null;
+  clearTextEditorConfirmState();
   clearStateEditorConfirmState();
   commitOpenTextEditorIfNeeded();
   closeStateEditor();
@@ -1729,15 +1772,94 @@ function syncTextEditorDraftsFromNode() {
   descriptionEditorDraft.value = props.node.description;
 }
 
-function openTextEditor(field: "title" | "description") {
+function isTextEditorOpen(field: TextEditorField) {
+  return activeTextEditor.value === field;
+}
+
+function textEditorWidth(field: TextEditorField) {
+  return field === "title" ? 360 : 420;
+}
+
+function textEditorTitle(field: TextEditorField) {
+  return field === "title" ? "Edit Name" : "Edit Description";
+}
+
+function textEditorDraftValue(field: TextEditorField) {
+  return field === "title" ? titleEditorDraft.value : descriptionEditorDraft.value;
+}
+
+function setTextEditorDraftValue(field: TextEditorField, value: string) {
+  if (field === "title") {
+    titleEditorDraft.value = value;
+    return;
+  }
+  descriptionEditorDraft.value = value;
+}
+
+function focusTextEditorField(field: TextEditorField) {
+  void nextTick(() => {
+    window.requestAnimationFrame(() => {
+      if (field === "title") {
+        titleEditorInputRef.value?.focus?.();
+        return;
+      }
+      descriptionEditorInputRef.value?.focus?.();
+    });
+  });
+}
+
+function clearTextEditorConfirmTimeout() {
+  if (textEditorConfirmTimeoutRef.value !== null) {
+    window.clearTimeout(textEditorConfirmTimeoutRef.value);
+    textEditorConfirmTimeoutRef.value = null;
+  }
+}
+
+function clearTextEditorConfirmState() {
+  clearTextEditorConfirmTimeout();
+  activeTextEditorConfirmField.value = null;
+}
+
+function startTextEditorConfirmWindow(field: TextEditorField) {
+  clearTextEditorConfirmTimeout();
+  activeTextEditorConfirmField.value = field;
+  textEditorConfirmTimeoutRef.value = window.setTimeout(() => {
+    textEditorConfirmTimeoutRef.value = null;
+    if (activeTextEditorConfirmField.value === field) {
+      activeTextEditorConfirmField.value = null;
+    }
+  }, 2000);
+}
+
+function isTextEditorConfirmOpen(field: TextEditorField) {
+  return activeTextEditorConfirmField.value === field;
+}
+
+function handleTextEditorAction(field: TextEditorField) {
+  if (isTextEditorOpen(field)) {
+    return;
+  }
+  const wasConfirmOpen = isTextEditorConfirmOpen(field);
+  clearTextEditorConfirmState();
+  if (wasConfirmOpen) {
+    openTextEditor(field);
+    return;
+  }
+  closeTextEditor();
+  startTextEditorConfirmWindow(field);
+}
+
+function openTextEditor(field: TextEditorField) {
   clearTopActionTimeout();
   activeTopAction.value = null;
+  clearTextEditorConfirmState();
   clearStateEditorConfirmState();
   closeStateEditor();
   closePortPicker();
   isSkillPickerOpen.value = false;
   syncTextEditorDraftsFromNode();
   activeTextEditor.value = field;
+  focusTextEditorField(field);
 }
 
 function closeTextEditor() {
@@ -1745,44 +1867,31 @@ function closeTextEditor() {
   syncTextEditorDraftsFromNode();
 }
 
-function commitTitleEdit() {
-  const nextTitle = titleEditorDraft.value.trim();
-  if (nextTitle && nextTitle !== props.node.name) {
-    emit("update-node-metadata", { nodeId: props.nodeId, patch: { name: nextTitle } });
-  }
-  closeTextEditor();
-}
-
-function commitDescriptionEdit() {
-  const nextDescription = descriptionEditorDraft.value.trim();
-  if (nextDescription !== props.node.description) {
-    emit("update-node-metadata", { nodeId: props.nodeId, patch: { description: nextDescription } });
-  }
-  closeTextEditor();
-}
-
-function handleTitleEditorDraftInput(value: string | number) {
+function handleTextEditorDraftInput(field: TextEditorField, value: string | number) {
   if (typeof value !== "string") {
     return;
   }
-  titleEditorDraft.value = value;
+  setTextEditorDraftValue(field, value);
 }
 
-function handleDescriptionEditorDraftInput(value: string | number) {
-  if (typeof value !== "string") {
+function commitTextEditor(field: TextEditorField | null = activeTextEditor.value) {
+  if (!field) {
     return;
   }
-  descriptionEditorDraft.value = value;
+
+  const nextValue = textEditorDraftValue(field).trim();
+  if (field === "title") {
+    if (nextValue && nextValue !== props.node.name) {
+      emit("update-node-metadata", { nodeId: props.nodeId, patch: { name: nextValue } });
+    }
+  } else if (nextValue !== props.node.description) {
+    emit("update-node-metadata", { nodeId: props.nodeId, patch: { description: nextValue } });
+  }
+  closeTextEditor();
 }
 
 function commitOpenTextEditorIfNeeded() {
-  if (activeTextEditor.value === "title") {
-    commitTitleEdit();
-    return;
-  }
-  if (activeTextEditor.value === "description") {
-    commitDescriptionEdit();
-  }
+  commitTextEditor(activeTextEditor.value);
 }
 
 function clearStateEditorConfirmTimeout() {
@@ -1856,6 +1965,7 @@ function openStateEditor(anchorId: string, stateKey: string | null | undefined) 
   }
   clearTopActionTimeout();
   activeTopAction.value = null;
+  clearTextEditorConfirmState();
   clearStateEditorConfirmState();
   commitOpenTextEditorIfNeeded();
   activePortPickerSide.value = null;
@@ -1980,6 +2090,7 @@ function toggleAdvancedPanel() {
     return;
   }
   clearTopActionConfirmState();
+  clearTextEditorConfirmState();
   clearStateEditorConfirmState();
   isSkillPickerOpen.value = false;
   closePortPicker();
@@ -1998,6 +2109,7 @@ function isFloatingPanelSurfaceTarget(target: EventTarget | null) {
       [
         "[data-top-action-surface='true']",
         "[data-state-editor-trigger='true']",
+        "[data-text-editor-trigger='true']",
         "[data-node-popup-surface='true']",
         ".node-card__top-popover",
         ".node-card__text-editor",
@@ -2015,19 +2127,14 @@ function isFloatingPanelSurfaceTarget(target: EventTarget | null) {
 
 function closeFloatingPanels(options?: { commitTextEditor?: boolean }) {
   clearTopActionConfirmState();
+  clearTextEditorConfirmState();
   clearStateEditorConfirmState();
   if (activeTopAction.value === "advanced") {
     activeTopAction.value = null;
   }
-  if (activeTextEditor.value === "title") {
+  if (activeTextEditor.value) {
     if (options?.commitTextEditor) {
-      commitTitleEdit();
-    } else {
-      closeTextEditor();
-    }
-  } else if (activeTextEditor.value === "description") {
-    if (options?.commitTextEditor) {
-      commitDescriptionEdit();
+      commitTextEditor(activeTextEditor.value);
     } else {
       closeTextEditor();
     }
@@ -2099,6 +2206,7 @@ function handlePresetActionClick() {
   isSkillPickerOpen.value = false;
   closePortPicker();
   closeStateEditor();
+  clearTextEditorConfirmState();
   clearStateEditorConfirmState();
   commitOpenTextEditorIfNeeded();
   if (activeTopAction.value === "preset") {
@@ -2112,6 +2220,7 @@ function handleDeleteActionClick() {
   isSkillPickerOpen.value = false;
   closePortPicker();
   closeStateEditor();
+  clearTextEditorConfirmState();
   clearStateEditorConfirmState();
   commitOpenTextEditorIfNeeded();
   if (activeTopAction.value === "delete") {
@@ -2555,21 +2664,91 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   background: rgba(255, 255, 255, 0.78);
 }
 
+.node-card__text-trigger {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.node-card__text-trigger:hover,
+.node-card__text-trigger:focus-visible {
+  border-color: rgba(154, 52, 18, 0.14);
+  background: rgba(255, 250, 241, 0.94);
+  box-shadow: 0 10px 22px rgba(60, 41, 20, 0.08);
+}
+
+.node-card__text-trigger--confirm,
+.node-card__text-trigger--confirm:hover,
+.node-card__text-trigger--confirm:focus-visible {
+  border-color: rgba(201, 107, 31, 0.34);
+  background: rgba(201, 107, 31, 0.96);
+  box-shadow: none;
+  color: #fff7ed;
+}
+
+.node-card__text-trigger--title {
+  padding: 6px 12px;
+}
+
+.node-card__text-trigger--description {
+  display: block;
+  margin: 0 var(--node-card-inline-padding) 20px;
+  padding: 8px 12px;
+}
+
+.node-card__text-trigger-content {
+  position: relative;
+  display: block;
+}
+
+.node-card__text-trigger-content--confirm {
+  color: inherit;
+}
+
+.node-card__text-trigger-content--confirm > .node-card__title,
+.node-card__text-trigger-content--confirm > .node-card__description {
+  opacity: 0;
+}
+
+.node-card__text-trigger-confirm-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: 1.12rem;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 140ms ease;
+  pointer-events: none;
+}
+
+.node-card__text-trigger-content--confirm > .node-card__text-trigger-confirm-icon {
+  opacity: 1;
+}
+
 .node-card__title {
   margin: 0;
   font-size: 2rem;
   line-height: 1.15;
   color: #1f2937;
-  cursor: text;
+  cursor: inherit;
+  transition: opacity 140ms ease;
 }
 
 .node-card__description {
   margin: 0;
-  padding: 0 var(--node-card-inline-padding) 20px;
   font-size: 0.98rem;
   line-height: 1.55;
   color: rgba(60, 41, 20, 0.74);
-  cursor: text;
+  cursor: inherit;
+  transition: opacity 140ms ease;
 }
 
 .node-card__text-editor {
@@ -3288,6 +3467,12 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   border-color: rgba(37, 99, 235, 0.16);
   background: rgba(239, 246, 255, 0.98);
   color: rgb(37, 99, 235);
+}
+
+.node-card__confirm-hint--text {
+  border-color: rgba(201, 107, 31, 0.24);
+  background: rgb(255, 247, 237);
+  color: rgb(154, 52, 18);
 }
 
 :deep(.node-card__action-popover.el-popper) {

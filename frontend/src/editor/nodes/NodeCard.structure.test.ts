@@ -153,8 +153,24 @@ test("NodeCard moves node actions into hoverable top buttons built from Element 
   assert.match(componentSource, /class="node-card__top-action-button node-card__top-action-button--preset"/);
   assert.match(componentSource, /class="node-card__top-action-button node-card__top-action-button--delete"/);
   assert.match(componentSource, /@click\.stop="toggleAdvancedPanel"/);
-  assert.match(componentSource, /@click\.stop="confirmDeleteNode"/);
-  assert.match(componentSource, /@click\.stop="confirmSavePreset"/);
+  assert.match(componentSource, /const activeTopAction = ref<"advanced" \| "delete" \| "preset" \| null>\(null\);/);
+  assert.match(componentSource, /const topActionTimeoutRef = ref<number \| null>\(null\);/);
+  assert.match(componentSource, /function clearTopActionConfirmState\(\)/);
+  assert.match(componentSource, /function startTopActionConfirmWindow\(action: "delete" \| "preset"\)/);
+  assert.match(componentSource, /if \(activeTopAction\.value === "delete"\) \{[\s\S]*confirmDeleteNode\(\);[\s\S]*return;/);
+  assert.match(componentSource, /if \(activeTopAction\.value === "preset"\) \{[\s\S]*confirmSavePreset\(\);[\s\S]*return;/);
+  assert.match(componentSource, /@click\.stop="handleDeleteActionClick"/);
+  assert.match(componentSource, /@click\.stop="handlePresetActionClick"/);
+  assert.match(componentSource, /:visible="activeTopAction === 'preset'"/);
+  assert.match(componentSource, /placement="top"/);
+  assert.match(componentSource, /:popper-style="confirmPopoverStyle"/);
+  assert.match(componentSource, /Save preset\?/);
+  assert.match(componentSource, /:visible="activeTopAction === 'delete'"/);
+  assert.match(componentSource, /Delete node\?/);
+  assert.match(componentSource, /const confirmPopoverStyle = \{/);
+  assert.match(componentSource, /node-card__top-action-button--confirm/);
+  assert.doesNotMatch(componentSource, /type="primary" @click\.stop="confirmSavePreset"/);
+  assert.doesNotMatch(componentSource, /type="danger" @click\.stop="confirmDeleteNode"/);
   assert.doesNotMatch(componentSource, /<details class="node-card__advanced-panel"/);
 });
 

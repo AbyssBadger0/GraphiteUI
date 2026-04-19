@@ -1,6 +1,12 @@
 <template>
-  <article class="node-card" :class="{ 'node-card--selected': selected }">
-    <div class="node-card__top-actions" :class="{ 'node-card__top-actions--visible': isTopActionVisible }" @pointerdown.stop @click.stop>
+  <article class="node-card" :class="{ 'node-card--selected': selected }" @click.capture="handleNodeCardClickCapture">
+    <div
+      class="node-card__top-actions"
+      :class="{ 'node-card__top-actions--visible': isTopActionVisible }"
+      data-top-action-surface="true"
+      @pointerdown.stop
+      @click.stop
+    >
       <ElPopover
         v-if="hasAdvancedSettings"
         :visible="activeTopAction === 'advanced'"
@@ -73,43 +79,45 @@
       <ElPopover
         v-if="canSavePreset"
         :visible="activeTopAction === 'preset'"
-        placement="bottom-end"
-        :width="220"
-        popper-class="node-card__action-popover"
+        placement="top"
+        :show-arrow="false"
+        :popper-style="confirmPopoverStyle"
+        popper-class="node-card__confirm-popover node-card__confirm-popover--preset"
       >
         <template #reference>
-          <ElButton circle class="node-card__top-action-button node-card__top-action-button--preset" @click.stop="openTopAction('preset')">
-            <ElIcon><CollectionTag /></ElIcon>
+          <ElButton
+            circle
+            data-top-action-surface="true"
+            class="node-card__top-action-button node-card__top-action-button--preset"
+            :class="{ 'node-card__top-action-button--confirm node-card__top-action-button--confirm-success': activeTopAction === 'preset' }"
+            @click.stop="handlePresetActionClick"
+          >
+            <ElIcon v-if="activeTopAction === 'preset'"><Check /></ElIcon>
+            <ElIcon v-else><CollectionTag /></ElIcon>
           </ElButton>
         </template>
-        <div class="node-card__top-popover">
-          <div class="node-card__top-popover-title">Save preset?</div>
-          <div class="node-card__top-popover-copy">Create a reusable preset from this agent node.</div>
-          <div class="node-card__top-popover-actions">
-            <ElButton size="small" @click.stop="activeTopAction = null">Cancel</ElButton>
-            <ElButton size="small" type="primary" @click.stop="confirmSavePreset">Save</ElButton>
-          </div>
-        </div>
+        <div class="node-card__confirm-hint node-card__confirm-hint--preset">Save preset?</div>
       </ElPopover>
       <ElPopover
         :visible="activeTopAction === 'delete'"
-        placement="bottom-end"
-        :width="220"
-        popper-class="node-card__action-popover"
+        placement="top"
+        :show-arrow="false"
+        :popper-style="confirmPopoverStyle"
+        popper-class="node-card__confirm-popover node-card__confirm-popover--delete"
       >
         <template #reference>
-          <ElButton circle class="node-card__top-action-button node-card__top-action-button--delete" @click.stop="openTopAction('delete')">
-            <ElIcon><Delete /></ElIcon>
+          <ElButton
+            circle
+            data-top-action-surface="true"
+            class="node-card__top-action-button node-card__top-action-button--delete"
+            :class="{ 'node-card__top-action-button--confirm node-card__top-action-button--confirm-danger': activeTopAction === 'delete' }"
+            @click.stop="handleDeleteActionClick"
+          >
+            <ElIcon v-if="activeTopAction === 'delete'"><Check /></ElIcon>
+            <ElIcon v-else><Delete /></ElIcon>
           </ElButton>
         </template>
-        <div class="node-card__top-popover">
-          <div class="node-card__top-popover-title">Delete node?</div>
-          <div class="node-card__top-popover-copy">This removes the node and prunes related flow links.</div>
-          <div class="node-card__top-popover-actions">
-            <ElButton size="small" @click.stop="activeTopAction = null">Cancel</ElButton>
-            <ElButton size="small" type="danger" @click.stop="confirmDeleteNode">Delete</ElButton>
-          </div>
-        </div>
+        <div class="node-card__confirm-hint node-card__confirm-hint--delete">Delete node?</div>
       </ElPopover>
     </div>
     <header class="node-card__header">
@@ -980,9 +988,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ElButton, ElIcon, ElInput, ElPopover } from "element-plus";
-import { Collection, CollectionTag, Delete, Document, FolderOpened, Operation, Opportunity } from "@element-plus/icons-vue";
+import { Check, Collection, CollectionTag, Delete, Document, FolderOpened, Operation, Opportunity } from "@element-plus/icons-vue";
 
 import StateDefaultValueEditor from "@/editor/workspace/StateDefaultValueEditor.vue";
 import { listConditionBranchMappingKeys, parseConditionBranchMappingDraft } from "@/lib/condition-branch-mapping";
@@ -1057,6 +1065,12 @@ const inputTypeOptions: Array<{
   { value: "file", label: "File", icon: FolderOpened },
   { value: "knowledge_base", label: "Knowledge Base", icon: Collection },
 ];
+const confirmPopoverStyle = {
+  padding: "0",
+  border: "none",
+  background: "transparent",
+  boxShadow: "none",
+};
 const stateTypeOptions = STATE_FIELD_TYPE_OPTIONS;
 const conditionRuleOperatorOptions = CONDITION_RULE_OPERATOR_OPTIONS;
 
@@ -1081,6 +1095,7 @@ const portStateSearch = ref("");
 const portStateDraft = ref<StateFieldDraft | null>(null);
 const portStateError = ref<string | null>(null);
 const activeTopAction = ref<"advanced" | "delete" | "preset" | null>(null);
+const topActionTimeoutRef = ref<number | null>(null);
 const activeStateEditorAnchorId = ref<string | null>(null);
 const stateEditorDraft = ref<StateFieldDraft | null>(null);
 const stateEditorError = ref<string | null>(null);
@@ -1297,10 +1312,15 @@ watch(
     if (selected) {
       return;
     }
+    clearTopActionTimeout();
     activeTopAction.value = null;
     closeStateEditor();
   },
 );
+
+onBeforeUnmount(() => {
+  clearTopActionTimeout();
+});
 
 function emitOutputConfigPatch(patch: Partial<OutputNode["config"]>) {
   if (props.node.kind !== "output") {
@@ -1415,6 +1435,7 @@ function toggleSkillPicker() {
   if (!showSkillPickerTrigger.value) {
     return;
   }
+  clearTopActionTimeout();
   activeTopAction.value = null;
   closeStateEditor();
   activePortPickerSide.value = null;
@@ -1440,6 +1461,7 @@ function removeAgentSkill(skillKey: string) {
 }
 
 function openPortPicker(side: "input" | "output") {
+  clearTopActionTimeout();
   activeTopAction.value = null;
   closeStateEditor();
   isSkillPickerOpen.value = false;
@@ -1627,6 +1649,7 @@ function openStateEditor(anchorId: string, stateKey: string | null | undefined) 
   if (!nextDraft) {
     return;
   }
+  clearTopActionTimeout();
   activeTopAction.value = null;
   activePortPickerSide.value = null;
   isSkillPickerOpen.value = false;
@@ -1756,27 +1779,82 @@ function toggleAdvancedPanel() {
   if (!hasAdvancedSettings.value) {
     return;
   }
+  clearTopActionConfirmState();
   isSkillPickerOpen.value = false;
   closePortPicker();
   closeStateEditor();
   activeTopAction.value = activeTopAction.value === "advanced" ? null : "advanced";
 }
 
-function openTopAction(action: "delete" | "preset") {
+function clearTopActionTimeout() {
+  if (topActionTimeoutRef.value !== null) {
+    window.clearTimeout(topActionTimeoutRef.value);
+    topActionTimeoutRef.value = null;
+  }
+}
+
+function clearTopActionConfirmState() {
+  clearTopActionTimeout();
+  if (activeTopAction.value === "delete" || activeTopAction.value === "preset") {
+    activeTopAction.value = null;
+  }
+}
+
+function startTopActionConfirmWindow(action: "delete" | "preset") {
+  clearTopActionTimeout();
+  activeTopAction.value = action;
+  topActionTimeoutRef.value = window.setTimeout(() => {
+    topActionTimeoutRef.value = null;
+    if (activeTopAction.value === action) {
+      activeTopAction.value = null;
+    }
+  }, 2000);
+}
+
+function handlePresetActionClick() {
   isSkillPickerOpen.value = false;
   closePortPicker();
   closeStateEditor();
-  activeTopAction.value = activeTopAction.value === action ? null : action;
+  if (activeTopAction.value === "preset") {
+    confirmSavePreset();
+    return;
+  }
+  startTopActionConfirmWindow("preset");
+}
+
+function handleDeleteActionClick() {
+  isSkillPickerOpen.value = false;
+  closePortPicker();
+  closeStateEditor();
+  if (activeTopAction.value === "delete") {
+    confirmDeleteNode();
+    return;
+  }
+  startTopActionConfirmWindow("delete");
+}
+
+function handleNodeCardClickCapture(event: Event) {
+  if (activeTopAction.value !== "delete" && activeTopAction.value !== "preset") {
+    return;
+  }
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+  if (target.closest("[data-top-action-surface='true']")) {
+    return;
+  }
+  clearTopActionConfirmState();
 }
 
 function confirmDeleteNode() {
+  clearTopActionConfirmState();
   emit("delete-node", { nodeId: props.nodeId });
-  activeTopAction.value = null;
 }
 
 function confirmSavePreset() {
+  clearTopActionConfirmState();
   emit("save-node-preset", { nodeId: props.nodeId });
-  activeTopAction.value = null;
 }
 
 function handleAgentModelValueChange(nextValue: string | number | boolean | undefined) {
@@ -2114,6 +2192,28 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
 
 .node-card__top-action-button--delete:hover {
   color: rgb(185, 28, 28);
+}
+
+.node-card__top-action-button--confirm {
+  color: #fff;
+}
+
+.node-card__top-action-button--confirm:hover {
+  color: #fff;
+}
+
+.node-card__top-action-button--confirm-success,
+.node-card__top-action-button--confirm-success:hover {
+  border-color: rgba(34, 197, 94, 0.34);
+  background: rgb(34, 197, 94);
+  color: #fff;
+}
+
+.node-card__top-action-button--confirm-danger,
+.node-card__top-action-button--confirm-danger:hover {
+  border-color: rgba(185, 28, 28, 0.3);
+  background: rgb(185, 28, 28);
+  color: #fff;
 }
 
 .node-card__header {
@@ -2727,6 +2827,30 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   gap: 8px;
 }
 
+.node-card__confirm-hint {
+  white-space: nowrap;
+  border-radius: 999px;
+  border: 1px solid rgba(154, 52, 18, 0.16);
+  padding: 6px 14px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  box-shadow: 0 14px 32px rgba(60, 41, 20, 0.14);
+}
+
+.node-card__confirm-hint--preset {
+  border-color: rgba(34, 197, 94, 0.16);
+  background: rgba(220, 252, 231, 0.98);
+  color: rgb(22, 163, 74);
+}
+
+.node-card__confirm-hint--delete {
+  border-color: rgba(185, 28, 28, 0.16);
+  background: rgba(255, 248, 248, 0.98);
+  color: rgb(153, 27, 27);
+}
+
 :deep(.node-card__action-popover.el-popper),
 :deep(.node-card__state-editor-popper.el-popper) {
   border: 1px solid rgba(154, 52, 18, 0.16);
@@ -2754,6 +2878,19 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   border-radius: 14px;
   border-color: rgba(154, 52, 18, 0.16);
   background: rgba(255, 255, 255, 0.88);
+  box-shadow: none;
+}
+
+:deep(.node-card__confirm-popover.el-popper) {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+:deep(.node-card__confirm-popover .el-popover) {
+  padding: 0;
+  background: transparent;
   box-shadow: none;
 }
 

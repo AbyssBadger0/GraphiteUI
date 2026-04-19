@@ -70,6 +70,20 @@ test("EditorCanvas renders hover-only flow hotspots and distinguishes flowing fl
   assert.match(componentSource, /@keyframes editor-canvas-flow-line/);
 });
 
+test("EditorCanvas shows a clicked-position delete confirm for flow edges before removing them", () => {
+  assert.match(componentSource, /@pointerdown\.stop="handleEdgePointerDown\(edge, \$event\)"/);
+  assert.match(componentSource, /const activeFlowEdgeDeleteConfirm = ref<\{/);
+  assert.match(componentSource, /function clearFlowEdgeDeleteConfirmState\(\)/);
+  assert.match(componentSource, /function startFlowEdgeDeleteConfirm\(edge: ProjectedCanvasEdge, event: PointerEvent\)/);
+  assert.match(componentSource, /function confirmFlowEdgeDelete\(\)/);
+  assert.match(componentSource, /<div[\s\S]*v-if="activeFlowEdgeDeleteConfirm"[\s\S]*class="editor-canvas__edge-delete-confirm"/);
+  assert.match(componentSource, /<div class="editor-canvas__confirm-hint editor-canvas__confirm-hint--remove">Delete edge\?<\/div>/);
+  assert.match(componentSource, /class="editor-canvas__edge-delete-button"/);
+  assert.match(componentSource, /<ElIcon><Check \/><\/ElIcon>/);
+  assert.match(componentSource, /if \(edge\.kind === "flow"\) \{[\s\S]*startFlowEdgeDeleteConfirm\(edge, event\);[\s\S]*return;/);
+  assert.match(componentSource, /emit\("remove-flow", \{[\s\S]*sourceNodeId: activeFlowEdgeDeleteConfirm\.value\.source,[\s\S]*targetNodeId: activeFlowEdgeDeleteConfirm\.value\.target,[\s\S]*\}\);/);
+});
+
 test("EditorCanvas restores empty-canvas onboarding copy for node creation", () => {
   assert.match(componentSource, /Double click to create your first node/);
   assert.match(componentSource, /Drag from an output handle into empty space to get type-aware preset suggestions\./);

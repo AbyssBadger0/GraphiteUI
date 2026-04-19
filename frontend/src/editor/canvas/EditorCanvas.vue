@@ -15,6 +15,7 @@
     @pointercancel="handleCanvasPointerUp"
     @keydown.delete.prevent="handleSelectedEdgeDelete"
     @keydown.backspace.prevent="handleSelectedEdgeDelete"
+    @keydown.escape.prevent="clearFlowEdgeDeleteConfirmState"
     @wheel.prevent="handleWheel"
     @dragover.prevent="handleCanvasDragOver"
     @drop.prevent="handleCanvasDrop"
@@ -71,9 +72,25 @@
                 : 'url(#editor-canvas-arrow-route)'
               : undefined
           "
-          @pointerdown.stop="handleEdgePointerDown(edge)"
+          @pointerdown.stop="handleEdgePointerDown(edge, $event)"
         />
       </svg>
+      <div
+        v-if="activeFlowEdgeDeleteConfirm"
+        class="editor-canvas__edge-delete-confirm"
+        :style="flowEdgeDeleteConfirmStyle"
+        aria-hidden="true"
+      >
+        <div class="editor-canvas__confirm-hint editor-canvas__confirm-hint--remove">Delete edge?</div>
+        <button
+          type="button"
+          class="editor-canvas__edge-delete-button"
+          @pointerdown.stop
+          @click.stop="confirmFlowEdgeDelete"
+        >
+          <ElIcon><Check /></ElIcon>
+        </button>
+      </div>
       <div
         v-for="[nodeId, node] in nodeEntries"
         :key="nodeId"
@@ -168,6 +185,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
+import { Check } from "@element-plus/icons-vue";
 
 import { buildAnchorModel } from "@/editor/anchors/anchorModel";
 import NodeCard from "@/editor/nodes/NodeCard.vue";
@@ -264,6 +282,14 @@ const nodeDrag = ref<{
 const pendingConnection = ref<PendingGraphConnection | null>(null);
 const pendingConnectionPoint = ref<{ x: number; y: number } | null>(null);
 const selectedEdgeId = ref<string | null>(null);
+const activeFlowEdgeDeleteConfirm = ref<{
+  id: string;
+  source: string;
+  target: string;
+  x: number;
+  y: number;
+} | null>(null);
+const flowEdgeDeleteConfirmTimeoutRef = ref<number | null>(null);
 const hoveredNodeId = ref<string | null>(null);
 const hoveredFlowHandleNodeId = ref<string | null>(null);
 const pendingAnchorMeasurementNodeIds = new Set<string>();
@@ -405,6 +431,16 @@ const canvasSurfaceStyle = computed(() => resolveCanvasSurfaceStyle(viewport.vie
 const viewportStyle = computed(() => ({
   transform: `translate(${viewport.viewport.x}px, ${viewport.viewport.y}px) scale(${viewport.viewport.scale})`,
 }));
+const flowEdgeDeleteConfirmStyle = computed(() => {
+  if (!activeFlowEdgeDeleteConfirm.value) {
+    return undefined;
+  }
+
+  return {
+    left: `${activeFlowEdgeDeleteConfirm.value.x}px`,
+    top: `${activeFlowEdgeDeleteConfirm.value.y}px`,
+  };
+});
 
 watch(projectedEdges, (edges) => {
   if (selectedEdgeId.value && !edges.some((edge) => edge.id === selectedEdgeId.value)) {
@@ -412,6 +448,10 @@ watch(projectedEdges, (edges) => {
     if (!pendingConnection.value) {
       pendingConnectionPoint.value = null;
     }
+  }
+
+  if (activeFlowEdgeDeleteConfirm.value && !edges.some((edge) => edge.id === activeFlowEdgeDeleteConfirm.value?.id)) {
+    clearFlowEdgeDeleteConfirmState();
   }
 });
 
@@ -434,7 +474,51 @@ onBeforeUnmount(() => {
     window.cancelAnimationFrame(scheduledAnchorMeasurementFrame);
     scheduledAnchorMeasurementFrame = null;
   }
+
+  clearFlowEdgeDeleteConfirmState();
 });
+
+function clearFlowEdgeDeleteConfirmTimeout() {
+  if (flowEdgeDeleteConfirmTimeoutRef.value !== null) {
+    window.clearTimeout(flowEdgeDeleteConfirmTimeoutRef.value);
+    flowEdgeDeleteConfirmTimeoutRef.value = null;
+  }
+}
+
+function clearFlowEdgeDeleteConfirmState() {
+  clearFlowEdgeDeleteConfirmTimeout();
+  activeFlowEdgeDeleteConfirm.value = null;
+}
+
+function startFlowEdgeDeleteConfirm(edge: ProjectedCanvasEdge, event: PointerEvent) {
+  clearFlowEdgeDeleteConfirmTimeout();
+  const point = resolveCanvasPoint(event);
+  activeFlowEdgeDeleteConfirm.value = {
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+    x: point.x,
+    y: point.y,
+  };
+  flowEdgeDeleteConfirmTimeoutRef.value = window.setTimeout(() => {
+    flowEdgeDeleteConfirmTimeoutRef.value = null;
+    if (activeFlowEdgeDeleteConfirm.value?.id === edge.id) {
+      activeFlowEdgeDeleteConfirm.value = null;
+    }
+  }, 2000);
+}
+
+function confirmFlowEdgeDelete() {
+  if (!activeFlowEdgeDeleteConfirm.value) {
+    return;
+  }
+
+  emit("remove-flow", {
+    sourceNodeId: activeFlowEdgeDeleteConfirm.value.source,
+    targetNodeId: activeFlowEdgeDeleteConfirm.value.target,
+  });
+  clearFlowEdgeDeleteConfirmState();
+}
 
 function nodeStyle(position: GraphPosition) {
   return {
@@ -656,6 +740,7 @@ function handleCanvasPointerDown(event: PointerEvent) {
   event.preventDefault();
   window.getSelection()?.removeAllRanges();
   canvasRef.value?.setPointerCapture(event.pointerId);
+  clearFlowEdgeDeleteConfirmState();
   pendingConnection.value = null;
   pendingConnectionPoint.value = null;
   selectedEdgeId.value = null;
@@ -742,6 +827,7 @@ function handleNodePointerDown(nodeId: string, event: PointerEvent) {
     return;
   }
   canvasRef.value?.focus();
+  clearFlowEdgeDeleteConfirmState();
   pendingConnection.value = null;
   pendingConnectionPoint.value = null;
   selectedEdgeId.value = null;
@@ -793,9 +879,17 @@ function handleWheel(event: WheelEvent) {
   viewport.zoomBy(event.deltaY);
 }
 
-function handleEdgePointerDown(edge: ProjectedCanvasEdge) {
+function handleEdgePointerDown(edge: ProjectedCanvasEdge, event: PointerEvent) {
   canvasRef.value?.focus();
+  clearFlowEdgeDeleteConfirmState();
   pendingConnection.value = null;
+  if (edge.kind === "flow") {
+    pendingConnectionPoint.value = null;
+    selectedEdgeId.value = null;
+    selection.clearSelection();
+    startFlowEdgeDeleteConfirm(edge, event);
+    return;
+  }
   if (selectedEdgeId.value === edge.id) {
     selectedEdgeId.value = null;
     pendingConnectionPoint.value = null;
@@ -808,6 +902,7 @@ function handleEdgePointerDown(edge: ProjectedCanvasEdge) {
 
 function handleAnchorPointerDown(anchor: ProjectedCanvasAnchor) {
   canvasRef.value?.focus();
+  clearFlowEdgeDeleteConfirmState();
   selection.selectNode(anchor.nodeId);
 
   if (
@@ -846,6 +941,7 @@ function openCreationMenuFromPendingConnection(event: PointerEvent) {
   if (!activeConnection.value) {
     return;
   }
+  clearFlowEdgeDeleteConfirmState();
   const isStateCreationSource = activeConnection.value.sourceKind === "state-out";
   const isFlowCreationSource = activeConnection.value.sourceKind === "flow-out";
   const isRouteCreationSource = activeConnection.value.sourceKind === "route-out";
@@ -1154,6 +1250,63 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   height: 3000px;
   overflow: visible;
   pointer-events: none;
+}
+
+.editor-canvas__edge-delete-confirm {
+  position: absolute;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.editor-canvas__confirm-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-width: max-content;
+  padding: 5px 10px;
+  border: 1px solid rgba(185, 28, 28, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 248, 248, 0.98);
+  box-shadow: 0 10px 24px rgba(120, 53, 15, 0.12);
+  color: rgba(127, 29, 29, 0.9);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.editor-canvas__confirm-hint--remove {
+  border-color: rgba(185, 28, 28, 0.16);
+  background: rgba(255, 248, 248, 0.98);
+  color: rgba(127, 29, 29, 0.9);
+}
+
+.editor-canvas__edge-delete-button {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(185, 28, 28, 0.2);
+  border-radius: 999px;
+  background: rgb(185, 28, 28);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(120, 53, 15, 0.16);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+.editor-canvas__edge-delete-button :deep(.el-icon) {
+  font-size: 1rem;
 }
 
 .editor-canvas__anchors {

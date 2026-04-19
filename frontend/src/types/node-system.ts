@@ -177,6 +177,7 @@ export type NodeCreationContext = {
   position: GraphPosition;
   sourceNodeId?: string;
   sourceAnchorKind?: "flow-out" | "route-out" | "state-out";
+  sourceBranchKey?: string;
   sourceStateKey?: string;
   sourceValueType?: string | null;
   clientX?: number;

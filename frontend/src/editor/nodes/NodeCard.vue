@@ -150,7 +150,9 @@
           <ElPopover
             :visible="isStateEditorOpen(`input-primary-output:${view.body.primaryOutput.key}`)"
             placement="bottom-end"
-            :width="340"
+            :width="320"
+            :show-arrow="false"
+            :popper-style="stateEditorPopoverStyle"
             popper-class="node-card__state-editor-popper"
           >
             <template #reference>
@@ -171,42 +173,21 @@
                 />
               </span>
             </template>
-            <div v-if="stateEditorDraft" class="node-card__state-editor" data-node-popup-surface="true">
-              <div class="node-card__state-editor-title">Edit State</div>
-              <label class="node-card__control-row">
-                <span class="node-card__control-label">Name</span>
-                <ElInput :model-value="stateEditorDraft.definition.name" @update:model-value="handleStateEditorNameInput" />
-              </label>
-              <label class="node-card__control-row">
-                <span class="node-card__control-label">Key</span>
-                <ElInput :model-value="stateEditorDraft.key" @update:model-value="handleStateEditorKeyInput" />
-              </label>
-              <label class="node-card__control-row">
-                <span class="node-card__control-label">Type</span>
-                <select class="node-card__control-select" :value="stateEditorDraft.definition.type" @change="handleStateEditorTypeChange">
-                  <option v-for="typeOption in stateTypeOptions" :key="typeOption" :value="typeOption">{{ typeOption }}</option>
-                </select>
-              </label>
-              <label class="node-card__control-row">
-                <span class="node-card__control-label">Description</span>
-                <ElInput
-                  type="textarea"
-                  :rows="3"
-                  :model-value="stateEditorDraft.definition.description"
-                  @update:model-value="handleStateEditorDescriptionInput"
-                />
-              </label>
-              <label class="node-card__control-row">
-                <span class="node-card__control-label">Color</span>
-                <ElInput :model-value="stateEditorDraft.definition.color" @update:model-value="handleStateEditorColorInput" />
-              </label>
-              <StateDefaultValueEditor :field="stateEditorDraft.definition" @update-value="updateStateEditorValue" />
-              <div v-if="stateEditorError" class="node-card__port-picker-hint node-card__port-picker-hint--error">{{ stateEditorError }}</div>
-              <div class="node-card__top-popover-actions">
-                <ElButton size="small" @click="closeStateEditor">Cancel</ElButton>
-                <ElButton size="small" type="primary" @click="commitStateEditor">Save</ElButton>
-              </div>
-            </div>
+            <StateEditorPopover
+              v-if="stateEditorDraft"
+              class="node-card__state-editor"
+              :draft="stateEditorDraft"
+              :error="stateEditorError"
+              :type-options="stateTypeOptions"
+              :color-options="stateColorOptions"
+              @update:key="handleStateEditorKeyInput"
+              @update:name="handleStateEditorNameInput"
+              @update:type="handleStateEditorTypeValue"
+              @update:color="handleStateEditorColorInput"
+              @update:description="handleStateEditorDescriptionInput"
+              @cancel="closeStateEditor"
+              @save="commitStateEditor"
+            />
           </ElPopover>
         </div>
       </div>
@@ -331,7 +312,9 @@
             <ElPopover
               :visible="isStateEditorOpen(`agent-input:${port.key}`)"
               placement="bottom-start"
-              :width="340"
+              :width="320"
+              :show-arrow="false"
+              :popper-style="stateEditorPopoverStyle"
               popper-class="node-card__state-editor-popper"
             >
               <template #reference>
@@ -347,42 +330,21 @@
                   <span class="node-card__port-pill-label" @dblclick.stop="openStateEditor(`agent-input:${port.key}`, port.key)">{{ port.label }}</span>
                 </span>
               </template>
-              <div v-if="stateEditorDraft" class="node-card__state-editor" data-node-popup-surface="true">
-                <div class="node-card__state-editor-title">Edit State</div>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Name</span>
-                  <ElInput :model-value="stateEditorDraft.definition.name" @update:model-value="handleStateEditorNameInput" />
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Key</span>
-                  <ElInput :model-value="stateEditorDraft.key" @update:model-value="handleStateEditorKeyInput" />
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Type</span>
-                  <select class="node-card__control-select" :value="stateEditorDraft.definition.type" @change="handleStateEditorTypeChange">
-                    <option v-for="typeOption in stateTypeOptions" :key="typeOption" :value="typeOption">{{ typeOption }}</option>
-                  </select>
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Description</span>
-                  <ElInput
-                    type="textarea"
-                    :rows="3"
-                    :model-value="stateEditorDraft.definition.description"
-                    @update:model-value="handleStateEditorDescriptionInput"
-                  />
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Color</span>
-                  <ElInput :model-value="stateEditorDraft.definition.color" @update:model-value="handleStateEditorColorInput" />
-                </label>
-                <StateDefaultValueEditor :field="stateEditorDraft.definition" @update-value="updateStateEditorValue" />
-                <div v-if="stateEditorError" class="node-card__port-picker-hint node-card__port-picker-hint--error">{{ stateEditorError }}</div>
-                <div class="node-card__top-popover-actions">
-                  <ElButton size="small" @click="closeStateEditor">Cancel</ElButton>
-                  <ElButton size="small" type="primary" @click="commitStateEditor">Save</ElButton>
-                </div>
-              </div>
+              <StateEditorPopover
+                v-if="stateEditorDraft"
+                class="node-card__state-editor"
+                :draft="stateEditorDraft"
+                :error="stateEditorError"
+                :type-options="stateTypeOptions"
+                :color-options="stateColorOptions"
+                @update:key="handleStateEditorKeyInput"
+                @update:name="handleStateEditorNameInput"
+                @update:type="handleStateEditorTypeValue"
+                @update:color="handleStateEditorColorInput"
+                @update:description="handleStateEditorDescriptionInput"
+                @cancel="closeStateEditor"
+                @save="commitStateEditor"
+              />
             </ElPopover>
           </div>
         </div>
@@ -391,7 +353,9 @@
             <ElPopover
               :visible="isStateEditorOpen(`agent-output:${port.key}`)"
               placement="bottom-end"
-              :width="340"
+              :width="320"
+              :show-arrow="false"
+              :popper-style="stateEditorPopoverStyle"
               popper-class="node-card__state-editor-popper"
             >
               <template #reference>
@@ -407,42 +371,21 @@
                   />
                 </span>
               </template>
-              <div v-if="stateEditorDraft" class="node-card__state-editor" data-node-popup-surface="true">
-                <div class="node-card__state-editor-title">Edit State</div>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Name</span>
-                  <ElInput :model-value="stateEditorDraft.definition.name" @update:model-value="handleStateEditorNameInput" />
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Key</span>
-                  <ElInput :model-value="stateEditorDraft.key" @update:model-value="handleStateEditorKeyInput" />
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Type</span>
-                  <select class="node-card__control-select" :value="stateEditorDraft.definition.type" @change="handleStateEditorTypeChange">
-                    <option v-for="typeOption in stateTypeOptions" :key="typeOption" :value="typeOption">{{ typeOption }}</option>
-                  </select>
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Description</span>
-                  <ElInput
-                    type="textarea"
-                    :rows="3"
-                    :model-value="stateEditorDraft.definition.description"
-                    @update:model-value="handleStateEditorDescriptionInput"
-                  />
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Color</span>
-                  <ElInput :model-value="stateEditorDraft.definition.color" @update:model-value="handleStateEditorColorInput" />
-                </label>
-                <StateDefaultValueEditor :field="stateEditorDraft.definition" @update-value="updateStateEditorValue" />
-                <div v-if="stateEditorError" class="node-card__port-picker-hint node-card__port-picker-hint--error">{{ stateEditorError }}</div>
-                <div class="node-card__top-popover-actions">
-                  <ElButton size="small" @click="closeStateEditor">Cancel</ElButton>
-                  <ElButton size="small" type="primary" @click="commitStateEditor">Save</ElButton>
-                </div>
-              </div>
+              <StateEditorPopover
+                v-if="stateEditorDraft"
+                class="node-card__state-editor"
+                :draft="stateEditorDraft"
+                :error="stateEditorError"
+                :type-options="stateTypeOptions"
+                :color-options="stateColorOptions"
+                @update:key="handleStateEditorKeyInput"
+                @update:name="handleStateEditorNameInput"
+                @update:type="handleStateEditorTypeValue"
+                @update:color="handleStateEditorColorInput"
+                @update:description="handleStateEditorDescriptionInput"
+                @cancel="closeStateEditor"
+                @save="commitStateEditor"
+              />
             </ElPopover>
           </div>
         </div>
@@ -450,6 +393,7 @@
       <div class="node-card__agent-runtime-row">
         <div class="node-card__agent-model-select-shell" @pointerdown.stop @click.stop>
           <ElSelect
+            ref="agentModelSelectRef"
             class="node-card__agent-model-select"
             :model-value="agentResolvedModelValue || undefined"
             :placeholder="agentModelOptions.length === 0 ? 'No configured models' : 'Select model'"
@@ -708,7 +652,9 @@
           v-if="view.body.connectedStateKey && view.body.connectedStateLabel"
           :visible="isStateEditorOpen(`output-input:${view.body.connectedStateKey}`)"
           placement="bottom-start"
-          :width="340"
+          :width="320"
+          :show-arrow="false"
+          :popper-style="stateEditorPopoverStyle"
           popper-class="node-card__state-editor-popper"
         >
           <template #reference>
@@ -729,42 +675,21 @@
               </span>
             </span>
           </template>
-          <div v-if="stateEditorDraft" class="node-card__state-editor" data-node-popup-surface="true">
-            <div class="node-card__state-editor-title">Edit State</div>
-            <label class="node-card__control-row">
-              <span class="node-card__control-label">Name</span>
-              <ElInput :model-value="stateEditorDraft.definition.name" @update:model-value="handleStateEditorNameInput" />
-            </label>
-            <label class="node-card__control-row">
-              <span class="node-card__control-label">Key</span>
-              <ElInput :model-value="stateEditorDraft.key" @update:model-value="handleStateEditorKeyInput" />
-            </label>
-            <label class="node-card__control-row">
-              <span class="node-card__control-label">Type</span>
-              <select class="node-card__control-select" :value="stateEditorDraft.definition.type" @change="handleStateEditorTypeChange">
-                <option v-for="typeOption in stateTypeOptions" :key="typeOption" :value="typeOption">{{ typeOption }}</option>
-              </select>
-            </label>
-            <label class="node-card__control-row">
-              <span class="node-card__control-label">Description</span>
-              <ElInput
-                type="textarea"
-                :rows="3"
-                :model-value="stateEditorDraft.definition.description"
-                @update:model-value="handleStateEditorDescriptionInput"
-              />
-            </label>
-            <label class="node-card__control-row">
-              <span class="node-card__control-label">Color</span>
-              <ElInput :model-value="stateEditorDraft.definition.color" @update:model-value="handleStateEditorColorInput" />
-            </label>
-            <StateDefaultValueEditor :field="stateEditorDraft.definition" @update-value="updateStateEditorValue" />
-            <div v-if="stateEditorError" class="node-card__port-picker-hint node-card__port-picker-hint--error">{{ stateEditorError }}</div>
-            <div class="node-card__top-popover-actions">
-              <ElButton size="small" @click="closeStateEditor">Cancel</ElButton>
-              <ElButton size="small" type="primary" @click="commitStateEditor">Save</ElButton>
-            </div>
-          </div>
+          <StateEditorPopover
+            v-if="stateEditorDraft"
+            class="node-card__state-editor"
+            :draft="stateEditorDraft"
+            :error="stateEditorError"
+            :type-options="stateTypeOptions"
+            :color-options="stateColorOptions"
+            @update:key="handleStateEditorKeyInput"
+            @update:name="handleStateEditorNameInput"
+            @update:type="handleStateEditorTypeValue"
+            @update:color="handleStateEditorColorInput"
+            @update:description="handleStateEditorDescriptionInput"
+            @cancel="closeStateEditor"
+            @save="commitStateEditor"
+          />
         </ElPopover>
         <span v-else class="node-card__port-label">Unbound</span>
         <button
@@ -798,7 +723,9 @@
             <ElPopover
               :visible="isStateEditorOpen(`condition-input:${port.key}`)"
               placement="bottom-start"
-              :width="340"
+              :width="320"
+              :show-arrow="false"
+              :popper-style="stateEditorPopoverStyle"
               popper-class="node-card__state-editor-popper"
             >
               <template #reference>
@@ -814,42 +741,21 @@
                   <span class="node-card__port-pill-label" @dblclick.stop="openStateEditor(`condition-input:${port.key}`, port.key)">{{ port.label }}</span>
                 </span>
               </template>
-              <div v-if="stateEditorDraft" class="node-card__state-editor" data-node-popup-surface="true">
-                <div class="node-card__state-editor-title">Edit State</div>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Name</span>
-                  <ElInput :model-value="stateEditorDraft.definition.name" @update:model-value="handleStateEditorNameInput" />
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Key</span>
-                  <ElInput :model-value="stateEditorDraft.key" @update:model-value="handleStateEditorKeyInput" />
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Type</span>
-                  <select class="node-card__control-select" :value="stateEditorDraft.definition.type" @change="handleStateEditorTypeChange">
-                    <option v-for="typeOption in stateTypeOptions" :key="typeOption" :value="typeOption">{{ typeOption }}</option>
-                  </select>
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Description</span>
-                  <ElInput
-                    type="textarea"
-                    :rows="3"
-                    :model-value="stateEditorDraft.definition.description"
-                    @update:model-value="handleStateEditorDescriptionInput"
-                  />
-                </label>
-                <label class="node-card__control-row">
-                  <span class="node-card__control-label">Color</span>
-                  <ElInput :model-value="stateEditorDraft.definition.color" @update:model-value="handleStateEditorColorInput" />
-                </label>
-                <StateDefaultValueEditor :field="stateEditorDraft.definition" @update-value="updateStateEditorValue" />
-                <div v-if="stateEditorError" class="node-card__port-picker-hint node-card__port-picker-hint--error">{{ stateEditorError }}</div>
-                <div class="node-card__top-popover-actions">
-                  <ElButton size="small" @click="closeStateEditor">Cancel</ElButton>
-                  <ElButton size="small" type="primary" @click="commitStateEditor">Save</ElButton>
-                </div>
-              </div>
+              <StateEditorPopover
+                v-if="stateEditorDraft"
+                class="node-card__state-editor"
+                :draft="stateEditorDraft"
+                :error="stateEditorError"
+                :type-options="stateTypeOptions"
+                :color-options="stateColorOptions"
+                @update:key="handleStateEditorKeyInput"
+                @update:name="handleStateEditorNameInput"
+                @update:type="handleStateEditorTypeValue"
+                @update:color="handleStateEditorColorInput"
+                @update:description="handleStateEditorDescriptionInput"
+                @cancel="closeStateEditor"
+                @save="commitStateEditor"
+              />
             </ElPopover>
           </div>
         </div>
@@ -993,6 +899,7 @@ import { ElButton, ElIcon, ElInput, ElPopover } from "element-plus";
 import { Check, Collection, CollectionTag, Delete, Document, FolderOpened, Operation, Opportunity } from "@element-plus/icons-vue";
 
 import StateDefaultValueEditor from "@/editor/workspace/StateDefaultValueEditor.vue";
+import StateEditorPopover from "./StateEditorPopover.vue";
 import { listConditionBranchMappingKeys, parseConditionBranchMappingDraft } from "@/lib/condition-branch-mapping";
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
 import type { AgentNode, ConditionNode, GraphNode, InputNode, OutputNode, StateDefinition } from "@/types/node-system";
@@ -1006,7 +913,13 @@ import { buildNodeCardViewModel } from "./nodeCardViewModel";
 import { listAttachableSkillDefinitions, resolveAttachedSkillBadges } from "./skillPickerModel";
 import { createStateDraftFromQuery, matchesStatePortSearch } from "./statePortCreateModel";
 import { createUploadedAssetEnvelope, resolveUploadedAssetInputAccept, tryParseUploadedAssetEnvelope } from "./uploadedAssetModel";
-import { defaultValueForStateType, STATE_FIELD_TYPE_OPTIONS, type StateFieldDraft, type StateFieldType } from "@/editor/workspace/statePanelFields";
+import {
+  defaultValueForStateType,
+  resolveStateColorOptions,
+  STATE_FIELD_TYPE_OPTIONS,
+  type StateFieldDraft,
+  type StateFieldType,
+} from "@/editor/workspace/statePanelFields";
 
 const props = defineProps<{
   nodeId: string;
@@ -1071,6 +984,16 @@ const confirmPopoverStyle = {
   background: "transparent",
   boxShadow: "none",
 };
+const stateEditorPopoverStyle = {
+  "--el-popover-bg-color": "transparent",
+  "--el-popover-border-color": "transparent",
+  "--el-popover-padding": "0px",
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
+  padding: "0",
+  "min-width": "0",
+} as const;
 const stateTypeOptions = STATE_FIELD_TYPE_OPTIONS;
 const conditionRuleOperatorOptions = CONDITION_RULE_OPERATOR_OPTIONS;
 
@@ -1094,11 +1017,13 @@ const activePortPickerSide = ref<"input" | "output" | null>(null);
 const portStateSearch = ref("");
 const portStateDraft = ref<StateFieldDraft | null>(null);
 const portStateError = ref<string | null>(null);
+const agentModelSelectRef = ref<{ blur?: () => void; toggleMenu?: () => void; expanded?: boolean } | null>(null);
 const activeTopAction = ref<"advanced" | "delete" | "preset" | null>(null);
 const topActionTimeoutRef = ref<number | null>(null);
 const activeStateEditorAnchorId = ref<string | null>(null);
 const stateEditorDraft = ref<StateFieldDraft | null>(null);
 const stateEditorError = ref<string | null>(null);
+const stateColorOptions = computed(() => resolveStateColorOptions(stateEditorDraft.value?.definition.color ?? ""));
 const conditionRuleEditor = computed(() =>
   props.node.kind === "condition" ? buildConditionRuleEditorModel(props.node.config.rule, props.stateSchema) : null,
 );
@@ -1729,30 +1654,16 @@ function handleStateEditorColorInput(value: string | number) {
   };
 }
 
-function handleStateEditorTypeChange(event: Event) {
-  const target = event.target;
-  if (!(target instanceof HTMLSelectElement) || !stateEditorDraft.value) {
+function handleStateEditorTypeValue(value: string | number | boolean | undefined) {
+  if (typeof value !== "string" || !stateEditorDraft.value) {
     return;
   }
   stateEditorDraft.value = {
     ...stateEditorDraft.value,
     definition: {
       ...stateEditorDraft.value.definition,
-      type: target.value,
-      value: defaultValueForStateType(target.value as StateFieldType),
-    },
-  };
-}
-
-function updateStateEditorValue(value: unknown) {
-  if (!stateEditorDraft.value) {
-    return;
-  }
-  stateEditorDraft.value = {
-    ...stateEditorDraft.value,
-    definition: {
-      ...stateEditorDraft.value.definition,
-      value,
+      type: value,
+      value: defaultValueForStateType(value as StateFieldType),
     },
   };
 }
@@ -1947,6 +1858,14 @@ function handleAgentModelValueChange(nextValue: string | number | boolean | unde
     return;
   }
   emitAgentConfigPatch(resolveAgentModelSelection(normalizedValue, trimmedGlobalTextModelRef.value));
+  collapseAgentModelSelect();
+}
+
+function collapseAgentModelSelect() {
+  if (agentModelSelectRef.value?.expanded) {
+    agentModelSelectRef.value.toggleMenu?.();
+  }
+  agentModelSelectRef.value?.blur?.();
 }
 
 function handleAgentThinkingToggle(nextValue: string | number | boolean) {
@@ -2224,7 +2143,7 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   min-height: 260px;
   border: 1px solid rgba(154, 52, 18, 0.18);
   border-radius: 28px;
-  overflow: hidden;
+  overflow: visible;
   background: linear-gradient(180deg, rgba(255, 250, 241, 0.98) 0%, rgba(248, 237, 219, 0.96) 100%);
   box-shadow: 0 22px 40px rgba(60, 41, 20, 0.08);
   user-select: none;
@@ -2237,15 +2156,16 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
 
 .node-card__top-actions {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 3;
+  top: 0;
+  right: 18px;
+  z-index: 6;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 160ms ease;
+  transform: translateY(-50%);
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
 .node-card:hover .node-card__top-actions,
@@ -2257,12 +2177,12 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
 
 .node-card__top-action-button {
   --el-color-primary: #c96b1f;
-  width: 34px;
-  height: 34px;
+  width: 48px;
+  height: 48px;
   border: 1px solid rgba(154, 52, 18, 0.14);
   background: rgba(255, 252, 247, 0.94);
   color: rgba(90, 58, 28, 0.82);
-  box-shadow: 0 10px 24px rgba(60, 41, 20, 0.08);
+  box-shadow: 0 14px 28px rgba(60, 41, 20, 0.12);
 }
 
 .node-card__top-action-button:hover {
@@ -2301,7 +2221,7 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px calc(var(--node-card-inline-padding) + 112px) 8px var(--node-card-inline-padding);
+  padding: 18px var(--node-card-inline-padding) 8px var(--node-card-inline-padding);
 }
 
 .node-card__eyebrow {
@@ -2941,20 +2861,32 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   color: rgb(153, 27, 27);
 }
 
-:deep(.node-card__action-popover.el-popper),
-:deep(.node-card__state-editor-popper.el-popper) {
+:deep(.node-card__action-popover.el-popper) {
   border: 1px solid rgba(154, 52, 18, 0.16);
   border-radius: 18px;
   background: rgba(255, 250, 241, 0.98);
   box-shadow: 0 20px 40px rgba(60, 41, 20, 0.12);
 }
 
-:deep(.node-card__action-popover .el-popover),
-:deep(.node-card__state-editor-popper .el-popover) {
+:deep(.node-card__state-editor-popper.el-popper) {
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:deep(.node-card__action-popover .el-popover) {
   padding: 14px;
 }
 
-:deep(.node-card__state-editor-popper .el-input__wrapper),
+:deep(.node-card__state-editor-popper .el-popover) {
+  padding: 0;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+}
+
 :deep(.node-card__action-popover .el-input__wrapper) {
   min-height: 38px;
   border-radius: 14px;
@@ -2963,7 +2895,6 @@ function handleConditionBranchEnter(_currentKey: string, event: KeyboardEvent) {
   box-shadow: none;
 }
 
-:deep(.node-card__state-editor-popper .el-textarea__inner),
 :deep(.node-card__action-popover .el-textarea__inner) {
   border-radius: 14px;
   border-color: rgba(154, 52, 18, 0.16);

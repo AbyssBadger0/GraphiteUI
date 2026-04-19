@@ -115,6 +115,7 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(agentSection, /@pointerdown\.stop/);
   assert.match(agentSection, /@click\.stop/);
   assert.match(agentSection, /<ElSelect/);
+  assert.match(agentSection, /ref="agentModelSelectRef"/);
   assert.match(agentSection, /class="node-card__agent-model-select"/);
   assert.match(agentSection, /popper-class="node-card__agent-model-popper"/);
   assert.match(agentSection, /class="node-card__agent-thinking-card"/);
@@ -142,6 +143,9 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(componentSource, /\.node-card__agent-thinking-icon \{[\s\S]*width:\s*20px;/);
   assert.match(componentSource, /\.node-card__agent-thinking-icon \{[\s\S]*height:\s*20px;/);
   assert.doesNotMatch(componentSource, /\.node-card__agent-thinking-icon \{[^}]*background:/);
+  assert.match(componentSource, /const agentModelSelectRef = ref<\{ blur\?: \(\) => void; toggleMenu\?: \(\) => void; expanded\?: boolean \} \| null>\(null\);/);
+  assert.match(componentSource, /function collapseAgentModelSelect\(\) \{[\s\S]*if \(agentModelSelectRef\.value\?\.expanded\) \{[\s\S]*agentModelSelectRef\.value\.toggleMenu\?\.\(\);[\s\S]*\}[\s\S]*agentModelSelectRef\.value\?\.blur\?\.\(\);[\s\S]*\}/);
+  assert.match(componentSource, /collapseAgentModelSelect\(\);/);
 });
 
 test("NodeCard moves node actions into hoverable top buttons built from Element Plus icons and overlays", () => {
@@ -169,21 +173,43 @@ test("NodeCard moves node actions into hoverable top buttons built from Element 
   assert.match(componentSource, /Delete node\?/);
   assert.match(componentSource, /const confirmPopoverStyle = \{/);
   assert.match(componentSource, /node-card__top-action-button--confirm/);
+  assert.match(componentSource, /\.node-card \{[\s\S]*overflow:\s*visible;/);
+  assert.match(componentSource, /\.node-card__top-actions \{[\s\S]*top:\s*0;/);
+  assert.match(componentSource, /\.node-card__top-actions \{[\s\S]*right:\s*18px;/);
+  assert.match(componentSource, /\.node-card__top-actions \{[\s\S]*transform:\s*translateY\(-50%\);/);
+  assert.match(componentSource, /\.node-card__top-actions \{[\s\S]*gap:\s*10px;/);
+  assert.match(componentSource, /\.node-card__top-action-button \{[\s\S]*width:\s*48px;/);
+  assert.match(componentSource, /\.node-card__top-action-button \{[\s\S]*height:\s*48px;/);
+  assert.match(componentSource, /\.node-card__header \{[\s\S]*padding:\s*18px var\(--node-card-inline-padding\) 8px var\(--node-card-inline-padding\);/);
   assert.doesNotMatch(componentSource, /type="primary" @click\.stop="confirmSavePreset"/);
   assert.doesNotMatch(componentSource, /type="danger" @click\.stop="confirmDeleteNode"/);
   assert.doesNotMatch(componentSource, /<details class="node-card__advanced-panel"/);
 });
 
 test("NodeCard opens bound-state editing from a double click on the port label", () => {
+  assert.match(componentSource, /import StateEditorPopover from "\.\/StateEditorPopover\.vue";/);
   assert.match(componentSource, /@dblclick\.stop="openStateEditor\(/);
   assert.match(componentSource, /const stateEditorDraft = ref<StateFieldDraft \| null>\(null\);/);
   assert.match(componentSource, /const activeStateEditorAnchorId = ref<string \| null>\(null\);/);
   assert.match(componentSource, /emit\("rename-state", \{ currentKey:/);
   assert.match(componentSource, /emit\("update-state", \{[\s\S]*stateKey:/);
   assert.match(componentSource, /<ElPopover[\s\S]*:visible="isStateEditorOpen\(/);
+  assert.match(componentSource, /<StateEditorPopover/);
+  assert.match(componentSource, /:width="320"/);
+  assert.match(componentSource, /:show-arrow="false"/);
+  assert.match(componentSource, /:popper-style="stateEditorPopoverStyle"/);
   assert.doesNotMatch(componentSource, /trigger="manual"/);
   assert.match(componentSource, /StateDefaultValueEditor/);
   assert.match(componentSource, /class="node-card__state-editor"/);
+  assert.match(componentSource, /const stateEditorPopoverStyle = \{/);
+  assert.match(componentSource, /"--el-popover-bg-color":\s*"transparent"/);
+  assert.match(componentSource, /"--el-popover-border-color":\s*"transparent"/);
+  assert.match(componentSource, /"--el-popover-padding":\s*"0px"/);
+  assert.match(componentSource, /"min-width":\s*"0"/);
+  assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*border-radius:\s*16px;/);
+  assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*background:\s*transparent;/);
+  assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*padding:\s*0;/);
+  assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*box-shadow:\s*none;/);
 });
 
 test("NodeCard declares top-action and state-edit events for canvas forwarding", () => {

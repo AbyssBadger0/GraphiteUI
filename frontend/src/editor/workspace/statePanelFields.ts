@@ -21,6 +21,12 @@ export type StateFieldType =
   | "file"
   | "knowledge_base";
 
+export type StateColorOption = {
+  value: string;
+  label: string;
+  swatch: string;
+};
+
 export const STATE_FIELD_TYPE_OPTIONS: StateFieldType[] = [
   "text",
   "number",
@@ -36,6 +42,34 @@ export const STATE_FIELD_TYPE_OPTIONS: StateFieldType[] = [
   "file",
   "knowledge_base",
 ];
+
+export const STATE_COLOR_OPTIONS: StateColorOption[] = [
+  { value: "", label: "Auto", swatch: "#d97706" },
+  { value: "#d97706", label: "Amber", swatch: "#d97706" },
+  { value: "#2563eb", label: "Blue", swatch: "#2563eb" },
+  { value: "#7c3aed", label: "Violet", swatch: "#7c3aed" },
+  { value: "#10b981", label: "Emerald", swatch: "#10b981" },
+  { value: "#0891b2", label: "Cyan", swatch: "#0891b2" },
+  { value: "#e11d48", label: "Rose", swatch: "#e11d48" },
+  { value: "#475569", label: "Slate", swatch: "#475569" },
+  { value: "#9a3412", label: "Walnut", swatch: "#9a3412" },
+];
+
+export function resolveStateColorOptions(currentColor: string): StateColorOption[] {
+  const normalized = currentColor.trim();
+  if (!normalized) {
+    return STATE_COLOR_OPTIONS;
+  }
+
+  if (STATE_COLOR_OPTIONS.some((option) => option.value === normalized)) {
+    return STATE_COLOR_OPTIONS;
+  }
+
+  return [
+    { value: normalized, label: normalized.toUpperCase(), swatch: normalized },
+    ...STATE_COLOR_OPTIONS,
+  ];
+}
 
 export function buildDefaultStateField(existingKeys: string[]) {
   let index = 1;

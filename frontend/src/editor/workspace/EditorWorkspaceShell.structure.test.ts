@@ -16,3 +16,19 @@ test("EditorWorkspaceShell renders workspace panes without reka-ui tab primitive
   assert.match(componentSource, /v-show="tab\.tabId === workspace\.activeTabId"/);
   assert.match(componentSource, /editor-workspace-shell__editor--active/);
 });
+
+test("EditorWorkspaceShell wires canvas node-creation intents into a dedicated creation menu component", () => {
+  assert.match(componentSource, /import EditorNodeCreationMenu from "\.\/EditorNodeCreationMenu\.vue";/);
+  assert.match(componentSource, /@open-node-creation-menu="openNodeCreationMenuForTab\(tab\.tabId, \$event\)"/);
+  assert.match(componentSource, /@create-node-from-file="createNodeFromFileForTab\(tab\.tabId, \$event\)"/);
+  assert.match(componentSource, /<EditorNodeCreationMenu/);
+  assert.match(componentSource, /@select-entry="createNodeFromMenuForTab\(tab\.tabId, \$event\)"/);
+  assert.match(componentSource, /@close="closeNodeCreationMenu\(tab\.tabId\)"/);
+});
+
+test("EditorWorkspaceShell loads persisted presets for the node creation menu", () => {
+  assert.match(componentSource, /import \{ fetchPresets \} from "@\/api\/presets";/);
+  assert.match(componentSource, /const persistedPresets = ref<PresetDocument\[\]>\(\[\]\);/);
+  assert.match(componentSource, /async function loadPersistedPresets\(\)/);
+  assert.match(componentSource, /persistedPresets\.value = await fetchPresets\(\)/);
+});

@@ -52,3 +52,25 @@ test("EditorCanvas renders hover-only flow hotspots and animates data edges as a
   assert.match(componentSource, /\.editor-canvas__edge--data \{[\s\S]*animation:\s*editor-canvas-ant-line 1\.2s linear infinite;/);
   assert.match(componentSource, /@keyframes editor-canvas-ant-line/);
 });
+
+test("EditorCanvas restores empty-canvas onboarding copy for node creation", () => {
+  assert.match(componentSource, /Double click to create your first node/);
+  assert.match(componentSource, /Drag from an output handle into empty space to get type-aware preset suggestions\./);
+});
+
+test("EditorCanvas emits node-creation intents for empty-canvas double click and dropped files", () => {
+  assert.match(componentSource, /\(event: "open-node-creation-menu", payload:/);
+  assert.match(componentSource, /\(event: "create-node-from-file", payload:/);
+  assert.match(componentSource, /@dblclick="handleCanvasDoubleClick"/);
+  assert.match(componentSource, /function handleCanvasDoubleClick\(event: MouseEvent\)/);
+  assert.match(componentSource, /emit\("open-node-creation-menu",/);
+  assert.match(componentSource, /emit\("create-node-from-file",/);
+});
+
+test("EditorCanvas opens the creation flow when output drags end on empty canvas", () => {
+  assert.match(componentSource, /function openCreationMenuFromPendingConnection/);
+  assert.match(componentSource, /activeConnection\.value\.sourceKind === "state-out"/);
+  assert.match(componentSource, /activeConnection\.value\.sourceKind === "flow-out"/);
+  assert.match(componentSource, /activeConnection\.value\.sourceKind === "route-out"/);
+  assert.match(componentSource, /openCreationMenuFromPendingConnection\(event\)/);
+});

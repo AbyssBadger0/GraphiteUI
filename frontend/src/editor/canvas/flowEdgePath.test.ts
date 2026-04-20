@@ -152,3 +152,54 @@ test("buildSequenceFlowPath staggers upstream source exits and target entries be
     ].join(" "),
   );
 });
+
+test("buildSequenceFlowPath keeps the return descent outside the source corridor for lower right targets", () => {
+  assert.equal(
+    buildSequenceFlowPath({
+      sourceX: 552,
+      sourceY: 332,
+      targetX: 523,
+      targetY: 738,
+      sourceNodeX: 80,
+      targetNodeX: 520,
+    }),
+    [
+      "M 552 332",
+      "L 580 332",
+      "L 606 332",
+      "Q 624 332 624 314",
+      "L 624 172",
+      "L 624 720",
+      "Q 624 738 606 738",
+      "L 495 738",
+      "L 523 738",
+    ].join(" "),
+  );
+});
+
+test("buildSequenceFlowPath keeps true leftward targets on the target-side drop rail even when they sit lower", () => {
+  assert.equal(
+    buildSequenceFlowPath({
+      sourceX: 1286,
+      sourceY: 362,
+      targetX: 636,
+      targetY: 529,
+      sourceNodeX: 780,
+      targetNodeX: 120,
+    }),
+    [
+      "M 1286 362",
+      "L 1314 362",
+      "L 1340 362",
+      "Q 1358 362 1358 344",
+      "L 1358 220",
+      "Q 1358 202 1340 202",
+      "L 582 202",
+      "Q 564 202 564 220",
+      "L 564 511",
+      "Q 564 529 582 529",
+      "L 608 529",
+      "L 636 529",
+    ].join(" "),
+  );
+});

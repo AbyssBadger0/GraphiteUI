@@ -39,10 +39,7 @@ export function buildSequenceFlowPath(input: SequenceFlowPathInput) {
     input.sourceX +
     UPSTREAM_HORIZONTAL_CLEARANCE +
     resolveTerminalStagger(input.sourceLaneIndex, input.sourceLaneCount);
-  const targetDropX =
-    input.targetX -
-    UPSTREAM_HORIZONTAL_CLEARANCE -
-    resolveTerminalStagger(input.targetLaneIndex, input.targetLaneCount);
+  const targetDropX = resolveReturnDropX(input, sourceBranchX);
   const endLeadX = input.targetX - FLOW_TERMINAL_OVERLAP;
 
   return buildRoundedOrthogonalPath(
@@ -111,6 +108,22 @@ function resolveTerminalStagger(index?: number, count?: number) {
   }
 
   return index * FLOW_TERMINAL_STAGGER;
+}
+
+function resolveReturnDropX(input: SequenceFlowPathInput, sourceBranchX: number) {
+  const targetDropX =
+    input.targetX -
+    UPSTREAM_HORIZONTAL_CLEARANCE -
+    resolveTerminalStagger(input.targetLaneIndex, input.targetLaneCount);
+
+  const targetNodeIsStillOnOrRightOfSource =
+    input.sourceNodeX !== undefined && input.targetNodeX !== undefined && input.targetNodeX >= input.sourceNodeX;
+
+  if (input.targetY > input.sourceY && targetNodeIsStillOnOrRightOfSource && targetDropX < sourceBranchX) {
+    return sourceBranchX;
+  }
+
+  return targetDropX;
 }
 
 function resolveDownstreamControlSpan(distance: number) {

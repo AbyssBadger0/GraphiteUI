@@ -1,6 +1,7 @@
 const FLOW_TERMINAL_OVERLAP = 28;
 const FLOW_TERMINAL_STAGGER = FLOW_TERMINAL_OVERLAP / 2;
 const FLOW_LANE_SPACING = 28;
+const DOWNSTREAM_TIGHT_MIN_CONTROL = 12;
 const DOWNSTREAM_CONTROL_MIN = 36;
 const DOWNSTREAM_CONTROL_MAX = 180;
 const DOWNSTREAM_CONTROL_RATIO = 0.32;
@@ -25,12 +26,10 @@ export type SequenceFlowPathInput = {
 };
 
 export function buildSequenceFlowPath(input: SequenceFlowPathInput) {
-  const sourceReferenceX = input.sourceNodeX ?? input.sourceX;
-  const targetReferenceX = input.targetNodeX ?? input.targetX;
   const sourceLaneOffset = resolveLaneOffset(input.sourceLaneIndex, input.sourceLaneCount);
   const targetLaneOffset = resolveLaneOffset(input.targetLaneIndex, input.targetLaneCount);
 
-  if (targetReferenceX >= sourceReferenceX) {
+  if (input.targetX > input.sourceX) {
     return buildLaneBezierPath(input, sourceLaneOffset, targetLaneOffset);
   }
 
@@ -62,8 +61,13 @@ export function buildSequenceFlowPath(input: SequenceFlowPathInput) {
 }
 
 function buildLaneBezierPath(input: SequenceFlowPathInput, sourceLaneOffset: number, targetLaneOffset: number) {
+  const directDistance = input.targetX - input.sourceX;
+  if (directDistance <= FLOW_TERMINAL_OVERLAP * 2) {
+    return buildTightBezierPath(input, sourceLaneOffset, targetLaneOffset);
+  }
+
   const startLeadX = input.sourceX + FLOW_TERMINAL_OVERLAP;
-  const endLeadX = Math.max(input.targetX - FLOW_TERMINAL_OVERLAP, startLeadX + FLOW_TERMINAL_OVERLAP);
+  const endLeadX = input.targetX - FLOW_TERMINAL_OVERLAP;
   const laneDistance = endLeadX - startLeadX;
 
   const controlSpan = resolveDownstreamControlSpan(laneDistance);
@@ -73,6 +77,15 @@ function buildLaneBezierPath(input: SequenceFlowPathInput, sourceLaneOffset: num
     `L ${roundCoordinate(startLeadX)} ${roundCoordinate(input.sourceY)}`,
     `C ${roundCoordinate(startLeadX + controlSpan)} ${roundCoordinate(input.sourceY + sourceLaneOffset)} ${roundCoordinate(endLeadX - controlSpan)} ${roundCoordinate(input.targetY + targetLaneOffset)} ${roundCoordinate(endLeadX)} ${roundCoordinate(input.targetY)}`,
     `L ${roundCoordinate(input.targetX)} ${roundCoordinate(input.targetY)}`,
+  ].join(" ");
+}
+
+function buildTightBezierPath(input: SequenceFlowPathInput, sourceLaneOffset: number, targetLaneOffset: number) {
+  const controlSpan = Math.max((input.targetX - input.sourceX) / 2, DOWNSTREAM_TIGHT_MIN_CONTROL);
+
+  return [
+    `M ${roundCoordinate(input.sourceX)} ${roundCoordinate(input.sourceY)}`,
+    `C ${roundCoordinate(input.sourceX + controlSpan)} ${roundCoordinate(input.sourceY + sourceLaneOffset)} ${roundCoordinate(input.targetX - controlSpan)} ${roundCoordinate(input.targetY + targetLaneOffset)} ${roundCoordinate(input.targetX)} ${roundCoordinate(input.targetY)}`,
   ].join(" ");
 }
 

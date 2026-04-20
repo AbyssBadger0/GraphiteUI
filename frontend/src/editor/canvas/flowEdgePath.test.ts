@@ -15,8 +15,20 @@ test("buildSequenceFlowPath keeps downstream targets on a bezier middle segment 
   );
 });
 
-test("buildSequenceFlowPath uses node positions to avoid misrouting close downstream cards", () => {
-  assert.match(
+test("buildSequenceFlowPath keeps the normal rightward path while the real target anchor is still to the right", () => {
+  assert.equal(
+    buildSequenceFlowPath({
+      sourceX: 552,
+      sourceY: 254,
+      targetX: 596,
+      targetY: 254,
+    }),
+    "M 552 254 C 574 254 574 254 596 254",
+  );
+});
+
+test("buildSequenceFlowPath switches to the return path once the real target anchor moves left of the source anchor", () => {
+  assert.equal(
     buildSequenceFlowPath({
       sourceX: 534,
       sourceY: 254,
@@ -25,7 +37,20 @@ test("buildSequenceFlowPath uses node positions to avoid misrouting close downst
       sourceNodeX: 80,
       targetNodeX: 520,
     }),
-    /^M 534 254(?: L .*?)? C .*$/,
+    [
+      "M 534 254",
+      "L 562 254",
+      "L 588 254",
+      "Q 606 254 606 236",
+      "L 606 112",
+      "Q 606 94 588 94",
+      "L 472 94",
+      "Q 454 94 454 112",
+      "L 454 236",
+      "Q 454 254 472 254",
+      "L 498 254",
+      "L 526 254",
+    ].join(" "),
   );
 });
 

@@ -14,12 +14,14 @@ test("EditorCanvas binds the canvas surface styling to the viewport state", () =
 });
 
 test("EditorCanvas does not animate node transforms while dragging", () => {
-  assert.match(componentSource, /\.editor-canvas__node \{[\s\S]*transition:\s*filter 180ms ease;/);
-  assert.doesNotMatch(componentSource, /\.editor-canvas__node \{[\s\S]*transform 180ms ease/);
+  const nodeCssBlock = componentSource.match(/\.editor-canvas__node \{[^}]*\}/)?.[0] ?? "";
+  assert.match(nodeCssBlock, /transition:\s*filter 180ms ease;/);
+  assert.doesNotMatch(nodeCssBlock, /transform 180ms ease/);
 });
 
 test("EditorCanvas raises hovered and selected nodes above sibling cards", () => {
-  assert.match(componentSource, /:class="\[resolveRunNodeClassList\(nodeId\), \{ 'editor-canvas__node--selected': selection\.selectedNodeId\.value === nodeId \}\]"/);
+  assert.match(componentSource, /:class="\{ 'editor-canvas__node--selected': selection\.selectedNodeId\.value === nodeId \}"/);
+  assert.match(componentSource, /<NodeCard[\s\S]*:class="resolveRunNodeClassList\(nodeId\)"/);
   assert.match(componentSource, /\.editor-canvas__node:hover,\n\.editor-canvas__node:focus-within,\n\.editor-canvas__node--selected \{[\s\S]*z-index:\s*8;/);
 });
 
@@ -37,18 +39,40 @@ test("EditorCanvas renders anchors in a dedicated overlay layer above nodes", ()
   assert.match(componentSource, /<svg class="editor-canvas__anchors"[\s\S]*<circle[\s\S]*v-for="anchor in pointAnchors"/);
 });
 
+test("EditorCanvas restores legacy runtime feedback styling on node cards and active edges", () => {
+  assert.match(componentSource, /@keyframes editor-canvas-node-execution-glow-pulse/);
+  assert.match(componentSource, /\.editor-canvas__node-halo--running \{[\s\S]*rgba\(52,\s*211,\s*153,\s*0\.52\)/);
+  assert.match(componentSource, /\.editor-canvas__node-halo--running-current \{[\s\S]*rgba\(110,\s*231,\s*183,\s*0\.72\)/);
+  assert.match(componentSource, /\.editor-canvas__node--running \{[\s\S]*0 0 0 1\.5px rgba\(16,\s*185,\s*129,\s*0\.62\)/);
+  assert.match(componentSource, /\.editor-canvas__node--running-current \{[\s\S]*0 0 0 1\.5px rgba\(16,\s*185,\s*129,\s*0\.86\)/);
+  assert.match(componentSource, /\.editor-canvas__node--success \{[\s\S]*0 0 0 1\.5px rgba\(180,\s*83,\s*9,\s*0\.34\)/);
+  assert.match(componentSource, /\.editor-canvas__node--failed \{[\s\S]*0 0 0 1\.5px rgba\(239,\s*68,\s*68,\s*0\.56\)/);
+  assert.match(componentSource, /\.editor-canvas__edge--active-run \{[\s\S]*stroke-width:\s*3px;/);
+  assert.match(componentSource, /\.editor-canvas__edge--active-run \{[\s\S]*opacity:\s*1;/);
+  assert.doesNotMatch(componentSource, /\.editor-canvas__edge--active-run \{[^}]*stroke:/);
+  assert.doesNotMatch(componentSource, /\.editor-canvas__edge--active-run \{[^}]*filter:/);
+});
+
 test("EditorCanvas renders condition route outputs as right-side floating branch handles", () => {
   assert.match(componentSource, /const routeHandles = computed\(\(\) => projectedAnchors\.value\.filter\(\(anchor\) => anchor\.kind === "route-out"\)\);/);
   assert.match(componentSource, /<div class="editor-canvas__route-handles" aria-hidden="true">/);
   assert.match(componentSource, /v-for="anchor in routeHandles"/);
-  assert.match(componentSource, /class="editor-canvas__route-handle"/);
+  assert.match(componentSource, /class="editor-canvas__flow-hotspot editor-canvas__flow-hotspot--outbound editor-canvas__route-handle"/);
+  assert.match(componentSource, /'editor-canvas__flow-hotspot--visible': isFlowHotspotVisible\(anchor\)/);
+  assert.match(componentSource, /:style="\[routeHandleStyle\(anchor\), flowHotspotConnectStyle\(anchor\)\]"/);
   assert.match(componentSource, /class="editor-canvas__route-handle-label"/);
-  assert.match(componentSource, /class="editor-canvas__route-handle-button"/);
-  assert.match(componentSource, /formatRouteHandleLabel\(anchor\.branch\)/);
+  assert.match(componentSource, /\{\{ anchor\.branch \}\}/);
+  assert.doesNotMatch(componentSource, /class="editor-canvas__route-handle-button"/);
+  assert.doesNotMatch(componentSource, /formatRouteHandleLabel\(anchor\.branch\)/);
   assert.match(componentSource, /@pointerdown\.prevent\.stop="handleAnchorPointerDown\(anchor\)"/);
+  assert.match(componentSource, /@pointerenter="setHoveredFlowHandleNode\(anchor\.nodeId\)"/);
+  assert.match(componentSource, /@pointerleave="clearHoveredFlowHandleNode\(anchor\.nodeId\)"/);
   assert.match(componentSource, /\.editor-canvas__route-handles \{[\s\S]*z-index:\s*12;/);
-  assert.match(componentSource, /\.editor-canvas__route-handle-button \{[\s\S]*border-radius:\s*999px;/);
-  assert.match(componentSource, /\.editor-canvas__route-handle-button \{[\s\S]*font-size:\s*24px;/);
+  assert.match(componentSource, /import \{ FLOW_OUT_HOTSPOT_GEOMETRY \} from "@\/editor\/flowHandleGeometry";/);
+  assert.match(componentSource, /function resolveFlowOutHotspotStyle\(anchor: ProjectedCanvasAnchor\)/);
+  assert.match(componentSource, /\.editor-canvas__flow-hotspot--visible::before \{[\s\S]*var\(--editor-flow-handle-fill,/);
+  assert.match(componentSource, /\.editor-canvas__route-handle-label \{[\s\S]*opacity:\s*0;/);
+  assert.match(componentSource, /\.editor-canvas__flow-hotspot--visible \.editor-canvas__route-handle-label \{[\s\S]*opacity:\s*1;/);
   assert.match(componentSource, /\.editor-canvas__route-handle--success/);
   assert.match(componentSource, /\.editor-canvas__route-handle--danger/);
   assert.match(componentSource, /\.editor-canvas__route-handle--warning/);
@@ -75,18 +99,23 @@ test("EditorCanvas renders hover-only flow hotspots and distinguishes flowing fl
   assert.match(componentSource, /const hoveredNodeId = ref<string \| null>\(null\);/);
   assert.match(componentSource, /'editor-canvas__flow-hotspot--outbound': anchor\.kind === 'flow-out'/);
   assert.match(componentSource, /'editor-canvas__flow-hotspot--visible': isFlowHotspotVisible\(anchor\)/);
+  assert.match(componentSource, /anchor\.kind === "flow-out" \|\| anchor\.kind === "route-out"/);
   assert.match(componentSource, /\.editor-canvas__flow-hotspot--outbound::after \{[\s\S]*content:\s*"\+";/);
   assert.match(componentSource, /\.editor-canvas__flow-hotspot--visible::before \{[\s\S]*opacity:\s*1;/);
   assert.match(componentSource, /'editor-canvas__edge--flow': connectionPreview\.kind === 'flow'/);
   assert.match(componentSource, /'editor-canvas__edge--flow': edge\.kind === 'flow'/);
   assert.match(componentSource, /:style="connectionPreviewStyle"/);
-  assert.match(componentSource, /:marker-end="connectionPreview\.kind === 'route' \? 'url\(#editor-canvas-arrow-preview\)' : undefined"/);
+  assert.doesNotMatch(componentSource, /connectionPreview\.kind === 'route' \? 'url\(#editor-canvas-arrow-preview\)'/);
+  assert.doesNotMatch(componentSource, /edge\.kind === 'route'[\s\S]*url\(#editor-canvas-arrow-route\)/);
   assert.doesNotMatch(componentSource, /editor-canvas-arrow-flow/);
   assert.match(componentSource, /const activeConnectionAccentColor = computed\(\(\) =>/);
   assert.match(componentSource, /function withAlpha\(hexColor: string, alpha: number\)/);
   assert.match(componentSource, /\.editor-canvas__edge--data \{[\s\S]*animation:\s*editor-canvas-ant-line 1\.2s linear infinite;/);
   assert.match(componentSource, /\.editor-canvas__edge--flow \{[\s\S]*animation:\s*editor-canvas-flow-line 1\.8s linear infinite;/);
+  assert.match(componentSource, /\.editor-canvas__edge--route \{[\s\S]*stroke-dasharray:\s*18 22;/);
+  assert.match(componentSource, /\.editor-canvas__edge--route \{[\s\S]*animation:\s*editor-canvas-flow-line 1\.8s linear infinite;/);
   assert.match(componentSource, /\.editor-canvas__edge--preview \{[\s\S]*stroke:\s*var\(--editor-connection-preview-stroke,/);
+  assert.match(componentSource, /\.editor-canvas__edge--preview\.editor-canvas__edge--flow,\n\.editor-canvas__edge--preview\.editor-canvas__edge--route \{[\s\S]*stroke-dasharray:\s*16 18;/);
   assert.match(componentSource, /\.editor-canvas__flow-hotspot--connect-source::before \{[\s\S]*background:\s*var\(--editor-connection-source-fill,/);
   assert.match(componentSource, /\.editor-canvas__flow-hotspot--connect-target::before \{[\s\S]*background:\s*var\(--editor-connection-target-fill,/);
   assert.match(componentSource, /\.editor-canvas__anchor--connect-source \{[\s\S]*--editor-anchor-fill:\s*var\(--editor-connection-source-anchor,/);
@@ -110,14 +139,15 @@ test("EditorCanvas shows a clicked-position delete confirm for flow edges before
   assert.match(componentSource, /function clearFlowEdgeDeleteConfirmState\(\)/);
   assert.match(componentSource, /function startFlowEdgeDeleteConfirm\(edge: ProjectedCanvasEdge, event: PointerEvent\)/);
   assert.match(componentSource, /function confirmFlowEdgeDelete\(\)/);
-  assert.match(componentSource, /<path[\s\S]*v-for="edge in projectedEdges\.filter\(\(edge\) => edge\.kind === 'flow'\)"[\s\S]*class="editor-canvas__edge-delete-highlight"/);
+  assert.match(componentSource, /<path[\s\S]*v-for="edge in projectedEdges\.filter\(\(edge\) => edge\.kind === 'flow' \|\| edge\.kind === 'route'\)"[\s\S]*class="editor-canvas__edge-delete-highlight"/);
   assert.match(componentSource, /'editor-canvas__edge-delete-highlight--active': isFlowEdgeDeleteConfirmOpen\(edge\.id\)/);
   assert.match(componentSource, /<div[\s\S]*v-if="activeFlowEdgeDeleteConfirm"[\s\S]*class="editor-canvas__edge-delete-confirm"/);
   assert.match(componentSource, /<div class="editor-canvas__confirm-hint editor-canvas__confirm-hint--remove">Delete edge\?<\/div>/);
   assert.match(componentSource, /class="editor-canvas__edge-delete-button"/);
   assert.match(componentSource, /<ElIcon><Check \/><\/ElIcon>/);
-  assert.match(componentSource, /if \(edge\.kind === "flow"\) \{[\s\S]*startFlowEdgeDeleteConfirm\(edge, event\);[\s\S]*return;/);
+  assert.match(componentSource, /if \(edge\.kind === "flow" \|\| edge\.kind === "route"\) \{[\s\S]*startFlowEdgeDeleteConfirm\(edge, event\);[\s\S]*return;/);
   assert.match(componentSource, /emit\("remove-flow", \{[\s\S]*sourceNodeId: activeFlowEdgeDeleteConfirm\.value\.source,[\s\S]*targetNodeId: activeFlowEdgeDeleteConfirm\.value\.target,[\s\S]*\}\);/);
+  assert.match(componentSource, /emit\("remove-route", \{[\s\S]*branchKey: activeFlowEdgeDeleteConfirm\.value\.branch/);
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight \{[\s\S]*stroke:\s*rgba\(201,\s*107,\s*31,\s*0\.16\);/);
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight \{[\s\S]*stroke-width:\s*7px;/);
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight--active \{[\s\S]*stroke:\s*rgba\(220,\s*38,\s*38,\s*0\.34\);/);

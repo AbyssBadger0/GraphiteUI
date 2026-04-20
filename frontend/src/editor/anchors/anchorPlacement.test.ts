@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildAnchorModel } from "./anchorModel.ts";
-import { placeAnchors } from "./anchorPlacement.ts";
+import { placeAnchors, resolveRouteOutputRowGap } from "./anchorPlacement.ts";
 import type { GraphNode } from "../../types/node-system.ts";
 
 const agentNode: GraphNode = {
@@ -118,12 +118,19 @@ test("placeAnchors gives condition nodes a left flow entry and right-side route 
       id: anchor.id,
       branch: anchor.branch,
       x: anchor.x,
+      y: anchor.y,
       side: anchor.side,
     })),
     [
-      { id: "branch:true", branch: "true", x: 1234, side: "right" },
-      { id: "branch:false", branch: "false", x: 1234, side: "right" },
-      { id: "branch:exhausted", branch: "exhausted", x: 1234, side: "right" },
+      { id: "branch:true", branch: "true", x: 1234, y: 365, side: "right" },
+      { id: "branch:false", branch: "false", x: 1234, y: 459, side: "right" },
+      { id: "branch:exhausted", branch: "exhausted", x: 1234, y: 553, side: "right" },
     ],
   );
+});
+
+test("resolveRouteOutputRowGap derives wider branch spacing from row count instead of fixed offsets", () => {
+  assert.equal(resolveRouteOutputRowGap(0, 52), 52);
+  assert.equal(resolveRouteOutputRowGap(1, 52), 52);
+  assert.equal(resolveRouteOutputRowGap(3, 52), 94);
 });

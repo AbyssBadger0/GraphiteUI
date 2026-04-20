@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { buildConnectorCurvePath } from "./connectionCurvePath.ts";
 import { projectCanvasAnchors, projectCanvasEdges } from "./edgeProjection.ts";
 import type { GraphPayload } from "../../types/node-system.ts";
 
@@ -195,7 +196,7 @@ test("projectCanvasEdges exposes branch metadata for condition routes", () => {
         writes: [],
         config: {
           branches: ["continue", "retry"],
-          loopLimit: -1,
+          loopLimit: 5,
           branchMapping: {
             true: "continue",
             false: "retry",
@@ -239,4 +240,15 @@ test("projectCanvasEdges exposes branch metadata for condition routes", () => {
 
   assert.ok(routeEdge);
   assert.equal(routeEdge?.branch, "retry");
+  assert.equal(
+    routeEdge?.path,
+    buildConnectorCurvePath({
+      sourceX: 554,
+      sourceY: 239,
+      targetX: 486,
+      targetY: 154,
+      sourceSide: "right",
+      targetSide: "left",
+    }),
+  );
 });

@@ -2,7 +2,6 @@ import type { GraphDocument, GraphNode, GraphPayload } from "../../types/node-sy
 import { buildAnchorModel } from "../anchors/anchorModel.ts";
 import { placeAnchors, type NodeFrame } from "../anchors/anchorPlacement.ts";
 import { buildConnectorCurvePath } from "./connectionCurvePath.ts";
-import { buildRouteEdgePath, resolveRouteEdgeSourceOffset } from "./routeEdgePath.ts";
 
 export type ProjectedCanvasEdge = {
   id: string;
@@ -70,13 +69,7 @@ export function projectCanvasEdges(document: GraphPayload | GraphDocument): Proj
           source: edge.source,
           target: targetNodeId,
           branch,
-          path: buildRouteEdgePath({
-            sourceX: routeSource.x,
-            sourceY: routeSource.y,
-            targetX: target.flowIn.x,
-            targetY: target.flowIn.y,
-            sourceOffset: resolveRouteEdgeSourceOffset(source.routeOutputs.indexOf(routeSource)),
-          }),
+          path: buildFlowPath(routeSource.x, routeSource.y, target.flowIn.x, target.flowIn.y),
         };
       })
       .filter(Boolean) as ProjectedCanvasEdge[];

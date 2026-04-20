@@ -1,7 +1,6 @@
 import type { GraphDocument, GraphPayload } from "../../types/node-system.ts";
 import { type ProjectedCanvasAnchor, type ProjectedCanvasEdge, projectCanvasAnchors, projectCanvasEdges } from "./edgeProjection.ts";
 import { buildConnectorCurvePath } from "./connectionCurvePath.ts";
-import { buildRouteEdgePath, resolveRouteEdgeSourceOffset } from "./routeEdgePath.ts";
 
 export type MeasuredAnchorOffset = {
   offsetX: number;
@@ -55,13 +54,7 @@ function resolveCanvasEdges(
 
       return {
         ...edge,
-        path: buildRouteEdgePath({
-          sourceX: sourceAnchor.x,
-          sourceY: sourceAnchor.y,
-          targetX: targetAnchor.x,
-          targetY: targetAnchor.y,
-          sourceOffset: resolveRouteSourceOffset(document, edge.source, edge.branch ?? ""),
-        }),
+        path: buildFlowPath(sourceAnchor.x, sourceAnchor.y, targetAnchor.x, targetAnchor.y),
       };
     }
 
@@ -104,14 +97,4 @@ function buildFlowPath(startX: number, startY: number, endX: number, endY: numbe
     sourceSide: "right",
     targetSide: "left",
   });
-}
-
-function resolveRouteSourceOffset(document: GraphPayload | GraphDocument, nodeId: string, branchKey: string) {
-  const node = document.nodes[nodeId];
-  if (!node || node.kind !== "condition") {
-    return 0;
-  }
-
-  const branchIndex = node.config.branches.indexOf(branchKey);
-  return resolveRouteEdgeSourceOffset(branchIndex >= 0 ? branchIndex : 0);
 }

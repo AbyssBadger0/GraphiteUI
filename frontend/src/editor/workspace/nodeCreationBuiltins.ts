@@ -104,7 +104,7 @@ const BUILTIN_EMPTY_CONDITION_PRESET: PresetDocument = {
       writes: [],
       config: {
         branches: ["true", "false", "exhausted"],
-        loopLimit: -1,
+        loopLimit: 5,
         branchMapping: {
           true: "true",
           false: "false",

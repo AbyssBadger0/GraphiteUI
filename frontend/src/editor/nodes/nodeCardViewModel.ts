@@ -1,5 +1,6 @@
 import type { UploadedAssetType } from "./uploadedAssetModel.ts";
 import { isUploadedAssetStateType } from "./uploadedAssetModel.ts";
+import { normalizeConditionLoopLimit } from "./conditionLoopLimit.ts";
 import type { GraphNode, StateDefinition } from "../../types/node-system.ts";
 
 export type NodePortViewModel = {
@@ -174,7 +175,7 @@ function buildBody(
       sourceLabel: getStateLabel(node.config.rule.source, stateSchema),
       operatorLabel: node.config.rule.operator,
       valueLabel: node.config.rule.value === null ? "null" : String(node.config.rule.value),
-      maxLoopsLabel: node.config.loopLimit === -1 ? "Unlimited" : String(node.config.loopLimit),
+      maxLoopsLabel: String(normalizeConditionLoopLimit(node.config.loopLimit)),
       primaryInput: inputs[0] ?? null,
       routeOutputs: mapConditionRouteOutputs(node, options.conditionRouteTargets ?? {}),
     };

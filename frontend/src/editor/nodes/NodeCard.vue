@@ -310,19 +310,19 @@
       <div v-if="showKnowledgeBaseInput" class="node-card__surface node-card__input-picker">
         <label class="node-card__control-row">
           <span class="node-card__control-label">Knowledge Base</span>
-          <select
-            class="node-card__control-select node-card__input-select"
-            :value="inputKnowledgeBaseValue"
+          <ElSelect
+            class="node-card__control-select node-card__input-select graphite-select"
+            :model-value="inputKnowledgeBaseValue || undefined"
+            :placeholder="inputKnowledgeBaseOptions.length === 0 ? 'No knowledge bases found' : 'Select knowledge base'"
             :disabled="inputKnowledgeBaseOptions.length === 0"
+            :teleported="false"
+            popper-class="graphite-select-popper"
             @pointerdown.stop
             @click.stop
-            @change="handleInputKnowledgeBaseChange"
+            @update:model-value="handleInputKnowledgeBaseSelect"
           >
-            <option value="">{{ inputKnowledgeBaseOptions.length === 0 ? "No knowledge bases found" : "Select knowledge base" }}</option>
-            <option v-for="option in inputKnowledgeBaseOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
+            <ElOption v-for="option in inputKnowledgeBaseOptions" :key="option.value" :label="option.label" :value="option.value" />
+          </ElSelect>
         </label>
         <div class="node-card__input-meta">
           {{ selectedKnowledgeBaseDescription }}
@@ -570,11 +570,11 @@
         <div class="node-card__agent-model-select-shell" @pointerdown.stop @click.stop>
           <ElSelect
             ref="agentModelSelectRef"
-            class="node-card__agent-model-select"
+            class="node-card__agent-model-select graphite-select"
             :model-value="agentResolvedModelValue || undefined"
             :placeholder="agentModelOptions.length === 0 ? 'No configured models' : 'Select model'"
             :disabled="agentModelOptions.length === 0"
-            popper-class="node-card__agent-model-popper"
+            popper-class="graphite-select-popper node-card__agent-model-popper"
             @update:model-value="handleAgentModelValueChange"
           >
             <ElOption
@@ -662,15 +662,17 @@
           </label>
           <label class="node-card__control-row">
             <span class="node-card__control-label">Type</span>
-            <select
-              class="node-card__control-select"
-              :value="portStateDraft.definition.type"
+            <ElSelect
+              class="node-card__control-select graphite-select"
+              :model-value="portStateDraft.definition.type"
+              :teleported="false"
+              popper-class="graphite-select-popper"
               @pointerdown.stop
               @click.stop
-              @change="handlePortDraftTypeChange"
+              @update:model-value="handlePortDraftTypeSelect"
             >
-              <option v-for="typeOption in stateTypeOptions" :key="typeOption" :value="typeOption">{{ typeOption }}</option>
-            </select>
+              <ElOption v-for="typeOption in stateTypeOptions" :key="typeOption" :label="typeOption" :value="typeOption" />
+            </ElSelect>
           </label>
           <label class="node-card__control-row">
             <span class="node-card__control-label">Description</span>
@@ -977,21 +979,21 @@
             </div>
             <div v-else class="node-card__condition-source-empty">Connect source state</div>
           </div>
-          <div class="node-card__condition-grid">
+          <div class="node-card__condition-controls-row">
             <label class="node-card__control-row">
               <span class="node-card__control-label">Operator</span>
-              <select
-                class="node-card__control-select"
-                :value="node.kind === 'condition' ? node.config.rule.operator : ''"
+              <ElSelect
+                class="node-card__control-select node-card__condition-operator-select graphite-select"
+                :model-value="node.kind === 'condition' ? node.config.rule.operator : ''"
                 :title="view.body.operatorLabel"
+                :teleported="false"
+                popper-class="graphite-select-popper"
                 @pointerdown.stop
                 @click.stop
-                @change="handleConditionRuleOperatorChange"
+                @update:model-value="handleConditionRuleOperatorSelect"
               >
-                <option v-for="option in conditionRuleOperatorOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
+                <ElOption v-for="option in conditionRuleOperatorOptions" :key="option.value" :label="option.label" :value="option.value" />
+              </ElSelect>
             </label>
             <label class="node-card__control-row">
               <span class="node-card__control-label">Value</span>
@@ -1010,10 +1012,12 @@
               <span class="node-card__control-label">Max loops</span>
               <input
                 class="node-card__loop-input node-card__loop-input--condition"
-                type="text"
+                type="number"
                 inputmode="numeric"
+                :min="CONDITION_LOOP_LIMIT_MIN"
+                :max="CONDITION_LOOP_LIMIT_MAX"
                 :value="conditionLoopLimitDraft"
-                :placeholder="view.body.maxLoopsLabel"
+                :placeholder="String(CONDITION_LOOP_LIMIT_DEFAULT)"
                 @pointerdown.stop
                 @click.stop
                 @input="handleConditionLoopLimitInput"
@@ -1021,17 +1025,6 @@
                 @keydown.enter.prevent="handleConditionLoopLimitEnter"
               />
             </label>
-          </div>
-        </div>
-        <div class="node-card__condition-branch-rail">
-          <div
-            v-for="branch in view.body.routeOutputs"
-            :key="branch.branch"
-            class="node-card__condition-branch-chip"
-            :class="`node-card__condition-branch-chip--${branch.tone}`"
-          >
-            <span class="node-card__condition-branch-label">{{ formatConditionBranchLabel(branch.branch) }}</span>
-            <span v-if="branch.routeTargetLabel" class="node-card__condition-branch-target">{{ branch.routeTargetLabel }}</span>
           </div>
         </div>
       </div>
@@ -1050,7 +1043,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { ElButton, ElIcon, ElInput, ElPopover } from "element-plus";
+import { ElButton, ElIcon, ElInput, ElOption, ElPopover, ElSelect } from "element-plus";
 import { Check, Collection, CollectionTag, Delete, Document, FolderOpened, Operation, Opportunity } from "@element-plus/icons-vue";
 
 import StateDefaultValueEditor from "@/editor/workspace/StateDefaultValueEditor.vue";
@@ -1060,7 +1053,13 @@ import type { AgentNode, ConditionNode, GraphNode, InputNode, OutputNode, StateD
 import type { SkillDefinition } from "@/types/skills";
 
 import { DEFAULT_AGENT_TEMPERATURE, buildAgentModelSelectOptions, normalizeAgentTemperature, resolveAgentModelSelection } from "./agentConfigModel";
-import { parseConditionLoopLimitDraft } from "./conditionLoopLimit";
+import {
+  CONDITION_LOOP_LIMIT_DEFAULT,
+  CONDITION_LOOP_LIMIT_MAX,
+  CONDITION_LOOP_LIMIT_MIN,
+  normalizeConditionLoopLimit,
+  parseConditionLoopLimitDraft,
+} from "./conditionLoopLimit";
 import { CONDITION_RULE_OPERATOR_OPTIONS } from "./conditionRuleEditorModel";
 import { isSwitchableInputBoundaryType, resolveNextInputValueForBoundaryType, resolveStateTypeForInputBoundary } from "./inputValueTypeModel";
 import { buildNodeCardViewModel } from "./nodeCardViewModel";
@@ -1409,7 +1408,7 @@ const hasFloatingPanelOpen = computed(
 watch(
   () => (props.node.kind === "condition" ? props.node.config.loopLimit : null),
   (loopLimit) => {
-    conditionLoopLimitDraft.value = loopLimit === null ? "" : String(loopLimit);
+    conditionLoopLimitDraft.value = loopLimit === null ? "" : String(normalizeConditionLoopLimit(loopLimit));
   },
   { immediate: true },
 );
@@ -1661,17 +1660,17 @@ function handlePortDraftKeyInput(event: Event) {
   };
 }
 
-function handlePortDraftTypeChange(event: Event) {
-  const target = event.target;
-  if (!(target instanceof HTMLSelectElement) || !portStateDraft.value) {
+function handlePortDraftTypeSelect(value: string | number | boolean | undefined) {
+  if (!portStateDraft.value) {
     return;
   }
+  const nextType = String(value ?? "text");
   portStateDraft.value = {
     ...portStateDraft.value,
     definition: {
       ...portStateDraft.value.definition,
-      type: target.value,
-      value: defaultValueForStateType(target.value as StateFieldType),
+      type: nextType,
+      value: defaultValueForStateType(nextType as StateFieldType),
     },
   };
 }
@@ -2441,12 +2440,8 @@ function handleInputValueInput(event: Event) {
   emitInputConfigPatch({ value: target.value });
 }
 
-function handleInputKnowledgeBaseChange(event: Event) {
-  const target = event.target;
-  if (!(target instanceof HTMLSelectElement)) {
-    return;
-  }
-  emitInputConfigPatch({ value: target.value });
+function handleInputKnowledgeBaseSelect(value: string | number | boolean | undefined) {
+  emitInputConfigPatch({ value: typeof value === "string" ? value : "" });
 }
 
 function handleInputBoundarySelection(nextType: string | number | boolean) {
@@ -2536,7 +2531,7 @@ function commitConditionLoopLimit() {
 
   const nextLoopLimit = parseConditionLoopLimitDraft(conditionLoopLimitDraft.value);
   if (nextLoopLimit === null) {
-    conditionLoopLimitDraft.value = String(props.node.config.loopLimit ?? -1);
+    conditionLoopLimitDraft.value = String(normalizeConditionLoopLimit(props.node.config.loopLimit));
     return;
   }
   if (nextLoopLimit === props.node.config.loopLimit) {
@@ -2565,12 +2560,8 @@ function updateConditionRule(patch: Partial<ConditionNode["config"]["rule"]>) {
   });
 }
 
-function handleConditionRuleOperatorChange(event: Event) {
-  const target = event.target;
-  if (!(target instanceof HTMLSelectElement)) {
-    return;
-  }
-  updateConditionRule({ operator: target.value });
+function handleConditionRuleOperatorSelect(value: string | number | boolean | undefined) {
+  updateConditionRule({ operator: String(value ?? "exists") });
 }
 
 function handleConditionRuleValueInput(event: Event) {
@@ -2581,19 +2572,6 @@ function handleConditionRuleValueInput(event: Event) {
   updateConditionRule({ value: target.value });
 }
 
-function formatConditionBranchLabel(branch: string) {
-  const normalizedBranch = branch.trim().toLowerCase();
-  if (normalizedBranch === "true") {
-    return "True";
-  }
-  if (normalizedBranch === "false") {
-    return "False";
-  }
-  if (normalizedBranch === "exhausted") {
-    return "Exhausted";
-  }
-  return branch;
-}
 </script>
 
 <style scoped>
@@ -4184,14 +4162,7 @@ function formatConditionBranchLabel(branch: string) {
 }
 
 .node-card__control-select {
-  min-height: 36px;
   width: 100%;
-  border: 1px solid rgba(154, 52, 18, 0.16);
-  border-radius: 14px;
-  padding: 0 12px;
-  background: rgba(255, 255, 255, 0.86);
-  color: #1f2937;
-  font-size: 0.82rem;
 }
 
 .node-card__control-textarea {
@@ -4219,9 +4190,9 @@ function formatConditionBranchLabel(branch: string) {
 
 .node-card__condition-panel {
   display: grid;
-  grid-template-columns: minmax(208px, 1.45fr) minmax(0, 0.82fr) minmax(0, 1fr) minmax(112px, 0.72fr);
-  gap: 12px;
-  align-items: end;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
 }
 
 .node-card__condition-source-row {
@@ -4231,6 +4202,7 @@ function formatConditionBranchLabel(branch: string) {
 }
 
 .node-card__port-pill-row--condition-source {
+  width: 100%;
   min-width: 0;
 }
 
@@ -4247,8 +4219,16 @@ function formatConditionBranchLabel(branch: string) {
   font-size: 0.84rem;
 }
 
-.node-card__condition-grid {
-  display: contents;
+.node-card__condition-controls-row {
+  --node-card-condition-loop-column: clamp(6.5rem, 22%, 8rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--node-card-condition-loop-column);
+  gap: 12px;
+  align-items: end;
+}
+
+.node-card__condition-controls-row > .node-card__control-row {
+  min-width: 0;
 }
 
 .node-card__condition-editor-grid {
@@ -4284,56 +4264,6 @@ function formatConditionBranchLabel(branch: string) {
 
 .node-card__loop-input--condition {
   width: 100%;
-}
-
-.node-card__condition-branch-rail {
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.node-card__condition-branch-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  border-radius: 999px;
-  padding: 0 12px;
-  border: 1px solid transparent;
-  background: rgba(255, 250, 241, 0.86);
-  color: rgba(60, 41, 20, 0.9);
-}
-
-.node-card__condition-branch-chip--success {
-  border-color: rgba(34, 197, 94, 0.24);
-  background: rgba(240, 253, 244, 0.92);
-  color: rgba(22, 101, 52, 0.92);
-}
-
-.node-card__condition-branch-chip--danger {
-  border-color: rgba(239, 68, 68, 0.22);
-  background: rgba(254, 242, 242, 0.92);
-  color: rgba(153, 27, 27, 0.92);
-}
-
-.node-card__condition-branch-chip--warning {
-  border-color: rgba(234, 179, 8, 0.24);
-  background: rgba(255, 251, 235, 0.92);
-  color: rgba(161, 98, 7, 0.92);
-}
-
-.node-card__condition-branch-label {
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.node-card__condition-branch-target {
-  font-size: 0.76rem;
-  font-weight: 600;
-  opacity: 0.72;
 }
 
 .node-card__condition-rule {

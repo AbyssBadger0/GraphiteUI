@@ -387,6 +387,7 @@ const nodeDrag = ref<{
   startClientY: number;
   originX: number;
   originY: number;
+  captureElement: HTMLElement | null;
   moved: boolean;
 } | null>(null);
 const suppressedNodeClickId = ref<string | null>(null);
@@ -427,6 +428,8 @@ const hoveredNodeId = ref<string | null>(null);
 const hoveredFlowHandleNodeId = ref<string | null>(null);
 const pendingAnchorMeasurementNodeIds = new Set<string>();
 let scheduledAnchorMeasurementFrame: number | null = null;
+let scheduledDragFrame: number | null = null;
+let pendingDragFrameCallback: (() => void) | null = null;
 let canvasResizeObserver: ResizeObserver | null = null;
 
 const nodeEntries = computed(() => Object.entries(props.document.nodes));
@@ -678,6 +681,7 @@ onBeforeUnmount(() => {
     window.cancelAnimationFrame(scheduledAnchorMeasurementFrame);
     scheduledAnchorMeasurementFrame = null;
   }
+  cancelScheduledDragFrame();
 
   canvasResizeObserver?.disconnect();
   canvasResizeObserver = null;
@@ -1322,6 +1326,41 @@ function scheduleAnchorMeasurement(nodeId?: string) {
   });
 }
 
+function scheduleDragFrame(callback: () => void) {
+  pendingDragFrameCallback = callback;
+
+  if (scheduledDragFrame !== null) {
+    return;
+  }
+
+  scheduledDragFrame = window.requestAnimationFrame(() => {
+    scheduledDragFrame = null;
+    const pendingCallback = pendingDragFrameCallback;
+    pendingDragFrameCallback = null;
+    pendingCallback?.();
+  });
+}
+
+function flushScheduledDragFrame() {
+  if (scheduledDragFrame === null) {
+    return;
+  }
+
+  window.cancelAnimationFrame(scheduledDragFrame);
+  scheduledDragFrame = null;
+  const pendingCallback = pendingDragFrameCallback;
+  pendingDragFrameCallback = null;
+  pendingCallback?.();
+}
+
+function cancelScheduledDragFrame() {
+  if (scheduledDragFrame !== null) {
+    window.cancelAnimationFrame(scheduledDragFrame);
+    scheduledDragFrame = null;
+  }
+  pendingDragFrameCallback = null;
+}
+
 function measureAnchorOffsets(nodeIds?: string[]) {
   const nextAnchorOffsets = { ...measuredAnchorOffsets.value };
   const nextNodeSizes = { ...measuredNodeSizes.value };
@@ -1429,6 +1468,7 @@ function handleCanvasPointerDown(event: PointerEvent) {
   event.preventDefault();
   window.getSelection()?.removeAllRanges();
   canvasRef.value?.setPointerCapture(event.pointerId);
+  cancelScheduledDragFrame();
   clearCanvasTransientState();
   pendingConnection.value = null;
   pendingConnectionPoint.value = null;
@@ -1439,10 +1479,13 @@ function handleCanvasPointerDown(event: PointerEvent) {
 
 function handleCanvasPointerMove(event: PointerEvent) {
   if (activeConnection.value) {
-    autoSnappedTargetAnchor.value = resolveAutoSnappedTargetAnchor(event);
-    pendingConnectionPoint.value = autoSnappedTargetAnchor.value
-      ? { x: autoSnappedTargetAnchor.value.x, y: autoSnappedTargetAnchor.value.y }
-      : resolveCanvasPoint(event);
+    scheduleDragFrame(() => {
+      autoSnappedTargetAnchor.value = resolveAutoSnappedTargetAnchor(event);
+      pendingConnectionPoint.value = autoSnappedTargetAnchor.value
+        ? { x: autoSnappedTargetAnchor.value.x, y: autoSnappedTargetAnchor.value.y }
+        : resolveCanvasPoint(event);
+    });
+    return;
   }
   if (nodeDrag.value && nodeDrag.value.pointerId === event.pointerId) {
     const pointerDeltaX = event.clientX - nodeDrag.value.startClientX;
@@ -1455,21 +1498,33 @@ function handleCanvasPointerMove(event: PointerEvent) {
     }
     const deltaX = pointerDeltaX / viewport.viewport.scale;
     const deltaY = pointerDeltaY / viewport.viewport.scale;
-    emit("update:node-position", {
-      nodeId: nodeDrag.value.nodeId,
-      position: {
-        x: Math.round(nodeDrag.value.originX + deltaX),
-        y: Math.round(nodeDrag.value.originY + deltaY),
-      },
+    const nextPosition = {
+      x: Math.round(nodeDrag.value.originX + deltaX),
+      y: Math.round(nodeDrag.value.originY + deltaY),
+    };
+    const nodeId = nodeDrag.value.nodeId;
+    scheduleDragFrame(() => {
+      emit("update:node-position", {
+        nodeId,
+        position: nextPosition,
+      });
     });
     return;
   }
-  viewport.movePan(event);
+  if (viewport.isPanning.value) {
+    scheduleDragFrame(() => {
+      viewport.movePan(event);
+    });
+  }
 }
 
 function handleCanvasPointerUp(event: PointerEvent) {
+  flushScheduledDragFrame();
   if (canvasRef.value?.hasPointerCapture(event.pointerId)) {
     canvasRef.value.releasePointerCapture(event.pointerId);
+  }
+  if (nodeDrag.value?.captureElement?.hasPointerCapture(event.pointerId)) {
+    nodeDrag.value.captureElement.releasePointerCapture(event.pointerId);
   }
   if (activeConnection.value) {
     if (autoSnappedTargetAnchor.value) {
@@ -1620,6 +1675,7 @@ function handleNodePointerDown(nodeId: string, event: PointerEvent) {
   if (activeConnection.value) {
     const snappedAnchor = resolveEligibleTargetAnchorForNodeBody(nodeId);
     if (snappedAnchor) {
+      event.preventDefault();
       if (!preserveInlineEditorFocus) {
         canvasRef.value?.focus();
       }
@@ -1630,9 +1686,16 @@ function handleNodePointerDown(nodeId: string, event: PointerEvent) {
   if (!preserveInlineEditorFocus) {
     canvasRef.value?.focus();
   }
+  event.preventDefault();
+  let captureElement: HTMLElement | null = null;
+  if (event.currentTarget instanceof HTMLElement) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    captureElement = event.currentTarget;
+  }
   clearCanvasTransientState();
   pendingConnection.value = null;
   pendingConnectionPoint.value = null;
+  cancelScheduledDragFrame();
   selectedEdgeId.value = null;
   selection.selectNode(nodeId);
   nodeDrag.value = {
@@ -1642,6 +1705,7 @@ function handleNodePointerDown(nodeId: string, event: PointerEvent) {
     startClientY: event.clientY,
     originX: node.ui.position.x,
     originY: node.ui.position.y,
+    captureElement,
     moved: false,
   };
 }
@@ -1971,6 +2035,9 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
     linear-gradient(180deg, rgba(255, 250, 241, 0.98) 0%, rgba(248, 237, 219, 0.96) 100%);
   cursor: grab;
   outline: none;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-touch-callout: none;
 }
 
 .editor-canvas--connecting,
@@ -2347,6 +2414,7 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   transform: translate(-50%, -50%);
   pointer-events: auto;
   cursor: crosshair;
+  touch-action: none;
 }
 
 .editor-canvas__route-handle {
@@ -2537,6 +2605,7 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   stroke-width: 2;
   cursor: crosshair;
   pointer-events: auto;
+  touch-action: none;
   filter: drop-shadow(0 4px 8px rgba(120, 53, 15, 0.18));
   transition:
     transform 120ms ease,
@@ -2570,6 +2639,8 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   z-index: 1;
   isolation: isolate;
   transition: filter 180ms ease;
+  touch-action: none;
+  -webkit-touch-callout: none;
 }
 
 .editor-canvas__node:hover,

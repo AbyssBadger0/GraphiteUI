@@ -302,6 +302,30 @@ test("EditorCanvas keeps canvas panning alive outside the viewport and disables 
   assert.match(componentSource, /\.editor-canvas--panning,\n\.editor-canvas--panning \* \{[\s\S]*user-select:\s*none;/);
 });
 
+test("EditorCanvas opts mobile touch drags out of browser gestures", () => {
+  const canvasCssBlock = componentSource.match(/\.editor-canvas \{[^}]*\}/)?.[0] ?? "";
+  const nodeCssBlock = componentSource.match(/\.editor-canvas__node \{[^}]*\}/)?.[0] ?? "";
+  const flowHotspotCssBlock = componentSource.match(/\.editor-canvas__flow-hotspot \{[^}]*\}/)?.[0] ?? "";
+
+  assert.match(canvasCssBlock, /touch-action:\s*none;/);
+  assert.match(canvasCssBlock, /overscroll-behavior:\s*none;/);
+  assert.match(canvasCssBlock, /-webkit-touch-callout:\s*none;/);
+  assert.match(nodeCssBlock, /touch-action:\s*none;/);
+  assert.match(nodeCssBlock, /-webkit-touch-callout:\s*none;/);
+  assert.match(flowHotspotCssBlock, /touch-action:\s*none;/);
+});
+
+test("EditorCanvas captures node drags and batches drag writes with animation frames", () => {
+  assert.match(componentSource, /event\.preventDefault\(\);[\s\S]*event\.currentTarget\.setPointerCapture\(event\.pointerId\);[\s\S]*nodeDrag\.value = \{/);
+  assert.match(componentSource, /let scheduledDragFrame: number \| null = null;/);
+  assert.match(componentSource, /function scheduleDragFrame/);
+  assert.match(componentSource, /window\.requestAnimationFrame\(\(\) => \{/);
+  assert.match(componentSource, /scheduleDragFrame\(\(\) => \{[\s\S]*emit\("update:node-position"/);
+  assert.match(componentSource, /scheduleDragFrame\(\(\) => \{[\s\S]*viewport\.movePan\(event\);/);
+  assert.match(componentSource, /function cancelScheduledDragFrame\(\)/);
+  assert.match(componentSource, /window\.cancelAnimationFrame\(scheduledDragFrame\);/);
+});
+
 test("EditorCanvas suppresses the residual click after a node drag so inline editors do not open on release", () => {
   assert.match(componentSource, /@click\.capture="handleNodeClickCapture\(nodeId, \$event\)"/);
   assert.match(componentSource, /const suppressedNodeClickId = ref<string \| null>\(null\);/);

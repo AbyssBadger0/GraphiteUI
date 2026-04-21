@@ -20,6 +20,29 @@
     @dragover.prevent="handleCanvasDragOver"
     @drop.prevent="handleCanvasDrop"
   >
+    <div
+      class="editor-canvas__edge-view-toolbar"
+      role="toolbar"
+      aria-label="线条显示模式"
+      @pointerdown.stop
+      @pointerup.stop
+      @dblclick.stop
+      @click.stop
+      @wheel.stop
+    >
+      <button
+        v-for="option in EDGE_VISIBILITY_MODE_OPTIONS"
+        :key="option.mode"
+        type="button"
+        class="editor-canvas__edge-view-button"
+        :class="{ 'editor-canvas__edge-view-button--active': edgeVisibilityMode === option.mode }"
+        :title="option.title"
+        :aria-pressed="edgeVisibilityMode === option.mode"
+        @click.stop="setEdgeVisibilityMode(option.mode)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
     <div class="editor-canvas__viewport" :style="viewportStyle">
       <div v-if="nodeEntries.length === 0" class="editor-canvas__empty-state">
         <div class="editor-canvas__empty-eyebrow">Empty Canvas</div>
@@ -41,6 +64,7 @@
         <path
           v-for="edge in projectedEdges.filter((edge) => edge.kind === 'flow' || edge.kind === 'route')"
           :key="`${edge.id}:highlight`"
+          v-show="isProjectedEdgeVisible(edge)"
           :d="edge.path"
           class="editor-canvas__edge-delete-highlight"
           :style="edgeStyle(edge)"
@@ -49,6 +73,7 @@
         <path
           v-for="edge in projectedEdges.filter((edge) => edge.kind === 'data')"
           :key="`${edge.id}:data-highlight`"
+          v-show="isProjectedEdgeVisible(edge)"
           :d="edge.path"
           class="editor-canvas__edge-data-highlight"
           :style="edgeStyle(edge)"
@@ -57,6 +82,7 @@
         <path
           v-for="edge in projectedEdges"
           :key="edge.id"
+          v-show="isProjectedEdgeVisible(edge)"
           :d="edge.path"
           class="editor-canvas__edge"
           :style="edgeStyle(edge)"
@@ -71,6 +97,7 @@
         <path
           v-for="edge in projectedEdges"
           :key="`${edge.id}:hitarea`"
+          v-show="isProjectedEdgeVisible(edge)"
           :d="edge.path"
           class="editor-canvas__edge-hitarea"
           :class="{
@@ -292,6 +319,11 @@ import { resolveNodeRunPresentation } from "@/editor/canvas/runNodePresentation"
 import { resolveCanvasLayout, type MeasuredAnchorOffset } from "@/editor/canvas/resolvedCanvasLayout";
 import { resolveCanvasSurfaceStyle } from "@/editor/canvas/canvasSurfaceStyle";
 import {
+  EDGE_VISIBILITY_MODE_OPTIONS,
+  filterProjectedEdgesForVisibilityMode,
+  type EdgeVisibilityMode,
+} from "./edgeVisibilityModel";
+import {
   defaultValueForStateType,
   resolveStateColorOptions,
   STATE_FIELD_TYPE_OPTIONS,
@@ -396,6 +428,7 @@ const pendingConnection = ref<PendingGraphConnection | null>(null);
 const pendingConnectionPoint = ref<{ x: number; y: number } | null>(null);
 const autoSnappedTargetAnchor = ref<ProjectedCanvasAnchor | null>(null);
 const selectedEdgeId = ref<string | null>(null);
+const edgeVisibilityMode = ref<EdgeVisibilityMode>("smart");
 const activeFlowEdgeDeleteConfirm = ref<{
   id: string;
   kind: "flow" | "route";
@@ -466,6 +499,25 @@ const conditionRouteTargetsByNodeId = computed(() =>
 );
 const resolvedCanvasLayout = computed(() => resolveCanvasLayout(props.document, measuredAnchorOffsets.value));
 const projectedEdges = computed(() => resolvedCanvasLayout.value.edges);
+const edgeVisibilityRelatedNodeIds = computed(() => {
+  const nodeIds = new Set<string>();
+  if (selection.selectedNodeId.value) {
+    nodeIds.add(selection.selectedNodeId.value);
+  }
+  if (hoveredNodeId.value) {
+    nodeIds.add(hoveredNodeId.value);
+  }
+  return nodeIds;
+});
+const visibleProjectedEdgeIds = computed(
+  () =>
+    new Set(
+      filterProjectedEdgesForVisibilityMode(projectedEdges.value, {
+        mode: edgeVisibilityMode.value,
+        relatedNodeIds: edgeVisibilityRelatedNodeIds.value,
+      }).map((edge) => edge.id),
+    ),
+);
 const projectedAnchors = computed(() => resolvedCanvasLayout.value.anchors);
 const flowAnchors = computed(() =>
   projectedAnchors.value.filter((anchor) => anchor.kind === "flow-in" || anchor.kind === "flow-out"),
@@ -637,6 +689,22 @@ function isActiveDataEdge(edge: Pick<ProjectedCanvasEdge, "kind" | "source" | "t
 
 function isDataEdgeStateInteractionOpen(edge: Pick<ProjectedCanvasEdge, "kind" | "source" | "target" | "state">) {
   return isActiveDataEdge(edge, activeDataEdgeStateConfirm.value) || isActiveDataEdge(edge, activeDataEdgeStateEditor.value);
+}
+
+function isProjectedEdgeVisible(edge: ProjectedCanvasEdge) {
+  return visibleProjectedEdgeIds.value.has(edge.id);
+}
+
+function setEdgeVisibilityMode(mode: EdgeVisibilityMode) {
+  if (edgeVisibilityMode.value === mode) {
+    return;
+  }
+
+  edgeVisibilityMode.value = mode;
+  selectedEdgeId.value = null;
+  pendingConnection.value = null;
+  pendingConnectionPoint.value = null;
+  clearCanvasTransientState();
 }
 
 watch(projectedEdges, (edges) => {
@@ -2050,6 +2118,61 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 .editor-canvas--panning * {
   user-select: none;
   -webkit-user-select: none;
+}
+
+.editor-canvas__edge-view-toolbar {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  z-index: 24;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 250, 241, 0.88);
+  box-shadow: 0 12px 26px rgba(120, 53, 15, 0.1);
+  backdrop-filter: blur(14px);
+  cursor: default;
+  pointer-events: auto;
+}
+
+.editor-canvas__edge-view-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(73, 52, 34, 0.72);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.editor-canvas__edge-view-button:hover {
+  background: rgba(154, 52, 18, 0.08);
+  color: rgba(75, 42, 18, 0.92);
+}
+
+.editor-canvas__edge-view-button--active {
+  background: rgba(154, 52, 18, 0.9);
+  color: rgba(255, 250, 242, 0.98);
+}
+
+.editor-canvas__edge-view-button--active:hover {
+  background: rgba(154, 52, 18, 0.9);
+  color: rgba(255, 250, 242, 0.98);
 }
 
 .editor-canvas__viewport {

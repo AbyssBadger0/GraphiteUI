@@ -151,6 +151,23 @@ test("EditorCanvas renders hover-only flow hotspots and distinguishes flowing fl
   assert.match(componentSource, /\.editor-canvas__edge \{[\s\S]*pointer-events:\s*none;/);
 });
 
+test("EditorCanvas exposes a top-left capsule toolbar for edge visibility modes", () => {
+  assert.match(componentSource, /import \{[\s\S]*EDGE_VISIBILITY_MODE_OPTIONS,[\s\S]*filterProjectedEdgesForVisibilityMode,[\s\S]*type EdgeVisibilityMode[\s\S]*\} from "\.\/edgeVisibilityModel";/);
+  assert.match(componentSource, /const edgeVisibilityMode = ref<EdgeVisibilityMode>\("smart"\);/);
+  assert.match(componentSource, /const edgeVisibilityRelatedNodeIds = computed\(\(\) =>/);
+  assert.match(componentSource, /const visibleProjectedEdgeIds = computed\(/);
+  assert.match(componentSource, /filterProjectedEdgesForVisibilityMode\(projectedEdges\.value,/);
+  assert.match(componentSource, /function isProjectedEdgeVisible\(edge: ProjectedCanvasEdge\)/);
+  assert.match(componentSource, /class="editor-canvas__edge-view-toolbar"/);
+  assert.match(componentSource, /v-for="option in EDGE_VISIBILITY_MODE_OPTIONS"/);
+  assert.match(componentSource, /setEdgeVisibilityMode\(option\.mode\)/);
+  assert.match(componentSource, /\{\{ option\.label \}\}/);
+  assert.match(componentSource, /v-show="isProjectedEdgeVisible\(edge\)"/);
+  assert.match(componentSource, /\.editor-canvas__edge-view-toolbar \{[\s\S]*position:\s*absolute;[\s\S]*left:\s*18px;[\s\S]*top:\s*18px;/);
+  assert.match(componentSource, /\.editor-canvas__edge-view-button \{[\s\S]*border-radius:\s*999px;/);
+  assert.match(componentSource, /\.editor-canvas__edge-view-button--active \{[\s\S]*background:\s*rgba\(154,\s*52,\s*18,\s*0\.9\);/);
+});
+
 test("EditorCanvas shows a clicked-position delete confirm for flow edges before removing them", () => {
   assert.match(componentSource, /@pointerdown\.stop="handleEdgePointerDown\(edge, \$event\)"/);
   assert.match(componentSource, /const activeFlowEdgeDeleteConfirm = ref<\{/);

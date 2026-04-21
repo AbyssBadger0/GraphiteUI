@@ -148,6 +148,35 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(componentSource, /collapseAgentModelSelect\(\);/);
 });
 
+test("NodeCard opens agent add skill and port actions in themed popovers instead of inline panels", () => {
+  const agentSectionMatch = componentSource.match(
+    /<section v-else-if="view\.body\.kind === 'agent'"[\s\S]*?<\/section>/,
+  );
+  assert.ok(agentSectionMatch, "expected to find the agent node section");
+  const agentSection = agentSectionMatch[0];
+
+  assert.match(agentSection, /<ElPopover[\s\S]*:visible="isSkillPickerOpen"[\s\S]*popper-class="node-card__agent-add-popover-popper"/);
+  assert.match(agentSection, /v-for="picker in agentPortPickerActions"/);
+  assert.match(agentSection, /:visible="activePortPickerSide === picker\.side"[\s\S]*popper-class="node-card__agent-add-popover-popper"/);
+  assert.match(agentSection, /class="node-card__agent-add-popover node-card__skill-picker"/);
+  assert.match(agentSection, /class="node-card__agent-add-popover node-card__port-picker"/);
+  assert.match(agentSection, /@click\.stop="toggleSkillPicker"/);
+  assert.match(agentSection, /@click\.stop="openPortPicker\(picker\.side\)"/);
+  assert.match(componentSource, /const agentPortPickerActions: Array<\{ side: "input" \| "output"; label: string; toneClass: string; placement: "bottom-start" \| "bottom-end" \}> = \[/);
+  assert.match(componentSource, /\{ side: "input", label: "\+ input", toneClass: "node-card__action-pill--input", placement: "bottom-start" \}/);
+  assert.match(componentSource, /\{ side: "output", label: "\+ output", toneClass: "node-card__action-pill--output", placement: "bottom-end" \}/);
+  assert.match(agentSection, /<ElSelect[\s\S]*class="node-card__control-select graphite-select"[\s\S]*popper-class="graphite-select-popper node-card__port-picker-select-popper"/);
+  assert.match(agentSection, /class="node-card__port-picker-color-option"/);
+  assert.match(agentSection, /class="node-card__port-picker-color-dot"/);
+  assert.match(componentSource, /const portStateColorOptions = computed\(\(\) => resolveStateColorOptions\(portStateDraft\.value\?\.definition\.color \?\? ""\)\);/);
+  assert.match(componentSource, /const agentAddPopoverStyle = \{/);
+  assert.match(componentSource, /"--el-popover-bg-color":\s*"transparent"/);
+  assert.match(componentSource, /\.node-card__agent-add-popover \{[\s\S]*background:\s*rgba\(255,\s*244,\s*232,\s*0\.96\);/);
+  assert.match(componentSource, /:deep\(\.node-card__agent-add-popover-popper\.el-popper\) \{[\s\S]*background:\s*transparent;/);
+  assert.doesNotMatch(agentSection, /<div v-if="activePortPickerSide" class="node-card__port-picker"/);
+  assert.doesNotMatch(agentSection, /<div v-if="isSkillPickerOpen" class="node-card__skill-picker"/);
+});
+
 test("NodeCard moves node actions into hoverable top buttons built from Element Plus icons and overlays", () => {
   assert.match(componentSource, /import \{[\s\S]*ElButton,[\s\S]*ElPopover[\s\S]*\} from "element-plus";/);
   assert.match(componentSource, /import \{[\s\S]*CollectionTag[\s\S]*Delete[\s\S]*Operation[\s\S]*\} from "@element-plus\/icons-vue";/);

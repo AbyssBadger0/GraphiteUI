@@ -608,192 +608,218 @@
         </div>
       </div>
       <div class="node-card__action-row">
-        <button
+        <ElPopover
           v-if="showSkillPickerTrigger"
-          type="button"
-          class="node-card__action-pill node-card__action-pill--skill node-card__action-pill-button"
-          @pointerdown.stop
-          @click.stop="toggleSkillPicker"
+          :visible="isSkillPickerOpen"
+          placement="bottom-start"
+          :width="360"
+          :show-arrow="false"
+          :popper-style="agentAddPopoverStyle"
+          popper-class="node-card__agent-add-popover-popper"
         >
-          + skill
-        </button>
+          <template #reference>
+            <button
+              type="button"
+              class="node-card__action-pill node-card__action-pill--skill node-card__action-pill-button"
+              @pointerdown.stop
+              @click.stop="toggleSkillPicker"
+            >
+              + skill
+            </button>
+          </template>
+          <div class="node-card__agent-add-popover node-card__skill-picker" data-node-popup-surface="true" @pointerdown.stop @click.stop>
+            <div class="node-card__skill-picker-title">Add Skill</div>
+            <div class="node-card__skill-picker-copy">这里只负责附加已有 skill，不在编排界面里编辑 skill 内容。</div>
+            <div v-if="skillDefinitionsLoading" class="node-card__skill-panel-message">
+              Loading skills...
+            </div>
+            <div v-else-if="skillDefinitionsError" class="node-card__skill-panel-message node-card__skill-panel-message--error">
+              {{ skillDefinitionsError }}
+            </div>
+            <div v-else-if="availableSkillDefinitions.length === 0" class="node-card__skill-panel-message">
+              No available skills to attach.
+            </div>
+            <button
+              v-for="definition in availableSkillDefinitions"
+              v-else
+              :key="definition.skillKey"
+              type="button"
+              class="node-card__skill-option"
+              @pointerdown.stop
+              @click.stop="attachAgentSkill(definition.skillKey)"
+            >
+              <div class="node-card__skill-option-title">{{ definition.label }}</div>
+              <div class="node-card__skill-option-copy">{{ definition.description }}</div>
+              <div class="node-card__skill-option-meta">
+                <span v-if="definition.inputSchema.length > 0">In {{ definition.inputSchema.length }}</span>
+                <span v-if="definition.outputSchema.length > 0">Out {{ definition.outputSchema.length }}</span>
+              </div>
+            </button>
+          </div>
+        </ElPopover>
         <span v-else class="node-card__action-pill node-card__action-pill--skill node-card__action-pill--disabled">+ skill</span>
-        <button
-          type="button"
-          class="node-card__action-pill node-card__action-pill--input node-card__action-pill-button"
-          @pointerdown.stop
-          @click.stop="openPortPicker('input')"
+        <ElPopover
+          v-for="picker in agentPortPickerActions"
+          :key="picker.side"
+          :visible="activePortPickerSide === picker.side"
+          :placement="picker.placement"
+          :width="portStateDraft ? 376 : 340"
+          :show-arrow="false"
+          :popper-style="agentAddPopoverStyle"
+          popper-class="node-card__agent-add-popover-popper"
         >
-          + input
-        </button>
-        <button
-          type="button"
-          class="node-card__action-pill node-card__action-pill--output node-card__action-pill-button"
-          @pointerdown.stop
-          @click.stop="openPortPicker('output')"
-        >
-          + output
-        </button>
-      </div>
-      <div v-if="activePortPickerSide" class="node-card__port-picker" data-node-popup-surface="true" @pointerdown.stop @click.stop>
-        <div class="node-card__port-picker-title">{{ portPickerTitle }}</div>
-        <div v-if="portStateDraft" class="node-card__port-picker-form">
-          <label class="node-card__control-row">
-            <span class="node-card__control-label">Name</span>
-            <input
-              class="node-card__control-input"
-              type="text"
-              :value="portStateDraft.definition.name"
-              @pointerdown.stop
-              @click.stop
-              @input="handlePortDraftNameInput"
-            />
-          </label>
-          <label class="node-card__control-row">
-            <span class="node-card__control-label">Key</span>
-            <input
-              class="node-card__control-input"
-              type="text"
-              :value="portStateDraft.key"
-              @pointerdown.stop
-              @click.stop
-              @input="handlePortDraftKeyInput"
-            />
-          </label>
-          <label class="node-card__control-row">
-            <span class="node-card__control-label">Type</span>
-            <ElSelect
-              class="node-card__control-select graphite-select"
-              :model-value="portStateDraft.definition.type"
-              :teleported="false"
-              popper-class="graphite-select-popper"
-              @pointerdown.stop
-              @click.stop
-              @update:model-value="handlePortDraftTypeSelect"
-            >
-              <ElOption v-for="typeOption in stateTypeOptions" :key="typeOption" :label="typeOption" :value="typeOption" />
-            </ElSelect>
-          </label>
-          <label class="node-card__control-row">
-            <span class="node-card__control-label">Description</span>
-            <textarea
-              class="node-card__control-textarea"
-              :value="portStateDraft.definition.description"
-              @pointerdown.stop
-              @click.stop
-              @input="handlePortDraftDescriptionInput"
-            />
-          </label>
-          <label class="node-card__control-row">
-            <span class="node-card__control-label">Color</span>
-            <input
-              class="node-card__control-input"
-              type="text"
-              :value="portStateDraft.definition.color"
-              placeholder="#d97706"
-              @pointerdown.stop
-              @click.stop
-              @input="handlePortDraftColorInput"
-            />
-          </label>
-          <StateDefaultValueEditor
-            :field="portStateDraft.definition"
-            @update-value="updatePortDraftValue"
-          />
-          <div class="node-card__port-picker-hint" :class="{ 'node-card__port-picker-hint--error': Boolean(portStateError) }">
-            {{ portStateError ?? "Create the state and bind this port to it immediately." }}
-          </div>
-          <div class="node-card__port-picker-actions">
+          <template #reference>
             <button
               type="button"
-              class="node-card__port-picker-button"
+              class="node-card__action-pill node-card__action-pill-button"
+              :class="picker.toneClass"
               @pointerdown.stop
-              @click.stop="backPortDraft"
+              @click.stop="openPortPicker(picker.side)"
             >
-              Back
+              {{ picker.label }}
             </button>
-            <button
-              type="button"
-              class="node-card__port-picker-button node-card__port-picker-button--primary"
-              @pointerdown.stop
-              @click.stop="commitPortStateCreate"
-            >
-              Create
-            </button>
-          </div>
-        </div>
-        <div v-else class="node-card__port-picker-form">
-          <input
-            class="node-card__control-input"
-            type="text"
-            :value="portStateSearch"
-            :placeholder="activePortPickerSide === 'input' ? 'Search or create input state' : 'Search or create output state'"
+          </template>
+          <div
+            v-if="activePortPickerSide === picker.side"
+            class="node-card__agent-add-popover node-card__port-picker"
+            data-node-popup-surface="true"
             @pointerdown.stop
             @click.stop
-            @input="handlePortStateSearchInput"
-          />
-          <button
-            v-if="portStateSearch.trim()"
-            type="button"
-            class="node-card__port-create-option"
-            @pointerdown.stop
-            @click.stop="beginPortStateCreate"
           >
-            <span class="node-card__port-create-label">Create</span>
-            <span class="node-card__port-create-title">新增 “{{ portStateSearch.trim() }}”</span>
-          </button>
-          <button
-            v-for="stateRow in portPickerMatchingStates"
-            :key="stateRow.key"
-            type="button"
-            class="node-card__port-state-option"
-            @pointerdown.stop
-            @click.stop="bindStateToPort(stateRow.key)"
-          >
-            <span class="node-card__port-state-type">{{ stateRow.definition.type }}</span>
-            <span class="node-card__port-state-title">{{ stateRow.label }}</span>
-            <span class="node-card__port-state-key">{{ stateRow.key }}</span>
-          </button>
-          <div class="node-card__port-picker-actions">
-            <button
-              type="button"
-              class="node-card__port-picker-button"
-              @pointerdown.stop
-              @click.stop="closePortPicker"
-            >
-              Cancel
-            </button>
+            <div class="node-card__port-picker-title">{{ portPickerTitle }}</div>
+            <div v-if="portStateDraft" class="node-card__port-picker-form">
+              <div class="node-card__port-picker-grid">
+                <label class="node-card__control-row">
+                  <span class="node-card__control-label">Key</span>
+                  <ElInput
+                    aria-label="Key"
+                    :model-value="portStateDraft.key"
+                    @update:model-value="handlePortDraftKeyValue"
+                  />
+                </label>
+                <label class="node-card__control-row">
+                  <span class="node-card__control-label">Name</span>
+                  <ElInput
+                    aria-label="Name"
+                    :model-value="portStateDraft.definition.name"
+                    @update:model-value="handlePortDraftNameValue"
+                  />
+                </label>
+                <label class="node-card__control-row">
+                  <span class="node-card__control-label">Type</span>
+                  <ElSelect
+                    ref="portDraftTypeSelectRef"
+                    class="node-card__control-select graphite-select"
+                    :model-value="portStateDraft.definition.type"
+                    :teleported="false"
+                    popper-class="graphite-select-popper node-card__port-picker-select-popper"
+                    @update:model-value="handlePortDraftTypeSelect"
+                  >
+                    <ElOption v-for="typeOption in stateTypeOptions" :key="typeOption" :label="typeOption" :value="typeOption" />
+                  </ElSelect>
+                </label>
+                <label class="node-card__control-row">
+                  <span class="node-card__control-label">Color</span>
+                  <ElSelect
+                    ref="portDraftColorSelectRef"
+                    class="node-card__control-select graphite-select"
+                    :model-value="portStateDraft.definition.color"
+                    :teleported="false"
+                    popper-class="graphite-select-popper node-card__port-picker-select-popper"
+                    @update:model-value="handlePortDraftColorSelect"
+                  >
+                    <template #label>
+                      <span class="node-card__port-picker-color-value">
+                        <span class="node-card__port-picker-color-dot" :style="portStateSelectedColorStyle" />
+                      </span>
+                    </template>
+                    <ElOption v-for="option in portStateColorOptions" :key="option.value || option.label" :label="option.label" :value="option.value">
+                      <div class="node-card__port-picker-color-option">
+                        <span class="node-card__port-picker-color-dot" :style="{ backgroundColor: option.swatch }" />
+                        <span>{{ option.label }}</span>
+                      </div>
+                    </ElOption>
+                  </ElSelect>
+                </label>
+              </div>
+              <label class="node-card__control-row">
+                <span class="node-card__control-label">Description</span>
+                <ElInput
+                  aria-label="Description"
+                  type="textarea"
+                  :rows="2"
+                  :model-value="portStateDraft.definition.description"
+                  @update:model-value="handlePortDraftDescriptionValue"
+                />
+              </label>
+              <StateDefaultValueEditor
+                :field="portStateDraft.definition"
+                @update-value="updatePortDraftValue"
+              />
+              <div class="node-card__port-picker-hint" :class="{ 'node-card__port-picker-hint--error': Boolean(portStateError) }">
+                {{ portStateError ?? "Create the state and bind this port to it immediately." }}
+              </div>
+              <div class="node-card__port-picker-actions">
+                <button
+                  type="button"
+                  class="node-card__port-picker-button"
+                  @pointerdown.stop
+                  @click.stop="backPortDraft"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  class="node-card__port-picker-button node-card__port-picker-button--primary"
+                  @pointerdown.stop
+                  @click.stop="commitPortStateCreate"
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+            <div v-else class="node-card__port-picker-form">
+              <ElInput
+                class="node-card__port-picker-search"
+                :model-value="portStateSearch"
+                :placeholder="activePortPickerSide === 'input' ? 'Search or create input state' : 'Search or create output state'"
+                @update:model-value="handlePortStateSearchValue"
+              />
+              <button
+                v-if="portStateSearch.trim()"
+                type="button"
+                class="node-card__port-create-option"
+                @pointerdown.stop
+                @click.stop="beginPortStateCreate"
+              >
+                <span class="node-card__port-create-label">Create</span>
+                <span class="node-card__port-create-title">新增 “{{ portStateSearch.trim() }}”</span>
+              </button>
+              <button
+                v-for="stateRow in portPickerMatchingStates"
+                :key="stateRow.key"
+                type="button"
+                class="node-card__port-state-option"
+                @pointerdown.stop
+                @click.stop="bindStateToPort(stateRow.key)"
+              >
+                <span class="node-card__port-state-type">{{ stateRow.definition.type }}</span>
+                <span class="node-card__port-state-title">{{ stateRow.label }}</span>
+                <span class="node-card__port-state-key">{{ stateRow.key }}</span>
+              </button>
+              <div class="node-card__port-picker-actions">
+                <button
+                  type="button"
+                  class="node-card__port-picker-button"
+                  @pointerdown.stop
+                  @click.stop="closePortPicker"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div v-if="isSkillPickerOpen" class="node-card__skill-picker" data-node-popup-surface="true" @pointerdown.stop @click.stop>
-        <div class="node-card__skill-picker-title">Add Skill</div>
-        <div class="node-card__skill-picker-copy">这里只负责附加已有 skill，不在编排界面里编辑 skill 内容。</div>
-        <div v-if="skillDefinitionsLoading" class="node-card__skill-panel-message">
-          Loading skills...
-        </div>
-        <div v-else-if="skillDefinitionsError" class="node-card__skill-panel-message node-card__skill-panel-message--error">
-          {{ skillDefinitionsError }}
-        </div>
-        <div v-else-if="availableSkillDefinitions.length === 0" class="node-card__skill-panel-message">
-          No available skills to attach.
-        </div>
-        <button
-          v-for="definition in availableSkillDefinitions"
-          v-else
-          :key="definition.skillKey"
-          type="button"
-          class="node-card__skill-option"
-          @pointerdown.stop
-          @click.stop="attachAgentSkill(definition.skillKey)"
-        >
-          <div class="node-card__skill-option-title">{{ definition.label }}</div>
-          <div class="node-card__skill-option-copy">{{ definition.description }}</div>
-          <div class="node-card__skill-option-meta">
-            <span v-if="definition.inputSchema.length > 0">In {{ definition.inputSchema.length }}</span>
-            <span v-if="definition.outputSchema.length > 0">Out {{ definition.outputSchema.length }}</span>
-          </div>
-        </button>
+        </ElPopover>
       </div>
       <div v-if="attachedSkillBadges.length > 0" class="node-card__skill-badges">
         <span
@@ -1184,8 +1210,22 @@ const stateEditorPopoverStyle = {
   padding: "0",
   "min-width": "0",
 } as const;
+const agentAddPopoverStyle = {
+  "--el-popover-bg-color": "transparent",
+  "--el-popover-border-color": "transparent",
+  "--el-popover-padding": "0px",
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
+  padding: "0",
+  "min-width": "0",
+} as const;
 const stateTypeOptions = STATE_FIELD_TYPE_OPTIONS;
 const conditionRuleOperatorOptions = CONDITION_RULE_OPERATOR_OPTIONS;
+const agentPortPickerActions: Array<{ side: "input" | "output"; label: string; toneClass: string; placement: "bottom-start" | "bottom-end" }> = [
+  { side: "input", label: "+ input", toneClass: "node-card__action-pill--input", placement: "bottom-start" },
+  { side: "output", label: "+ output", toneClass: "node-card__action-pill--output", placement: "bottom-end" },
+];
 
 const view = computed(() =>
   buildNodeCardViewModel(props.nodeId, props.node, props.stateSchema, {
@@ -1212,6 +1252,9 @@ const portStateSearch = ref("");
 const portStateDraft = ref<StateFieldDraft | null>(null);
 const portStateError = ref<string | null>(null);
 const agentModelSelectRef = ref<{ blur?: () => void; toggleMenu?: () => void; expanded?: boolean } | null>(null);
+type SelectExpose = { blur?: () => void; toggleMenu?: () => void; expanded?: boolean };
+const portDraftTypeSelectRef = ref<SelectExpose | SelectExpose[] | null>(null);
+const portDraftColorSelectRef = ref<SelectExpose | SelectExpose[] | null>(null);
 const activeTopAction = ref<"advanced" | "delete" | "preset" | null>(null);
 const topActionTimeoutRef = ref<number | null>(null);
 const activeTextEditor = ref<TextEditorField | null>(null);
@@ -1238,6 +1281,14 @@ const activeStateEditorAnchorId = ref<string | null>(null);
 const stateEditorDraft = ref<StateFieldDraft | null>(null);
 const stateEditorError = ref<string | null>(null);
 const stateColorOptions = computed(() => resolveStateColorOptions(stateEditorDraft.value?.definition.color ?? ""));
+const portStateColorOptions = computed(() => resolveStateColorOptions(portStateDraft.value?.definition.color ?? ""));
+const portStateSelectedColorStyle = computed(() => {
+  const selectedColor = portStateDraft.value?.definition.color ?? "";
+  const matchedOption = portStateColorOptions.value.find((option) => option.value === selectedColor);
+  return {
+    backgroundColor: matchedOption?.swatch || selectedColor || "#d97706",
+  };
+});
 const showKnowledgeBaseInput = computed(() => view.value.body.kind === "input" && view.value.body.editorMode === "knowledge_base");
 const showAssetUploadInput = computed(() => view.value.body.kind === "input" && view.value.body.editorMode === "asset");
 const isInputValueEditable = computed(() => view.value.body.kind === "input" && view.value.body.editorMode === "text");
@@ -1654,6 +1705,10 @@ function handlePortStateSearchInput(event: Event) {
   portStateSearch.value = target.value;
 }
 
+function handlePortStateSearchValue(value: string | number) {
+  portStateSearch.value = String(value ?? "");
+}
+
 function beginPortStateCreate() {
   portStateDraft.value = createStateDraftFromQuery(portStateSearch.value, Object.keys(props.stateSchema));
   portStateError.value = null;
@@ -1669,11 +1724,18 @@ function handlePortDraftNameInput(event: Event) {
   if (!(target instanceof HTMLInputElement) || !portStateDraft.value) {
     return;
   }
+  handlePortDraftNameValue(target.value);
+}
+
+function handlePortDraftNameValue(value: string | number) {
+  if (!portStateDraft.value) {
+    return;
+  }
   portStateDraft.value = {
     ...portStateDraft.value,
     definition: {
       ...portStateDraft.value.definition,
-      name: target.value,
+      name: String(value ?? ""),
     },
   };
 }
@@ -1683,13 +1745,20 @@ function handlePortDraftKeyInput(event: Event) {
   if (!(target instanceof HTMLInputElement) || !portStateDraft.value) {
     return;
   }
+  handlePortDraftKeyValue(target.value);
+}
+
+function handlePortDraftKeyValue(value: string | number) {
+  if (!portStateDraft.value) {
+    return;
+  }
   portStateDraft.value = {
     ...portStateDraft.value,
-    key: target.value,
+    key: String(value ?? ""),
   };
 }
 
-function handlePortDraftTypeSelect(value: string | number | boolean | undefined) {
+async function handlePortDraftTypeSelect(value: string | number | boolean | undefined) {
   if (!portStateDraft.value) {
     return;
   }
@@ -1702,6 +1771,7 @@ function handlePortDraftTypeSelect(value: string | number | boolean | undefined)
       value: defaultValueForStateType(nextType as StateFieldType),
     },
   };
+  await collapsePortDraftTypeSelect();
 }
 
 function handlePortDraftDescriptionInput(event: Event) {
@@ -1709,11 +1779,18 @@ function handlePortDraftDescriptionInput(event: Event) {
   if (!(target instanceof HTMLTextAreaElement) || !portStateDraft.value) {
     return;
   }
+  handlePortDraftDescriptionValue(target.value);
+}
+
+function handlePortDraftDescriptionValue(value: string | number) {
+  if (!portStateDraft.value) {
+    return;
+  }
   portStateDraft.value = {
     ...portStateDraft.value,
     definition: {
       ...portStateDraft.value.definition,
-      description: target.value,
+      description: String(value ?? ""),
     },
   };
 }
@@ -1723,13 +1800,47 @@ function handlePortDraftColorInput(event: Event) {
   if (!(target instanceof HTMLInputElement) || !portStateDraft.value) {
     return;
   }
+  updatePortDraftColor(target.value);
+}
+
+async function handlePortDraftColorSelect(value: string | number | boolean | undefined) {
+  updatePortDraftColor(String(value ?? ""));
+  await collapsePortDraftColorSelect();
+}
+
+function updatePortDraftColor(color: string) {
+  if (!portStateDraft.value) {
+    return;
+  }
   portStateDraft.value = {
     ...portStateDraft.value,
     definition: {
       ...portStateDraft.value.definition,
-      color: target.value,
+      color,
     },
   };
+}
+
+async function collapsePortDraftTypeSelect() {
+  await nextTick();
+  const select = resolveFirstSelectExpose(portDraftTypeSelectRef.value);
+  if (select?.expanded) {
+    select.toggleMenu?.();
+  }
+  select?.blur?.();
+}
+
+async function collapsePortDraftColorSelect() {
+  await nextTick();
+  const select = resolveFirstSelectExpose(portDraftColorSelectRef.value);
+  if (select?.expanded) {
+    select.toggleMenu?.();
+  }
+  select?.blur?.();
+}
+
+function resolveFirstSelectExpose(select: SelectExpose | SelectExpose[] | null) {
+  return Array.isArray(select) ? select[0] ?? null : select;
 }
 
 function updatePortDraftValue(value: unknown) {
@@ -2273,6 +2384,8 @@ function isFloatingPanelSurfaceTarget(target: EventTarget | null) {
         ".node-card__confirm-popover",
         ".node-card__text-editor-popper",
         ".node-card__state-editor-popper",
+        ".node-card__agent-add-popover-popper",
+        ".node-card__port-picker-select-popper",
         ".node-card__agent-model-popper",
       ].join(", "),
     ),
@@ -3364,6 +3477,53 @@ function handleConditionRuleValueInput(event: Event) {
   opacity: 0.58;
 }
 
+.node-card__agent-add-popover {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 244, 232, 0.96);
+  box-shadow: 0 16px 34px rgba(60, 41, 20, 0.12);
+  color: #3c2914;
+}
+
+:deep(.node-card__agent-add-popover-popper.el-popper) {
+  border-radius: 16px;
+  background: transparent;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+:deep(.node-card__agent-add-popover .el-input__wrapper),
+:deep(.node-card__agent-add-popover .el-select__wrapper) {
+  min-height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(154, 52, 18, 0.16);
+  background: rgba(255, 251, 246, 0.88);
+  box-shadow: none;
+}
+
+:deep(.node-card__agent-add-popover .el-input__wrapper.is-focus),
+:deep(.node-card__agent-add-popover .el-select__wrapper.is-focused) {
+  border-color: rgba(201, 107, 31, 0.28);
+  box-shadow: 0 0 0 2px rgba(201, 107, 31, 0.1);
+}
+
+:deep(.node-card__agent-add-popover .el-textarea__inner) {
+  border-radius: 12px;
+  border: 1px solid rgba(154, 52, 18, 0.16);
+  background: rgba(255, 251, 246, 0.88);
+  box-shadow: none;
+  color: #3c2914;
+}
+
+:deep(.node-card__agent-add-popover .el-textarea__inner:focus) {
+  border-color: rgba(201, 107, 31, 0.28);
+  box-shadow: 0 0 0 2px rgba(201, 107, 31, 0.1);
+}
+
 .node-card__skill-picker {
   display: grid;
   gap: 10px;
@@ -3495,6 +3655,31 @@ function handleConditionRuleValueInput(event: Event) {
   gap: 10px;
 }
 
+.node-card__port-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.node-card__port-picker-color-value,
+.node-card__port-picker-color-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.node-card__port-picker-color-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border: 1px solid rgba(60, 41, 20, 0.16);
+  border-radius: 999px;
+}
+
+.node-card__port-picker-search {
+  width: 100%;
+}
+
 .node-card__port-picker-hint {
   font-size: 0.76rem;
   line-height: 1.55;
@@ -3529,6 +3714,14 @@ function handleConditionRuleValueInput(event: Event) {
   border-color: rgba(21, 128, 61, 0.18);
   background: rgba(240, 253, 244, 0.92);
   color: #15803d;
+}
+
+.node-card__agent-add-popover.node-card__skill-picker,
+.node-card__agent-add-popover.node-card__port-picker {
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 244, 232, 0.96);
+  box-shadow: 0 16px 34px rgba(60, 41, 20, 0.12);
 }
 
 .node-card__state-editor {

@@ -10,6 +10,7 @@ export type EditorTabBarCopy = {
   state: string;
   save: string;
   validate: string;
+  importPython: string;
   exportPython: string;
   run: string;
 };
@@ -24,6 +25,7 @@ export const ZH_EDITOR_TAB_BAR_COPY: EditorTabBarCopy = {
   state: "State",
   save: "Save",
   validate: "Validate",
+  importPython: "导入 Py",
   exportPython: "导出 Py",
   run: "Run",
 };

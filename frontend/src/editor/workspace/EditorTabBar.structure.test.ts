@@ -46,6 +46,12 @@ test("EditorTabBar exposes a Python export action beside validation and run cont
   assert.match(componentSource, /@click="\$emit\('export-active-graph'\)"/);
 });
 
+test("EditorTabBar exposes a Python import action beside export", () => {
+  assert.match(componentSource, /import-python-graph/);
+  assert.match(componentSource, /copy\.importPython/);
+  assert.match(componentSource, /@click="\$emit\('import-python-graph'\)"/);
+});
+
 test("EditorTabBar exposes browser-like tab interactions", () => {
   assert.match(componentSource, /draggable="true"/);
   assert.match(componentSource, /@auxclick="handleTabAuxClick\(tab, \$event\)"/);

@@ -40,3 +40,7 @@ export async function runGraph(payload: GraphPayload): Promise<GraphRunResponse>
 export async function exportLangGraphPython(payload: GraphPayload): Promise<string> {
   return apiPostText("/api/graphs/export/langgraph-python", payload);
 }
+
+export async function importGraphFromPythonSource(source: string): Promise<GraphPayload> {
+  return apiPost("/api/graphs/import/python", { source });
+}

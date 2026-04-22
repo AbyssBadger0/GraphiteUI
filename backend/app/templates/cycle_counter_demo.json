@@ -1,12 +1,12 @@
 {
   "template_id": "cycle_counter_demo",
-  "label": "回环计数示例",
-  "description": "A minimal cyclic graph that increments a counter until it reaches three.",
-  "default_graph_name": "回环计数示例",
+  "label": "循环计数",
+  "description": "Start from an initial counter, increment it in a loop, and stop when counter reaches three or the loop limit is exhausted.",
+  "default_graph_name": "循环计数",
   "state_schema": {
     "counter": {
       "name": "counter",
-      "description": "Current loop counter.",
+      "description": "Current loop counter value.",
       "type": "number",
       "value": 0,
       "color": "#d97706"
@@ -16,7 +16,7 @@
     "seed_counter": {
       "kind": "input",
       "name": "seed_counter",
-      "description": "Seed the initial counter value.",
+      "description": "Set the initial counter value.",
       "ui": {
         "position": { "x": 80, "y": 220 },
         "collapsed": false
@@ -31,7 +31,7 @@
     "increment_counter": {
       "kind": "agent",
       "name": "increment_counter",
-      "description": "Increment the counter by one.",
+      "description": "Read counter and return counter + 1.",
       "ui": {
         "position": { "x": 760, "y": 220 },
         "collapsed": false
@@ -50,7 +50,7 @@
     "continue_check": {
       "kind": "condition",
       "name": "continue_check",
-      "description": "Route true while the counter is below three, false when complete, or exhausted at the loop limit.",
+      "description": "Continue while counter is below three; otherwise finish or report loop exhaustion.",
       "ui": {
         "position": { "x": 1440, "y": 220 },
         "collapsed": false
@@ -75,7 +75,7 @@
     "output_counter": {
       "kind": "output",
       "name": "output_counter",
-      "description": "Show the final counter value.",
+      "description": "Show the final counter value when the loop completes normally.",
       "ui": {
         "position": { "x": 2120, "y": 220 },
         "collapsed": false
@@ -93,7 +93,7 @@
     "output_loop_exhausted": {
       "kind": "output",
       "name": "output_loop_exhausted",
-      "description": "Show the counter value when the loop limit is exhausted.",
+      "description": "Show the counter value if the loop limit stops execution.",
       "ui": {
         "position": { "x": 2120, "y": 700 },
         "collapsed": false
@@ -128,5 +128,6 @@
         "exhausted": "output_loop_exhausted"
       }
     }
-  ]
+  ],
+  "metadata": {}
 }

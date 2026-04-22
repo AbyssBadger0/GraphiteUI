@@ -6,7 +6,10 @@
       <p class="editor-welcome__body">
         这里不是目录页，而是编排器真正的工作台。选择模板或已有图后，我们会直接进入新的 Vue 编辑器画布。
       </p>
-      <button type="button" class="editor-welcome__primary" @click="$emit('create-new')">新建图</button>
+      <div class="editor-welcome__actions">
+        <button type="button" class="editor-welcome__primary" @click="$emit('create-new')">新建图</button>
+        <button type="button" class="editor-welcome__secondary" @click="$emit('import-python-graph')">导入 Py 图</button>
+      </div>
     </header>
 
     <section class="editor-welcome__grid">
@@ -85,6 +88,7 @@ const props = defineProps<{
 
 defineEmits<{
   (event: "create-new"): void;
+  (event: "import-python-graph"): void;
   (event: "open-template", templateId: string): void;
   (event: "open-graph", graphId: string): void;
 }>();
@@ -159,14 +163,29 @@ function graphEdgeCount(graph: GraphDocument) {
   color: rgba(60, 41, 20, 0.76);
 }
 
-.editor-welcome__primary {
+.editor-welcome__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 18px;
+}
+
+.editor-welcome__primary,
+.editor-welcome__secondary {
   border: 1px solid rgba(154, 52, 18, 0.22);
   border-radius: 999px;
   padding: 10px 18px;
+  cursor: pointer;
+}
+
+.editor-welcome__primary {
   background: rgba(255, 248, 240, 0.95);
   color: rgb(154, 52, 18);
-  cursor: pointer;
+}
+
+.editor-welcome__secondary {
+  background: rgba(255, 252, 247, 0.86);
+  color: rgba(90, 58, 34, 0.92);
 }
 
 .editor-welcome__grid {

@@ -1,6 +1,6 @@
 import type { RunDetail, RunSummary } from "@/types/run";
 
-import { apiGet } from "./http";
+import { apiGet, apiPost } from "./http.ts";
 
 export async function fetchRuns(params?: { graphName?: string; status?: string }): Promise<RunSummary[]> {
   const searchParams = new URLSearchParams();
@@ -16,4 +16,8 @@ export async function fetchRuns(params?: { graphName?: string; status?: string }
 
 export async function fetchRun(runId: string): Promise<RunDetail> {
   return apiGet<RunDetail>(`/api/runs/${runId}`);
+}
+
+export async function resumeRun(runId: string, resume: Record<string, unknown>): Promise<{ run_id: string; status: string }> {
+  return apiPost(`/api/runs/${runId}/resume`, { resume });
 }

@@ -189,7 +189,7 @@
         :key="nodeId"
         :ref="(element) => registerNodeRef(nodeId, element)"
         class="editor-canvas__node"
-        :class="{ 'editor-canvas__node--selected': selection.selectedNodeId.value === nodeId }"
+        :class="{ 'editor-canvas__node--selected': isNodeVisuallySelected(nodeId) }"
         :style="nodeStyle(node.ui.position)"
         @pointerenter="setHoveredNode(nodeId)"
         @pointerleave="clearHoveredNode(nodeId)"
@@ -219,7 +219,8 @@
           :run-output-display-mode="runOutputPreviewByNodeId?.[nodeId]?.displayMode ?? null"
           :run-failure-message="runFailureMessageByNodeId?.[nodeId] ?? null"
           :pending-state-input-source="pendingAgentInputSourceByNodeId[nodeId] ?? null"
-          :selected="selection.selectedNodeId.value === nodeId"
+          :human-review-pending="isHumanReviewNode(nodeId)"
+          :selected="isNodeVisuallySelected(nodeId)"
           @update-node-metadata="emit('update-node-metadata', $event)"
           @update-input-config="emit('update-input-config', $event)"
           @update-input-state="emit('update-input-state', $event)"
@@ -235,6 +236,7 @@
           @create-port-state="emit('create-port-state', $event)"
           @delete-node="emit('delete-node', $event)"
           @save-node-preset="emit('save-node-preset', $event)"
+          @open-human-review="emit('open-human-review', $event)"
           @update-output-config="emit('update-output-config', $event)"
         />
       </div>
@@ -384,6 +386,7 @@ const emit = defineEmits<{
   (event: "create-port-state", payload: { nodeId: string; side: "input" | "output"; field: { key: string; definition: StateDefinition } }): void;
   (event: "delete-node", payload: { nodeId: string }): void;
   (event: "save-node-preset", payload: { nodeId: string }): void;
+  (event: "open-human-review", payload: { nodeId: string }): void;
   (event: "update-output-config", payload: { nodeId: string; patch: Partial<OutputNode["config"]> }): void;
   (event: "connect-flow", payload: { sourceNodeId: string; targetNodeId: string }): void;
   (event: "connect-state", payload: { sourceNodeId: string; sourceStateKey: string; targetNodeId: string; targetStateKey: string }): void;
@@ -2210,6 +2213,14 @@ function resolveRunNodePresentationForNode(nodeId: string) {
 function resolveRunNodeClassList(nodeId: string) {
   const presentation = resolveRunNodePresentationForNode(nodeId);
   return presentation?.shellClass ? [presentation.shellClass] : [];
+}
+
+function isHumanReviewNode(nodeId: string) {
+  return props.latestRunStatus === "awaiting_human" && props.currentRunNodeId === nodeId;
+}
+
+function isNodeVisuallySelected(nodeId: string) {
+  return selection.selectedNodeId.value === nodeId || isHumanReviewNode(nodeId);
 }
 
 function resolveRunEdgePresentationForEdge(edgeId: string) {

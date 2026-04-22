@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from app.core.compiler.validator import validate_graph
 from app.core.langgraph import execute_node_system_graph_langgraph, get_langgraph_runtime_unsupported_reasons
-from app.core.langgraph.codegen import generate_langgraph_python_source
+from app.core.langgraph.codegen import generate_langgraph_python_source, import_graph_payload_from_python_source
 from app.core.runtime.state import create_initial_run_state, set_run_status, touch_run_lifecycle
 from app.core.schemas.node_system import (
     GraphSaveResponse,
@@ -114,6 +114,23 @@ def export_langgraph_python_endpoint(payload: dict[str, Any]) -> str:
             },
         )
     return generate_langgraph_python_source(graph_payload)
+
+
+@router.post("/import/python", response_model=NodeSystemGraphPayload)
+def import_langgraph_python_endpoint(payload: dict[str, Any]) -> NodeSystemGraphPayload:
+    source = payload.get("source")
+    if not isinstance(source, str) or not source.strip():
+        raise HTTPException(status_code=422, detail={"message": "Python source is required."})
+
+    try:
+        graph_payload = import_graph_payload_from_python_source(source)
+    except (ValueError, ValidationError) as exc:
+        raise HTTPException(status_code=422, detail={"message": str(exc)}) from exc
+
+    validation = validate_graph(graph_payload)
+    if not validation.valid:
+        raise HTTPException(status_code=422, detail=validation.model_dump())
+    return graph_payload
 
 
 @router.post("/run")

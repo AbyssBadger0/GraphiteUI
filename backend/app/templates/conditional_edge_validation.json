@@ -1,8 +1,8 @@
 {
   "template_id": "conditional_edge_validation",
-  "label": "条件边验证",
-  "description": "A minimal conditional-edge graph for validating branch selection in the LangGraph runtime.",
-  "default_graph_name": "条件边验证",
+  "label": "条件分支",
+  "description": "Route a score through true, false, or exhausted conditional branches.",
+  "default_graph_name": "条件分支",
   "state_schema": {
     "score": {
       "name": "score",
@@ -15,15 +15,22 @@
       "name": "pass_message",
       "description": "Message shown when the score passes the threshold.",
       "type": "text",
-      "value": "通过分支命中：score >= 60",
+      "value": "通过：score >= 60，进入 true 分支。",
       "color": "#15803d"
     },
     "fail_message": {
       "name": "fail_message",
       "description": "Message shown when the score misses the threshold.",
       "type": "text",
-      "value": "未通过分支命中：score < 60",
+      "value": "未通过：score < 60，进入 false 分支。",
       "color": "#b91c1c"
+    },
+    "exhausted_message": {
+      "name": "exhausted_message",
+      "description": "Message shown when the loop limit is exhausted.",
+      "type": "text",
+      "value": "循环次数已耗尽，进入 exhausted 分支。",
+      "color": "#78716c"
     }
   },
   "nodes": {
@@ -45,7 +52,7 @@
     "input_pass_message": {
       "kind": "input",
       "name": "input_pass_message",
-      "description": "Provide the output text for the pass branch.",
+      "description": "Provide the output text for the true branch.",
       "ui": {
         "position": { "x": 80, "y": 560 },
         "collapsed": false
@@ -54,13 +61,13 @@
         { "state": "pass_message", "mode": "replace" }
       ],
       "config": {
-        "value": "通过分支命中：score >= 60"
+        "value": "通过：score >= 60，进入 true 分支。"
       }
     },
     "input_fail_message": {
       "kind": "input",
       "name": "input_fail_message",
-      "description": "Provide the output text for the fail branch.",
+      "description": "Provide the output text for the false branch.",
       "ui": {
         "position": { "x": 760, "y": 560 },
         "collapsed": false
@@ -69,13 +76,28 @@
         { "state": "fail_message", "mode": "replace" }
       ],
       "config": {
-        "value": "未通过分支命中：score < 60"
+        "value": "未通过：score < 60，进入 false 分支。"
+      }
+    },
+    "input_exhausted_message": {
+      "kind": "input",
+      "name": "input_exhausted_message",
+      "description": "Provide the output text for the exhausted branch.",
+      "ui": {
+        "position": { "x": 80, "y": 1040 },
+        "collapsed": false
+      },
+      "writes": [
+        { "state": "exhausted_message", "mode": "replace" }
+      ],
+      "config": {
+        "value": "循环次数已耗尽，进入 exhausted 分支。"
       }
     },
     "score_gate": {
       "kind": "condition",
       "name": "score_gate",
-      "description": "Route through true, false, or exhausted based on the numeric score.",
+      "description": "Route through true, false, or exhausted based on score >= 60.",
       "ui": {
         "position": { "x": 760, "y": 80 },
         "collapsed": false
@@ -100,7 +122,7 @@
     "output_pass": {
       "kind": "output",
       "name": "output_pass",
-      "description": "Show the pass-branch output.",
+      "description": "Show the true-branch output.",
       "ui": {
         "position": { "x": 1440, "y": 80 },
         "collapsed": false
@@ -118,7 +140,7 @@
     "output_fail": {
       "kind": "output",
       "name": "output_fail",
-      "description": "Show the fail-branch output.",
+      "description": "Show the false-branch output.",
       "ui": {
         "position": { "x": 1440, "y": 560 },
         "collapsed": false
@@ -136,13 +158,13 @@
     "output_exhausted": {
       "kind": "output",
       "name": "output_exhausted",
-      "description": "Show the exhausted-branch fallback value.",
+      "description": "Show the exhausted-branch output.",
       "ui": {
         "position": { "x": 1440, "y": 1040 },
         "collapsed": false
       },
       "reads": [
-        { "state": "score", "required": true }
+        { "state": "exhausted_message", "required": true }
       ],
       "config": {
         "displayMode": "auto",

@@ -31,7 +31,7 @@ test("EditorCanvas does not animate node transforms while dragging", () => {
 });
 
 test("EditorCanvas raises hovered and selected nodes above sibling cards", () => {
-  assert.match(componentSource, /:class="\{ 'editor-canvas__node--selected': selection\.selectedNodeId\.value === nodeId \}"/);
+  assert.match(componentSource, /:class="\{ 'editor-canvas__node--selected': isNodeVisuallySelected\(nodeId\) \}"/);
   assert.match(componentSource, /<NodeCard[\s\S]*:class="resolveRunNodeClassList\(nodeId\)"/);
   assert.match(componentSource, /\.editor-canvas__node:hover,\n\.editor-canvas__node:focus-within,\n\.editor-canvas__node--selected \{[\s\S]*z-index:\s*8;/);
 });
@@ -62,6 +62,16 @@ test("EditorCanvas restores legacy runtime feedback styling on node cards and ac
   assert.match(componentSource, /\.editor-canvas__edge--active-run \{[\s\S]*opacity:\s*1;/);
   assert.doesNotMatch(componentSource, /\.editor-canvas__edge--active-run \{[^}]*stroke:/);
   assert.doesNotMatch(componentSource, /\.editor-canvas__edge--active-run \{[^}]*filter:/);
+});
+
+test("EditorCanvas treats awaiting-human current node as a persistent review node", () => {
+  assert.match(componentSource, /:class="\{ 'editor-canvas__node--selected': isNodeVisuallySelected\(nodeId\) \}"/);
+  assert.match(componentSource, /:human-review-pending="isHumanReviewNode\(nodeId\)"/);
+  assert.match(componentSource, /@open-human-review="emit\('open-human-review', \$event\)"/);
+  assert.match(componentSource, /function isHumanReviewNode\(nodeId: string\)/);
+  assert.match(componentSource, /props\.latestRunStatus === "awaiting_human" && props\.currentRunNodeId === nodeId/);
+  assert.match(componentSource, /function isNodeVisuallySelected\(nodeId: string\)/);
+  assert.match(componentSource, /return selection\.selectedNodeId\.value === nodeId \|\| isHumanReviewNode\(nodeId\);/);
 });
 
 test("EditorCanvas renders condition route outputs as right-side floating branch handles", () => {

@@ -71,3 +71,23 @@ test("EditorWorkspaceShell routes menu selections and dropped files through the 
   assert.doesNotMatch(componentSource, /requestNodeFocusForTab\(tabId, result\.createdNodeId\)/);
   assert.match(componentSource, /closeNodeCreationMenu\(tabId\)/);
 });
+
+test("EditorWorkspaceShell imports marked GraphiteUI Python files as new graph tabs", () => {
+  assert.match(componentSource, /@import-python-graph="openPythonGraphImportDialog"/);
+  assert.match(componentSource, /ref="pythonGraphImportInput"/);
+  assert.match(componentSource, /async function importPythonGraphFile\(/);
+  assert.match(componentSource, /isGraphiteUiPythonExportSource\(source\)/);
+  assert.match(componentSource, /openImportedGraphTab\(importedGraph, file\.name\)/);
+});
+
+test("EditorWorkspaceShell opens the right sidebar in Human Review mode for awaiting-human runs", () => {
+  assert.match(componentSource, /import EditorHumanReviewPanel from "\.\/EditorHumanReviewPanel\.vue";/);
+  assert.match(componentSource, /const sidePanelModeByTabId = ref<Record<string, "state" \| "human-review">>\(\{\}\);/);
+  assert.match(componentSource, /function openHumanReviewPanelForTab\(tabId: string, nodeId: string \| null\)/);
+  assert.match(componentSource, /@open-human-review="openHumanReviewPanelForTab\(tab\.tabId, \$event\.nodeId\)"/);
+  assert.match(componentSource, /<EditorHumanReviewPanel/);
+  assert.match(componentSource, /v-if="sidePanelMode\(tab\.tabId\) === 'human-review' && documentsByTabId\[tab\.tabId\]"/);
+  assert.match(componentSource, /:run="latestRunDetailByTabId\[tab\.tabId\] \?\? null"/);
+  assert.match(componentSource, /if \(run\.status === "awaiting_human" && run\.current_node_id\) \{/);
+  assert.match(componentSource, /openHumanReviewPanelForTab\(tabId, run\.current_node_id\);/);
+});

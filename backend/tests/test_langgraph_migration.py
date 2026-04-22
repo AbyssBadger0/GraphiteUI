@@ -9,7 +9,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.compiler.validator import validate_graph
 from app.core.langgraph.compiler import compile_graph_to_langgraph_plan, get_langgraph_runtime_unsupported_reasons
-from app.core.langgraph.codegen import _build_export_graph_payload, generate_langgraph_python_source
+from app.core.langgraph.codegen import (
+    _build_export_graph_payload,
+    generate_langgraph_python_source,
+    import_graph_payload_from_python_source,
+)
 from app.core.langgraph.runtime import _finalize_langgraph_cycle_summary, execute_node_system_graph_langgraph
 from app.core.runtime import node_system_executor
 from app.core.runtime.state import create_initial_run_state, set_run_status
@@ -91,8 +95,11 @@ def _fake_invoke_skill(skill_func, skill_inputs):
 
 def _fake_generate_agent_response(node, input_values, skill_context, runtime_config):
     _ = skill_context
+    primary_value = input_values.get("question")
+    if primary_value is None and input_values:
+        primary_value = next(iter(input_values.values()))
     outputs = {
-        binding.state: f"{node.name}:{input_values.get('question', '')}".strip(":")
+        binding.state: f"{node.name}:{primary_value or ''}".strip(":")
         for binding in node.writes
     }
     return outputs, "", [], runtime_config
@@ -242,19 +249,19 @@ class LangGraphMigrationTests(unittest.TestCase):
         graph = _load_hello_world_graph()
         plan = compile_graph_to_langgraph_plan(graph)
         self.assertEqual(plan.name, "Hello World")
-        self.assertEqual(set(plan.requirements.entry_nodes), {"input_question"})
-        self.assertEqual(set(plan.requirements.terminal_nodes), {"output_answer"})
-        self.assertEqual(set(plan.requirements.runtime_entry_nodes), {"answer_helper"})
-        self.assertEqual(set(plan.requirements.runtime_terminal_nodes), {"answer_helper"})
-        self.assertEqual(set(plan.runtime_nodes), {"answer_helper"})
+        self.assertEqual(set(plan.requirements.entry_nodes), {"input_name"})
+        self.assertEqual(set(plan.requirements.terminal_nodes), {"output_greeting"})
+        self.assertEqual(set(plan.requirements.runtime_entry_nodes), {"greeting_agent"})
+        self.assertEqual(set(plan.requirements.runtime_terminal_nodes), {"greeting_agent"})
+        self.assertEqual(set(plan.runtime_nodes), {"greeting_agent"})
         self.assertEqual([edge.model_dump(by_alias=True) for edge in plan.runtime_edges], [])
         self.assertEqual(
             [boundary.model_dump(by_alias=True) for boundary in plan.input_boundaries],
-            [{"node": "input_question", "state": "question"}],
+            [{"node": "input_name", "state": "name"}],
         )
         self.assertEqual(
             [boundary.model_dump(by_alias=True) for boundary in plan.output_boundaries],
-            [{"node": "output_answer", "state": "answer"}],
+            [{"node": "output_greeting", "state": "greeting"}],
         )
         self.assertEqual(plan.requirements.skill_keys, [])
         self.assertEqual(plan.requirements.unsupported_reasons, [])
@@ -289,26 +296,26 @@ class LangGraphMigrationTests(unittest.TestCase):
     @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
     def test_hello_world_runtime_prefers_state_schema_value_for_input_nodes(self):
         graph = _load_hello_world_graph()
-        graph.state_schema["question"].value = "来自 state_schema 的问题"
-        graph.nodes["input_question"].config.value = "来自节点 config 的旧值"
+        graph.state_schema["name"].value = "来自 state_schema 的名称"
+        graph.nodes["input_name"].config.value = "来自节点 config 的旧值"
 
         result = execute_node_system_graph_langgraph(graph, persist_progress=False)
 
         self.assertEqual(result["status"], "completed")
-        self.assertEqual(result["final_result"], "answer_helper:来自 state_schema 的问题")
+        self.assertEqual(result["final_result"], "greeting_agent:来自 state_schema 的名称")
         self.assertEqual(result["checkpoint_metadata"]["available"], True)
         self.assertTrue(result["checkpoint_metadata"]["checkpoint_id"])
         self.assertEqual(result["checkpoint_metadata"]["thread_id"], result["run_id"])
         self.assertEqual(len(result["node_executions"]), 1)
-        self.assertEqual({item["node_id"] for item in result["node_executions"]}, {"answer_helper"})
+        self.assertEqual({item["node_id"] for item in result["node_executions"]}, {"greeting_agent"})
         self.assertEqual({item["node_type"] for item in result["node_executions"]}, {"agent"})
         self.assertEqual(result["cycle_summary"]["has_cycle"], False)
-        self.assertEqual(result["output_previews"][0]["node_id"], "output_answer")
-        self.assertEqual(result["output_previews"][0]["source_key"], "answer")
-        self.assertEqual(result["output_previews"][0]["value"], "answer_helper:来自 state_schema 的问题")
-        self.assertEqual(result["node_status_map"]["input_question"], "success")
-        self.assertEqual(result["node_status_map"]["output_answer"], "success")
-        self.assertIn("answer", result["state_snapshot"]["values"])
+        self.assertEqual(result["output_previews"][0]["node_id"], "output_greeting")
+        self.assertEqual(result["output_previews"][0]["source_key"], "greeting")
+        self.assertEqual(result["output_previews"][0]["value"], "greeting_agent:来自 state_schema 的名称")
+        self.assertEqual(result["node_status_map"]["input_name"], "success")
+        self.assertEqual(result["node_status_map"]["output_greeting"], "success")
+        self.assertIn("greeting", result["state_snapshot"]["values"])
 
     @patch("app.core.langgraph.runtime.save_run", lambda state: None)
     @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
@@ -351,7 +358,7 @@ class LangGraphMigrationTests(unittest.TestCase):
         self.assertEqual(result["runtime_backend"], "langgraph")
         self.assertEqual(result["lifecycle"]["resume_count"], 1)
         self.assertEqual(result["lifecycle"]["resumed_from_run_id"], initial_state["run_id"])
-        self.assertIn("answer", result["state_snapshot"]["values"])
+        self.assertIn("greeting", result["state_snapshot"]["values"])
 
     @patch("app.core.langgraph.runtime.save_run", lambda state: None)
     @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
@@ -361,18 +368,18 @@ class LangGraphMigrationTests(unittest.TestCase):
     def test_langgraph_interrupt_before_waits_for_human(self):
         graph = _load_hello_world_graph()
         payload = graph.model_dump(by_alias=True)
-        payload["metadata"] = {"interrupt_before": ["answer_helper"]}
+        payload["metadata"] = {"interrupt_before": ["greeting_agent"]}
         interrupt_graph = NodeSystemGraphPayload.model_validate(payload)
 
         result = execute_node_system_graph_langgraph(interrupt_graph, persist_progress=False)
 
         self.assertEqual(result["status"], "awaiting_human")
         self.assertEqual(result["runtime_backend"], "langgraph")
-        self.assertEqual(result["current_node_id"], "answer_helper")
+        self.assertEqual(result["current_node_id"], "greeting_agent")
         self.assertEqual(result["lifecycle"]["pause_reason"], "breakpoint")
         self.assertTrue(result["checkpoint_metadata"]["available"])
-        self.assertEqual(result["state_snapshot"]["values"]["question"], "什么是 GraphiteUI？")
-        self.assertEqual(result["metadata"]["pending_interrupt_nodes"], ["answer_helper"])
+        self.assertEqual(result["state_snapshot"]["values"]["name"], "GraphiteUI 用户")
+        self.assertEqual(result["metadata"]["pending_interrupt_nodes"], ["greeting_agent"])
         self.assertEqual(result["metadata"]["pending_interrupts"], [])
 
     @patch("app.core.langgraph.runtime.save_run", lambda state: None)
@@ -383,7 +390,7 @@ class LangGraphMigrationTests(unittest.TestCase):
     def test_langgraph_interrupt_resume_accepts_human_state_updates(self):
         graph = _load_hello_world_graph()
         payload = graph.model_dump(by_alias=True)
-        payload["metadata"] = {"interrupt_before": ["answer_helper"]}
+        payload["metadata"] = {"interrupt_before": ["greeting_agent"]}
         interrupt_graph = NodeSystemGraphPayload.model_validate(payload)
 
         interrupted = execute_node_system_graph_langgraph(interrupt_graph, persist_progress=False)
@@ -403,15 +410,15 @@ class LangGraphMigrationTests(unittest.TestCase):
             initial_state=resumed_state,
             persist_progress=False,
             resume_from_checkpoint=True,
-            resume_command={"question": "人工确认后的问题"},
+            resume_command={"name": "人工确认后的名称"},
         )
 
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["runtime_backend"], "langgraph")
         self.assertEqual(result["lifecycle"]["resume_count"], 1)
         self.assertEqual(result["lifecycle"]["resumed_from_run_id"], interrupted["run_id"])
-        self.assertEqual(result["state_snapshot"]["values"]["question"], "人工确认后的问题")
-        self.assertEqual(result["state_snapshot"]["values"]["answer"], "answer_helper:人工确认后的问题")
+        self.assertEqual(result["state_snapshot"]["values"]["name"], "人工确认后的名称")
+        self.assertEqual(result["state_snapshot"]["values"]["greeting"], "greeting_agent:人工确认后的名称")
         self.assertNotIn("pending_interrupt_nodes", result.get("metadata", {}))
 
     def test_knowledge_base_validation_template_still_valid(self):
@@ -878,7 +885,7 @@ class LangGraphMigrationTests(unittest.TestCase):
         namespace: dict[str, object] = {}
         exec(source, namespace, namespace)
         result = namespace["invoke_graph"]()
-        self.assertIn("answer", result)
+        self.assertIn("greeting", result)
 
     def test_exported_langgraph_payload_keeps_only_runtime_fields(self):
         graph = _load_hello_world_graph()
@@ -886,45 +893,71 @@ class LangGraphMigrationTests(unittest.TestCase):
 
         self.assertNotIn("graph_id", payload)
         self.assertNotIn("metadata", payload)
-        self.assertEqual(payload["state_schema"]["question"], {"value": "什么是 GraphiteUI？"})
-        self.assertEqual(payload["state_schema"]["answer"], {"value": ""})
+        self.assertEqual(payload["state_schema"]["name"], {"value": "GraphiteUI 用户"})
+        self.assertEqual(payload["state_schema"]["greeting"], {"value": ""})
         self.assertEqual(
-            payload["nodes"]["input_question"],
+            payload["nodes"]["input_name"],
             {
                 "kind": "input",
-                "writes": [{"state": "question"}],
+                "writes": [{"state": "name"}],
             },
         )
         self.assertEqual(
-            payload["nodes"]["answer_helper"],
+            payload["nodes"]["greeting_agent"],
             {
                 "kind": "agent",
-                "reads": [{"state": "question"}],
-                "writes": [{"state": "answer"}],
-                "config": {"taskInstruction": "请直接用中文回答用户问题。"},
+                "reads": [{"state": "name"}],
+                "writes": [{"state": "greeting"}],
+                "config": {"taskInstruction": "读取输入 name，用中文生成一句简短、友好的欢迎语。只输出问候内容，不要解释。"},
             },
         )
         self.assertEqual(
-            payload["nodes"]["output_answer"],
+            payload["nodes"]["output_greeting"],
             {
                 "kind": "output",
-                "reads": [{"state": "answer"}],
+                "reads": [{"state": "greeting"}],
             },
         )
 
     def test_exported_langgraph_python_source_omits_editor_only_payload_fields(self):
         graph = _load_hello_world_graph()
         source = generate_langgraph_python_source(graph)
-        payload_source = source.split("GRAPH = ", 1)[0]
+        runtime_payload_source = source.split("GRAPH_PAYLOAD = ", 1)[1].split("\nGRAPHITEUI_EDITOR_GRAPH =", 1)[0]
 
         self.assertIn("NodeSystemGraphPayload.model_validate(_inflate_graph_payload(GRAPH_PAYLOAD))", source)
         self.assertNotIn("NodeSystemGraphDocument", source)
-        self.assertNotIn("'ui':", payload_source)
-        self.assertNotIn("'description':", payload_source)
-        self.assertNotIn("'color':", payload_source)
-        self.assertNotIn("'required':", payload_source)
-        self.assertNotIn("'modelSource': 'global'", payload_source)
-        self.assertNotIn("'graph_id': 'exported_graph'", payload_source)
+        self.assertNotIn("'ui':", runtime_payload_source)
+        self.assertNotIn("'description':", runtime_payload_source)
+        self.assertNotIn("'color':", runtime_payload_source)
+        self.assertNotIn("'required':", runtime_payload_source)
+        self.assertNotIn("'modelSource': 'global'", runtime_payload_source)
+        self.assertNotIn("'graph_id': 'exported_graph'", runtime_payload_source)
+
+    def test_exported_langgraph_python_source_embeds_reversible_editor_graph(self):
+        graph = _load_hello_world_graph()
+        source = generate_langgraph_python_source(graph)
+        editor_payload_source = source.split("GRAPHITEUI_EDITOR_GRAPH = ", 1)[1].split("\nINTERRUPT_BEFORE_CONFIG", 1)[0]
+
+        self.assertIn("GRAPHITEUI_EXPORT_VERSION = 1", source)
+        self.assertIn("'ui':", editor_payload_source)
+        self.assertIn("'description':", editor_payload_source)
+        self.assertIn("'color':", editor_payload_source)
+        self.assertNotIn("'graph_id':", editor_payload_source)
+
+    def test_import_graph_payload_from_python_source_reads_editor_graph_without_execution(self):
+        graph = _load_hello_world_graph()
+        source = generate_langgraph_python_source(graph) + "\nraise RuntimeError('must not execute import file')\n"
+
+        imported = import_graph_payload_from_python_source(source)
+
+        self.assertEqual(imported.name, graph.name)
+        self.assertIsNone(imported.graph_id)
+        self.assertEqual(imported.nodes["input_name"].ui.position.x, 80.0)
+        self.assertEqual(imported.state_schema["name"].color, "#d97706")
+
+    def test_import_graph_payload_from_python_source_rejects_plain_python(self):
+        with self.assertRaises(ValueError):
+            import_graph_payload_from_python_source("print('ordinary python file')\n")
 
     @patch("app.core.langgraph.runtime.save_run", lambda state: None)
     @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
@@ -1078,13 +1111,12 @@ class LangGraphMigrationTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["runtime_backend"], "langgraph")
-        self.assertEqual(len(result["node_executions"]), 2)
+        self.assertEqual(len(result["node_executions"]), 1)
         self.assertEqual({item["node_type"] for item in result["node_executions"]}, {"agent"})
         self.assertIn("search_knowledge_base", result["selected_skills"])
-        self.assertEqual(len(result["skill_outputs"]), 2)
+        self.assertEqual(len(result["skill_outputs"]), 1)
         self.assertTrue(result["knowledge_summary"])
-        self.assertIn("raw_answer", result["state_snapshot"]["values"])
-        self.assertIn("formatted_answer", result["state_snapshot"]["values"])
+        self.assertIn("answer", result["state_snapshot"]["values"])
 
     @patch("app.core.langgraph.runtime.save_run", lambda state: None)
     @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
@@ -1094,7 +1126,7 @@ class LangGraphMigrationTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["runtime_backend"], "langgraph")
-        self.assertEqual(result["final_result"], "通过分支命中：score >= 60")
+        self.assertEqual(result["final_result"], "通过：score >= 60，进入 true 分支。")
         self.assertEqual(result["state_snapshot"]["values"]["score"], 80)
         self.assertEqual(result["node_executions"], [])
         self.assertEqual(result["node_status_map"]["score_gate"], "success")

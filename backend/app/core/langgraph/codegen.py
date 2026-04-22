@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pprint import pformat
 from typing import Any
 
@@ -20,9 +21,11 @@ from app.core.schemas.node_system import (
 
 def generate_langgraph_python_source(graph: NodeSystemGraphPayload) -> str:
     payload = _build_export_graph_payload(graph)
+    editor_payload = _build_editor_graph_payload(graph)
     interrupt_before = _normalize_interrupt_config(graph.metadata.get("interrupt_before") or graph.metadata.get("interruptBefore"))
     interrupt_after = _normalize_interrupt_config(graph.metadata.get("interrupt_after") or graph.metadata.get("interruptAfter"))
     payload_literal = pformat(payload, sort_dicts=False, width=100)
+    editor_payload_literal = pformat(editor_payload, sort_dicts=False, width=100)
     interrupt_before_literal = pformat(interrupt_before, sort_dicts=False, width=100)
     interrupt_after_literal = pformat(interrupt_after, sort_dicts=False, width=100)
 
@@ -44,7 +47,9 @@ from app.core.runtime.state import create_initial_run_state
 from app.core.schemas.node_system import NodeSystemGraphPayload
 
 
+GRAPHITEUI_EXPORT_VERSION = 1
 GRAPH_PAYLOAD = {payload_literal}
+GRAPHITEUI_EDITOR_GRAPH = {editor_payload_literal}
 INTERRUPT_BEFORE_CONFIG = {interrupt_before_literal}
 INTERRUPT_AFTER_CONFIG = {interrupt_after_literal}
 
@@ -179,6 +184,46 @@ if __name__ == "__main__":
     result = invoke_graph()
     print(result)
 """
+
+
+def import_graph_payload_from_python_source(source: str) -> NodeSystemGraphPayload:
+    assignments = _parse_literal_assignments(source)
+    if assignments.get("GRAPHITEUI_EXPORT_VERSION") != 1 or "GRAPHITEUI_EDITOR_GRAPH" not in assignments:
+        raise ValueError("Python file is not a GraphiteUI reversible export.")
+
+    editor_payload = assignments["GRAPHITEUI_EDITOR_GRAPH"]
+    if not isinstance(editor_payload, dict):
+        raise ValueError("GraphiteUI editor graph payload must be a dictionary.")
+
+    graph_payload = dict(editor_payload)
+    graph_payload["graph_id"] = None
+    return NodeSystemGraphPayload.model_validate(graph_payload)
+
+
+def _parse_literal_assignments(source: str) -> dict[str, Any]:
+    try:
+        module = ast.parse(source)
+    except SyntaxError as exc:
+        raise ValueError("Python source could not be parsed.") from exc
+
+    assignments: dict[str, Any] = {}
+    for statement in module.body:
+        if not isinstance(statement, ast.Assign) or len(statement.targets) != 1:
+            continue
+        target = statement.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+        if target.id not in {"GRAPHITEUI_EXPORT_VERSION", "GRAPHITEUI_EDITOR_GRAPH", "GRAPH_PAYLOAD"}:
+            continue
+        try:
+            assignments[target.id] = ast.literal_eval(statement.value)
+        except (ValueError, SyntaxError) as exc:
+            raise ValueError(f"GraphiteUI export constant '{target.id}' is not a safe literal.") from exc
+    return assignments
+
+
+def _build_editor_graph_payload(graph: NodeSystemGraphPayload) -> dict[str, Any]:
+    return graph.model_dump(mode="json", by_alias=True, exclude={"graph_id"})
 
 
 def _build_export_graph_payload(graph: NodeSystemGraphPayload) -> dict[str, Any]:

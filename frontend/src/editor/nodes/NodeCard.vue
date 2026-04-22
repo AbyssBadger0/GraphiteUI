@@ -14,6 +14,15 @@
       @pointerdown.stop
       @click.stop
     >
+      <ElButton
+        v-if="humanReviewPending"
+        round
+        data-top-action-surface="true"
+        class="node-card__human-review-button"
+        @click.stop="$emit('open-human-review', { nodeId })"
+      >
+        Human Review
+      </ElButton>
       <ElPopover
         v-if="hasAdvancedSettings"
         :visible="activeTopAction === 'advanced'"
@@ -1168,6 +1177,7 @@ const props = defineProps<{
   runOutputDisplayMode?: string | null;
   runFailureMessage?: string | null;
   pendingStateInputSource?: { stateKey: string; label: string; stateColor: string } | null;
+  humanReviewPending: boolean;
   selected: boolean;
 }>();
 
@@ -1188,6 +1198,7 @@ const emit = defineEmits<{
   (event: "create-port-state", payload: { nodeId: string; side: "input" | "output"; field: StateFieldDraft }): void;
   (event: "delete-node", payload: { nodeId: string }): void;
   (event: "save-node-preset", payload: { nodeId: string }): void;
+  (event: "open-human-review", payload: { nodeId: string }): void;
 }>();
 
 const outputDisplayModeOptions: Array<{ value: OutputNode["config"]["displayMode"]; label: string }> = [
@@ -1499,7 +1510,7 @@ const agentTemperatureInput = computed(() => {
 });
 const hasAdvancedSettings = computed(() => props.node.kind === "agent" || props.node.kind === "output");
 const canSavePreset = computed(() => props.node.kind === "agent");
-const isTopActionVisible = computed(() => props.selected || activeTopAction.value !== null);
+const isTopActionVisible = computed(() => props.humanReviewPending || props.selected || activeTopAction.value !== null);
 const hasFloatingPanelOpen = computed(
   () =>
     activeTopAction.value !== null ||
@@ -2819,6 +2830,26 @@ function handleConditionRuleValueInput(event: Event) {
 
 .node-card__top-action-button :deep(.el-icon) {
   font-size: 1.18rem;
+}
+
+.node-card__human-review-button {
+  min-width: 118px;
+  height: 40px;
+  border: 1px solid rgba(217, 119, 6, 0.26);
+  border-radius: 999px;
+  background: rgba(217, 119, 6, 0.12);
+  color: #9a3412;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+.node-card__human-review-button:hover {
+  border-color: rgba(217, 119, 6, 0.34);
+  background: rgba(217, 119, 6, 0.18);
+  color: #7c2d12;
 }
 
 .node-card__top-action-button:hover {

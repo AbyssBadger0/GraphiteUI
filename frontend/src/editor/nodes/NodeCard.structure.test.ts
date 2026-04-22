@@ -256,6 +256,16 @@ test("NodeCard moves node actions into hoverable top buttons built from Element 
   assert.doesNotMatch(componentSource, /<details class="node-card__advanced-panel"/);
 });
 
+test("NodeCard shows a persistent human review capsule in the top action dock", () => {
+  assert.match(componentSource, /humanReviewPending:\s*boolean;/);
+  assert.match(componentSource, /v-if="humanReviewPending"/);
+  assert.match(componentSource, /class="node-card__human-review-button"/);
+  assert.match(componentSource, /@click\.stop="\$emit\('open-human-review', \{ nodeId \}\)"/);
+  assert.match(componentSource, /Human Review/);
+  assert.match(componentSource, /const isTopActionVisible = computed\(\(\) => props\.humanReviewPending \|\| props\.selected \|\| activeTopAction\.value !== null\);/);
+  assert.match(componentSource, /\.node-card__human-review-button \{[\s\S]*background:\s*rgba\(217,\s*119,\s*6,\s*0\.12\);/);
+});
+
 test("NodeCard reveals state pills on hover and opens state editing only after a confirm click", () => {
   assert.match(componentSource, /import StateEditorPopover from "\.\/StateEditorPopover\.vue";/);
   assert.match(componentSource, /@click\.stop="handleStateEditorActionClick\(/);

@@ -5,6 +5,7 @@
     :class="{
       'editor-canvas--connecting': Boolean(pendingConnection),
       'editor-canvas--panning': viewport.isPanning.value,
+      'editor-canvas--locked': interactionLocked,
     }"
     :style="canvasSurfaceStyle"
     tabindex="0"
@@ -42,6 +43,9 @@
       >
         {{ option.label }}
       </button>
+    </div>
+    <div v-if="interactionLocked" class="editor-canvas__lock-banner" aria-live="polite">
+      Run paused · Graph locked
     </div>
     <div class="editor-canvas__viewport" :style="viewportStyle">
       <div v-if="nodeEntries.length === 0" class="editor-canvas__empty-state">
@@ -193,6 +197,7 @@
         :style="nodeStyle(node.ui.position)"
         @pointerenter="setHoveredNode(nodeId)"
         @pointerleave="clearHoveredNode(nodeId)"
+        @pointerdown.capture="handleLockedNodePointerCapture(nodeId, $event)"
         @pointerdown.stop="handleNodePointerDown(nodeId, $event)"
         @click.capture="handleNodeClickCapture(nodeId, $event)"
       >
@@ -213,6 +218,8 @@
           :available-agent-model-refs="availableAgentModelRefs"
           :agent-model-display-lookup="agentModelDisplayLookup"
           :global-text-model-ref="globalTextModelRef"
+          :agent-breakpoint-enabled="isAgentBreakpointEnabledInDocument(document, nodeId)"
+          :agent-breakpoint-timing="resolveAgentBreakpointTimingInDocument(document, nodeId)"
           :condition-route-targets="conditionRouteTargetsByNodeId[nodeId] ?? undefined"
           :latest-run-status="latestRunStatus ?? null"
           :run-output-preview-text="runOutputPreviewByNodeId?.[nodeId]?.text ?? null"
@@ -228,6 +235,8 @@
           @update-state="emit('update-state', $event)"
           @remove-port-state="emit('remove-port-state', $event)"
           @update-agent-config="emit('update-agent-config', $event)"
+          @toggle-agent-breakpoint="emit('toggle-agent-breakpoint', $event)"
+          @update-agent-breakpoint-timing="emit('update-agent-breakpoint-timing', $event)"
           @update-condition-config="emit('update-condition-config', $event)"
           @update-condition-branch="emit('update-condition-branch', $event)"
           @add-condition-branch="emit('add-condition-branch', $event)"
@@ -345,6 +354,7 @@ import { resolveFocusedViewport } from "@/editor/canvas/focusNodeViewport";
 import { resolveViewportForMinimapCenter } from "./minimapModel";
 import { useNodeSelectionFocus, type NodeFocusRequest } from "./useNodeSelectionFocus";
 import { useViewport } from "./useViewport";
+import { isAgentBreakpointEnabledInDocument, resolveAgentBreakpointTimingInDocument } from "@/lib/graph-document";
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
 import type { SkillDefinition } from "@/types/skills";
 import type { AgentNode, ConditionNode, GraphDocument, GraphNode, GraphPayload, GraphPosition, InputNode, OutputNode, StateDefinition } from "@/types/node-system";
@@ -366,6 +376,7 @@ const props = defineProps<{
   runOutputPreviewByNodeId?: Record<string, { text: string; displayMode: string | null }>;
   runFailureMessageByNodeId?: Record<string, string>;
   activeRunEdgeIds?: string[];
+  interactionLocked?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -378,6 +389,8 @@ const emit = defineEmits<{
   (event: "update-state", payload: { stateKey: string; patch: Partial<StateDefinition> }): void;
   (event: "remove-port-state", payload: { nodeId: string; side: "input" | "output"; stateKey: string }): void;
   (event: "update-agent-config", payload: { nodeId: string; patch: Partial<AgentNode["config"]> }): void;
+  (event: "toggle-agent-breakpoint", payload: { nodeId: string; enabled: boolean }): void;
+  (event: "update-agent-breakpoint-timing", payload: { nodeId: string; timing: "before" | "after" }): void;
   (event: "update-condition-config", payload: { nodeId: string; patch: Partial<ConditionNode["config"]> }): void;
   (event: "update-condition-branch", payload: { nodeId: string; currentKey: string; nextKey: string; mappingKeys: string[] }): void;
   (event: "add-condition-branch", payload: { nodeId: string }): void;
@@ -1681,6 +1694,12 @@ function handleCanvasPointerUp(event: PointerEvent) {
     nodeDrag.value.captureElement.releasePointerCapture(event.pointerId);
   }
   if (activeConnection.value) {
+    if (isGraphEditingLocked()) {
+      pendingConnection.value = null;
+      pendingConnectionPoint.value = null;
+      autoSnappedTargetAnchor.value = null;
+      return;
+    }
     if (autoSnappedTargetAnchor.value) {
       completePendingConnection(autoSnappedTargetAnchor.value);
       return;
@@ -1725,6 +1744,9 @@ function handleNodeClickCapture(nodeId: string, event: MouseEvent) {
 }
 
 function handleCanvasDoubleClick(event: MouseEvent) {
+  if (isGraphEditingLocked()) {
+    return;
+  }
   const target = event.target as HTMLElement | null;
   if (
     target?.closest(
@@ -1838,10 +1860,17 @@ function resolveEligibleTargetAnchorForNodeBody(nodeId: string) {
 }
 
 function handleCanvasDragOver(event: DragEvent) {
+  if (isGraphEditingLocked()) {
+    event.dataTransfer!.dropEffect = "none";
+    return;
+  }
   event.dataTransfer!.dropEffect = event.dataTransfer?.files?.length ? "copy" : "none";
 }
 
 function handleCanvasDrop(event: DragEvent) {
+  if (isGraphEditingLocked()) {
+    return;
+  }
   const target = event.target as HTMLElement | null;
   if (target?.closest(".editor-canvas__node, .node-card")) {
     return;
@@ -1863,6 +1892,13 @@ function handleCanvasDrop(event: DragEvent) {
 function handleNodePointerDown(nodeId: string, event: PointerEvent) {
   const node = props.document.nodes[nodeId];
   if (!node) {
+    return;
+  }
+  if (isGraphEditingLocked()) {
+    event.preventDefault();
+    canvasRef.value?.focus();
+    clearCanvasTransientState();
+    selection.selectNode(nodeId);
     return;
   }
   const target = event.target;
@@ -1944,6 +1980,10 @@ function handleWheel(event: WheelEvent) {
 }
 
 function handleEdgePointerDown(edge: ProjectedCanvasEdge, event: PointerEvent) {
+  if (isGraphEditingLocked()) {
+    event.preventDefault();
+    return;
+  }
   canvasRef.value?.focus();
   clearCanvasTransientState();
   pendingConnection.value = null;
@@ -1972,6 +2012,9 @@ function handleEdgePointerDown(edge: ProjectedCanvasEdge, event: PointerEvent) {
 }
 
 function handleAnchorPointerDown(anchor: ProjectedCanvasAnchor) {
+  if (isGraphEditingLocked()) {
+    return;
+  }
   canvasRef.value?.focus();
   clearCanvasTransientState();
   selection.selectNode(anchor.nodeId);
@@ -2009,6 +2052,9 @@ function handleAnchorPointerDown(anchor: ProjectedCanvasAnchor) {
 }
 
 function openCreationMenuFromPendingConnection(event: PointerEvent) {
+  if (isGraphEditingLocked()) {
+    return;
+  }
   if (!activeConnection.value) {
     return;
   }
@@ -2115,6 +2161,9 @@ function isSamePendingConnection(left: PendingGraphConnection | null, right: Pen
 }
 
 function completePendingConnection(targetAnchor: ProjectedCanvasAnchor) {
+  if (isGraphEditingLocked()) {
+    return;
+  }
   const connection = activeConnection.value;
   if (!connection) {
     return;
@@ -2161,6 +2210,9 @@ function completePendingConnection(targetAnchor: ProjectedCanvasAnchor) {
 }
 
 function handleSelectedEdgeDelete() {
+  if (isGraphEditingLocked()) {
+    return;
+  }
   const edge = selectedEdgeId.value ? projectedEdges.value.find((candidate) => candidate.id === selectedEdgeId.value) : null;
   if (!edge) {
     return;
@@ -2223,6 +2275,29 @@ function isNodeVisuallySelected(nodeId: string) {
   return selection.selectedNodeId.value === nodeId || isHumanReviewNode(nodeId);
 }
 
+function isGraphEditingLocked() {
+  return Boolean(props.interactionLocked);
+}
+
+function handleLockedNodePointerCapture(nodeId: string, event: PointerEvent) {
+  if (!isGraphEditingLocked()) {
+    return;
+  }
+  const target = event.target;
+  if (target instanceof HTMLElement && target.closest("[data-human-review-action='true']")) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+  canvasRef.value?.focus();
+  clearCanvasTransientState();
+  pendingConnection.value = null;
+  pendingConnectionPoint.value = null;
+  autoSnappedTargetAnchor.value = null;
+  selectedEdgeId.value = null;
+  selection.selectNode(nodeId);
+}
+
 function resolveRunEdgePresentationForEdge(edgeId: string) {
   return resolveEdgeRunPresentation(edgeId, props.activeRunEdgeIds ?? []);
 }
@@ -2254,6 +2329,29 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 .editor-canvas--panning * {
   user-select: none;
   -webkit-user-select: none;
+}
+
+.editor-canvas--locked {
+  cursor: grab;
+}
+
+.editor-canvas__lock-banner {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: 25;
+  transform: translateX(-50%);
+  padding: 7px 14px;
+  border: 1px solid rgba(154, 52, 18, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 250, 241, 0.92);
+  color: #9a3412;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  box-shadow: 0 12px 28px rgba(120, 53, 15, 0.1);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
 }
 
 .editor-canvas__edge-view-toolbar {

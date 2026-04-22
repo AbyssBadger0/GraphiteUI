@@ -4,11 +4,12 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Query
+from pydantic import ValidationError
 
 from app.core.langgraph import execute_node_system_graph_langgraph, get_langgraph_runtime_unsupported_reasons
 from app.core.runtime.state import create_initial_run_state, set_run_status, touch_run_lifecycle
+from app.core.schemas.node_system import NodeSystemGraphDocument
 from app.core.schemas.run import NodeExecutionDetail, RunDetail, RunSummary
-from app.core.storage.graph_store import load_graph
 from app.core.storage.run_store import list_runs, load_run
 from app.core.storage.run_store import save_run
 
@@ -80,10 +81,20 @@ def resume_run_endpoint(
     if previous_run.get("status") not in {"failed", "paused", "awaiting_human"}:
         raise HTTPException(status_code=409, detail=f"Run '{run_id}' cannot be resumed from status '{previous_run.get('status')}'.")
 
+    graph_snapshot = previous_run.get("graph_snapshot")
+    if not isinstance(graph_snapshot, dict):
+        raise HTTPException(status_code=409, detail=f"Run '{run_id}' cannot be resumed because its graph snapshot is missing.")
+
     try:
-        graph = load_graph(str(previous_run["graph_id"]))
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        graph = NodeSystemGraphDocument.model_validate(graph_snapshot)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": f"Run '{run_id}' cannot be resumed because its graph snapshot is invalid.",
+                "errors": exc.errors(),
+            },
+        ) from exc
 
     fallback_reasons = get_langgraph_runtime_unsupported_reasons(graph)
     if fallback_reasons:

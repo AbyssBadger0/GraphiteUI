@@ -81,6 +81,7 @@
                 :run-output-preview-by-node-id="runOutputPreviewByTabId[tab.tabId] ?? undefined"
                 :run-failure-message-by-node-id="runFailureMessageByTabId[tab.tabId] ?? undefined"
                 :active-run-edge-ids="activeRunEdgeIdsByTabId[tab.tabId] ?? undefined"
+                :interaction-locked="isGraphInteractionLocked(tab.tabId)"
                 @select-node="focusNodeForTab(tab.tabId, $event)"
                 @update-node-metadata="updateNodeMetadataForTab(tab.tabId, $event.nodeId, $event.patch)"
                 @update-input-config="updateInputConfigForTab(tab.tabId, $event.nodeId, $event.patch)"
@@ -89,6 +90,8 @@
                 @update-state="updateStateField(tab.tabId, $event.stateKey, $event.patch)"
                 @remove-port-state="removeNodePortStateForTab(tab.tabId, $event.nodeId, $event.side, $event.stateKey)"
                 @update-agent-config="updateAgentConfigForTab(tab.tabId, $event.nodeId, $event.patch)"
+                @toggle-agent-breakpoint="toggleAgentBreakpointForTab(tab.tabId, $event.nodeId, $event.enabled)"
+                @update-agent-breakpoint-timing="updateAgentBreakpointTimingForTab(tab.tabId, $event.nodeId, $event.timing)"
                 @update-condition-config="updateConditionConfigForTab(tab.tabId, $event.nodeId, $event.patch)"
                 @update-condition-branch="updateConditionBranchForTab(tab.tabId, $event.nodeId, $event.currentKey, $event.nextKey, $event.mappingKeys)"
                 @add-condition-branch="addConditionBranchForTab(tab.tabId, $event.nodeId)"
@@ -223,6 +226,8 @@ import {
   removeNodeFromDocument,
   pruneUnreferencedStateSchemaInDocument,
   syncKnowledgeBaseSkillsInDocument,
+  updateAgentBreakpointInDocument,
+  updateAgentBreakpointTimingInDocument,
   updateAgentNodeConfigInDocument,
   updateConditionBranchInDocument,
   updateConditionNodeConfigInDocument,
@@ -849,6 +854,7 @@ function toggleStatePanel(tabId: string) {
 }
 
 function openHumanReviewPanelForTab(tabId: string, nodeId: string | null) {
+  closeNodeCreationMenu(tabId);
   sidePanelModeByTabId.value = {
     ...sidePanelModeByTabId.value,
     [tabId]: "human-review",
@@ -858,6 +864,24 @@ function openHumanReviewPanelForTab(tabId: string, nodeId: string | null) {
     [tabId]: true,
   };
   focusNodeForTab(tabId, nodeId);
+}
+
+function isGraphInteractionLocked(tabId: string) {
+  return latestRunDetailByTabId.value[tabId]?.status === "awaiting_human";
+}
+
+function guardGraphEditForTab(tabId: string) {
+  if (!isGraphInteractionLocked(tabId)) {
+    return false;
+  }
+  const run = latestRunDetailByTabId.value[tabId] ?? null;
+  setMessageFeedbackForTab(tabId, {
+    tone: "warning",
+    message: "Run is paused for human review. Continue or cancel the paused run before editing the graph.",
+    activeRunId: run?.run_id ?? undefined,
+    activeRunStatus: run?.status ?? "awaiting_human",
+  });
+  return true;
 }
 
 function focusNodeForTab(tabId: string, nodeId: string | null) {
@@ -934,6 +958,9 @@ function nodeCreationEntriesForTab(tabId: string): NodeCreationEntry[] {
 }
 
 function openNodeCreationMenuForTab(tabId: string, context: NodeCreationContext) {
+  if (guardGraphEditForTab(tabId)) {
+    return;
+  }
   nodeCreationMenuByTabId.value = {
     ...nodeCreationMenuByTabId.value,
     [tabId]: {
@@ -974,6 +1001,10 @@ function updateNodeCreationQuery(tabId: string, query: string) {
 }
 
 function createNodeFromMenuForTab(tabId: string, _entry: NodeCreationEntry) {
+  if (guardGraphEditForTab(tabId)) {
+    closeNodeCreationMenu(tabId);
+    return;
+  }
   const document = documentsByTabId.value[tabId];
   const menuState = nodeCreationMenuState(tabId);
   if (!document || !menuState?.context) {
@@ -1002,6 +1033,10 @@ function createNodeFromMenuForTab(tabId: string, _entry: NodeCreationEntry) {
 }
 
 async function createNodeFromFileForTab(tabId: string, _payload: { file: File; position: GraphPosition }) {
+  if (guardGraphEditForTab(tabId)) {
+    closeNodeCreationMenu(tabId);
+    return;
+  }
   const document = documentsByTabId.value[tabId];
   if (!document) {
     closeNodeCreationMenu(tabId);
@@ -1080,6 +1115,9 @@ async function importPythonGraphFile(file: File, options: { fallbackToFileNode: 
 }
 
 function handleNodePositionUpdate(tabId: string, payload: { nodeId: string; position: GraphPosition }) {
+  if (guardGraphEditForTab(tabId)) {
+    return;
+  }
   const document = documentsByTabId.value[tabId];
   if (!document?.nodes[payload.nodeId]) {
     return;
@@ -1099,6 +1137,9 @@ function handleNodePositionUpdate(tabId: string, payload: { nodeId: string; posi
 }
 
 function markDocumentDirty(tabId: string, nextDocument: GraphPayload | GraphDocument) {
+  if (guardGraphEditForTab(tabId)) {
+    return;
+  }
   setDocumentForTab(tabId, nextDocument);
   updateWorkspace(
     applyDocumentMetaToWorkspaceTab(workspace.value, tabId, {
@@ -1458,6 +1499,36 @@ function updateAgentConfigForTab(tabId: string, nodeId: string, patch: Partial<A
   focusNodeForTab(tabId, nodeId);
 }
 
+function toggleAgentBreakpointForTab(tabId: string, nodeId: string, enabled: boolean) {
+  const document = documentsByTabId.value[tabId];
+  if (!document) {
+    return;
+  }
+
+  const nextDocument = updateAgentBreakpointInDocument(document, nodeId, enabled);
+  if (nextDocument === document) {
+    return;
+  }
+
+  markDocumentDirty(tabId, nextDocument);
+  focusNodeForTab(tabId, nodeId);
+}
+
+function updateAgentBreakpointTimingForTab(tabId: string, nodeId: string, timing: "before" | "after") {
+  const document = documentsByTabId.value[tabId];
+  if (!document) {
+    return;
+  }
+
+  const nextDocument = updateAgentBreakpointTimingInDocument(document, nodeId, timing);
+  if (nextDocument === document) {
+    return;
+  }
+
+  markDocumentDirty(tabId, nextDocument);
+  focusNodeForTab(tabId, nodeId);
+}
+
 function updateConditionConfigForTab(tabId: string, nodeId: string, patch: Partial<ConditionNode["config"]>) {
   const document = documentsByTabId.value[tabId];
   if (!document) {
@@ -1593,6 +1664,9 @@ function removeStateWriterBinding(tabId: string, stateKey: string, nodeId: strin
 function renameActiveGraph(name: string) {
   const tab = activeTab.value;
   if (!tab) {
+    return;
+  }
+  if (guardGraphEditForTab(tab.tabId)) {
     return;
   }
   const document = documentsByTabId.value[tab.tabId];

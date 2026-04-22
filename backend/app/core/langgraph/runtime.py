@@ -28,9 +28,28 @@ from app.core.runtime.state import create_initial_run_state, set_run_status, tou
 from app.core.schemas.node_system import NodeSystemGraphDocument
 from app.core.storage.run_store import save_run
 
+AFTER_BREAKPOINT_NODE_PREFIX = "__graphite_after_breakpoint__"
+
 
 def _replace_reducer(_current: Any, update: Any) -> Any:
     return update
+
+
+def _after_breakpoint_node_name(node_name: str) -> str:
+    return f"{AFTER_BREAKPOINT_NODE_PREFIX}{node_name}"
+
+
+def _source_node_from_after_breakpoint(node_name: str) -> str:
+    if node_name.startswith(AFTER_BREAKPOINT_NODE_PREFIX):
+        return node_name.removeprefix(AFTER_BREAKPOINT_NODE_PREFIX)
+    return node_name
+
+
+def _build_after_breakpoint_passthrough_callable():
+    def _call(_current_values: dict[str, Any]) -> dict[str, Any]:
+        return {}
+
+    return _call
 
 
 def execute_node_system_graph_langgraph(
@@ -114,13 +133,24 @@ def execute_node_system_graph_langgraph(
             ),
         )
 
+    interrupt_before, interrupt_after = _resolve_interrupt_configuration(graph, allowed_nodes=set(build_plan.runtime_nodes))
+    after_breakpoint_nodes = {
+        node_name: _after_breakpoint_node_name(node_name)
+        for node_name in (interrupt_after or [])
+        if node_name in build_plan.runtime_nodes
+    }
+    for breakpoint_node_name in after_breakpoint_nodes.values():
+        workflow.add_node(breakpoint_node_name, _build_after_breakpoint_passthrough_callable())
+
     for node_name in build_plan.requirements.runtime_entry_nodes:
         workflow.add_edge(START, node_name)
+    for node_name, breakpoint_node_name in after_breakpoint_nodes.items():
+        workflow.add_edge(node_name, breakpoint_node_name)
     for edge in build_plan.runtime_edges:
-        workflow.add_edge(edge.source, edge.target)
+        workflow.add_edge(after_breakpoint_nodes.get(edge.source, edge.source), edge.target)
     for route in build_plan.runtime_condition_routes:
         workflow.add_conditional_edges(
-            _runtime_graph_endpoint(route.source),
+            after_breakpoint_nodes.get(_runtime_graph_endpoint(route.source), _runtime_graph_endpoint(route.source)),
             _build_langgraph_route_callable(
                 graph=graph,
                 route=route,
@@ -138,13 +168,13 @@ def execute_node_system_graph_langgraph(
             path_map={branch: _runtime_graph_endpoint(target) for branch, target in route.branches.items()},
         )
     for node_name in build_plan.requirements.runtime_terminal_nodes:
-        workflow.add_edge(node_name, END)
+        workflow.add_edge(after_breakpoint_nodes.get(node_name, node_name), END)
 
-    interrupt_before, interrupt_after = _resolve_interrupt_configuration(graph, allowed_nodes=set(build_plan.runtime_nodes))
+    compiled_interrupt_before = sorted(set(interrupt_before or []) | set(after_breakpoint_nodes.values())) or None
     compiled = workflow.compile(
         checkpointer=checkpoint_saver,
-        interrupt_before=interrupt_before,
-        interrupt_after=interrupt_after,
+        interrupt_before=compiled_interrupt_before,
+        interrupt_after=None,
     )
 
     try:
@@ -167,6 +197,7 @@ def execute_node_system_graph_langgraph(
             _apply_waiting_state(
                 state,
                 snapshot,
+                graph=graph,
                 checkpoint_saver=checkpoint_saver,
                 checkpoint_lookup_config=checkpoint_lookup_config,
                 started_perf=started_perf,
@@ -551,7 +582,7 @@ def _serialize_pending_interrupts(snapshot: Any) -> tuple[list[str], list[dict[s
     pending_interrupts: list[dict[str, Any]] = []
 
     for task in getattr(snapshot, "tasks", ()) or ():
-        node_name = str(getattr(task, "name", "") or "").strip()
+        node_name = _source_node_from_after_breakpoint(str(getattr(task, "name", "") or "").strip())
         if node_name and node_name not in pending_nodes:
             pending_nodes.append(node_name)
         for interrupt in getattr(task, "interrupts", ()) or ():
@@ -564,7 +595,11 @@ def _serialize_pending_interrupts(snapshot: Any) -> tuple[list[str], list[dict[s
             )
 
     if not pending_nodes:
-        pending_nodes = [str(item) for item in (getattr(snapshot, "next", ()) or ()) if str(item).strip()]
+        pending_nodes = [
+            _source_node_from_after_breakpoint(str(item).strip())
+            for item in (getattr(snapshot, "next", ()) or ())
+            if str(item).strip()
+        ]
 
     return pending_nodes, pending_interrupts
 
@@ -573,6 +608,7 @@ def _apply_waiting_state(
     state: dict[str, Any],
     snapshot: Any,
     *,
+    graph: NodeSystemGraphDocument,
     checkpoint_saver: JsonCheckpointSaver,
     checkpoint_lookup_config: dict[str, Any],
     started_perf: float,
@@ -586,11 +622,14 @@ def _apply_waiting_state(
     state["current_node_id"] = pending_nodes[0] if pending_nodes else None
     node_status_map = state.setdefault("node_status_map", {})
     for node_name in pending_nodes:
-        node_status_map[node_name] = "paused"
+        if node_status_map.get(node_name) != "success":
+            node_status_map[node_name] = "paused"
     metadata = state.setdefault("metadata", {})
     metadata["pending_interrupt_nodes"] = pending_nodes
     metadata["pending_interrupts"] = pending_interrupts
     metadata["resolved_runtime_backend"] = "langgraph"
+    if active_edge_ids:
+        collect_output_boundaries(graph, state, active_edge_ids)
     _sync_checkpoint_metadata(state, checkpoint_saver, checkpoint_lookup_config)
     _refresh_run_artifacts(state, node_outputs, active_edge_ids, started_perf=started_perf)
 

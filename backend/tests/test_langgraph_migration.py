@@ -77,6 +77,20 @@ def _load_cycle_counter_demo_graph() -> NodeSystemGraphPayload:
     )
 
 
+def _load_human_review_demo_graph() -> NodeSystemGraphPayload:
+    template = NodeSystemTemplate.model_validate(load_template_record("human_review_demo"))
+    return NodeSystemGraphPayload.model_validate(
+        {
+            "name": template.default_graph_name,
+            "state_schema": template.state_schema,
+            "nodes": template.nodes,
+            "edges": template.edges,
+            "conditional_edges": template.conditional_edges,
+            "metadata": template.metadata,
+        }
+    )
+
+
 def _fake_skill_registry(*, include_disabled: bool = False):
     _ = include_disabled
     return {"search_knowledge_base": object()}
@@ -387,6 +401,27 @@ class LangGraphMigrationTests(unittest.TestCase):
     @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response)
     @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
     @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
+    def test_langgraph_interrupt_after_agent_collects_output_preview(self):
+        graph = _load_hello_world_graph()
+        payload = graph.model_dump(by_alias=True)
+        payload["metadata"] = {"interrupt_after": ["greeting_agent"]}
+        interrupt_graph = NodeSystemGraphPayload.model_validate(payload)
+
+        result = execute_node_system_graph_langgraph(interrupt_graph, persist_progress=False)
+
+        self.assertEqual(result["status"], "awaiting_human")
+        self.assertEqual(result["current_node_id"], "greeting_agent")
+        self.assertEqual(result["node_status_map"]["greeting_agent"], "success")
+        self.assertEqual(result["state_snapshot"]["values"]["greeting"], "greeting_agent:GraphiteUI 用户")
+        self.assertEqual(result["output_previews"][0]["node_id"], "output_greeting")
+        self.assertEqual(result["output_previews"][0]["source_key"], "greeting")
+        self.assertEqual(result["output_previews"][0]["value"], "greeting_agent:GraphiteUI 用户")
+
+    @patch("app.core.langgraph.runtime.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response)
+    @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
+    @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
     def test_langgraph_interrupt_resume_accepts_human_state_updates(self):
         graph = _load_hello_world_graph()
         payload = graph.model_dump(by_alias=True)
@@ -435,6 +470,35 @@ class LangGraphMigrationTests(unittest.TestCase):
         graph = _load_cycle_counter_demo_graph()
         validation = validate_graph(graph)
         self.assertTrue(validation.valid, validation.model_dump())
+
+    def test_human_review_demo_template_still_valid(self):
+        graph = _load_human_review_demo_graph()
+        validation = validate_graph(graph)
+        self.assertTrue(validation.valid, validation.model_dump())
+
+    @patch("app.core.langgraph.runtime.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response)
+    @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
+    @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
+    def test_human_review_demo_template_pauses_after_draft_agent(self):
+        graph = _load_human_review_demo_graph()
+
+        result = execute_node_system_graph_langgraph(graph, persist_progress=False)
+
+        self.assertEqual(result["status"], "awaiting_human")
+        self.assertEqual(result["runtime_backend"], "langgraph")
+        self.assertEqual(result["current_node_id"], "draft_writer")
+        self.assertEqual(result["node_status_map"]["draft_writer"], "success")
+        self.assertEqual(result["lifecycle"]["pause_reason"], "breakpoint")
+        self.assertTrue(result["checkpoint_metadata"]["available"])
+        self.assertEqual(result["metadata"]["pending_interrupt_nodes"], ["draft_writer"])
+        self.assertEqual(result["state_snapshot"]["values"]["request"], "请给 GraphiteUI 写一段简短的欢迎介绍。")
+        self.assertEqual(result["state_snapshot"]["values"]["draft_answer"], "draft_writer:请给 GraphiteUI 写一段简短的欢迎介绍。")
+        self.assertEqual(result["state_snapshot"]["values"]["human_feedback"], "请让语气更适合新用户，并强调可视化编排能力。")
+        self.assertEqual(result["output_previews"][0]["node_id"], "output_draft_answer")
+        self.assertEqual(result["output_previews"][0]["source_key"], "draft_answer")
+        self.assertEqual(result["output_previews"][0]["value"], "draft_writer:请给 GraphiteUI 写一段简短的欢迎介绍。")
 
     def test_plain_edge_graph_validates_without_handle_fields(self):
         graph = NodeSystemGraphPayload.model_validate(

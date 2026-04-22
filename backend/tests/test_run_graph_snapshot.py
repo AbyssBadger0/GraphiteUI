@@ -11,6 +11,8 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.main import app
+from app.core.runtime.state import create_initial_run_state, set_run_status, touch_run_lifecycle
+from app.core.storage.run_store import save_run
 from app.templates.loader import load_template_record
 
 
@@ -78,6 +80,75 @@ class RunGraphSnapshotTest(unittest.TestCase):
                         graph_snapshot["nodes"]["increment_counter"]["config"]["taskInstruction"],
                         "读取输入 counter，并严格只返回 JSON：{\"counter\": 当前 counter + 9}。不要输出任何解释。",
                     )
+
+    def test_resume_uses_saved_run_snapshot_instead_of_current_graph_store(self) -> None:
+        template = load_template_record("hello_world")
+        graph_snapshot = {
+            "graph_id": "runtime_snapshot_graph",
+            "name": template["default_graph_name"],
+            "state_schema": template["state_schema"],
+            "nodes": template["nodes"],
+            "edges": template["edges"],
+            "conditional_edges": template["conditional_edges"],
+            "metadata": template["metadata"],
+        }
+        previous_run = create_initial_run_state(
+            graph_id="missing_saved_graph",
+            graph_name=template["default_graph_name"],
+            max_revision_round=1,
+        )
+        previous_run["runtime_backend"] = "langgraph"
+        previous_run["graph_snapshot"] = graph_snapshot
+        previous_run["checkpoint_metadata"] = {
+            "available": True,
+            "checkpoint_id": "checkpoint-1",
+            "thread_id": "thread-1",
+            "checkpoint_ns": "",
+            "saver": "json_checkpoint_saver",
+        }
+        set_run_status(previous_run, "awaiting_human", pause_reason="breakpoint")
+        touch_run_lifecycle(previous_run)
+
+        captured: dict[str, object] = {}
+
+        def _capture_resume(graph, initial_state=None, persist_progress=True, resume_from_checkpoint=False, resume_command=None):
+            captured["graph_id"] = graph.graph_id
+            captured["graph_name"] = graph.name
+            captured["state_keys"] = sorted(graph.state_schema.keys())
+            captured["resume_command"] = resume_command
+            return initial_state
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            graph_dir = root / "graphs"
+            run_dir = root / "runs"
+            checkpoint_dir = root / "checkpoints"
+            data_dir = root / "data"
+            db_path = data_dir / "graphiteui.db"
+
+            with (
+                patch("app.core.storage.database.DATA_DIR", data_dir),
+                patch("app.core.storage.database.DB_PATH", db_path),
+                patch("app.core.storage.database.GRAPH_DATA_DIR", graph_dir),
+                patch("app.core.storage.database.RUN_DATA_DIR", run_dir),
+                patch("app.core.storage.database.CHECKPOINT_DATA_DIR", checkpoint_dir),
+                patch("app.core.storage.run_store.RUN_DATA_DIR", run_dir),
+                patch("app.core.langgraph.checkpoints.CHECKPOINT_DATA_DIR", checkpoint_dir),
+                patch("app.api.routes_runs.execute_node_system_graph_langgraph", side_effect=_capture_resume),
+            ):
+                save_run(previous_run)
+
+                with TestClient(app) as client:
+                    response = client.post(
+                        f"/api/runs/{previous_run['run_id']}/resume",
+                        json={"resume": {"name": "人工确认"}},
+                    )
+
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual(captured["graph_id"], "runtime_snapshot_graph")
+                self.assertEqual(captured["graph_name"], "Hello World")
+                self.assertEqual(captured["state_keys"], ["greeting", "name"])
+                self.assertEqual(captured["resume_command"], {"name": "人工确认"})
 
 
 if __name__ == "__main__":

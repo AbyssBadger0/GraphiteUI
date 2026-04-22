@@ -18,6 +18,7 @@
         v-if="humanReviewPending"
         round
         data-top-action-surface="true"
+        data-human-review-action="true"
         class="node-card__human-review-button"
         @click.stop="$emit('open-human-review', { nodeId })"
       >
@@ -48,6 +49,18 @@
                 inputmode="decimal"
                 @update:model-value="handleAgentTemperatureInputValue"
               />
+            </label>
+            <label class="node-card__control-row">
+              <span class="node-card__control-label">Breakpoint</span>
+              <ElSelect
+                class="node-card__breakpoint-timing-select graphite-select"
+                :model-value="agentBreakpointTimingValue"
+                popper-class="graphite-select-popper node-card__breakpoint-timing-popper"
+                @update:model-value="handleAgentBreakpointTimingSelect"
+              >
+                <ElOption label="Run after" value="after" />
+                <ElOption label="Run before" value="before" />
+              </ElSelect>
             </label>
           </div>
           <div v-else-if="view.body.kind === 'output'" class="node-card__advanced-popover-content">
@@ -636,6 +649,18 @@
             @update:model-value="handleAgentThinkingToggle"
           />
         </div>
+        <button
+          type="button"
+          class="node-card__agent-breakpoint-button"
+          :class="{ 'node-card__agent-breakpoint-button--enabled': agentBreakpointEnabled }"
+          :aria-pressed="agentBreakpointEnabled"
+          :title="agentBreakpointEnabled ? 'Breakpoint enabled' : 'Breakpoint disabled'"
+          @pointerdown.stop
+          @click.stop="handleAgentBreakpointToggle"
+        >
+          <ElIcon class="node-card__agent-breakpoint-icon"><Flag /></ElIcon>
+          <span class="node-card__agent-breakpoint-text">{{ agentBreakpointEnabled ? "ON" : "OFF" }}</span>
+        </button>
       </div>
       <div class="node-card__action-row">
         <ElPopover
@@ -1126,7 +1151,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ElButton, ElIcon, ElInput, ElOption, ElPopover, ElSelect } from "element-plus";
-import { Check, Collection, CollectionTag, Delete, Document, DocumentChecked, FolderOpened, Operation, Opportunity } from "@element-plus/icons-vue";
+import { Check, Collection, CollectionTag, Delete, Document, DocumentChecked, Flag, FolderOpened, Operation, Opportunity } from "@element-plus/icons-vue";
 
 import StateDefaultValueEditor from "@/editor/workspace/StateDefaultValueEditor.vue";
 import StateEditorPopover from "./StateEditorPopover.vue";
@@ -1171,6 +1196,8 @@ const props = defineProps<{
   availableAgentModelRefs: string[];
   agentModelDisplayLookup: Record<string, string>;
   globalTextModelRef: string;
+  agentBreakpointEnabled?: boolean;
+  agentBreakpointTiming?: "before" | "after";
   conditionRouteTargets?: Record<string, string | null>;
   latestRunStatus?: string | null;
   runOutputPreviewText?: string | null;
@@ -1190,6 +1217,8 @@ const emit = defineEmits<{
   (event: "remove-port-state", payload: { nodeId: string; side: "input" | "output"; stateKey: string }): void;
   (event: "update-output-config", payload: { nodeId: string; patch: Partial<OutputNode["config"]> }): void;
   (event: "update-agent-config", payload: { nodeId: string; patch: Partial<AgentNode["config"]> }): void;
+  (event: "toggle-agent-breakpoint", payload: { nodeId: string; enabled: boolean }): void;
+  (event: "update-agent-breakpoint-timing", payload: { nodeId: string; timing: "before" | "after" }): void;
   (event: "update-condition-config", payload: { nodeId: string; patch: Partial<ConditionNode["config"]> }): void;
   (event: "update-condition-branch", payload: { nodeId: string; currentKey: string; nextKey: string; mappingKeys: string[] }): void;
   (event: "add-condition-branch", payload: { nodeId: string }): void;
@@ -1453,6 +1482,7 @@ const agentResolvedModelValue = computed(() => {
   return props.node.config.modelSource === "override" && overrideModel ? overrideModel : trimmedGlobalTextModelRef.value;
 });
 const agentThinkingEnabled = computed(() => props.node.kind === "agent" ? props.node.config.thinkingMode === "on" : true);
+const agentBreakpointTimingValue = computed(() => props.agentBreakpointTiming ?? "after");
 const agentModelOptions = computed(() =>
   buildAgentModelSelectOptions(agentResolvedModelValue.value, props.availableAgentModelRefs, props.agentModelDisplayLookup),
 );
@@ -2592,6 +2622,20 @@ function updateAgentThinkingMode(thinkingMode: AgentNode["config"]["thinkingMode
   emitAgentConfigPatch({ thinkingMode });
 }
 
+function handleAgentBreakpointToggle() {
+  if (props.node.kind !== "agent") {
+    return;
+  }
+  emit("toggle-agent-breakpoint", { nodeId: props.nodeId, enabled: !props.agentBreakpointEnabled });
+}
+
+function handleAgentBreakpointTimingSelect(nextValue: string | number | boolean | undefined) {
+  if (nextValue !== "before" && nextValue !== "after") {
+    return;
+  }
+  emit("update-agent-breakpoint-timing", { nodeId: props.nodeId, timing: nextValue });
+}
+
 function handleAgentTemperatureInput(event: Event) {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) {
@@ -3388,9 +3432,10 @@ function handleConditionRuleValueInput(event: Event) {
 
 .node-card__agent-runtime-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(180px, 260px) auto auto;
   gap: 10px;
-  align-items: start;
+  align-items: center;
+  justify-content: start;
 }
 
 .node-card__agent-model-select {
@@ -3518,6 +3563,78 @@ function handleConditionRuleValueInput(event: Event) {
   justify-self: end;
   --el-switch-on-color: #c96b1f;
   --el-switch-off-color: rgba(154, 52, 18, 0.24);
+}
+
+.node-card__breakpoint-timing-select {
+  --el-color-primary: #c96b1f;
+  --el-border-radius-base: 12px;
+}
+
+.node-card__breakpoint-timing-select :deep(.el-select__wrapper) {
+  min-height: 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+:deep(.node-card__breakpoint-timing-popper.el-popper) {
+  border: 1px solid rgba(154, 52, 18, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 250, 241, 0.98);
+}
+
+.node-card__agent-breakpoint-button {
+  appearance: none;
+  display: inline-grid;
+  grid-template-columns: 20px 32px;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  min-height: 48px;
+  gap: 8px;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  border-radius: 16px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: rgba(111, 67, 30, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.node-card__agent-breakpoint-button:hover {
+  border-color: rgba(154, 52, 18, 0.22);
+  background: rgba(255, 252, 247, 0.94);
+}
+
+.node-card__agent-breakpoint-button:focus-visible {
+  outline: none;
+  border-color: rgba(201, 107, 31, 0.32);
+  box-shadow:
+    0 0 0 3px rgba(201, 107, 31, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.node-card__agent-breakpoint-button--enabled {
+  border-color: rgba(201, 107, 31, 0.32);
+  background: rgba(201, 107, 31, 0.12);
+  color: #9a3412;
+}
+
+.node-card__agent-breakpoint-icon,
+.node-card__agent-breakpoint-icon :deep(svg) {
+  width: 18px;
+  height: 18px;
+}
+
+.node-card__agent-breakpoint-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .node-card__action-pill {

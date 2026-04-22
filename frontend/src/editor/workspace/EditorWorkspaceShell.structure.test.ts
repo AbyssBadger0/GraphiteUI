@@ -91,3 +91,11 @@ test("EditorWorkspaceShell opens the right sidebar in Human Review mode for awai
   assert.match(componentSource, /if \(run\.status === "awaiting_human" && run\.current_node_id\) \{/);
   assert.match(componentSource, /openHumanReviewPanelForTab\(tabId, run\.current_node_id\);/);
 });
+
+test("EditorWorkspaceShell locks graph editing while a run is awaiting human review", () => {
+  assert.match(componentSource, /:interaction-locked="isGraphInteractionLocked\(tab\.tabId\)"/);
+  assert.match(componentSource, /function isGraphInteractionLocked\(tabId: string\)/);
+  assert.match(componentSource, /return latestRunDetailByTabId\.value\[tabId\]\?\.status === "awaiting_human";/);
+  assert.match(componentSource, /function guardGraphEditForTab\(tabId: string\)/);
+  assert.match(componentSource, /if \(guardGraphEditForTab\(tabId\)\) \{/);
+});

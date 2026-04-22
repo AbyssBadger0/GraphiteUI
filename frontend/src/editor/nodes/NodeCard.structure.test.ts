@@ -126,6 +126,10 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(agentSection, /:width="56"/);
   assert.match(agentSection, /active-text="ON"/);
   assert.match(agentSection, /inactive-text="OFF"/);
+  assert.match(agentSection, /class="node-card__agent-breakpoint-button"/);
+  assert.match(agentSection, /:class="\{ 'node-card__agent-breakpoint-button--enabled': agentBreakpointEnabled \}"/);
+  assert.match(agentSection, /:aria-pressed="agentBreakpointEnabled"/);
+  assert.match(agentSection, /@click\.stop="handleAgentBreakpointToggle"/);
   assert.doesNotMatch(agentSection, /node-card__agent-thinking-inline/);
   assert.doesNotMatch(agentSection, /node-card__agent-thinking-shell/);
   assert.doesNotMatch(agentSection, /class="node-card__agent-thinking-label"/);
@@ -134,7 +138,7 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.doesNotMatch(agentSection, /class="node-card__chip-row"/);
   assert.doesNotMatch(agentSection, /class="node-card__agent-thinking-toggle"/);
   assert.match(componentSource, /\.node-card__agent-thinking-card \{/);
-  assert.match(componentSource, /\.node-card__agent-runtime-row \{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto;/);
+  assert.match(componentSource, /\.node-card__agent-runtime-row \{[\s\S]*grid-template-columns:\s*minmax\(180px,\s*260px\)\s*auto\s*auto;/);
   assert.match(componentSource, /\.node-card__agent-thinking-card \{[\s\S]*grid-template-columns:\s*20px\s*56px;/);
   assert.match(componentSource, /\.node-card__agent-thinking-card \{[\s\S]*min-height:\s*48px;/);
   assert.match(componentSource, /\.node-card__agent-thinking-card \{[\s\S]*border-radius:\s*16px;/);
@@ -143,6 +147,16 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(componentSource, /\.node-card__agent-thinking-icon \{[\s\S]*width:\s*20px;/);
   assert.match(componentSource, /\.node-card__agent-thinking-icon \{[\s\S]*height:\s*20px;/);
   assert.doesNotMatch(componentSource, /\.node-card__agent-thinking-icon \{[^}]*background:/);
+  assert.match(componentSource, /agentBreakpointEnabled\?:\s*boolean;/);
+  assert.match(componentSource, /agentBreakpointTiming\?:\s*"before" \| "after";/);
+  assert.match(componentSource, /\(event: "toggle-agent-breakpoint", payload: \{ nodeId: string; enabled: boolean \}\): void;/);
+  assert.match(componentSource, /\(event: "update-agent-breakpoint-timing", payload: \{ nodeId: string; timing: "before" \| "after" \}\): void;/);
+  assert.match(componentSource, /function handleAgentBreakpointToggle\(\) \{[\s\S]*emit\("toggle-agent-breakpoint", \{ nodeId: props\.nodeId, enabled: !props\.agentBreakpointEnabled \}\);[\s\S]*\}/);
+  assert.match(componentSource, /class="node-card__breakpoint-timing-select graphite-select"/);
+  assert.match(componentSource, /:model-value="agentBreakpointTimingValue"/);
+  assert.match(componentSource, /@update:model-value="handleAgentBreakpointTimingSelect"/);
+  assert.match(componentSource, /Run after/);
+  assert.match(componentSource, /Run before/);
   assert.match(componentSource, /const agentModelSelectRef = ref<\{ blur\?: \(\) => void; toggleMenu\?: \(\) => void; expanded\?: boolean \} \| null>\(null\);/);
   assert.match(componentSource, /function collapseAgentModelSelect\(\) \{[\s\S]*if \(agentModelSelectRef\.value\?\.expanded\) \{[\s\S]*agentModelSelectRef\.value\.toggleMenu\?\.\(\);[\s\S]*\}[\s\S]*agentModelSelectRef\.value\?\.blur\?\.\(\);[\s\S]*\}/);
   assert.match(componentSource, /collapseAgentModelSelect\(\);/);

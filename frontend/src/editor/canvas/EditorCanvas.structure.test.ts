@@ -74,6 +74,22 @@ test("EditorCanvas treats awaiting-human current node as a persistent review nod
   assert.match(componentSource, /return selection\.selectedNodeId\.value === nodeId \|\| isHumanReviewNode\(nodeId\);/);
 });
 
+test("EditorCanvas keeps paused human-review graphs viewable but read-only", () => {
+  assert.match(componentSource, /interactionLocked\?: boolean;/);
+  assert.match(componentSource, /'editor-canvas--locked': interactionLocked/);
+  assert.match(componentSource, /v-if="interactionLocked"/);
+  assert.match(componentSource, /class="editor-canvas__lock-banner"/);
+  assert.match(componentSource, /function isGraphEditingLocked\(\)/);
+  assert.match(componentSource, /return Boolean\(props\.interactionLocked\);/);
+  assert.match(componentSource, /function handleLockedNodePointerCapture\(nodeId: string, event: PointerEvent\)/);
+  assert.match(componentSource, /target\.closest\("\[data-human-review-action='true'\]"\)/);
+  assert.match(componentSource, /if \(isGraphEditingLocked\(\)\) \{/);
+  assert.match(componentSource, /function handleCanvasDoubleClick\(event: MouseEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{/);
+  assert.match(componentSource, /function handleCanvasDrop\(event: DragEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{/);
+  assert.match(componentSource, /function handleEdgePointerDown\(edge: ProjectedCanvasEdge, event: PointerEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{/);
+  assert.match(componentSource, /function handleAnchorPointerDown\(anchor: ProjectedCanvasAnchor\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{/);
+});
+
 test("EditorCanvas renders condition route outputs as right-side floating branch handles", () => {
   assert.match(componentSource, /const routeHandles = computed\(\(\) => projectedAnchors\.value\.filter\(\(anchor\) => anchor\.kind === "route-out"\)\);/);
   assert.match(componentSource, /<div class="editor-canvas__route-handles" aria-hidden="true">/);

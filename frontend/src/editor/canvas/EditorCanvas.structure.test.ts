@@ -392,6 +392,21 @@ test("EditorCanvas opts mobile touch drags out of browser gestures", () => {
   assert.match(flowHotspotCssBlock, /touch-action:\s*none;/);
 });
 
+test("EditorCanvas supports two-finger pinch zoom on mobile without changing single-pointer gestures", () => {
+  assert.match(componentSource, /const activeCanvasPointers = new Map<number, \{ clientX: number; clientY: number; pointerType: string \}>\(\);/);
+  assert.match(componentSource, /const pinchZoom = ref<\{/);
+  assert.match(componentSource, /function beginPinchZoomIfReady\(\)/);
+  assert.match(componentSource, /pointer\.pointerType === "touch"/);
+  assert.match(componentSource, /viewport\.endPan\(\);/);
+  assert.match(componentSource, /startScale: viewport\.viewport\.scale/);
+  assert.match(componentSource, /function updatePinchZoom\(\)/);
+  assert.match(componentSource, /viewport\.zoomAt\(\{/);
+  assert.match(componentSource, /nextScale: pinch\.startScale \* \(nextDistance \/ pinch\.startDistance\)/);
+  assert.match(componentSource, /if \(event\.pointerType === "touch"\) \{/);
+  assert.match(componentSource, /if \(pinchZoom\.value\) \{[\s\S]*event\.preventDefault\(\);[\s\S]*scheduleDragFrame\(\(\) => \{[\s\S]*updatePinchZoom\(\);/);
+  assert.match(componentSource, /if \(pinchZoom\.value\?\.pointerIds\.includes\(event\.pointerId\)\) \{[\s\S]*clearPinchZoom\(\);[\s\S]*viewport\.endPan\(\);[\s\S]*return;/);
+});
+
 test("EditorCanvas captures node drags and batches drag writes with animation frames", () => {
   assert.match(componentSource, /if \(!preserveInlineEditorFocus\) \{[\s\S]*event\.preventDefault\(\);[\s\S]*\}/);
   assert.match(componentSource, /if \(!preserveInlineEditorFocus\) \{[\s\S]*event\.currentTarget\.setPointerCapture\(event\.pointerId\);[\s\S]*\}/);

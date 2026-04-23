@@ -53,6 +53,19 @@ export function useViewport() {
     viewport.scale = clamp(viewport.scale + direction, 0.4, 2.2);
   }
 
+  function zoomAt(input: { clientX: number; clientY: number; canvasLeft: number; canvasTop: number; nextScale: number }) {
+    const currentScale = viewport.scale || 1;
+    const nextScale = clamp(input.nextScale, 0.4, 2.2);
+    const anchorX = input.clientX - input.canvasLeft;
+    const anchorY = input.clientY - input.canvasTop;
+    const worldX = (anchorX - viewport.x) / currentScale;
+    const worldY = (anchorY - viewport.y) / currentScale;
+
+    viewport.scale = nextScale;
+    viewport.x = anchorX - worldX * nextScale;
+    viewport.y = anchorY - worldY * nextScale;
+  }
+
   function setViewport(nextViewport: { x: number; y: number; scale: number }) {
     viewport.x = nextViewport.x;
     viewport.y = nextViewport.y;
@@ -66,6 +79,7 @@ export function useViewport() {
     movePan,
     endPan,
     zoomBy,
+    zoomAt,
     setViewport,
   };
 }

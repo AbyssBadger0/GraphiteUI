@@ -454,6 +454,14 @@ const nodeDrag = ref<{
   captureElement: HTMLElement | null;
   moved: boolean;
 } | null>(null);
+const activeCanvasPointers = new Map<number, { clientX: number; clientY: number; pointerType: string }>();
+const pinchZoom = ref<{
+  pointerIds: [number, number];
+  startDistance: number;
+  startScale: number;
+  centerClientX: number;
+  centerClientY: number;
+} | null>(null);
 const suppressedNodeClickId = ref<string | null>(null);
 const suppressedNodeClickTimeoutRef = ref<number | null>(null);
 const pendingConnection = ref<PendingGraphConnection | null>(null);
@@ -1632,7 +1640,100 @@ function roundMeasuredOffset(value: number) {
   return Math.round(value * 1000) / 1000;
 }
 
+function clearPinchZoom() {
+  pinchZoom.value = null;
+  activeCanvasPointers.clear();
+}
+
+function resolvePointerDistance(left: { clientX: number; clientY: number }, right: { clientX: number; clientY: number }) {
+  return Math.hypot(right.clientX - left.clientX, right.clientY - left.clientY);
+}
+
+function resolvePointerCenter(left: { clientX: number; clientY: number }, right: { clientX: number; clientY: number }) {
+  return {
+    clientX: (left.clientX + right.clientX) / 2,
+    clientY: (left.clientY + right.clientY) / 2,
+  };
+}
+
+function beginPinchZoomIfReady() {
+  const touchPointers = Array.from(activeCanvasPointers.entries()).filter(([, pointer]) => pointer.pointerType === "touch");
+  if (touchPointers.length < 2) {
+    return false;
+  }
+
+  const [leftEntry, rightEntry] = touchPointers;
+  if (!leftEntry || !rightEntry) {
+    return false;
+  }
+
+  const [, leftPointer] = leftEntry;
+  const [, rightPointer] = rightEntry;
+  const startDistance = resolvePointerDistance(leftPointer, rightPointer);
+  if (startDistance <= 0) {
+    return false;
+  }
+
+  const center = resolvePointerCenter(leftPointer, rightPointer);
+  viewport.endPan();
+  pinchZoom.value = {
+    pointerIds: [leftEntry[0], rightEntry[0]],
+    startDistance,
+    startScale: viewport.viewport.scale,
+    centerClientX: center.clientX,
+    centerClientY: center.clientY,
+  };
+  return true;
+}
+
+function updatePinchZoom() {
+  const pinch = pinchZoom.value;
+  if (!pinch) {
+    return;
+  }
+
+  const leftPointer = activeCanvasPointers.get(pinch.pointerIds[0]);
+  const rightPointer = activeCanvasPointers.get(pinch.pointerIds[1]);
+  const canvas = canvasRef.value;
+  if (!leftPointer || !rightPointer || !canvas) {
+    clearPinchZoom();
+    return;
+  }
+
+  const nextDistance = resolvePointerDistance(leftPointer, rightPointer);
+  if (nextDistance <= 0) {
+    return;
+  }
+
+  const center = resolvePointerCenter(leftPointer, rightPointer);
+  const rect = canvas.getBoundingClientRect();
+  viewport.zoomAt({
+    clientX: center.clientX,
+    clientY: center.clientY,
+    canvasLeft: rect.left,
+    canvasTop: rect.top,
+    nextScale: pinch.startScale * (nextDistance / pinch.startDistance),
+  });
+}
+
 function handleCanvasPointerDown(event: PointerEvent) {
+  if (event.pointerType === "touch") {
+    activeCanvasPointers.set(event.pointerId, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pointerType: event.pointerType,
+    });
+    if (beginPinchZoomIfReady()) {
+      event.preventDefault();
+      window.getSelection()?.removeAllRanges();
+      clearCanvasTransientState();
+      pendingConnection.value = null;
+      pendingConnectionPoint.value = null;
+      selectedEdgeId.value = null;
+      selection.clearSelection();
+      return;
+    }
+  }
   canvasRef.value?.focus();
   event.preventDefault();
   window.getSelection()?.removeAllRanges();
@@ -1647,6 +1748,20 @@ function handleCanvasPointerDown(event: PointerEvent) {
 }
 
 function handleCanvasPointerMove(event: PointerEvent) {
+  if (event.pointerType === "touch" && activeCanvasPointers.has(event.pointerId)) {
+    activeCanvasPointers.set(event.pointerId, {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pointerType: event.pointerType,
+    });
+    if (pinchZoom.value) {
+      event.preventDefault();
+      scheduleDragFrame(() => {
+        updatePinchZoom();
+      });
+      return;
+    }
+  }
   if (activeConnection.value) {
     scheduleDragFrame(() => {
       autoSnappedTargetAnchor.value = resolveAutoSnappedTargetAnchor(event);
@@ -1692,6 +1807,12 @@ function handleCanvasPointerMove(event: PointerEvent) {
 
 function handleCanvasPointerUp(event: PointerEvent) {
   flushScheduledDragFrame();
+  activeCanvasPointers.delete(event.pointerId);
+  if (pinchZoom.value?.pointerIds.includes(event.pointerId)) {
+    clearPinchZoom();
+    viewport.endPan();
+    return;
+  }
   if (canvasRef.value?.hasPointerCapture(event.pointerId)) {
     canvasRef.value.releasePointerCapture(event.pointerId);
   }

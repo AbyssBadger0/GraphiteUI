@@ -9,9 +9,11 @@ import type { GraphDocument, GraphPayload, TemplateRecord } from "../types/node-
 const {
   cloneGraphDocument,
   createDraftFromTemplate,
+  createEditorSeedDraftGraph,
   createEmptyDraftGraph,
   isAgentBreakpointEnabledInDocument,
   pruneUnreferencedStateSchemaInDocument,
+  resolveEditorSeedTemplate,
   resolveAgentBreakpointTimingInDocument,
   updateAgentBreakpointInDocument,
   updateAgentBreakpointTimingInDocument,
@@ -168,6 +170,31 @@ test("createEmptyDraftGraph creates an empty backend-native payload", () => {
     conditional_edges: [],
     metadata: {},
   });
+});
+
+test("resolveEditorSeedTemplate prefers the requested template, then hello world, then the first template", () => {
+  const alternateTemplate = {
+    ...template,
+    template_id: "alternate",
+    default_graph_name: "Alternate",
+  };
+
+  assert.equal(resolveEditorSeedTemplate([template, alternateTemplate], "alternate")?.template_id, "alternate");
+  assert.equal(resolveEditorSeedTemplate([alternateTemplate, template], null)?.template_id, "hello_world");
+  assert.equal(resolveEditorSeedTemplate([alternateTemplate], null)?.template_id, "alternate");
+  assert.equal(resolveEditorSeedTemplate([], null), null);
+});
+
+test("createEditorSeedDraftGraph restores the baseline hello world seed for blank new graphs", () => {
+  const draft = createEditorSeedDraftGraph([template], null);
+
+  assert.equal(draft.graph_id, null);
+  assert.equal(draft.name, "Hello World");
+  assert.deepEqual(draft.nodes, template.nodes);
+  assert.notEqual(draft.nodes, template.nodes);
+
+  draft.state_schema.question.value = "changed";
+  assert.equal(template.state_schema.question.value, "什么是 GraphiteUI？");
 });
 
 test("pruneUnreferencedStateSchemaInDocument removes states that no node still references", () => {

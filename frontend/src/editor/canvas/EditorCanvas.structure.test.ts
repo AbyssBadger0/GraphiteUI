@@ -282,11 +282,12 @@ test("EditorCanvas restores empty-canvas onboarding copy for node creation", () 
 
 test("EditorCanvas constrains empty-canvas onboarding text inside narrow canvas widths", () => {
   assert.match(componentSource, /\.editor-canvas__empty-state \{[\s\S]*padding-inline:\s*clamp\(16px,\s*6vw,\s*56px\);/);
-  assert.match(componentSource, /\.editor-canvas__empty-title \{[\s\S]*max-width:\s*min\(100%,\s*34rem\);/);
+  assert.match(componentSource, /class="editor-canvas__empty-card"/);
+  assert.match(componentSource, /\.editor-canvas__empty-card \{[\s\S]*width:\s*min\(100%,\s*34rem\);/);
+  assert.match(componentSource, /\.editor-canvas__empty-card \{[\s\S]*border-radius:\s*28px;/);
   assert.match(componentSource, /\.editor-canvas__empty-title \{[\s\S]*overflow-wrap:\s*anywhere;/);
   assert.match(componentSource, /\.editor-canvas__empty-title \{[\s\S]*font-size:\s*clamp\(1\.35rem,\s*5vw,\s*2rem\);/);
-  assert.match(componentSource, /@media \(max-width:\s*640px\) \{[\s\S]*\.editor-canvas__empty-title \{[\s\S]*max-width:\s*min\(100%,\s*18rem\);/);
-  assert.match(componentSource, /@media \(max-width:\s*640px\) \{[\s\S]*\.editor-canvas__empty-copy \{[\s\S]*max-width:\s*min\(100%,\s*18rem\);/);
+  assert.match(componentSource, /@media \(max-width:\s*640px\) \{[\s\S]*\.editor-canvas__empty-card \{[\s\S]*max-width:\s*min\(100%,\s*18rem\);/);
 });
 
 test("EditorCanvas emits node-creation intents for empty-canvas double click and dropped files", () => {

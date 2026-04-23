@@ -49,9 +49,11 @@
     </div>
     <div class="editor-canvas__viewport" :style="viewportStyle">
       <div v-if="nodeEntries.length === 0" class="editor-canvas__empty-state">
-        <div class="editor-canvas__empty-eyebrow">Empty Canvas</div>
-        <div class="editor-canvas__empty-title">Double click to create your first node</div>
-        <div class="editor-canvas__empty-copy">Drag from an output handle into empty space to get type-aware preset suggestions.</div>
+        <div class="editor-canvas__empty-card">
+          <div class="editor-canvas__empty-eyebrow">Empty Canvas</div>
+          <div class="editor-canvas__empty-title">Double click to create your first node</div>
+          <div class="editor-canvas__empty-copy">Drag from an output handle into empty space to get type-aware preset suggestions.</div>
+        </div>
       </div>
       <svg class="editor-canvas__edges" viewBox="0 0 4000 3000" preserveAspectRatio="none" aria-hidden="true">
         <path
@@ -2420,14 +2422,25 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   inset: 0;
   z-index: 1;
   box-sizing: border-box;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding-inline: clamp(16px, 6vw, 56px);
   pointer-events: none;
 }
 
 .editor-canvas__empty-state > * {
   pointer-events: none;
+}
+
+.editor-canvas__empty-card {
+  box-sizing: border-box;
+  width: min(100%, 34rem);
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  border-radius: 28px;
+  padding: clamp(22px, 5vw, 34px);
+  background: rgba(255, 250, 242, 0.72);
+  box-shadow: 0 18px 44px rgba(60, 41, 20, 0.08);
 }
 
 .editor-canvas__empty-eyebrow,
@@ -2445,7 +2458,6 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 
 .editor-canvas__empty-title {
   margin-top: 12px;
-  max-width: min(100%, 34rem);
   font-size: clamp(1.35rem, 5vw, 2rem);
   font-weight: 600;
   line-height: 1.22;
@@ -2455,16 +2467,11 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 
 .editor-canvas__empty-copy {
   margin-top: 8px;
-  max-width: min(100%, 34rem);
   color: rgba(60, 41, 20, 0.74);
 }
 
 @media (max-width: 640px) {
-  .editor-canvas__empty-title {
-    max-width: min(100%, 18rem);
-  }
-
-  .editor-canvas__empty-copy {
+  .editor-canvas__empty-card {
     max-width: min(100%, 18rem);
   }
 }

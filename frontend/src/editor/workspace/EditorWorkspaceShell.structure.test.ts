@@ -33,6 +33,14 @@ test("EditorWorkspaceShell loads persisted presets for the node creation menu", 
   assert.match(componentSource, /persistedPresets\.value = await fetchPresets\(\)/);
 });
 
+test("EditorWorkspaceShell seeds plain new tabs from the baseline default template", () => {
+  assert.match(componentSource, /createEditorSeedDraftGraph/);
+  assert.match(componentSource, /resolveEditorSeedTemplate/);
+  assert.match(componentSource, /return createEditorSeedDraftGraph\(props\.templates, tab\.defaultTemplateId \?\? null, tab\.title\);/);
+  assert.match(componentSource, /const seedTemplate = resolveEditorSeedTemplate\(props\.templates, template\?\.template_id \?\? null\);/);
+  assert.match(componentSource, /const draft = createEditorSeedDraftGraph\(props\.templates, template\?\.template_id \?\? null\);/);
+});
+
 test("EditorWorkspaceShell wires node top-action events into state updates, node deletion, and preset persistence", () => {
   assert.match(componentSource, /import \{ fetchPreset, fetchPresets, savePreset \} from "@\/api\/presets";/);
   assert.match(componentSource, /@update-node-metadata="updateNodeMetadataForTab\(tab\.tabId, \$event\.nodeId, \$event\.patch\)"/);

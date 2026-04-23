@@ -15,6 +15,8 @@ import type { AgentNode, ConditionNode, GraphDocument, GraphNode, GraphPayload, 
 
 export type AgentBreakpointTiming = "before" | "after";
 
+const DEFAULT_EDITOR_SEED_TEMPLATE_ID = "hello_world";
+
 export function createDraftFromTemplate(template: TemplateRecord): GraphPayload {
   const rawTemplate = toRaw(template) as TemplateRecord;
 
@@ -39,6 +41,31 @@ export function createEmptyDraftGraph(name = "Untitled Graph"): GraphPayload {
     conditional_edges: [],
     metadata: {},
   };
+}
+
+export function resolveEditorSeedTemplate(
+  templates: TemplateRecord[],
+  defaultTemplateId?: string | null,
+): TemplateRecord | null {
+  const rawTemplates = templates.map((template) => toRaw(template) as TemplateRecord);
+  return (
+    rawTemplates.find((template) => template.template_id === defaultTemplateId) ??
+    rawTemplates.find((template) => template.template_id === DEFAULT_EDITOR_SEED_TEMPLATE_ID) ??
+    rawTemplates[0] ??
+    null
+  );
+}
+
+export function createEditorSeedDraftGraph(
+  templates: TemplateRecord[],
+  defaultTemplateId?: string | null,
+  fallbackName = "Node System Playground",
+): GraphPayload {
+  const seedTemplate = resolveEditorSeedTemplate(templates, defaultTemplateId);
+  if (seedTemplate) {
+    return createDraftFromTemplate(seedTemplate);
+  }
+  return createEmptyDraftGraph(fallbackName);
 }
 
 export function pruneUnreferencedStateSchemaInDocument<T extends GraphPayload | GraphDocument>(document: T): T {

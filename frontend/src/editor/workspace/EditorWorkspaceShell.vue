@@ -216,8 +216,7 @@ import {
   connectConditionRouteInDocument,
   connectFlowNodesInDocument,
   connectStateBindingInDocument,
-  createDraftFromTemplate,
-  createEmptyDraftGraph,
+  createEditorSeedDraftGraph,
   reconnectConditionRouteInDocument,
   reconnectFlowEdgeInDocument,
   removeConditionRouteFromDocument,
@@ -225,6 +224,7 @@ import {
   removeFlowEdgeFromDocument,
   removeNodeFromDocument,
   pruneUnreferencedStateSchemaInDocument,
+  resolveEditorSeedTemplate,
   syncKnowledgeBaseSkillsInDocument,
   updateAgentBreakpointInDocument,
   updateAgentBreakpointTimingInDocument,
@@ -648,12 +648,12 @@ function createDraftForTab(tab: EditorWorkspaceTab): GraphPayload {
   if (tab.templateId) {
     const template = templateById.value.get(tab.templateId);
     if (template) {
-      const draft = createDraftFromTemplate(template);
+      const draft = createEditorSeedDraftGraph(props.templates, template.template_id, tab.title);
       draft.name = tab.title;
       return draft;
     }
   }
-  return createEmptyDraftGraph(tab.title);
+  return createEditorSeedDraftGraph(props.templates, tab.defaultTemplateId ?? null, tab.title);
 }
 
 function ensureUnsavedTabDocuments() {
@@ -667,14 +667,16 @@ function ensureUnsavedTabDocuments() {
 
 function openNewTab(templateId: string | null, navigation: "push" | "replace" | "none" = "push") {
   const template = templateId ? templateById.value.get(templateId) ?? null : null;
+  const seedTemplate = resolveEditorSeedTemplate(props.templates, template?.template_id ?? null);
+  const draft = createEditorSeedDraftGraph(props.templates, template?.template_id ?? null);
   const tab = createUnsavedWorkspaceTab({
     kind: template ? "template" : "new",
-    title: template?.label ?? "Untitled Graph",
+    title: template?.label ?? seedTemplate?.default_graph_name ?? draft.name,
     templateId: template?.template_id ?? null,
     defaultTemplateId: template?.template_id ?? null,
   });
 
-  registerDocumentForTab(tab.tabId, template ? createDraftFromTemplate(template) : createEmptyDraftGraph(tab.title));
+  registerDocumentForTab(tab.tabId, draft);
   updateWorkspace({
     activeTabId: tab.tabId,
     tabs: [...workspace.value.tabs, tab],

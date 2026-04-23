@@ -118,18 +118,27 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(agentSection, /ref="agentModelSelectRef"/);
   assert.match(agentSection, /class="node-card__agent-model-select graphite-select"/);
   assert.match(agentSection, /popper-class="graphite-select-popper node-card__agent-model-popper"/);
-  assert.match(agentSection, /class="node-card__agent-thinking-card"/);
+  assert.equal(
+    [...agentSection.matchAll(/<ElPopover\s+trigger="hover"\s+placement="top-start"[\s\S]*?popper-class="node-card__agent-toggle-hint-popper"/g)]
+      .length,
+    2,
+  );
+  assert.match(agentSection, /class="node-card__agent-toggle-card node-card__agent-toggle-card--thinking"/);
   assert.match(agentSection, /class="node-card__agent-thinking-icon"/);
   assert.match(agentSection, /<ElSwitch/);
-  assert.match(agentSection, /class="node-card__agent-thinking-switch"/);
+  assert.match(agentSection, /class="node-card__agent-toggle-switch node-card__agent-thinking-switch"/);
   assert.match(agentSection, /:model-value="agentThinkingEnabled"/);
   assert.match(agentSection, /:width="56"/);
   assert.match(agentSection, /active-text="ON"/);
   assert.match(agentSection, /inactive-text="OFF"/);
-  assert.match(agentSection, /class="node-card__agent-breakpoint-button"/);
-  assert.match(agentSection, /:class="\{ 'node-card__agent-breakpoint-button--enabled': agentBreakpointEnabled \}"/);
-  assert.match(agentSection, /:aria-pressed="agentBreakpointEnabled"/);
-  assert.match(agentSection, /@click\.stop="handleAgentBreakpointToggle"/);
+  assert.match(agentSection, /class="node-card__confirm-hint node-card__confirm-hint--toggle">思考模式<\/div>/);
+  assert.match(agentSection, /class="node-card__agent-toggle-card node-card__agent-toggle-card--breakpoint"/);
+  assert.match(agentSection, /class="node-card__agent-breakpoint-icon"/);
+  assert.match(agentSection, /class="node-card__agent-toggle-switch node-card__agent-breakpoint-switch"/);
+  assert.match(agentSection, /:model-value="agentBreakpointEnabled"/);
+  assert.match(agentSection, /@update:model-value="handleAgentBreakpointToggleValue"/);
+  assert.match(agentSection, /class="node-card__confirm-hint node-card__confirm-hint--toggle">设置断点<\/div>/);
+  assert.doesNotMatch(agentSection, /class="node-card__agent-breakpoint-button"/);
   assert.doesNotMatch(agentSection, /node-card__agent-thinking-inline/);
   assert.doesNotMatch(agentSection, /node-card__agent-thinking-shell/);
   assert.doesNotMatch(agentSection, /class="node-card__agent-thinking-label"/);
@@ -137,13 +146,16 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.doesNotMatch(agentSection, />Thinking</);
   assert.doesNotMatch(agentSection, /class="node-card__chip-row"/);
   assert.doesNotMatch(agentSection, /class="node-card__agent-thinking-toggle"/);
-  assert.match(componentSource, /\.node-card__agent-thinking-card \{/);
-  assert.match(componentSource, /\.node-card__agent-runtime-row \{[\s\S]*grid-template-columns:\s*minmax\(180px,\s*260px\)\s*auto\s*auto;/);
-  assert.match(componentSource, /\.node-card__agent-thinking-card \{[\s\S]*grid-template-columns:\s*20px\s*56px;/);
-  assert.match(componentSource, /\.node-card__agent-thinking-card \{[\s\S]*min-height:\s*48px;/);
-  assert.match(componentSource, /\.node-card__agent-thinking-card \{[\s\S]*border-radius:\s*16px;/);
-  assert.match(componentSource, /\.node-card__agent-thinking-card \{[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.88\);/);
-  assert.match(componentSource, /\.node-card__agent-thinking-card \{[\s\S]*padding:\s*0 14px;/);
+  assert.match(componentSource, /\.node-card__agent-runtime-row \{[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/);
+  assert.match(componentSource, /\.node-card__agent-model-select-shell \{[\s\S]*width:\s*100%;/);
+  assert.match(componentSource, /\.node-card__agent-toggle-card \{/);
+  assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*grid-template-columns:\s*20px\s*56px;/);
+  assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*width:\s*100%;/);
+  assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*min-height:\s*48px;/);
+  assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*border-radius:\s*16px;/);
+  assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.88\);/);
+  assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*padding:\s*0 14px;/);
+  assert.match(componentSource, /\.node-card__confirm-hint--toggle \{[\s\S]*background:\s*rgb\(255,\s*247,\s*237\);/);
   assert.match(componentSource, /\.node-card__agent-thinking-icon \{[\s\S]*width:\s*20px;/);
   assert.match(componentSource, /\.node-card__agent-thinking-icon \{[\s\S]*height:\s*20px;/);
   assert.doesNotMatch(componentSource, /\.node-card__agent-thinking-icon \{[^}]*background:/);
@@ -152,6 +164,7 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(componentSource, /\(event: "toggle-agent-breakpoint", payload: \{ nodeId: string; enabled: boolean \}\): void;/);
   assert.match(componentSource, /\(event: "update-agent-breakpoint-timing", payload: \{ nodeId: string; timing: "before" \| "after" \}\): void;/);
   assert.match(componentSource, /function handleAgentBreakpointToggle\(\) \{[\s\S]*emit\("toggle-agent-breakpoint", \{ nodeId: props\.nodeId, enabled: !props\.agentBreakpointEnabled \}\);[\s\S]*\}/);
+  assert.match(componentSource, /function handleAgentBreakpointToggleValue\(value: string \| number \| boolean\) \{/);
   assert.match(componentSource, /class="node-card__breakpoint-timing-select graphite-select"/);
   assert.match(componentSource, /:model-value="agentBreakpointTimingValue"/);
   assert.match(componentSource, /@update:model-value="handleAgentBreakpointTimingSelect"/);

@@ -628,39 +628,79 @@
             />
           </ElSelect>
         </div>
-        <div class="node-card__agent-thinking-card">
-          <span
-            class="node-card__agent-thinking-icon"
-            :class="{ 'node-card__agent-thinking-icon--enabled': agentThinkingEnabled }"
-            aria-hidden="true"
-          >
-            <Opportunity />
-          </span>
-          <ElSwitch
-            class="node-card__agent-thinking-switch"
-            :model-value="agentThinkingEnabled"
-            :width="56"
-            inline-prompt
-            active-text="ON"
-            inactive-text="OFF"
-            aria-label="Toggle thinking mode"
-            @pointerdown.stop
-            @click.stop
-            @update:model-value="handleAgentThinkingToggle"
-          />
-        </div>
-        <button
-          type="button"
-          class="node-card__agent-breakpoint-button"
-          :class="{ 'node-card__agent-breakpoint-button--enabled': agentBreakpointEnabled }"
-          :aria-pressed="agentBreakpointEnabled"
-          :title="agentBreakpointEnabled ? 'Breakpoint enabled' : 'Breakpoint disabled'"
-          @pointerdown.stop
-          @click.stop="handleAgentBreakpointToggle"
+        <ElPopover
+          trigger="hover"
+          placement="top-start"
+          :show-arrow="false"
+          :popper-style="confirmPopoverStyle"
+          popper-class="node-card__agent-toggle-hint-popper"
         >
-          <ElIcon class="node-card__agent-breakpoint-icon"><Flag /></ElIcon>
-          <span class="node-card__agent-breakpoint-text">{{ agentBreakpointEnabled ? "ON" : "OFF" }}</span>
-        </button>
+          <template #reference>
+            <div
+              class="node-card__agent-toggle-card node-card__agent-toggle-card--thinking"
+              :class="{ 'node-card__agent-toggle-card--enabled': agentThinkingEnabled }"
+              @pointerdown.stop
+              @click.stop
+            >
+              <span
+                class="node-card__agent-thinking-icon"
+                :class="{ 'node-card__agent-thinking-icon--enabled': agentThinkingEnabled }"
+                aria-hidden="true"
+              >
+                <Opportunity />
+              </span>
+              <ElSwitch
+                class="node-card__agent-toggle-switch node-card__agent-thinking-switch"
+                :model-value="agentThinkingEnabled"
+                :width="56"
+                inline-prompt
+                active-text="ON"
+                inactive-text="OFF"
+                aria-label="Toggle thinking mode"
+                @pointerdown.stop
+                @click.stop
+                @update:model-value="handleAgentThinkingToggle"
+              />
+            </div>
+          </template>
+          <div class="node-card__confirm-hint node-card__confirm-hint--toggle">思考模式</div>
+        </ElPopover>
+        <ElPopover
+          trigger="hover"
+          placement="top-start"
+          :show-arrow="false"
+          :popper-style="confirmPopoverStyle"
+          popper-class="node-card__agent-toggle-hint-popper"
+        >
+          <template #reference>
+            <div
+              class="node-card__agent-toggle-card node-card__agent-toggle-card--breakpoint"
+              :class="{ 'node-card__agent-toggle-card--enabled': agentBreakpointEnabled }"
+              @pointerdown.stop
+              @click.stop
+            >
+              <ElIcon
+                class="node-card__agent-breakpoint-icon"
+                :class="{ 'node-card__agent-breakpoint-icon--enabled': agentBreakpointEnabled }"
+              >
+                <Flag />
+              </ElIcon>
+              <ElSwitch
+                class="node-card__agent-toggle-switch node-card__agent-breakpoint-switch"
+                :model-value="agentBreakpointEnabled"
+                :width="56"
+                inline-prompt
+                active-text="ON"
+                inactive-text="OFF"
+                aria-label="Toggle breakpoint"
+                @pointerdown.stop
+                @click.stop
+                @update:model-value="handleAgentBreakpointToggleValue"
+              />
+            </div>
+          </template>
+          <div class="node-card__confirm-hint node-card__confirm-hint--toggle">设置断点</div>
+        </ElPopover>
       </div>
       <div class="node-card__action-row">
         <ElPopover
@@ -2629,6 +2669,13 @@ function handleAgentBreakpointToggle() {
   emit("toggle-agent-breakpoint", { nodeId: props.nodeId, enabled: !props.agentBreakpointEnabled });
 }
 
+function handleAgentBreakpointToggleValue(value: string | number | boolean) {
+  if (props.node.kind !== "agent" || typeof value !== "boolean") {
+    return;
+  }
+  emit("toggle-agent-breakpoint", { nodeId: props.nodeId, enabled: value });
+}
+
 function handleAgentBreakpointTimingSelect(nextValue: string | number | boolean | undefined) {
   if (nextValue !== "before" && nextValue !== "after") {
     return;
@@ -3432,13 +3479,14 @@ function handleConditionRuleValueInput(event: Event) {
 
 .node-card__agent-runtime-row {
   display: grid;
-  grid-template-columns: minmax(180px, 260px) auto auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   align-items: center;
-  justify-content: start;
+  justify-content: stretch;
 }
 
 .node-card__agent-model-select {
+  width: 100%;
   --el-color-primary: #c96b1f;
   --el-border-radius-base: 16px;
   --el-border-color: rgba(154, 52, 18, 0.14);
@@ -3446,6 +3494,7 @@ function handleConditionRuleValueInput(event: Event) {
 }
 
 .node-card__agent-model-select-shell {
+  width: 100%;
   min-width: 0;
 }
 
@@ -3513,11 +3562,13 @@ function handleConditionRuleValueInput(event: Event) {
   background: rgba(154, 52, 18, 0.12);
 }
 
-.node-card__agent-thinking-card {
+.node-card__agent-toggle-card {
   display: grid;
   grid-template-columns: 20px 56px;
   align-items: center;
-  justify-self: end;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
   min-height: 48px;
   gap: 10px;
   border: 1px solid rgba(154, 52, 18, 0.14);
@@ -3525,44 +3576,70 @@ function handleConditionRuleValueInput(event: Event) {
   padding: 0 14px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
 }
 
-.node-card__agent-thinking-card:hover {
+.node-card__agent-toggle-card:hover {
   border-color: rgba(154, 52, 18, 0.22);
   background: rgba(255, 252, 247, 0.94);
 }
 
-.node-card__agent-thinking-card:focus-within {
+.node-card__agent-toggle-card:focus-within {
   border-color: rgba(201, 107, 31, 0.32);
   box-shadow:
     0 0 0 3px rgba(201, 107, 31, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
+.node-card__agent-toggle-card--enabled {
+  border-color: rgba(201, 107, 31, 0.28);
+  background: rgba(201, 107, 31, 0.1);
+}
+
 .node-card__agent-thinking-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.node-card__agent-breakpoint-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.node-card__agent-thinking-icon,
+.node-card__agent-breakpoint-icon {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
   color: rgba(111, 67, 30, 0.72);
   transition: color 140ms ease;
 }
 
-.node-card__agent-thinking-icon :deep(svg) {
+.node-card__agent-thinking-icon :deep(svg),
+.node-card__agent-breakpoint-icon :deep(svg) {
   width: 18px;
   height: 18px;
 }
 
-.node-card__agent-thinking-icon--enabled {
+.node-card__agent-thinking-icon--enabled,
+.node-card__agent-breakpoint-icon--enabled {
   color: #b45309;
 }
 
-.node-card__agent-thinking-switch {
+.node-card__agent-toggle-switch {
   justify-self: end;
   --el-switch-on-color: #c96b1f;
   --el-switch-off-color: rgba(154, 52, 18, 0.24);
+}
+
+:deep(.node-card__agent-toggle-hint-popper.el-popper) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .node-card__breakpoint-timing-select {
@@ -3582,59 +3659,6 @@ function handleConditionRuleValueInput(event: Event) {
   border: 1px solid rgba(154, 52, 18, 0.16);
   border-radius: 14px;
   background: rgba(255, 250, 241, 0.98);
-}
-
-.node-card__agent-breakpoint-button {
-  appearance: none;
-  display: inline-grid;
-  grid-template-columns: 20px 32px;
-  align-items: center;
-  justify-content: center;
-  justify-self: end;
-  min-height: 48px;
-  gap: 8px;
-  border: 1px solid rgba(154, 52, 18, 0.14);
-  border-radius: 16px;
-  padding: 0 12px;
-  background: rgba(255, 255, 255, 0.88);
-  color: rgba(111, 67, 30, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
-  cursor: pointer;
-  transition:
-    border-color 140ms ease,
-    background 140ms ease,
-    color 140ms ease;
-}
-
-.node-card__agent-breakpoint-button:hover {
-  border-color: rgba(154, 52, 18, 0.22);
-  background: rgba(255, 252, 247, 0.94);
-}
-
-.node-card__agent-breakpoint-button:focus-visible {
-  outline: none;
-  border-color: rgba(201, 107, 31, 0.32);
-  box-shadow:
-    0 0 0 3px rgba(201, 107, 31, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45);
-}
-
-.node-card__agent-breakpoint-button--enabled {
-  border-color: rgba(201, 107, 31, 0.32);
-  background: rgba(201, 107, 31, 0.12);
-  color: #9a3412;
-}
-
-.node-card__agent-breakpoint-icon,
-.node-card__agent-breakpoint-icon :deep(svg) {
-  width: 18px;
-  height: 18px;
-}
-
-.node-card__agent-breakpoint-text {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
 }
 
 .node-card__action-pill {
@@ -4002,6 +4026,12 @@ function handleConditionRuleValueInput(event: Event) {
 }
 
 .node-card__confirm-hint--text {
+  border-color: rgba(201, 107, 31, 0.24);
+  background: rgb(255, 247, 237);
+  color: rgb(154, 52, 18);
+}
+
+.node-card__confirm-hint--toggle {
   border-color: rgba(201, 107, 31, 0.24);
   background: rgb(255, 247, 237);
   color: rgb(154, 52, 18);

@@ -48,7 +48,7 @@
             <RouterLink class="home-empty__action" :to="templatesEmptyAction.href">{{ templatesEmptyAction.label }}</RouterLink>
           </div>
           <RouterLink
-            v-for="template in templates.slice(0, 3)"
+            v-for="template in templates"
             :key="template.template_id"
             class="home-card"
             :to="`/editor/new?template=${template.template_id}`"

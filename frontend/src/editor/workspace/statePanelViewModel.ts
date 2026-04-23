@@ -1,4 +1,5 @@
 import type { GraphDocument, GraphPayload } from "@/types/node-system";
+import { sortStateKeysByFirstAppearance } from "./stateOrdering.ts";
 
 export type StatePanelRowViewModel = {
   key: string;
@@ -30,22 +31,23 @@ export type StatePanelViewModel = {
 
 export function buildStatePanelViewModel(document: GraphPayload | GraphDocument): StatePanelViewModel {
   const bindingsByState = summarizeBindingsByState(document);
-  const rows = Object.entries(document.state_schema)
-    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-    .map(([key, state]) => ({
-      key,
-      title: state.name.trim() || key,
-      description: state.description.trim(),
-      typeLabel: state.type.trim() || "unknown",
-      valuePreview: formatStateValue(state.value),
-      color: state.color,
-      readerCount: bindingsByState[key]?.readerCount ?? 0,
-      writerCount: bindingsByState[key]?.writerCount ?? 0,
-      bindingSummary: formatBindingSummary(bindingsByState[key]?.readerCount ?? 0, bindingsByState[key]?.writerCount ?? 0),
-      readers: bindingsByState[key]?.readers ?? [],
-      writers: bindingsByState[key]?.writers ?? [],
-    }))
-    .sort((left, right) => compareStateRows(left, right, bindingsByState));
+  const rows = sortStateKeysByFirstAppearance(Object.keys(document.state_schema), document)
+    .map((key) => {
+      const state = document.state_schema[key];
+      return {
+        key,
+        title: state.name.trim() || key,
+        description: state.description.trim(),
+        typeLabel: state.type.trim() || "unknown",
+        valuePreview: formatStateValue(state.value),
+        color: state.color,
+        readerCount: bindingsByState[key]?.readerCount ?? 0,
+        writerCount: bindingsByState[key]?.writerCount ?? 0,
+        bindingSummary: formatBindingSummary(bindingsByState[key]?.readerCount ?? 0, bindingsByState[key]?.writerCount ?? 0),
+        readers: bindingsByState[key]?.readers ?? [],
+        writers: bindingsByState[key]?.writers ?? [],
+      };
+    });
 
   return {
     count: rows.length,
@@ -57,16 +59,13 @@ export function buildStatePanelViewModel(document: GraphPayload | GraphDocument)
 
 function summarizeBindingsByState(document: GraphPayload | GraphDocument) {
   const summary = Object.entries(document.nodes).reduce<
-    Record<string, { readerCount: number; writerCount: number; agentReaderCount: number; readers: StatePanelBindingViewModel[]; writers: StatePanelBindingViewModel[] }>
+    Record<string, { readerCount: number; writerCount: number; readers: StatePanelBindingViewModel[]; writers: StatePanelBindingViewModel[] }>
   >((acc, [nodeId, node]) => {
     const nodeLabel = node.name.trim() || nodeId;
 
     for (const read of node.reads) {
-      const current = acc[read.state] ?? { readerCount: 0, writerCount: 0, agentReaderCount: 0, readers: [], writers: [] };
+      const current = acc[read.state] ?? { readerCount: 0, writerCount: 0, readers: [], writers: [] };
       current.readerCount += 1;
-      if (node.kind === "agent") {
-        current.agentReaderCount += 1;
-      }
       current.readers.push({
         nodeId,
         nodeLabel,
@@ -77,7 +76,7 @@ function summarizeBindingsByState(document: GraphPayload | GraphDocument) {
     }
 
     for (const write of node.writes) {
-      const current = acc[write.state] ?? { readerCount: 0, writerCount: 0, agentReaderCount: 0, readers: [], writers: [] };
+      const current = acc[write.state] ?? { readerCount: 0, writerCount: 0, readers: [], writers: [] };
       current.writerCount += 1;
       current.writers.push({
         nodeId,
@@ -97,27 +96,6 @@ function summarizeBindingsByState(document: GraphPayload | GraphDocument) {
   }
 
   return summary;
-}
-
-function compareStateRows(
-  left: StatePanelRowViewModel,
-  right: StatePanelRowViewModel,
-  bindingsByState: ReturnType<typeof summarizeBindingsByState>,
-) {
-  const leftIsUnlinkedAgentInput = isUnlinkedAgentInputState(left.key, bindingsByState);
-  const rightIsUnlinkedAgentInput = isUnlinkedAgentInputState(right.key, bindingsByState);
-  if (leftIsUnlinkedAgentInput !== rightIsUnlinkedAgentInput) {
-    return leftIsUnlinkedAgentInput ? -1 : 1;
-  }
-  return left.key.localeCompare(right.key);
-}
-
-function isUnlinkedAgentInputState(
-  stateKey: string,
-  bindingsByState: ReturnType<typeof summarizeBindingsByState>,
-) {
-  const bindings = bindingsByState[stateKey];
-  return Boolean(bindings && bindings.agentReaderCount > 0 && bindings.writerCount === 0);
 }
 
 function formatBindingSummary(readerCount: number, writerCount: number) {

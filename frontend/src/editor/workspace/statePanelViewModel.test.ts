@@ -114,36 +114,36 @@ test("buildStatePanelViewModel returns sorted state rows with readable values", 
   assert.equal(view.rows[0].bindingSummary, "1 reader · 1 writer");
 });
 
-test("buildStatePanelViewModel prioritizes unlinked agent input states", () => {
+test("buildStatePanelViewModel orders rows by first state appearance in node execution order", () => {
   const view = buildStatePanelViewModel({
     graph_id: "graph-1",
-    name: "Human Review",
+    name: "Execution Order",
     metadata: {},
     state_schema: {
-      answer: {
-        name: "Answer",
-        description: "Generated answer.",
+      final_answer: {
+        name: "Final Answer",
+        description: "Final output.",
         type: "text",
         value: "",
         color: "#d97706",
       },
-      manual_feedback: {
-        name: "Manual Feedback",
-        description: "Human feedback entered during review.",
+      draft_answer: {
+        name: "Draft Answer",
+        description: "Draft output.",
         type: "text",
         value: "",
         color: "#2563eb",
       },
-      orphan_output_preview: {
-        name: "Output Preview",
-        description: "Read only by output.",
+      question: {
+        name: "Question",
+        description: "Original question.",
         type: "text",
         value: "",
         color: "#10b981",
       },
-      question: {
-        name: "Question",
-        description: "Original question.",
+      manual_feedback: {
+        name: "Manual Feedback",
+        description: "Human feedback.",
         type: "text",
         value: "",
         color: "#7c3aed",
@@ -165,7 +165,7 @@ test("buildStatePanelViewModel prioritizes unlinked agent input states", () => {
         description: "",
         ui: { position: { x: 0, y: 0 } },
         reads: [{ state: "question", required: true }],
-        writes: [{ state: "answer", mode: "replace" }],
+        writes: [{ state: "draft_answer", mode: "replace" }],
         config: {
           skills: [],
           taskInstruction: "",
@@ -181,10 +181,10 @@ test("buildStatePanelViewModel prioritizes unlinked agent input states", () => {
         description: "",
         ui: { position: { x: 0, y: 0 } },
         reads: [
-          { state: "answer", required: true },
+          { state: "draft_answer", required: true },
           { state: "manual_feedback", required: true },
         ],
-        writes: [],
+        writes: [{ state: "final_answer", mode: "replace" }],
         config: {
           skills: [],
           taskInstruction: "",
@@ -194,12 +194,12 @@ test("buildStatePanelViewModel prioritizes unlinked agent input states", () => {
           temperature: 0.2,
         },
       },
-      output_preview: {
+      output_answer: {
         kind: "output",
-        name: "output_preview",
+        name: "output_answer",
         description: "",
         ui: { position: { x: 0, y: 0 } },
-        reads: [{ state: "orphan_output_preview", required: true }],
+        reads: [{ state: "final_answer", required: true }],
         writes: [],
         config: {
           displayMode: "auto",
@@ -209,13 +209,17 @@ test("buildStatePanelViewModel prioritizes unlinked agent input states", () => {
         },
       },
     },
-    edges: [],
+    edges: [
+      { source: "input_question", target: "draft_writer" },
+      { source: "draft_writer", target: "revision_writer" },
+      { source: "revision_writer", target: "output_answer" },
+    ],
     conditional_edges: [],
   });
 
   assert.deepEqual(
     view.rows.map((row) => row.key),
-    ["manual_feedback", "answer", "orphan_output_preview", "question"],
+    ["question", "draft_answer", "manual_feedback", "final_answer"],
   );
 });
 

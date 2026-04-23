@@ -44,7 +44,8 @@ export function buildStatePanelViewModel(document: GraphPayload | GraphDocument)
       bindingSummary: formatBindingSummary(bindingsByState[key]?.readerCount ?? 0, bindingsByState[key]?.writerCount ?? 0),
       readers: bindingsByState[key]?.readers ?? [],
       writers: bindingsByState[key]?.writers ?? [],
-    }));
+    }))
+    .sort((left, right) => compareStateRows(left, right, bindingsByState));
 
   return {
     count: rows.length,
@@ -56,13 +57,16 @@ export function buildStatePanelViewModel(document: GraphPayload | GraphDocument)
 
 function summarizeBindingsByState(document: GraphPayload | GraphDocument) {
   const summary = Object.entries(document.nodes).reduce<
-    Record<string, { readerCount: number; writerCount: number; readers: StatePanelBindingViewModel[]; writers: StatePanelBindingViewModel[] }>
+    Record<string, { readerCount: number; writerCount: number; agentReaderCount: number; readers: StatePanelBindingViewModel[]; writers: StatePanelBindingViewModel[] }>
   >((acc, [nodeId, node]) => {
     const nodeLabel = node.name.trim() || nodeId;
 
     for (const read of node.reads) {
-      const current = acc[read.state] ?? { readerCount: 0, writerCount: 0, readers: [], writers: [] };
+      const current = acc[read.state] ?? { readerCount: 0, writerCount: 0, agentReaderCount: 0, readers: [], writers: [] };
       current.readerCount += 1;
+      if (node.kind === "agent") {
+        current.agentReaderCount += 1;
+      }
       current.readers.push({
         nodeId,
         nodeLabel,
@@ -73,7 +77,7 @@ function summarizeBindingsByState(document: GraphPayload | GraphDocument) {
     }
 
     for (const write of node.writes) {
-      const current = acc[write.state] ?? { readerCount: 0, writerCount: 0, readers: [], writers: [] };
+      const current = acc[write.state] ?? { readerCount: 0, writerCount: 0, agentReaderCount: 0, readers: [], writers: [] };
       current.writerCount += 1;
       current.writers.push({
         nodeId,
@@ -93,6 +97,27 @@ function summarizeBindingsByState(document: GraphPayload | GraphDocument) {
   }
 
   return summary;
+}
+
+function compareStateRows(
+  left: StatePanelRowViewModel,
+  right: StatePanelRowViewModel,
+  bindingsByState: ReturnType<typeof summarizeBindingsByState>,
+) {
+  const leftIsUnlinkedAgentInput = isUnlinkedAgentInputState(left.key, bindingsByState);
+  const rightIsUnlinkedAgentInput = isUnlinkedAgentInputState(right.key, bindingsByState);
+  if (leftIsUnlinkedAgentInput !== rightIsUnlinkedAgentInput) {
+    return leftIsUnlinkedAgentInput ? -1 : 1;
+  }
+  return left.key.localeCompare(right.key);
+}
+
+function isUnlinkedAgentInputState(
+  stateKey: string,
+  bindingsByState: ReturnType<typeof summarizeBindingsByState>,
+) {
+  const bindings = bindingsByState[stateKey];
+  return Boolean(bindings && bindings.agentReaderCount > 0 && bindings.writerCount === 0);
 }
 
 function formatBindingSummary(readerCount: number, writerCount: number) {

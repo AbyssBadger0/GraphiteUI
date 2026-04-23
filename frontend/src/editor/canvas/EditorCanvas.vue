@@ -164,31 +164,6 @@
           @update:color="handleDataEdgeStateEditorColorInput"
           @update:description="handleDataEdgeStateEditorDescriptionInput"
         />
-        <div class="editor-canvas__edge-state-editor-actions">
-          <button
-            v-if="canRemoveDataEdgeSourceBinding()"
-            type="button"
-            class="editor-canvas__edge-state-editor-action"
-            @pointerdown.stop
-            @click.stop="removeDataEdgeSourceBinding"
-          >
-            <ElIcon><Delete /></ElIcon>
-            <span>Remove source ref</span>
-          </button>
-          <button type="button" class="editor-canvas__edge-state-editor-action" @pointerdown.stop @click.stop="removeDataEdgeTargetBinding">
-            <ElIcon><Delete /></ElIcon>
-            <span>Remove target ref</span>
-          </button>
-        </div>
-        <button
-          type="button"
-          class="editor-canvas__edge-state-editor-action editor-canvas__edge-state-editor-action--danger"
-          @pointerdown.stop
-          @click.stop="removeDataEdgeBindings"
-        >
-          <ElIcon><Delete /></ElIcon>
-          <span>Remove both refs</span>
-        </button>
       </div>
       <div
         v-for="[nodeId, node] in nodeEntries"
@@ -324,7 +299,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
-import { Check, Delete } from "@element-plus/icons-vue";
+import { Check } from "@element-plus/icons-vue";
 
 import { buildAnchorModel } from "@/editor/anchors/anchorModel";
 import EditorMinimap from "./EditorMinimap.vue";
@@ -1130,60 +1105,6 @@ function handleDataEdgeStateEditorTypeValue(value: string | number | boolean | u
       value: defaultValueForStateType(value as StateFieldType),
     },
   });
-}
-
-function canRemoveDataEdgeSourceBinding() {
-  if (!activeDataEdgeStateEditor.value) {
-    return false;
-  }
-  return props.document.nodes[activeDataEdgeStateEditor.value.source]?.kind === "agent";
-}
-
-function removeDataEdgeSourceBinding() {
-  if (!activeDataEdgeStateEditor.value) {
-    return;
-  }
-  if (!canRemoveDataEdgeSourceBinding()) {
-    return;
-  }
-  emit("remove-port-state", {
-    nodeId: activeDataEdgeStateEditor.value.source,
-    side: "output",
-    stateKey: activeDataEdgeStateEditor.value.stateKey,
-  });
-  clearDataEdgeStateInteraction();
-}
-
-function removeDataEdgeTargetBinding() {
-  if (!activeDataEdgeStateEditor.value) {
-    return;
-  }
-  emit("remove-port-state", {
-    nodeId: activeDataEdgeStateEditor.value.target,
-    side: "input",
-    stateKey: activeDataEdgeStateEditor.value.stateKey,
-  });
-  clearDataEdgeStateInteraction();
-}
-
-function removeDataEdgeBindings() {
-  if (!activeDataEdgeStateEditor.value) {
-    return;
-  }
-
-  if (canRemoveDataEdgeSourceBinding()) {
-    emit("remove-port-state", {
-      nodeId: activeDataEdgeStateEditor.value.source,
-      side: "output",
-      stateKey: activeDataEdgeStateEditor.value.stateKey,
-    });
-  }
-  emit("remove-port-state", {
-    nodeId: activeDataEdgeStateEditor.value.target,
-    side: "input",
-    stateKey: activeDataEdgeStateEditor.value.stateKey,
-  });
-  clearDataEdgeStateInteraction();
 }
 
 function nodeStyle(position: GraphPosition) {
@@ -2711,48 +2632,6 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   gap: 10px;
   transform: translate(-50%, calc(-100% - 18px));
   pointer-events: auto;
-}
-
-.editor-canvas__edge-state-editor-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.editor-canvas__edge-state-editor-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid rgba(185, 28, 28, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 248, 248, 0.96);
-  color: rgba(127, 29, 29, 0.92);
-  font-size: 0.76rem;
-  font-weight: 600;
-  box-shadow: 0 10px 20px rgba(120, 53, 15, 0.08);
-}
-
-.editor-canvas__edge-state-editor-action:hover {
-  border-color: rgba(185, 28, 28, 0.22);
-  background: rgba(255, 242, 242, 0.98);
-}
-
-.editor-canvas__edge-state-editor-action--danger {
-  width: 100%;
-  justify-content: center;
-  min-height: 38px;
-  margin-top: 2px;
-  border-color: rgba(185, 28, 28, 0.18);
-  background: rgba(255, 241, 241, 0.98);
-  color: rgba(127, 29, 29, 0.94);
-  font-size: 0.8rem;
-}
-
-.editor-canvas__edge-state-editor-action--danger:hover {
-  border-color: rgba(185, 28, 28, 0.28);
-  background: rgba(254, 226, 226, 0.98);
 }
 
 .editor-canvas__anchors {

@@ -225,7 +225,7 @@ test("EditorCanvas tints route edge outlines from the branch palette", () => {
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight \{[\s\S]*stroke:\s*var\(--editor-edge-outline, rgba\(201,\s*107,\s*31,\s*0\.16\)\);/);
 });
 
-test("EditorCanvas gives data edges the same two-step state editing entry pattern as state ports", () => {
+test("EditorCanvas gives data edges the same two-step state editing entry pattern as state ports without binding deletion actions", () => {
   assert.match(componentSource, /import StateEditorPopover from "@\/editor\/nodes\/StateEditorPopover\.vue";/);
   assert.match(componentSource, /const activeDataEdgeStateConfirm = ref<\{/);
   assert.match(componentSource, /const activeDataEdgeStateEditor = ref<\{/);
@@ -235,9 +235,6 @@ test("EditorCanvas gives data edges the same two-step state editing entry patter
   assert.match(componentSource, /function startDataEdgeStateConfirm\(edge: ProjectedCanvasEdge, event: PointerEvent\)/);
   assert.match(componentSource, /function openDataEdgeStateEditor\(\)/);
   assert.match(componentSource, /function syncDataEdgeStateDraft\(nextDraft: StateFieldDraft\)/);
-  assert.match(componentSource, /function canRemoveDataEdgeSourceBinding\(\)/);
-  assert.match(componentSource, /function removeDataEdgeSourceBinding\(\)/);
-  assert.match(componentSource, /function removeDataEdgeTargetBinding\(\)/);
   assert.match(componentSource, /if \(edge\.kind === "data"\) \{[\s\S]*startDataEdgeStateConfirm\(edge, event\);[\s\S]*return;/);
   assert.match(componentSource, /<div[\s\S]*v-if="activeDataEdgeStateConfirm"[\s\S]*class="editor-canvas__edge-state-confirm"/);
   assert.match(componentSource, /<div class="editor-canvas__confirm-hint editor-canvas__confirm-hint--state">Edit state\?<\/div>/);
@@ -250,16 +247,15 @@ test("EditorCanvas gives data edges the same two-step state editing entry patter
   assert.match(componentSource, /@update:type="handleDataEdgeStateEditorTypeValue"/);
   assert.match(componentSource, /@update:color="handleDataEdgeStateEditorColorInput"/);
   assert.match(componentSource, /@update:description="handleDataEdgeStateEditorDescriptionInput"/);
-  assert.match(componentSource, /v-if="canRemoveDataEdgeSourceBinding\(\)"/);
-  assert.match(componentSource, /class="editor-canvas__edge-state-editor-action"/);
-  assert.match(componentSource, /Remove source ref/);
-  assert.match(componentSource, /Remove target ref/);
-  assert.match(componentSource, /class="editor-canvas__edge-state-editor-action editor-canvas__edge-state-editor-action--danger"/);
-  assert.match(componentSource, /Remove both refs/);
-  assert.match(componentSource, /function removeDataEdgeBindings\(\)/);
-  assert.match(componentSource, /if \(!canRemoveDataEdgeSourceBinding\(\)\) \{[\s\S]*return;[\s\S]*\}/);
-  assert.match(componentSource, /if \(canRemoveDataEdgeSourceBinding\(\)\) \{[\s\S]*emit\("remove-port-state", \{[\s\S]*nodeId: activeDataEdgeStateEditor\.value\.source,[\s\S]*side: "output",[\s\S]*stateKey: activeDataEdgeStateEditor\.value\.stateKey,[\s\S]*\}\);[\s\S]*\}/);
-  assert.match(componentSource, /emit\("remove-port-state", \{[\s\S]*nodeId: activeDataEdgeStateEditor\.value\.target,[\s\S]*side: "input",[\s\S]*stateKey: activeDataEdgeStateEditor\.value\.stateKey,[\s\S]*\}\);/);
+  assert.doesNotMatch(componentSource, /v-if="canRemoveDataEdgeSourceBinding\(\)"/);
+  assert.doesNotMatch(componentSource, /class="editor-canvas__edge-state-editor-action"/);
+  assert.doesNotMatch(componentSource, /Remove source ref/);
+  assert.doesNotMatch(componentSource, /Remove target ref/);
+  assert.doesNotMatch(componentSource, /Remove both refs/);
+  assert.doesNotMatch(componentSource, /function canRemoveDataEdgeSourceBinding\(\)/);
+  assert.doesNotMatch(componentSource, /function removeDataEdgeSourceBinding\(\)/);
+  assert.doesNotMatch(componentSource, /function removeDataEdgeTargetBinding\(\)/);
+  assert.doesNotMatch(componentSource, /function removeDataEdgeBindings\(\)/);
 });
 
 test("EditorCanvas tints data edge outlines from the data edge state color", () => {

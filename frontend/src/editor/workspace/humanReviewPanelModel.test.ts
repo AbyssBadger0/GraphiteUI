@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildHumanReviewPanelModel,
   buildHumanReviewRows,
   buildHumanReviewResumePayload,
   formatHumanReviewDraftValue,
@@ -108,7 +109,7 @@ function createRun(): RunDetail {
     runtime_backend: "langgraph",
     lifecycle: { updated_at: "", resume_count: 0, pause_reason: "breakpoint" },
     checkpoint_metadata: { available: true, checkpoint_id: "cp-1", thread_id: "thread-1" },
-    current_node_id: "answer_helper",
+    current_node_id: "draft_writer",
     revision_round: 0,
     started_at: "",
     metadata: {},
@@ -118,7 +119,7 @@ function createRun(): RunDetail {
     knowledge_summary: "",
     memory_summary: "",
     final_result: "",
-    node_status_map: { answer_helper: "paused" },
+    node_status_map: { draft_writer: "paused" },
     node_executions: [],
     warnings: [],
     errors: [],
@@ -165,4 +166,21 @@ test("buildHumanReviewResumePayload returns only changed parsed state values", (
 
 test("formatHumanReviewDraftValue keeps structured values readable", () => {
   assert.equal(formatHumanReviewDraftValue("object", { ok: true }), '{\n  "ok": true\n}');
+});
+
+test("buildHumanReviewPanelModel promotes downstream missing inputs into requiredNow", () => {
+  const panel = buildHumanReviewPanelModel(createRun(), createDocument());
+
+  assert.deepEqual(
+    panel.requiredNow.map((row) => row.key),
+    ["manual_feedback", "score"],
+  );
+  assert.deepEqual(
+    panel.otherRows.map((row) => row.key),
+    ["question", "draft"],
+  );
+  assert.equal(panel.requiredCount, 2);
+  assert.equal(panel.summaryText, "到下一个断点前，需人工填写 2 项输入");
+  assert.equal(panel.hasBlockingEmptyRequiredField, true);
+  assert.equal(panel.firstBlockingRequiredKey, "manual_feedback");
 });

@@ -142,12 +142,12 @@ const currentFocusNodeId = computed(() => props.run?.current_node_id ?? props.fo
 const pauseContextKey = computed(() => {
   const runId = props.run?.run_id ?? "no-run";
   const nodeId = props.run?.current_node_id ?? props.focusedNodeId ?? "no-node";
-  const checkpointId =
-    props.run?.checkpoint_metadata?.checkpoint_id ??
-    props.run?.lifecycle?.updated_at ??
-    props.run?.status ??
-    "no-checkpoint";
-  return `${runId}::${nodeId}::${checkpointId}`;
+  const checkpointId = props.run?.checkpoint_metadata?.checkpoint_id ?? "no-checkpoint";
+  const pausedAt = props.run?.lifecycle?.paused_at ?? "no-paused-at";
+  const threadId = props.run?.checkpoint_metadata?.thread_id ?? "no-thread";
+  const checkpointNamespace = props.run?.checkpoint_metadata?.checkpoint_ns ?? "no-checkpoint-ns";
+  const resumeCount = String(props.run?.lifecycle?.resume_count ?? "no-resume-count");
+  return `${runId}::${nodeId}::${checkpointId}::${pausedAt}::${threadId}::${checkpointNamespace}::${resumeCount}`;
 });
 const firstBlockingDraftKey = computed(
   () => panelModel.value.requiredNow.find((row) => draftFor(row.key).trim().length === 0)?.key ?? null,

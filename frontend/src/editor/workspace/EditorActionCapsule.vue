@@ -79,6 +79,8 @@ defineEmits<{
 .editor-action-capsule__run {
   min-height: 36px;
   border-radius: 999px;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease,
+    transform 0.16s ease;
 }
 
 .editor-action-capsule__icon-button {
@@ -100,6 +102,26 @@ defineEmits<{
   cursor: pointer;
 }
 
+.editor-action-capsule__state-pill--active {
+  border-color: rgba(154, 52, 18, 0.44);
+  background: rgba(255, 238, 222, 0.98);
+  color: rgba(126, 46, 11, 0.98);
+}
+
+.editor-action-capsule__state-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  min-height: 22px;
+  border-radius: 999px;
+  background: rgba(154, 52, 18, 0.12);
+  padding: 0 7px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .editor-action-capsule__run {
   border: 1px solid rgba(154, 52, 18, 0.9);
   background: rgba(154, 52, 18, 0.92);
@@ -107,5 +129,28 @@ defineEmits<{
   padding: 0 16px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.editor-action-capsule__icon-button:hover {
+  border-color: rgba(193, 151, 106, 0.34);
+  background: rgba(255, 245, 232, 0.96);
+}
+
+.editor-action-capsule__state-pill:hover {
+  border-color: rgba(154, 52, 18, 0.28);
+  background: rgba(255, 246, 237, 0.98);
+}
+
+.editor-action-capsule__run:hover {
+  border-color: rgba(131, 43, 13, 0.96);
+  background: rgba(131, 43, 13, 0.96);
+  transform: translateY(-1px);
+}
+
+.editor-action-capsule__icon-button:focus-visible,
+.editor-action-capsule__state-pill:focus-visible,
+.editor-action-capsule__run:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(210, 162, 117, 0.3);
 }
 </style>

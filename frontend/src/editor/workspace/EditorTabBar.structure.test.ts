@@ -41,6 +41,19 @@ test("EditorTabBar keeps only the tab strip and a browser-style plus launcher in
   assert.doesNotMatch(componentSource, /copy\.save/);
 });
 
+test("EditorTabBar does not declare or reference the retired toolbar boundary", () => {
+  assert.doesNotMatch(componentSource, /activeStateCount/);
+  assert.doesNotMatch(componentSource, /isStatePanelOpen/);
+  assert.doesNotMatch(componentSource, /toggle-state-panel/);
+  assert.doesNotMatch(componentSource, /save-active-graph/);
+  assert.doesNotMatch(componentSource, /validate-active-graph/);
+  assert.doesNotMatch(componentSource, /import-python-graph/);
+  assert.doesNotMatch(componentSource, /export-active-graph/);
+  assert.doesNotMatch(componentSource, /run-active-graph/);
+  assert.doesNotMatch(componentSource, /selectedTemplateId/);
+  assert.doesNotMatch(componentSource, /selectedGraphId/);
+});
+
 test("EditorTabBar exposes browser-like tab interactions", () => {
   assert.match(componentSource, /draggable="true"/);
   assert.match(componentSource, /@auxclick="handleTabAuxClick\(tab, \$event\)"/);

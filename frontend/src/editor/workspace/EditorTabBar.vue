@@ -122,8 +122,6 @@ const emit = defineEmits<{
   (event: "rename-active-graph", name: string): void;
 }>();
 
-const selectedTemplateId = ref("");
-const selectedGraphId = ref("");
 const editingTabId = ref<string | null>(null);
 const draftGraphName = ref("");
 const tabNameInput = ref<HTMLInputElement | null>(null);
@@ -159,22 +157,6 @@ const selectPlaceholders = computed(() =>
     copy,
   }),
 );
-
-watch(selectedTemplateId, (nextValue) => {
-  if (!nextValue) {
-    return;
-  }
-  emit("create-from-template", nextValue);
-  selectedTemplateId.value = "";
-});
-
-watch(selectedGraphId, (nextValue) => {
-  if (!nextValue) {
-    return;
-  }
-  emit("open-graph", nextValue);
-  selectedGraphId.value = "";
-});
 
 watch(
   () => props.activeTabId,

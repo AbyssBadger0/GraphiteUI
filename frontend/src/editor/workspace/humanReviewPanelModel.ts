@@ -88,17 +88,11 @@ export function buildHumanReviewPanelModel(
   );
   const requiredCandidates: Array<{ stateKey: string }> = [];
   const requiredKeys = new Set<string>();
-  const blockingWriterKindsByState = new Map<string, Set<string>>();
 
   for (const nodeId of windowNodeIds) {
     const node = document.nodes[nodeId];
     if (!node) {
       continue;
-    }
-    for (const binding of node.writes) {
-      const writerKinds = blockingWriterKindsByState.get(binding.state) ?? new Set<string>();
-      writerKinds.add(node.kind);
-      blockingWriterKindsByState.set(binding.state, writerKinds);
     }
     for (const binding of node.reads) {
       if (binding.required === false) {
@@ -139,9 +133,7 @@ export function buildHumanReviewPanelModel(
 
   const requiredNow = allRows.filter((row) => requiredKeys.has(row.key));
   const otherRows = allRows.filter((row) => !requiredKeys.has(row.key));
-  const firstBlockingRequiredKey =
-    requiredNow.find((row) => draftValueIsBlocking(row) && requiredRowIsBlocking(row, blockingWriterKindsByState))?.key ??
-    null;
+  const firstBlockingRequiredKey = requiredNow.find(draftValueIsBlocking)?.key ?? null;
 
   return {
     requiredNow,
@@ -368,14 +360,6 @@ function resolveWindowStateAvailability(
 
 function draftValueIsBlocking(row: HumanReviewRow) {
   return row.draft.trim().length === 0;
-}
-
-function requiredRowIsBlocking(row: HumanReviewRow, blockingWriterKindsByState: Map<string, Set<string>>) {
-  const writerKinds = blockingWriterKindsByState.get(row.key);
-  if (!writerKinds || writerKinds.size === 0) {
-    return true;
-  }
-  return writerKinds.has("input");
 }
 
 function resolveSummaryText(requiredCount: number) {

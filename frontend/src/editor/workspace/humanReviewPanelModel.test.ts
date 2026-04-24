@@ -193,6 +193,8 @@ test("buildHumanReviewPanelModel does not block continue when required fields al
       draft: "GraphiteUI is a visual graph editor.",
       score: 0.8,
       manual_feedback: "Tighten the product wording.",
+      pass_only_note: "Proceed with the approved branch.",
+      retry_only_note: "Revise using the retry branch.",
     },
   };
 

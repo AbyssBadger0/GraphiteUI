@@ -14,8 +14,13 @@
           <div class="editor-tab-launcher-panel__entry-meta">选择预设模板作为起点</div>
         </div>
       </button>
-      <div v-if="expandedSection === 'template'" class="editor-tab-launcher-panel__picker">
-        <WorkspaceSelect v-model="selectedTemplateId" :options="templateOptions" :placeholder="templatePlaceholder" />
+      <div class="editor-tab-launcher-panel__picker">
+        <WorkspaceSelect
+          v-if="expandedSection === 'template'"
+          v-model="selectedTemplateId"
+          :options="templateOptions"
+          :placeholder="templatePlaceholder"
+        />
       </div>
     </div>
 
@@ -26,8 +31,13 @@
           <div class="editor-tab-launcher-panel__entry-meta">继续编辑已保存工作流</div>
         </div>
       </button>
-      <div v-if="expandedSection === 'graph'" class="editor-tab-launcher-panel__picker">
-        <WorkspaceSelect v-model="selectedGraphId" :options="graphOptions" :placeholder="graphPlaceholder" />
+      <div class="editor-tab-launcher-panel__picker">
+        <WorkspaceSelect
+          v-if="expandedSection === 'graph'"
+          v-model="selectedGraphId"
+          :options="graphOptions"
+          :placeholder="graphPlaceholder"
+        />
       </div>
     </div>
   </div>
@@ -103,6 +113,10 @@ watch(selectedGraphId, (nextValue) => {
 
 .editor-tab-launcher-panel__picker {
   padding: 0 4px 4px;
+}
+
+.editor-tab-launcher-panel__picker:empty {
+  display: none;
 }
 
 .editor-tab-launcher-panel__entry-title {

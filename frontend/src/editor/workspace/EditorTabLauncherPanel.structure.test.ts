@@ -14,16 +14,8 @@ test("EditorTabLauncherPanel offers blank, template, and existing-graph entry po
   assert.match(componentSource, /@click="\$emit\('create-new'\)"/);
   assert.match(componentSource, /@click="toggleSection\('template'\)"/);
   assert.match(componentSource, /@click="toggleSection\('graph'\)"/);
-  assert.match(
-    componentSource,
-    /<div v-if="expandedSection === 'template'" class="editor-tab-launcher-panel__picker">[\s\S]*<WorkspaceSelect/,
-  );
-  assert.match(
-    componentSource,
-    /<div v-if="expandedSection === 'graph'" class="editor-tab-launcher-panel__picker">[\s\S]*<WorkspaceSelect/,
-  );
-  assert.doesNotMatch(componentSource, /<WorkspaceSelect[^>]*v-if="expandedSection === 'template'"/);
-  assert.doesNotMatch(componentSource, /<WorkspaceSelect[^>]*v-if="expandedSection === 'graph'"/);
+  assert.match(componentSource, /<WorkspaceSelect[\s\S]*v-if="expandedSection === 'template'"/);
+  assert.match(componentSource, /<WorkspaceSelect[\s\S]*v-if="expandedSection === 'graph'"/);
 });
 
 test("EditorTabLauncherPanel keeps the launcher light by using compact cards instead of a full dialog", () => {

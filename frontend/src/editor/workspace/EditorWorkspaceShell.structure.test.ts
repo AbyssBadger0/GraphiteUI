@@ -149,6 +149,8 @@ test("EditorWorkspaceShell locks graph editing while a run is awaiting human rev
 });
 
 test("EditorWorkspaceShell renders the graph action controls as a detached capsule instead of passing them through EditorTabBar", () => {
+  const editorTabBarUsage = componentSource.match(/<EditorTabBar[\s\S]*?\/>/)?.[0] ?? "";
+
   assert.match(componentSource, /import EditorActionCapsule from "\.\/EditorActionCapsule\.vue";/);
   assert.match(componentSource, /<EditorActionCapsule[\s\S]*:active-state-count="activeStateCount"[\s\S]*:is-state-panel-open="activeStatePanelOpen"/);
   assert.match(componentSource, /@save-active-graph="saveActiveGraph"/);
@@ -156,8 +158,9 @@ test("EditorWorkspaceShell renders the graph action controls as a detached capsu
   assert.match(componentSource, /@import-python-graph="openPythonGraphImportDialog"/);
   assert.match(componentSource, /@export-active-graph="exportActiveGraph"/);
   assert.match(componentSource, /@run-active-graph="runActiveGraph"/);
-  assert.doesNotMatch(componentSource, /<EditorTabBar[\s\S]*@save-active-graph=/);
-  assert.doesNotMatch(componentSource, /<EditorTabBar[\s\S]*@run-active-graph=/);
+  assert.match(editorTabBarUsage, /<EditorTabBar/);
+  assert.doesNotMatch(editorTabBarUsage, /@save-active-graph=/);
+  assert.doesNotMatch(editorTabBarUsage, /@run-active-graph=/);
 });
 
 test("EditorWorkspaceShell pins the full action capsule to the desktop top-right and moves it onto a right-aligned second row on narrow screens", () => {

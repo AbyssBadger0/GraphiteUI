@@ -30,19 +30,6 @@
         <span>{{ routeRestoreError }}</span>
       </div>
       <div class="editor-workspace-shell__chrome">
-        <div class="editor-workspace-shell__action-capsule-row">
-          <EditorActionCapsule
-            :active-state-count="activeStateCount"
-            :is-state-panel-open="activeStatePanelOpen"
-            @toggle-state-panel="toggleActiveStatePanel"
-            @save-active-graph="saveActiveGraph"
-            @validate-active-graph="validateActiveGraph"
-            @import-python-graph="openPythonGraphImportDialog"
-            @export-active-graph="exportActiveGraph"
-            @run-active-graph="runActiveGraph"
-          />
-        </div>
-
         <EditorTabBar
           :tabs="workspace.tabs"
           :active-tab-id="workspace.activeTabId"
@@ -56,6 +43,19 @@
           @open-graph="openExistingGraph"
           @rename-active-graph="renameActiveGraph"
         />
+
+        <div class="editor-workspace-shell__action-capsule-row">
+          <EditorActionCapsule
+            :active-state-count="activeStateCount"
+            :is-state-panel-open="activeStatePanelOpen"
+            @toggle-state-panel="toggleActiveStatePanel"
+            @save-active-graph="saveActiveGraph"
+            @validate-active-graph="validateActiveGraph"
+            @import-python-graph="openPythonGraphImportDialog"
+            @export-active-graph="exportActiveGraph"
+            @run-active-graph="runActiveGraph"
+          />
+        </div>
       </div>
 
       <div class="editor-workspace-shell__body">
@@ -2421,7 +2421,6 @@ onMounted(() => {
 
   .editor-workspace-shell__action-capsule-row {
     position: static;
-    order: 2;
     display: flex;
     justify-content: flex-end;
     pointer-events: auto;

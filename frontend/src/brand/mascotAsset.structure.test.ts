@@ -13,10 +13,13 @@ test("brand mascot is a borderless cat asset with a curled tail", () => {
   assert.doesNotMatch(mascotSource, /<circle\b/);
   assert.doesNotMatch(mascotSource, /<clipPath\b/);
   assert.doesNotMatch(mascotSource, /stroke="url\(#ringGold\)"/);
-  assert.match(mascotSource, /id="mascotTail"[\s\S]*stroke-width="42"/);
-  assert.match(mascotSource, /C242 172 306 118 312 42/);
-  assert.match(mascotSource, /C319 -42 247 -100 174 -72/);
-  assert.match(mascotSource, /C123 -52 118 8 159 26/);
+  assert.match(mascotSource, /id="mascotTail"[\s\S]*stroke-width="30"/);
+  assert.match(mascotSource, /d="M250 142/);
+  assert.match(mascotSource, /C298 132 328 88 324 42/);
+  assert.match(mascotSource, /C320 -2 284 -28 258 -14/);
+  assert.match(mascotSource, /C242 -4 248 16 268 18"/);
+  assert.doesNotMatch(mascotSource, /M162 178/);
+  assert.doesNotMatch(mascotSource, /C123 -52 118 8 159 26/);
   assert.match(mascotSource, /id="mascotSparkle"[\s\S]*d="M0-150/);
   assert.match(mascotSource, /C18-101 5-88 0-62/);
   assert.match(mascotSource, /<ellipse cx="-80" cy="82" rx="24" ry="52" fill="url\(#eyeGold\)"\/>/);

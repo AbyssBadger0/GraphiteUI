@@ -47,7 +47,7 @@ test("EditorTabBar keeps only the tab strip and a browser-style plus launcher in
   assert.match(componentSource, /class="editor-tab-bar__strip"/);
   assert.match(componentSource, /class="editor-tab-bar__add-tab"/);
   assert.match(componentSource, /<ElPopover[\s\S]*trigger="click"[\s\S]*placement="bottom-start"/);
-  assert.match(componentSource, /<EditorTabLauncherPanel[\s\S]*@create-new="\$emit\('create-new'\)"/);
+  assert.match(componentSource, /<EditorTabLauncherPanel[\s\S]*@create-new="handleLauncherCreateNew"/);
   assert.doesNotMatch(componentSource, /editor-tab-bar__controls-dock/);
   assert.doesNotMatch(componentSource, /copy\.run/);
   assert.doesNotMatch(componentSource, /copy\.save/);
@@ -212,4 +212,15 @@ test("EditorTabBar lets the plus launcher popover use the panel glass surface in
   assert.match(componentSource, /:global\(\.editor-tab-bar__launcher-popper\.el-popper\) \{[\s\S]*background:\s*transparent;/);
   assert.match(componentSource, /:global\(\.editor-tab-bar__launcher-popper\.el-popper\) \{[\s\S]*box-shadow:\s*none;/);
   assert.match(componentSource, /:global\(\.editor-tab-bar__launcher-popper \.el-popper__arrow\) \{[\s\S]*display:\s*none;/);
+});
+
+test("EditorTabBar closes the plus launcher popover after a terminal launcher action", () => {
+  assert.match(componentSource, /<ElPopover[\s\S]*v-model:visible="launcherPopoverOpen"[\s\S]*trigger="click"/);
+  assert.match(componentSource, /const launcherPopoverOpen = ref\(false\);/);
+  assert.match(componentSource, /@create-new="handleLauncherCreateNew"/);
+  assert.match(componentSource, /@create-from-template="handleLauncherCreateFromTemplate"/);
+  assert.match(componentSource, /@open-graph="handleLauncherOpenGraph"/);
+  assert.match(componentSource, /function handleLauncherCreateNew\(\) \{[\s\S]*launcherPopoverOpen\.value = false;[\s\S]*emit\("create-new"\);[\s\S]*\}/);
+  assert.match(componentSource, /function handleLauncherCreateFromTemplate\(templateId: string\) \{[\s\S]*launcherPopoverOpen\.value = false;[\s\S]*emit\("create-from-template", templateId\);[\s\S]*\}/);
+  assert.match(componentSource, /function handleLauncherOpenGraph\(graphId: string\) \{[\s\S]*launcherPopoverOpen\.value = false;[\s\S]*emit\("open-graph", graphId\);[\s\S]*\}/);
 });

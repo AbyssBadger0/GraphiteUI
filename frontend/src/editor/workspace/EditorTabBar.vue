@@ -73,7 +73,13 @@
           </div>
         </div>
 
-        <ElPopover trigger="click" placement="bottom-start" :width="352" popper-class="editor-tab-bar__launcher-popper">
+        <ElPopover
+          v-model:visible="launcherPopoverOpen"
+          trigger="click"
+          placement="bottom-start"
+          :width="352"
+          popper-class="editor-tab-bar__launcher-popper"
+        >
           <template #reference>
             <button type="button" class="editor-tab-bar__add-tab" aria-label="新建或打开图">
               <ElIcon aria-hidden="true"><Plus /></ElIcon>
@@ -85,9 +91,9 @@
             :graph-options="graphOptions"
             :template-placeholder="selectPlaceholders.template"
             :graph-placeholder="selectPlaceholders.graph"
-            @create-new="$emit('create-new')"
-            @create-from-template="$emit('create-from-template', $event)"
-            @open-graph="$emit('open-graph', $event)"
+            @create-new="handleLauncherCreateNew"
+            @create-from-template="handleLauncherCreateFromTemplate"
+            @open-graph="handleLauncherOpenGraph"
           />
         </ElPopover>
       </div>
@@ -133,6 +139,7 @@ const draftGraphName = ref("");
 const tabNameInput = ref<HTMLInputElement | null>(null);
 const tabsShell = ref<HTMLElement | null>(null);
 const tabsScroller = ref<HTMLElement | null>(null);
+const launcherPopoverOpen = ref(false);
 const draggedTabId = ref<string | null>(null);
 const dropTargetTabId = ref<string | null>(null);
 const dropPlacement = ref<"before" | "after" | null>(null);
@@ -224,6 +231,21 @@ function handleTabChange(value: string | number) {
   if (typeof value === "string") {
     emit("activate-tab", value);
   }
+}
+
+function handleLauncherCreateNew() {
+  launcherPopoverOpen.value = false;
+  emit("create-new");
+}
+
+function handleLauncherCreateFromTemplate(templateId: string) {
+  launcherPopoverOpen.value = false;
+  emit("create-from-template", templateId);
+}
+
+function handleLauncherOpenGraph(graphId: string) {
+  launcherPopoverOpen.value = false;
+  emit("open-graph", graphId);
 }
 
 async function startTabRename(tab: EditorWorkspaceTab) {

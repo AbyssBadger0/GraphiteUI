@@ -38,13 +38,25 @@
           <ArrowRight />
         </ElIcon>
       </button>
-      <div class="editor-tab-launcher-panel__picker">
-        <WorkspaceSelect
-          v-if="expandedSection === 'template'"
-          v-model="selectedTemplateId"
-          :options="templateOptions"
-          :placeholder="templatePlaceholder"
-        />
+      <div
+        v-if="expandedSection === 'template'"
+        class="editor-tab-launcher-panel__option-list"
+        role="listbox"
+        aria-label="可用模板"
+      >
+        <button
+          v-for="option in templateOptions"
+          :key="option.value"
+          type="button"
+          class="editor-tab-launcher-panel__option"
+          @click="selectTemplate(option.value)"
+        >
+          <span class="editor-tab-launcher-panel__option-label">{{ option.label }}</span>
+          <span class="editor-tab-launcher-panel__option-meta">{{ option.value }}</span>
+        </button>
+        <div v-if="templateOptions.length === 0" class="editor-tab-launcher-panel__empty">
+          {{ templatePlaceholder }}
+        </div>
       </div>
     </div>
 
@@ -70,13 +82,25 @@
           <ArrowRight />
         </ElIcon>
       </button>
-      <div class="editor-tab-launcher-panel__picker">
-        <WorkspaceSelect
-          v-if="expandedSection === 'graph'"
-          v-model="selectedGraphId"
-          :options="graphOptions"
-          :placeholder="graphPlaceholder"
-        />
+      <div
+        v-if="expandedSection === 'graph'"
+        class="editor-tab-launcher-panel__option-list"
+        role="listbox"
+        aria-label="已有图"
+      >
+        <button
+          v-for="option in graphOptions"
+          :key="option.value"
+          type="button"
+          class="editor-tab-launcher-panel__option"
+          @click="selectGraph(option.value)"
+        >
+          <span class="editor-tab-launcher-panel__option-label">{{ option.label }}</span>
+          <span class="editor-tab-launcher-panel__option-meta">{{ option.value }}</span>
+        </button>
+        <div v-if="graphOptions.length === 0" class="editor-tab-launcher-panel__empty">
+          {{ graphPlaceholder }}
+        </div>
       </div>
     </div>
   </div>
@@ -85,9 +109,8 @@
 <script setup lang="ts">
 import { ArrowRight, CollectionTag, DocumentAdd, FolderOpened } from "@element-plus/icons-vue";
 import { ElIcon } from "element-plus";
-import { ref, watch } from "vue";
+import { ref } from "vue";
 
-import WorkspaceSelect from "./WorkspaceSelect.vue";
 import type { WorkspaceSelectOption } from "./workspaceSelectModel";
 
 const props = defineProps<{
@@ -104,30 +127,20 @@ const emit = defineEmits<{
 }>();
 
 const expandedSection = ref<"template" | "graph" | null>(null);
-const selectedTemplateId = ref("");
-const selectedGraphId = ref("");
 
 function toggleSection(section: "template" | "graph") {
   expandedSection.value = expandedSection.value === section ? null : section;
 }
 
-watch(selectedTemplateId, (nextValue) => {
-  if (!nextValue) {
-    return;
-  }
-  emit("create-from-template", nextValue);
-  selectedTemplateId.value = "";
+function selectTemplate(templateId: string) {
+  emit("create-from-template", templateId);
   expandedSection.value = null;
-});
+}
 
-watch(selectedGraphId, (nextValue) => {
-  if (!nextValue) {
-    return;
-  }
-  emit("open-graph", nextValue);
-  selectedGraphId.value = "";
+function selectGraph(graphId: string) {
+  emit("open-graph", graphId);
   expandedSection.value = null;
-});
+}
 </script>
 
 <style scoped>
@@ -255,12 +268,77 @@ watch(selectedGraphId, (nextValue) => {
   transform: rotate(90deg);
 }
 
-.editor-tab-launcher-panel__picker {
+.editor-tab-launcher-panel__option-list {
+  max-height: min(260px, 42vh);
+  display: grid;
+  gap: 6px;
+  overflow-y: auto;
   padding: 0 4px 2px 56px;
+  scrollbar-color: rgba(154, 52, 18, 0.28) transparent;
+  scrollbar-width: thin;
 }
 
-.editor-tab-launcher-panel__picker:empty {
-  display: none;
+.editor-tab-launcher-panel__option-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.editor-tab-launcher-panel__option-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-tab-launcher-panel__option-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(154, 52, 18, 0.28);
+  background-clip: content-box;
+}
+
+.editor-tab-launcher-panel__option {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  border: 1px solid rgba(213, 184, 146, 0.42);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.28);
+  padding: 9px 11px;
+  color: rgba(72, 48, 29, 0.9);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.editor-tab-launcher-panel__option:hover,
+.editor-tab-launcher-panel__option:focus-visible {
+  border-color: rgba(154, 52, 18, 0.34);
+  background: rgba(255, 255, 255, 0.48);
+  color: rgba(111, 52, 22, 1);
+  outline: none;
+  transform: translateX(2px);
+}
+
+.editor-tab-launcher-panel__option-label {
+  overflow: hidden;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-tab-launcher-panel__option-meta {
+  overflow: hidden;
+  color: rgba(60, 41, 20, 0.5);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-tab-launcher-panel__empty {
+  border: 1px dashed rgba(213, 184, 146, 0.52);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.24);
+  padding: 12px;
+  color: rgba(60, 41, 20, 0.55);
+  font-size: 0.78rem;
 }
 
 .editor-tab-launcher-panel__entry-title {
@@ -287,7 +365,7 @@ watch(selectedGraphId, (nextValue) => {
     height: 36px;
   }
 
-  .editor-tab-launcher-panel__picker {
+  .editor-tab-launcher-panel__option-list {
     padding-left: 0;
   }
 }

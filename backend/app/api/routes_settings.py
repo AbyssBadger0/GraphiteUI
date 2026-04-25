@@ -11,12 +11,13 @@ from app.core.model_catalog import (
     normalize_model_ref,
     resolve_runtime_model_name,
 )
+from app.core.model_provider_templates import get_provider_template, normalize_transport
 from app.core.storage.settings_store import load_app_settings, save_app_settings
 from app.tools.local_llm import (
-    discover_openai_compatible_models,
     get_default_agent_temperature,
     get_default_agent_thinking_enabled,
 )
+from app.tools.model_provider_client import discover_provider_models
 from app.tools.registry import get_tool_registry
 
 
@@ -41,14 +42,23 @@ class AgentRuntimeDefaultsPayload(BaseModel):
 class SettingsProviderModelPayload(BaseModel):
     model: str = Field(min_length=1)
     label: str | None = None
+    route_target: str | None = Field(default=None, alias="route_target")
+    reasoning: bool | None = None
+    modalities: list[str] = Field(default_factory=lambda: ["text"])
+    context_window: int | None = Field(default=None, alias="context_window")
+    max_tokens: int | None = Field(default=None, alias="max_tokens")
 
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
 
 
 class SettingsModelProviderPayload(BaseModel):
     label: str | None = None
-    base_url: str = Field(alias="base_url", min_length=1)
+    transport: str = Field(default="openai-compatible")
+    base_url: str = Field(default="", alias="base_url")
     api_key: str | None = Field(default=None, alias="api_key")
+    enabled: bool = True
+    auth_header: str | None = Field(default=None, alias="auth_header")
+    auth_scheme: str | None = Field(default=None, alias="auth_scheme")
     models: list[SettingsProviderModelPayload] = Field(default_factory=list)
 
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
@@ -63,8 +73,12 @@ class SettingsUpdatePayload(BaseModel):
 
 
 class ModelDiscoveryPayload(BaseModel):
+    provider_id: str = Field(default="custom", alias="provider_id")
+    transport: str = Field(default="openai-compatible")
     base_url: str = Field(alias="base_url", min_length=1)
     api_key: str = Field(default="", alias="api_key")
+    auth_header: str | None = Field(default=None, alias="auth_header")
+    auth_scheme: str | None = Field(default=None, alias="auth_scheme")
 
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
 
@@ -85,17 +99,38 @@ def _merge_model_providers(
         if not provider_key:
             continue
 
+        template = get_provider_template(provider_key)
         existing_provider = merged_providers.get(provider_key)
         existing_provider = existing_provider if isinstance(existing_provider, dict) else {}
         incoming_api_key = str(provider_payload.api_key or "").strip()
+        transport = normalize_transport(provider_payload.transport or existing_provider.get("transport") or template["transport"])
+        auth_scheme = (
+            provider_payload.auth_scheme
+            if provider_payload.auth_scheme is not None
+            else existing_provider.get("auth_scheme")
+            if "auth_scheme" in existing_provider
+            else template.get("auth_scheme", "Bearer")
+        )
 
         provider_config = {
-            "label": provider_payload.label or existing_provider.get("label") or provider_key,
+            "label": provider_payload.label or existing_provider.get("label") or template.get("label") or provider_key,
+            "transport": transport,
             "base_url": str(provider_payload.base_url).strip().rstrip("/"),
+            "enabled": bool(provider_payload.enabled),
+            "auth_header": provider_payload.auth_header
+            or existing_provider.get("auth_header")
+            or template.get("auth_header")
+            or "Authorization",
+            "auth_scheme": "" if auth_scheme is None else str(auth_scheme),
             "models": [
                 {
                     "model": model_payload.model,
                     "label": model_payload.label or model_payload.model,
+                    "route_target": model_payload.route_target or "",
+                    "reasoning": model_payload.reasoning,
+                    "modalities": model_payload.modalities or ["text"],
+                    "context_window": model_payload.context_window,
+                    "max_tokens": model_payload.max_tokens,
                 }
                 for model_payload in provider_payload.models
             ],
@@ -173,7 +208,15 @@ def update_settings_endpoint(payload: SettingsUpdatePayload) -> dict:
 @router.post("/model-providers/discover")
 def discover_model_provider_models_endpoint(payload: ModelDiscoveryPayload) -> dict:
     try:
-        models = discover_openai_compatible_models(base_url=payload.base_url, api_key=payload.api_key)
+        template = get_provider_template(payload.provider_id)
+        models = discover_provider_models(
+            provider_id=payload.provider_id,
+            transport=payload.transport,
+            base_url=payload.base_url,
+            api_key=payload.api_key,
+            auth_header=payload.auth_header or template.get("auth_header") or "Authorization",
+            auth_scheme=payload.auth_scheme if payload.auth_scheme is not None else str(template.get("auth_scheme") or "Bearer"),
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"models": models}

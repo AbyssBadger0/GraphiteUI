@@ -160,6 +160,40 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
         self.assertEqual(catalog["default_text_model_ref"], "local/gemma-4-26b-a4b-it")
         self.assertEqual([model["model"] for model in local_provider["models"]], ["gemma-4-26b-a4b-it"])
 
+    def test_build_model_catalog_includes_enabled_openai_provider_models(self) -> None:
+        saved_settings = {
+            "text_model_ref": "openai/gpt-4.1",
+            "video_model_ref": "openai/gpt-4.1",
+            "model_providers": {
+                "openai": {
+                    "label": "OpenAI",
+                    "transport": "openai-compatible",
+                    "base_url": "https://api.openai.com/v1",
+                    "api_key": "sk-openai",
+                    "enabled": True,
+                    "auth_header": "Authorization",
+                    "auth_scheme": "Bearer",
+                    "models": [{"model": "gpt-4.1", "label": "GPT 4.1"}],
+                }
+            },
+        }
+
+        with self._patched_local_provider_env(LOCAL_BASE_URL="http://127.0.0.1:8888/v1"):
+            _local_llm, model_catalog = self._reload_target_modules()
+
+            with patch.object(model_catalog, "load_app_settings", return_value=saved_settings):
+                with patch.object(model_catalog, "get_local_gateway_runtime_config", return_value={"cloud": None, "llama": None}):
+                    with patch.object(model_catalog, "get_local_route_model_names", return_value=["local-model"]):
+                        catalog = model_catalog.build_model_catalog(force_refresh=False)
+
+        openai_provider = next(provider for provider in catalog["providers"] if provider["provider_id"] == "openai")
+
+        self.assertEqual(catalog["default_text_model_ref"], "openai/gpt-4.1")
+        self.assertTrue(openai_provider["configured"])
+        self.assertTrue(openai_provider["enabled"])
+        self.assertEqual(openai_provider["models"][0]["model_ref"], "openai/gpt-4.1")
+        self.assertEqual(openai_provider["models"][0]["label"], "GPT 4.1")
+
 
 if __name__ == "__main__":
     unittest.main()

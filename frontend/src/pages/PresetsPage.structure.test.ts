@@ -43,3 +43,11 @@ test("PresetsPage prevents management controls from overflowing narrow shells", 
   assert.match(componentSource, /\.presets-page__segments \{[\s\S]*max-width:\s*100%;[\s\S]*overflow-x:\s*auto;/);
   assert.match(componentSource, /@media \(max-width:\s*700px\) \{[\s\S]*\.presets-page__refresh \{[\s\S]*width:\s*100%;/);
 });
+
+test("PresetsPage uses local short shadows so dense management cards do not stack into bands", () => {
+  assert.match(componentSource, /--presets-page-panel-shadow:/);
+  assert.match(componentSource, /--presets-page-card-shadow:/);
+  assert.match(componentSource, /box-shadow:\s*var\(--presets-page-panel-shadow\);/);
+  assert.match(componentSource, /\.presets-page__metric,\n\.presets-page__card \{[\s\S]*box-shadow:\s*var\(--presets-page-card-shadow\);/);
+  assert.doesNotMatch(componentSource, /box-shadow:\s*var\(--graphite-shadow-panel\);/);
+});

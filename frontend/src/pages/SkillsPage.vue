@@ -264,6 +264,9 @@ onMounted(loadSkills);
 
 <style scoped>
 .skills-page {
+  --skills-page-panel-shadow: 0 10px 24px rgba(61, 43, 24, 0.04);
+  --skills-page-card-shadow: 0 4px 12px rgba(61, 43, 24, 0.026);
+
   display: grid;
   gap: 16px;
   width: 100%;
@@ -281,7 +284,7 @@ onMounted(loadSkills);
   border: 1px solid var(--graphite-border);
   border-radius: 24px;
   background: var(--graphite-surface-panel);
-  box-shadow: var(--graphite-shadow-panel);
+  box-shadow: var(--skills-page-panel-shadow);
 }
 
 .skills-page__hero > *,
@@ -382,6 +385,11 @@ onMounted(loadSkills);
 .skills-page__metric {
   padding: 16px;
   background: rgba(255, 255, 255, 0.62);
+}
+
+.skills-page__metric,
+.skills-page__card {
+  box-shadow: var(--skills-page-card-shadow);
 }
 
 .skills-page__metric span {

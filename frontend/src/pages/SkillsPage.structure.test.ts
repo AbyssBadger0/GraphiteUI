@@ -47,3 +47,11 @@ test("SkillsPage prevents management controls from overflowing narrow shells", (
   assert.match(componentSource, /\.skills-page__segments \{[\s\S]*max-width:\s*100%;[\s\S]*overflow-x:\s*auto;/);
   assert.match(componentSource, /@media \(max-width:\s*700px\) \{[\s\S]*\.skills-page__refresh \{[\s\S]*width:\s*100%;/);
 });
+
+test("SkillsPage uses local short shadows so dense management cards do not stack into bands", () => {
+  assert.match(componentSource, /--skills-page-panel-shadow:/);
+  assert.match(componentSource, /--skills-page-card-shadow:/);
+  assert.match(componentSource, /box-shadow:\s*var\(--skills-page-panel-shadow\);/);
+  assert.match(componentSource, /\.skills-page__metric,\n\.skills-page__card \{[\s\S]*box-shadow:\s*var\(--skills-page-card-shadow\);/);
+  assert.doesNotMatch(componentSource, /box-shadow:\s*var\(--graphite-shadow-panel\);/);
+});

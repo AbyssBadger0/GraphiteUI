@@ -245,6 +245,9 @@ onMounted(loadPresets);
 
 <style scoped>
 .presets-page {
+  --presets-page-panel-shadow: 0 10px 24px rgba(61, 43, 24, 0.04);
+  --presets-page-card-shadow: 0 4px 12px rgba(61, 43, 24, 0.026);
+
   display: grid;
   gap: 16px;
   width: 100%;
@@ -262,7 +265,7 @@ onMounted(loadPresets);
   border: 1px solid var(--graphite-border);
   border-radius: 24px;
   background: var(--graphite-surface-panel);
-  box-shadow: var(--graphite-shadow-panel);
+  box-shadow: var(--presets-page-panel-shadow);
 }
 
 .presets-page__hero > *,
@@ -366,6 +369,11 @@ onMounted(loadPresets);
 .presets-page__metric {
   padding: 16px;
   background: rgba(255, 255, 255, 0.62);
+}
+
+.presets-page__metric,
+.presets-page__card {
+  box-shadow: var(--presets-page-card-shadow);
 }
 
 .presets-page__metric span {

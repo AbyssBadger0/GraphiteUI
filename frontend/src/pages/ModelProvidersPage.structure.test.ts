@@ -40,6 +40,16 @@ test("ModelProvidersPage presents providers as cards before editing", () => {
 test("ModelProvidersPage applies provider changes immediately without a manual save button", () => {
   assert.doesNotMatch(pageSource, /settings\.saveSettings/);
   assert.doesNotMatch(pageSource, /class="model-providers-page__actions"/);
+  assert.doesNotMatch(pageSource, /class="model-providers-page__save-message"/);
+  assert.match(pageSource, /<Transition name="model-providers-page__save-toast-motion">/);
+  assert.match(pageSource, /class="model-providers-page__save-toast"/);
+  assert.match(pageSource, /role="status"/);
+  assert.match(pageSource, /aria-live="polite"/);
+  assert.match(pageSource, /class="model-providers-page__save-toast-dot"/);
+  assert.match(pageSource, /let saveMessageTimer: number \| null = null;/);
+  assert.match(pageSource, /function setSaveMessage\(message: string \| null, options\?: \{ autoDismiss\?: boolean \}\)/);
+  assert.match(pageSource, /setSaveMessage\(t\("settings\.saving"\)\);/);
+  assert.match(pageSource, /setSaveMessage\(t\("settings\.saved"\), \{ autoDismiss: true \}\);/);
   assert.match(pageSource, /async function persistSettings\(/);
   assert.match(pageSource, /@change="handleRuntimeDraftChange"/);
   assert.match(pageSource, /@change="handleProviderEnabledChange\(provider\)"/);

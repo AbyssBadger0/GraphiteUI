@@ -7,6 +7,19 @@
         <p class="model-providers-page__body">{{ t("settings.modelProvidersBody") }}</p>
       </header>
 
+      <Transition name="model-providers-page__save-toast-motion">
+        <div
+          v-if="saveMessage"
+          class="model-providers-page__save-toast"
+          :class="{ 'model-providers-page__save-toast--saving': isSaving, 'model-providers-page__save-toast--saved': !isSaving }"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="model-providers-page__save-toast-dot" aria-hidden="true"></span>
+          <span>{{ saveMessage }}</span>
+        </div>
+      </Transition>
+
       <div v-if="error" class="model-providers-page__empty">{{ t("common.failedToLoad", { error }) }}</div>
       <div v-else-if="!settings || !draft" class="model-providers-page__empty">{{ t("common.loadingSettings") }}</div>
       <template v-else>
@@ -69,7 +82,6 @@
               </div>
               <div class="model-providers-page__panel-toolbar">
                 <span class="model-providers-page__provider-status">{{ configuredModelOptions.length }} {{ t("settings.availableModels") }}</span>
-                <span v-if="saveMessage" class="model-providers-page__save-message">{{ saveMessage }}</span>
                 <button type="button" class="model-providers-page__button model-providers-page__button--primary" @click="openAddProviderPanel">
                   {{ t("settings.addProvider") }}
                 </button>
@@ -593,6 +605,7 @@ const logoutConfirmTimeoutRef = ref<number | null>(null);
 const codexLoginSession = ref<OpenAICodexAuthStartResponse | null>(null);
 const codexAuthBusy = ref(false);
 let codexPollTimer: number | null = null;
+let saveMessageTimer: number | null = null;
 const { t } = useI18n();
 const modelPickerPopoverStyle = {
   "--el-popover-bg-color": "transparent",
@@ -924,6 +937,26 @@ function setProviderMessage(providerId: string, message: string | null) {
   };
 }
 
+function clearSaveMessageTimer() {
+  if (saveMessageTimer !== null) {
+    window.clearTimeout(saveMessageTimer);
+    saveMessageTimer = null;
+  }
+}
+
+function setSaveMessage(message: string | null, options?: { autoDismiss?: boolean }) {
+  clearSaveMessageTimer();
+  saveMessage.value = message;
+  if (message && options?.autoDismiss) {
+    saveMessageTimer = window.setTimeout(() => {
+      saveMessageTimer = null;
+      if (!isSaving.value && saveMessage.value === message) {
+        saveMessage.value = null;
+      }
+    }, 2400);
+  }
+}
+
 async function persistSettings() {
   if (!draft.value) {
     return;
@@ -932,7 +965,7 @@ async function persistSettings() {
   const previousProviderDrafts = providerDrafts.value;
   try {
     isSaving.value = true;
-    saveMessage.value = t("settings.saving");
+    setSaveMessage(t("settings.saving"));
     alignDefaultModelsToProviderSelection();
     settings.value = await updateSettings({
       model: {
@@ -962,11 +995,11 @@ async function persistSettings() {
     } else if (providerEditorMode.value === "edit") {
       closeProviderEditorPanel();
     }
-    saveMessage.value = t("settings.saved");
+    setSaveMessage(t("settings.saved"), { autoDismiss: true });
     error.value = null;
   } catch (saveError) {
     error.value = saveError instanceof Error ? saveError.message : t("common.failedToSave", { error: "" });
-    saveMessage.value = null;
+    setSaveMessage(null);
   } finally {
     isSaving.value = false;
   }
@@ -1314,6 +1347,7 @@ onMounted(loadSettings);
 onBeforeUnmount(() => {
   stopCodexAutoPoll();
   clearLogoutConfirmTimeout();
+  clearSaveMessageTimer();
 });
 </script>
 
@@ -1368,6 +1402,62 @@ onBeforeUnmount(() => {
   margin: 0;
   color: rgba(60, 41, 20, 0.72);
   line-height: 1.6;
+}
+
+.model-providers-page__save-toast {
+  position: fixed;
+  top: 112px;
+  left: calc(50% + 120px);
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 164px;
+  max-width: min(360px, calc(100vw - 32px));
+  border: 1px solid rgba(22, 101, 52, 0.18);
+  border-radius: 14px;
+  padding: 12px 16px;
+  background: rgba(240, 253, 244, 0.98);
+  color: rgb(22, 101, 52);
+  box-shadow: 0 18px 38px rgba(60, 41, 20, 0.16);
+  font-weight: 760;
+  transform: translateX(-50%);
+}
+
+.model-providers-page__save-toast--saving {
+  border-color: rgba(37, 99, 235, 0.22);
+  background: rgba(239, 246, 255, 0.98);
+  color: rgb(37, 99, 235);
+}
+
+.model-providers-page__save-toast-dot {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.model-providers-page__save-toast--saving .model-providers-page__save-toast-dot {
+  border: 2px solid rgba(37, 99, 235, 0.22);
+  border-top-color: currentColor;
+  background: transparent;
+  box-shadow: none;
+  animation: model-provider-spin 900ms linear infinite;
+}
+
+.model-providers-page__save-toast-motion-enter-active,
+.model-providers-page__save-toast-motion-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.model-providers-page__save-toast-motion-enter-from,
+.model-providers-page__save-toast-motion-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -8px);
 }
 
 .model-providers-page__grid {
@@ -1920,7 +2010,6 @@ onBeforeUnmount(() => {
   border-radius: 12px;
 }
 
-.model-providers-page__save-message,
 .model-providers-page__provider-message,
 .model-providers-page__provider-status {
   color: rgba(60, 41, 20, 0.72);
@@ -1961,6 +2050,11 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .model-providers-page__save-toast {
+    top: 84px;
+    left: 50%;
+  }
+
   .model-providers-page__provider-card-main,
   .model-providers-page__provider-editor-header {
     display: grid;
@@ -1996,8 +2090,14 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .model-providers-page__spinner {
+  .model-providers-page__spinner,
+  .model-providers-page__save-toast--saving .model-providers-page__save-toast-dot {
     animation: none;
+  }
+
+  .model-providers-page__save-toast-motion-enter-active,
+  .model-providers-page__save-toast-motion-leave-active {
+    transition: none;
   }
 }
 </style>

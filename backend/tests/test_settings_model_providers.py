@@ -96,7 +96,7 @@ class SettingsModelProviderTests(unittest.TestCase):
 
         with patch("app.api.routes_settings.load_app_settings", return_value=existing_settings):
             with patch("app.api.routes_settings.save_app_settings", side_effect=capture_save):
-                with patch("app.api.routes_settings._build_settings_payload", return_value={"ok": True}):
+                with patch("app.api.routes_settings._build_settings_payload", return_value={"ok": True}) as build_payload:
                     with TestClient(app) as client:
                         response = client.post(
                             "/api/settings",
@@ -129,6 +129,7 @@ class SettingsModelProviderTests(unittest.TestCase):
         self.assertEqual(saved_payload["model_providers"]["openai"]["api_key"], "sk-existing")
         self.assertTrue(saved_payload["model_providers"]["openai"]["enabled"])
         self.assertEqual(saved_payload["model_providers"]["openai"]["transport"], "openai-compatible")
+        build_payload.assert_called_once_with(force_refresh_models=False)
 
     def test_build_settings_payload_refreshes_catalog_once(self) -> None:
         catalog = {

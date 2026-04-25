@@ -217,7 +217,7 @@ def update_settings_endpoint(payload: SettingsUpdatePayload) -> dict:
         }
     )
     save_app_settings(next_settings)
-    return _build_settings_payload(force_refresh_models=True)
+    return _build_settings_payload(force_refresh_models=False)
 
 
 @router.post("/model-providers/discover")

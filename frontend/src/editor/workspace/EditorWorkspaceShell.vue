@@ -67,7 +67,7 @@
           :class="{ 'editor-workspace-shell__editor--active': tab.tabId === workspace.activeTabId }"
         >
           <div class="editor-workspace-shell__editor-grid">
-            <div class="editor-workspace-shell__editor-main">
+            <div class="editor-workspace-shell__editor-main" :style="editorMainStyle(tab.tabId)">
               <div v-if="loadingByTabId[tab.tabId]" class="editor-workspace-shell__status-card">
                 <div class="editor-workspace-shell__status-eyebrow">Graph</div>
                 <h2>Loading saved graph…</h2>
@@ -1065,6 +1065,16 @@ function toggleActiveStatePanel() {
     [tabId]: "state",
   };
   toggleStatePanel(tabId);
+}
+
+function editorMainStyle(tabId: string) {
+  if (!isStatePanelOpen(tabId)) {
+    return {};
+  }
+
+  return {
+    "--editor-canvas-minimap-right-clearance": `calc(${sidePanelOpenWidth(tabId)} + 12px)`,
+  };
 }
 
 function sidePanelLayerStyle(tabId: string) {
@@ -2176,6 +2186,7 @@ onMounted(() => {
 .editor-workspace-shell {
   --editor-state-panel-open-width: clamp(340px, 32vw, 480px);
   --editor-human-review-panel-open-width: clamp(360px, 34vw, 520px);
+  --editor-workspace-floating-top-clearance: 72px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -2263,7 +2274,7 @@ onMounted(() => {
 }
 
 .editor-workspace-shell__editor-main {
-  --editor-canvas-floating-top-clearance: 72px;
+  --editor-canvas-floating-top-clearance: var(--editor-workspace-floating-top-clearance);
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -2272,7 +2283,7 @@ onMounted(() => {
 
 .editor-workspace-shell__side-panel-layer {
   position: absolute;
-  top: 12px;
+  top: var(--editor-workspace-floating-top-clearance);
   right: 12px;
   bottom: 12px;
   z-index: 30;
@@ -2420,6 +2431,10 @@ onMounted(() => {
 }
 
 @media (max-width: 920px) {
+  .editor-workspace-shell {
+    --editor-workspace-floating-top-clearance: 124px;
+  }
+
   .editor-workspace-shell__chrome {
     grid-template-columns: minmax(0, 1fr);
     align-content: start;
@@ -2434,9 +2449,6 @@ onMounted(() => {
     padding: 0;
   }
 
-  .editor-workspace-shell__editor-main {
-    --editor-canvas-floating-top-clearance: 124px;
-  }
 }
 
 @media (max-width: 760px) {

@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectory = dirname(currentFilePath);
 const componentSource = readFileSync(resolve(currentDirectory, "EditorCanvas.vue"), "utf8");
+const minimapSource = readFileSync(resolve(currentDirectory, "EditorMinimap.vue"), "utf8");
 
 test("EditorCanvas binds the canvas surface styling to the viewport state", () => {
   assert.match(componentSource, /class="editor-canvas"[\s\S]*:style="canvasSurfaceStyle"/);
@@ -22,6 +23,11 @@ test("EditorCanvas mounts a right-bottom minimap backed by measured node geometr
   assert.match(componentSource, /<EditorMinimap[\s\S]*class="editor-canvas__minimap"[\s\S]*:nodes="minimapNodes"[\s\S]*:edges="minimapEdges"[\s\S]*:viewport="viewport\.viewport"[\s\S]*:canvas-size="canvasSize"[\s\S]*@center-view="handleMinimapCenterView"/);
   assert.match(componentSource, /function handleMinimapCenterView\(point: \{ worldX: number; worldY: number \}\)/);
   assert.match(componentSource, /resolveViewportForMinimapCenter\(/);
+});
+
+test("EditorMinimap can be displaced by workspace side panels", () => {
+  assert.match(minimapSource, /\.editor-minimap \{[\s\S]*right:\s*calc\(22px \+ var\(--editor-canvas-minimap-right-clearance,\s*0px\)\);/);
+  assert.match(minimapSource, /\.editor-minimap \{[\s\S]*transition:\s*right 180ms ease;/);
 });
 
 test("EditorCanvas does not animate node transforms while dragging", () => {

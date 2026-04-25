@@ -142,7 +142,7 @@ function emitWorldPointFromEvent(event: PointerEvent) {
 <style scoped>
 .editor-minimap {
   position: absolute;
-  right: 22px;
+  right: calc(22px + var(--editor-canvas-minimap-right-clearance, 0px));
   bottom: 22px;
   z-index: 30;
   width: 224px;
@@ -157,6 +157,7 @@ function emitWorldPointFromEvent(event: PointerEvent) {
   backdrop-filter: blur(10px);
   cursor: grab;
   touch-action: none;
+  transition: right 180ms ease;
 }
 
 .editor-minimap--dragging {

@@ -13,7 +13,15 @@
       }"
     >
       <div class="app-shell__brand">
-        <div class="app-shell__brand-mark" aria-hidden="true">C</div>
+        <button
+          type="button"
+          class="app-shell__brand-mark"
+          :aria-label="isSidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')"
+          :title="isSidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')"
+          @click="setSidebarCollapsed(!isSidebarCollapsed)"
+        >
+          C
+        </button>
         <div class="app-shell__brand-copy">
           <h1 class="app-shell__title">GraphiteUI</h1>
           <p class="app-shell__subtitle">{{ t("app.subtitle") }}</p>
@@ -59,18 +67,6 @@
         </RouterLink>
       </nav>
 
-      <button
-        type="button"
-        class="app-shell__collapse"
-        :aria-label="isSidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')"
-        @click="setSidebarCollapsed(!isSidebarCollapsed)"
-      >
-        <ElIcon class="app-shell__collapse-icon" aria-hidden="true">
-          <Expand v-if="isSidebarCollapsed" />
-          <Fold v-else />
-        </ElIcon>
-        <span class="app-shell__collapse-label">{{ isSidebarCollapsed ? t("nav.expand") : t("nav.collapseSidebar") }}</span>
-      </button>
       <LanguageSwitcher :collapsed="isSidebarCollapsed" />
     </aside>
 
@@ -82,7 +78,7 @@
 
 <script setup lang="ts">
 import { ElIcon } from "element-plus";
-import { House, EditPen, Clock, Setting, Fold, Expand } from "@element-plus/icons-vue";
+import { House, EditPen, Clock, Setting } from "@element-plus/icons-vue";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
@@ -171,6 +167,7 @@ watch(isSidebarCollapsed, (nextValue) => {
 }
 
 .app-shell__brand-mark {
+  appearance: none;
   display: inline-flex;
   width: 36px;
   height: 36px;
@@ -180,9 +177,25 @@ watch(isSidebarCollapsed, (nextValue) => {
   border-radius: 12px;
   background: var(--graphite-glass-bg-strong);
   color: var(--graphite-accent);
+  cursor: pointer;
+  font-family: inherit;
   font-weight: 700;
   letter-spacing: 0.08em;
+  padding: 0;
   box-shadow: var(--graphite-glass-highlight);
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.app-shell__brand-mark:hover {
+  border-color: rgba(154, 52, 18, 0.22);
+  background: rgba(255, 248, 240, 0.9);
+  box-shadow: var(--graphite-glass-highlight), 0 8px 18px rgba(154, 52, 18, 0.1);
+  transform: translateY(-1px);
+}
+
+.app-shell__brand-mark:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(210, 162, 117, 0.24), var(--graphite-glass-highlight);
 }
 
 .app-shell__brand-copy {
@@ -218,6 +231,7 @@ watch(isSidebarCollapsed, (nextValue) => {
   width: 100%;
   display: grid;
   gap: 4px;
+  margin-bottom: auto;
 }
 
 .app-shell__link {
@@ -275,41 +289,6 @@ watch(isSidebarCollapsed, (nextValue) => {
   display: none;
 }
 
-.app-shell__collapse {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 38px;
-  margin-top: auto;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--graphite-text);
-  cursor: pointer;
-  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
-}
-
-.app-shell__collapse:hover {
-  border-color: rgba(154, 52, 18, 0.1);
-  background: rgba(255, 250, 242, 0.6);
-}
-
-.app-shell__collapse-icon {
-  font-size: 18px;
-  line-height: 1;
-}
-
-.app-shell__sidebar--collapsed .app-shell__collapse {
-  width: 42px;
-  padding: 0;
-}
-
-.app-shell__sidebar--collapsed .app-shell__collapse-label {
-  display: none;
-}
-
 .app-shell__content {
   min-width: 0;
   min-height: 0;
@@ -338,8 +317,7 @@ watch(isSidebarCollapsed, (nextValue) => {
   }
 
   .app-shell__brand-copy,
-  .app-shell__link-label,
-  .app-shell__collapse-label {
+  .app-shell__link-label {
     display: none;
   }
 
@@ -350,9 +328,5 @@ watch(isSidebarCollapsed, (nextValue) => {
     padding: 0;
   }
 
-  .app-shell__collapse {
-    width: 42px;
-    padding: 0;
-  }
 }
 </style>

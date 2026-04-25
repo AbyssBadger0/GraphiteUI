@@ -18,12 +18,13 @@ test("AppShell collapses to a persistent sidebar rail instead of hiding the side
   assert.match(componentSource, /\.app-shell--collapsed \{[\s\S]*--app-sidebar-width:\s*64px;/);
 });
 
-test("AppShell keeps collapsed navigation usable with compact labels and an in-rail toggle", () => {
+test("AppShell keeps collapsed navigation usable with compact labels and a brand mark toggle", () => {
   assert.match(componentSource, /app-shell__brand-mark/);
   assert.match(componentSource, /app-shell__brand-copy/);
   assert.match(componentSource, /app-shell__link-icon/);
   assert.match(componentSource, /app-shell__link-label/);
-  assert.match(componentSource, /:aria-label="isSidebarCollapsed \? t\('nav\.expandSidebar'\) : t\('nav\.collapseSidebar'\)"/);
+  assert.match(componentSource, /<button[\s\S]*class="app-shell__brand-mark"[\s\S]*:aria-label="isSidebarCollapsed \? t\('nav\.expandSidebar'\) : t\('nav\.collapseSidebar'\)"[\s\S]*@click="setSidebarCollapsed\(!isSidebarCollapsed\)"/);
+  assert.doesNotMatch(componentSource, /class="app-shell__collapse"/);
   assert.match(componentSource, /\.app-shell__sidebar--collapsed\s+\.app-shell__brand-copy \{[\s\S]*display:\s*none;/);
   assert.match(componentSource, /\.app-shell__sidebar--collapsed\s+\.app-shell__link-label \{[\s\S]*display:\s*none;/);
 });
@@ -39,7 +40,8 @@ test("AppShell uses dynamic viewport height and keeps editor chrome inside the v
 test("AppShell uses a low-noise ChatGPT-style brand rail with library icons", () => {
   assert.match(componentSource, /import \{[\s\S]*ElIcon[\s\S]*\} from "element-plus";/);
   assert.match(componentSource, /import \{[\s\S]*House[\s\S]*EditPen[\s\S]*Clock[\s\S]*Setting[\s\S]*\} from "@element-plus\/icons-vue";/);
-  assert.match(componentSource, /<div class="app-shell__brand-mark" aria-hidden="true">C<\/div>/);
+  assert.doesNotMatch(componentSource, /Fold|Expand/);
+  assert.match(componentSource, /<button[\s\S]*class="app-shell__brand-mark"[\s\S]*C[\s\S]*<\/button>/);
   assert.match(componentSource, /<h1 class="app-shell__title">GraphiteUI<\/h1>/);
   assert.doesNotMatch(componentSource, /app-shell__note/);
   assert.match(componentSource, /<ElIcon class="app-shell__link-icon"><House \/><\/ElIcon>/);

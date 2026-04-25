@@ -88,23 +88,17 @@ test("EditorTabBar behaves like a floating card group instead of reserving a ful
   assert.doesNotMatch(componentSource, /padding:\s*12px calc\(var\(--editor-action-capsule-desktop-reserve\) \+ 12px\) 0 12px;/);
 });
 
-test("EditorTabBar shows embedded scroll buttons only for directions that can page", () => {
-  assert.match(componentSource, /import \{ ArrowLeft, ArrowRight, Plus \} from "@element-plus\/icons-vue";/);
-  assert.match(componentSource, /v-if="canScrollTabsBackward"/);
-  assert.match(componentSource, /v-if="canScrollTabsForward"/);
-  assert.doesNotMatch(componentSource, /v-if="tabsOverflowing"/);
-  assert.match(componentSource, /class="editor-tab-bar__scroll-button editor-tab-bar__scroll-button--left"/);
-  assert.match(componentSource, /class="editor-tab-bar__scroll-button editor-tab-bar__scroll-button--right"/);
-  assert.match(componentSource, /aria-label="向左滚动标签页"/);
-  assert.match(componentSource, /aria-label="向右滚动标签页"/);
-  assert.match(componentSource, /@click="scrollTabsBy\(-1\)"/);
-  assert.match(componentSource, /@click="scrollTabsBy\(1\)"/);
-  assert.match(componentSource, /function scrollTabsBy\(direction: -1 \| 1\)/);
-  assert.match(componentSource, /const canScrollTabsBackward = ref\(false\);/);
-  assert.match(componentSource, /const canScrollTabsForward = ref\(false\);/);
-  assert.match(componentSource, /function updateTabsScrollState\(\)/);
+test("EditorTabBar relies on the native tab scroller instead of embedded scroll buttons", () => {
+  assert.match(componentSource, /import \{ Plus \} from "@element-plus\/icons-vue";/);
+  assert.doesNotMatch(componentSource, /ArrowLeft/);
+  assert.doesNotMatch(componentSource, /ArrowRight/);
+  assert.doesNotMatch(componentSource, /editor-tab-bar__scroll-button/);
+  assert.doesNotMatch(componentSource, /aria-label="向左滚动标签页"/);
+  assert.doesNotMatch(componentSource, /aria-label="向右滚动标签页"/);
+  assert.doesNotMatch(componentSource, /scrollTabsBy/);
+  assert.doesNotMatch(componentSource, /canScrollTabsBackward/);
+  assert.doesNotMatch(componentSource, /canScrollTabsForward/);
   assert.match(componentSource, /\.editor-tab-bar__tabs-shell \{[\s\S]*display:\s*flex;/);
-  assert.match(componentSource, /\.editor-tab-bar__scroll-button \{[\s\S]*width:\s*32px;[\s\S]*height:\s*32px;/);
 });
 
 test("EditorTabBar maps regular wheel input onto the native tab scroller", () => {

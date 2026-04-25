@@ -63,13 +63,30 @@ test("ModelProvidersPage lets provider management occupy the full card grid", ()
 });
 
 test("ModelProvidersPage keeps provider card controls on one row with capsule switches", () => {
-  assert.match(pageSource, /import \{ ElIcon, ElMessage, ElOption, ElSelect, ElSwitch \} from "element-plus";/);
+  assert.match(pageSource, /import \{ ElIcon, ElMessage, ElOption, ElPopover, ElSelect, ElSwitch \} from "element-plus";/);
   assert.match(pageSource, /class="model-providers-page__switch"/);
   assert.match(pageSource, /:width="54"/);
   assert.match(pageSource, /inline-prompt/);
   assert.match(pageSource, /\.model-providers-page__provider-card \.model-providers-page__provider-actions \{[\s\S]*flex-wrap:\s*nowrap;/);
   assert.match(pageSource, /\.model-providers-page__provider-card \.model-providers-page__button \{[\s\S]*white-space:\s*nowrap;/);
   assert.doesNotMatch(pageSource, /class="model-providers-page__toggle"/);
+});
+
+test("ModelProvidersPage shows and edits provider models from each card", () => {
+  assert.match(pageSource, /class="model-providers-page__provider-model-pills"/);
+  assert.match(pageSource, /v-for="modelName in provider\.selected_models"/);
+  assert.match(pageSource, /class="model-providers-page__provider-model-pill"/);
+  assert.match(pageSource, /<ElPopover[\s\S]*popper-class="model-providers-page__model-picker-popper"/);
+  assert.match(pageSource, /:popper-style="modelPickerPopoverStyle"/);
+  assert.match(pageSource, /class="model-providers-page__model-picker"/);
+  assert.match(pageSource, /v-for="modelName in providerModelOptions\(provider\)"/);
+  assert.match(pageSource, /class="model-providers-page__model-picker-option"/);
+  assert.match(pageSource, /model-providers-page__model-picker-option--selected/);
+  assert.match(pageSource, /@click\.stop="toggleProviderModel\(provider, modelName\)"/);
+  assert.match(pageSource, /function providerModelOptions\(provider: ProviderDraft\)/);
+  assert.match(pageSource, /function toggleProviderModel\(provider: ProviderDraft, modelName: string\)/);
+  assert.match(pageSource, /void persistSettings\(\);/);
+  assert.match(pageSource, /\.model-providers-page__model-picker \{[\s\S]*background:\s*rgba\(255,\s*244,\s*232,\s*0\.96\);/);
 });
 
 test("ModelProvidersPage opens an add-provider panel and immediately pre-fills templates", () => {
@@ -105,7 +122,7 @@ test("ModelProvidersPage shows ChatGPT device-code entry as part of the normal l
 });
 
 test("ModelProvidersPage uses toast feedback for ChatGPT copy attempts", () => {
-  assert.match(pageSource, /import \{ ElIcon, ElMessage, ElOption, ElSelect, ElSwitch \} from "element-plus";/);
+  assert.match(pageSource, /import \{ ElIcon, ElMessage, ElOption, ElPopover, ElSelect, ElSwitch \} from "element-plus";/);
   assert.match(pageSource, /import \{ CircleCheck, CopyDocument \} from "@element-plus\/icons-vue";/);
   assert.match(pageSource, /function showCodexToast\(type: "success" \| "error", message: string\)/);
   assert.match(pageSource, /ElMessage\(\{[\s\S]*customClass:\s*"model-providers-page__copy-toast"[\s\S]*message,[\s\S]*\}\);/);

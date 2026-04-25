@@ -121,7 +121,53 @@
                       : provider.base_url || t("settings.providerBaseUrlNotSet")
                   }}</span>
                 </div>
+                <div class="model-providers-page__provider-model-pills" :aria-label="t('settings.enabledModels')">
+                  <span
+                    v-for="modelName in provider.selected_models"
+                    :key="`${provider.provider_id}-selected-${modelName}`"
+                    class="model-providers-page__provider-model-pill"
+                    :title="modelName"
+                  >
+                    {{ modelName }}
+                  </span>
+                  <span v-if="provider.selected_models.length === 0" class="model-providers-page__provider-model-pill model-providers-page__provider-model-pill--empty">
+                    {{ t("settings.noModelsDiscovered") }}
+                  </span>
+                </div>
                 <div v-if="isLoginProvider(provider)" class="model-providers-page__provider-actions">
+                  <ElPopover
+                    trigger="click"
+                    placement="bottom-start"
+                    :width="360"
+                    :show-arrow="false"
+                    :popper-style="modelPickerPopoverStyle"
+                    popper-class="model-providers-page__model-picker-popper"
+                  >
+                    <template #reference>
+                      <button type="button" class="model-providers-page__button model-providers-page__model-config-button">
+                        {{ t("settings.enabledModels") }}
+                      </button>
+                    </template>
+                    <div class="model-providers-page__model-picker" @pointerdown.stop @click.stop>
+                      <div class="model-providers-page__model-picker-title">{{ provider.label || provider.provider_id }}</div>
+                      <div v-if="providerModelOptions(provider).length === 0" class="model-providers-page__model-picker-empty">
+                        {{ t("settings.noModelsDiscovered") }}
+                      </div>
+                      <button
+                        v-for="modelName in providerModelOptions(provider)"
+                        v-else
+                        :key="`${provider.provider_id}-model-option-${modelName}`"
+                        type="button"
+                        class="model-providers-page__model-picker-option"
+                        :class="{ 'model-providers-page__model-picker-option--selected': isProviderModelSelected(provider, modelName) }"
+                        @pointerdown.stop
+                        @click.stop="toggleProviderModel(provider, modelName)"
+                      >
+                        <span>{{ modelName }}</span>
+                        <ElIcon v-if="isProviderModelSelected(provider, modelName)" aria-hidden="true"><CircleCheck /></ElIcon>
+                      </button>
+                    </div>
+                  </ElPopover>
                   <button
                     v-if="!provider.auth_status?.authenticated"
                     type="button"
@@ -160,6 +206,39 @@
                   </button>
                 </div>
                 <div v-else class="model-providers-page__provider-actions">
+                  <ElPopover
+                    trigger="click"
+                    placement="bottom-start"
+                    :width="360"
+                    :show-arrow="false"
+                    :popper-style="modelPickerPopoverStyle"
+                    popper-class="model-providers-page__model-picker-popper"
+                  >
+                    <template #reference>
+                      <button type="button" class="model-providers-page__button model-providers-page__model-config-button">
+                        {{ t("settings.enabledModels") }}
+                      </button>
+                    </template>
+                    <div class="model-providers-page__model-picker" @pointerdown.stop @click.stop>
+                      <div class="model-providers-page__model-picker-title">{{ provider.label || provider.provider_id }}</div>
+                      <div v-if="providerModelOptions(provider).length === 0" class="model-providers-page__model-picker-empty">
+                        {{ t("settings.noModelsDiscovered") }}
+                      </div>
+                      <button
+                        v-for="modelName in providerModelOptions(provider)"
+                        v-else
+                        :key="`${provider.provider_id}-model-option-${modelName}`"
+                        type="button"
+                        class="model-providers-page__model-picker-option"
+                        :class="{ 'model-providers-page__model-picker-option--selected': isProviderModelSelected(provider, modelName) }"
+                        @pointerdown.stop
+                        @click.stop="toggleProviderModel(provider, modelName)"
+                      >
+                        <span>{{ modelName }}</span>
+                        <ElIcon v-if="isProviderModelSelected(provider, modelName)" aria-hidden="true"><CircleCheck /></ElIcon>
+                      </button>
+                    </div>
+                  </ElPopover>
                   <button type="button" class="model-providers-page__button" @click="openProviderEditor(provider.provider_id)">
                     {{ t("settings.configureProvider") }}
                   </button>
@@ -432,7 +511,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { ElIcon, ElMessage, ElOption, ElSelect, ElSwitch } from "element-plus";
+import { ElIcon, ElMessage, ElOption, ElPopover, ElSelect, ElSwitch } from "element-plus";
 import { CircleCheck, CopyDocument } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 
@@ -480,6 +559,15 @@ const codexLoginSession = ref<OpenAICodexAuthStartResponse | null>(null);
 const codexAuthBusy = ref(false);
 let codexPollTimer: number | null = null;
 const { t } = useI18n();
+const modelPickerPopoverStyle = {
+  "--el-popover-bg-color": "transparent",
+  "--el-popover-border-color": "transparent",
+  "--el-popover-padding": "0px",
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
+  padding: "0",
+} as const;
 
 function dedupeStrings(values: string[]) {
   const items: string[] = [];
@@ -653,6 +741,32 @@ const thinkingMode = computed({
 });
 function isLoginProvider(provider: ProviderDraft) {
   return provider.requires_login || provider.auth_mode === "chatgpt";
+}
+
+function providerModelOptions(provider: ProviderDraft) {
+  return dedupeStrings(provider.discovered_models.length > 0 ? provider.discovered_models : provider.selected_models);
+}
+
+function isProviderModelSelected(provider: ProviderDraft, modelName: string) {
+  const identity = modelName.trim().toLowerCase();
+  return provider.selected_models.some((selectedModel) => selectedModel.trim().toLowerCase() === identity);
+}
+
+function toggleProviderModel(provider: ProviderDraft, modelName: string) {
+  const normalizedModel = modelName.trim();
+  if (!normalizedModel) {
+    return;
+  }
+  const selected = isProviderModelSelected(provider, normalizedModel);
+  provider.selected_models = selected
+    ? provider.selected_models.filter((selectedModel) => selectedModel.trim().toLowerCase() !== normalizedModel.toLowerCase())
+    : dedupeStrings([...provider.selected_models, normalizedModel]);
+  providerDrafts.value = {
+    ...providerDrafts.value,
+    [provider.provider_id]: provider,
+  };
+  alignDefaultModelsToProviderSelection();
+  void persistSettings();
 }
 
 function providerAuthStatusLabel(provider: ProviderDraft) {
@@ -1391,6 +1505,44 @@ onBeforeUnmount(stopCodexAutoPoll);
   overflow-wrap: anywhere;
 }
 
+.model-providers-page__provider-model-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-height: 90px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.model-providers-page__provider-model-pill,
+.model-providers-page__model-picker-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(154, 52, 18, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 248, 240, 0.9);
+  color: rgb(154, 52, 18);
+  font-family: var(--graphite-font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.model-providers-page__provider-model-pill {
+  max-width: 100%;
+  min-height: 30px;
+  padding: 5px 10px;
+  overflow-wrap: anywhere;
+}
+
+.model-providers-page__provider-model-pill--empty {
+  color: rgba(60, 41, 20, 0.58);
+  font-family: inherit;
+  font-weight: 650;
+}
+
 .model-providers-page__provider-editor-panel,
 .model-providers-page__provider-empty {
   margin-top: 14px;
@@ -1467,6 +1619,73 @@ onBeforeUnmount(stopCodexAutoPoll);
 .model-providers-page__button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.model-providers-page__model-picker {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 244, 232, 0.96);
+  box-shadow: 0 16px 34px rgba(60, 41, 20, 0.12);
+  color: #3c2914;
+}
+
+:deep(.model-providers-page__model-picker-popper.el-popper) {
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.model-providers-page__model-picker-title {
+  min-width: 0;
+  color: #2f2114;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.model-providers-page__model-picker-empty {
+  border: 1px solid rgba(154, 52, 18, 0.1);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 251, 246, 0.76);
+  color: rgba(60, 41, 20, 0.66);
+  line-height: 1.5;
+}
+
+.model-providers-page__model-picker-option {
+  justify-content: space-between;
+  min-width: 0;
+  min-height: 38px;
+  width: 100%;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.model-providers-page__model-picker-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.model-providers-page__model-picker-option:hover {
+  border-color: rgba(154, 52, 18, 0.24);
+  background: rgba(255, 237, 213, 0.96);
+}
+
+.model-providers-page__model-picker-option--selected {
+  border-color: rgba(22, 101, 52, 0.3);
+  background: rgba(240, 253, 244, 0.96);
+  color: rgb(22, 101, 52);
+  box-shadow: inset 0 0 0 1px rgba(22, 101, 52, 0.08);
 }
 
 .model-providers-page__icon-button {

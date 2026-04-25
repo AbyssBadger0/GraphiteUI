@@ -7,9 +7,33 @@
           <h2 class="skills-page__title">{{ t("skills.title") }}</h2>
           <p class="skills-page__body">{{ t("skills.body") }}</p>
         </div>
-        <button type="button" class="skills-page__refresh" :disabled="loading" @click="loadSkills">
-          {{ loading ? t("skills.refreshing") : t("skills.refresh") }}
-        </button>
+        <div class="skills-page__hero-actions">
+          <button type="button" class="skills-page__action" :disabled="importMode !== null" @click="skillArchiveInput?.click()">
+            {{ importMode === "archive" ? t("skills.importing") : t("skills.importArchive") }}
+          </button>
+          <button type="button" class="skills-page__action" :disabled="importMode !== null" @click="skillDirectoryInput?.click()">
+            {{ importMode === "folder" ? t("skills.importing") : t("skills.importFolder") }}
+          </button>
+          <button type="button" class="skills-page__refresh" :disabled="loading" @click="loadSkills">
+            {{ loading ? t("skills.refreshing") : t("skills.refresh") }}
+          </button>
+          <input
+            ref="skillArchiveInput"
+            class="skills-page__file-input"
+            type="file"
+            accept=".zip,application/zip"
+            @change="importUploadedSkill($event, 'archive')"
+          />
+          <input
+            ref="skillDirectoryInput"
+            class="skills-page__file-input"
+            type="file"
+            webkitdirectory
+            directory
+            multiple
+            @change="importUploadedSkill($event, 'folder')"
+          />
+        </div>
       </header>
 
       <section class="skills-page__overview" :aria-label="t('skills.overviewLabel')">
@@ -38,7 +62,20 @@
         </label>
         <div class="skills-page__status-filter">
           <span>{{ t("skills.statusFilter") }}</span>
-          <ElSegmented v-model="statusFilter" class="skills-page__segments" :options="statusOptions" />
+          <div role="tablist" class="skills-page__filter-tabs" :aria-label="t('skills.statusFilter')">
+            <button
+              v-for="option in statusOptions"
+              :key="option.value"
+              type="button"
+              class="skills-page__filter-tab"
+              :class="{ 'skills-page__filter-tab--active': statusFilter === option.value }"
+              role="tab"
+              :aria-selected="statusFilter === option.value"
+              @click="statusFilter = option.value"
+            >
+              {{ option.label }}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -165,10 +202,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ElInput, ElSegmented } from "element-plus";
+import { ElInput } from "element-plus";
 import { useI18n } from "vue-i18n";
 
-import { deleteSkill, fetchSkillCatalog, importSkill, updateSkillStatus } from "@/api/skills";
+import { deleteSkill, fetchSkillCatalog, importSkill, importSkillUpload, updateSkillStatus } from "@/api/skills";
 import AppShell from "@/layouts/AppShell.vue";
 import type { SkillDefinition } from "@/types/skills";
 
@@ -185,6 +222,9 @@ const error = ref<string | null>(null);
 const actionError = ref<string | null>(null);
 const actionSkillKey = ref<string | null>(null);
 const confirmingSkillDeleteKey = ref<string | null>(null);
+const importMode = ref<"archive" | "folder" | null>(null);
+const skillArchiveInput = ref<HTMLInputElement | null>(null);
+const skillDirectoryInput = ref<HTMLInputElement | null>(null);
 const query = ref("");
 const statusFilter = ref<SkillStatusFilter>("all");
 const { t } = useI18n();
@@ -225,6 +265,27 @@ async function importSkillIntoCatalog(skill: SkillDefinition) {
     actionError.value = importError instanceof Error ? importError.message : t("common.loading");
   } finally {
     actionSkillKey.value = null;
+  }
+}
+
+async function importUploadedSkill(event: Event, mode: "archive" | "folder") {
+  const input = event.target as HTMLInputElement;
+  const files = Array.from(input.files ?? []);
+  if (files.length === 0) {
+    return;
+  }
+  const relativePaths = mode === "folder" ? files.map((file) => file.webkitRelativePath || file.name) : [];
+  importMode.value = mode;
+  actionError.value = null;
+  confirmingSkillDeleteKey.value = null;
+  try {
+    await importSkillUpload(files, relativePaths);
+    await loadSkills();
+  } catch (uploadError) {
+    actionError.value = uploadError instanceof Error ? uploadError.message : t("common.loading");
+  } finally {
+    importMode.value = null;
+    input.value = "";
   }
 }
 
@@ -290,6 +351,7 @@ onMounted(loadSkills);
 .skills-page__hero > *,
 .skills-page__search-field,
 .skills-page__status-filter,
+.skills-page__hero-actions,
 .skills-page__card-heading > *,
 .skills-page__columns section,
 .skills-page__compatibility {
@@ -302,6 +364,17 @@ onMounted(loadSkills);
   justify-content: space-between;
   gap: 16px;
   padding: 24px;
+}
+
+.skills-page__hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.skills-page__file-input {
+  display: none;
 }
 
 .skills-page__eyebrow,
@@ -424,25 +497,45 @@ onMounted(loadSkills);
   width: 100%;
 }
 
-.skills-page__segments {
-  display: block;
+.skills-page__filter-tabs {
+  display: flex;
+  gap: 4px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
+  border: 1px solid rgba(154, 52, 18, 0.08);
+  border-radius: 14px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.42);
 }
 
-.skills-page__segments :deep(.el-segmented__group) {
-  gap: 4px;
+.skills-page__filter-tab {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: transparent;
+  color: rgba(60, 41, 20, 0.68);
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
-.skills-page__segments :deep(.el-segmented__item.is-selected) {
-  color: var(--graphite-accent-strong);
+.skills-page__filter-tab:hover {
+  color: rgb(154, 52, 18);
+  background: rgba(255, 248, 240, 0.68);
 }
 
-.skills-page__segments :deep(.el-segmented__item-selected) {
+.skills-page__filter-tab--active {
   background: rgba(255, 248, 240, 0.96);
-  box-shadow: 0 8px 18px rgba(154, 52, 18, 0.12);
+  color: rgb(154, 52, 18);
+  box-shadow: inset 0 0 0 1px rgba(154, 52, 18, 0.1), 0 4px 10px rgba(154, 52, 18, 0.06);
+}
+
+.skills-page__filter-tab:focus-visible {
+  outline: 2px solid rgba(216, 166, 80, 0.5);
+  outline-offset: 2px;
 }
 
 .skills-page__list {
@@ -566,8 +659,13 @@ onMounted(loadSkills);
     display: grid;
   }
 
+  .skills-page__hero-actions,
   .skills-page__refresh {
     width: 100%;
+  }
+
+  .skills-page__hero-actions {
+    justify-content: stretch;
   }
 
   .skills-page__action {

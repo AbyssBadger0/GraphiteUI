@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { deleteSkill, fetchSkillCatalog, fetchSkillDefinitions, importSkill, updateSkillStatus } from "./skills.ts";
+import {
+  deleteSkill,
+  fetchSkillCatalog,
+  fetchSkillDefinitions,
+  importSkill,
+  importSkillUpload,
+  updateSkillStatus,
+} from "./skills.ts";
 
 const originalFetch = globalThis.fetch;
 
@@ -147,6 +154,37 @@ test("skill management helpers call import, status, and delete endpoints", async
       { url: "/api/skills/rewrite_text/enable", method: "POST", body: "null" },
       { url: "/api/skills/rewrite_text", method: "DELETE", body: null },
     ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("importSkillUpload posts files and relative paths as multipart form data", async () => {
+  let requestedUrl = "";
+  let requestMethod: string | undefined;
+  let requestBody: BodyInit | null | undefined;
+  const skillFile = new File(["---\nname: Uploaded\n---\nBody"], "SKILL.md", { type: "text/markdown" });
+
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    requestedUrl = String(input);
+    requestMethod = init?.method;
+    requestBody = init?.body;
+    return new Response(JSON.stringify({ skillKey: "uploaded_folder_skill", status: "active" }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    await importSkillUpload([skillFile], ["uploaded_folder_skill/SKILL.md"]);
+
+    assert.equal(requestedUrl, "/api/skills/imports/upload");
+    assert.equal(requestMethod, "POST");
+    assert.ok(requestBody instanceof FormData);
+    assert.equal(requestBody.get("files"), skillFile);
+    assert.equal(requestBody.get("relativePaths"), "uploaded_folder_skill/SKILL.md");
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import shutil
-from pathlib import Path
+import zipfile
+from pathlib import Path, PurePosixPath
+
+import yaml
 
 from app.core.schemas.skills import SkillCatalogStatus
 from app.core.storage.database import SKILL_STATE_DATA_DIR
@@ -78,3 +81,78 @@ def import_skill_from_source(skill_key: str, source_path: str) -> Path:
     shutil.copytree(source_dir, destination.parent, dirs_exist_ok=True)
     enable_skill(skill_key)
     return destination
+
+
+def extract_skill_archive(archive_path: Path, destination: Path) -> Path:
+    if not zipfile.is_zipfile(archive_path):
+        raise ValueError("Only .zip Skill archives are supported.")
+    destination.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive_path) as archive:
+        for member in archive.infolist():
+            if member.is_dir():
+                continue
+            target = _safe_child_path(destination, member.filename)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.open(member) as source, target.open("wb") as output:
+                shutil.copyfileobj(source, output)
+    return destination
+
+
+def import_skill_from_directory(source_root: Path) -> str:
+    skill_file = _find_single_skill_file(source_root)
+    skill_key = _derive_skill_key(skill_file)
+    destination = graphite_managed_skill_path_for(skill_key).parent
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(skill_file.parent, destination)
+    enable_skill(skill_key)
+    return skill_key
+
+
+def _find_single_skill_file(source_root: Path) -> Path:
+    if not source_root.exists():
+        raise ValueError("Uploaded Skill source does not exist.")
+    candidates = [
+        path
+        for path in source_root.rglob("SKILL.md")
+        if path.is_file() and "__MACOSX" not in path.relative_to(source_root).parts
+    ]
+    if not candidates:
+        raise ValueError("Uploaded Skill must contain one SKILL.md file.")
+    if len(candidates) > 1:
+        raise ValueError("Uploaded Skill must contain exactly one SKILL.md file.")
+    return candidates[0]
+
+
+def _derive_skill_key(skill_file: Path) -> str:
+    raw = skill_file.read_text(encoding="utf-8")
+    frontmatter = _read_frontmatter(raw, skill_file)
+    payload = yaml.safe_load(frontmatter) or {}
+    graphite = payload.get("graphite") or {}
+    skill_key = str(graphite.get("skill_key") or skill_file.parent.name).strip()
+    if not skill_key or skill_key in {".", ".."} or "/" in skill_key or "\\" in skill_key:
+        raise ValueError("Uploaded Skill has an invalid skill key.")
+    return skill_key
+
+
+def _read_frontmatter(raw: str, skill_file: Path) -> str:
+    if not raw.startswith("---\n"):
+        raise ValueError(f"Skill file '{skill_file}' must start with YAML frontmatter.")
+    _, rest = raw.split("---\n", 1)
+    marker = "\n---\n"
+    if marker not in rest:
+        raise ValueError(f"Skill file '{skill_file}' must close YAML frontmatter with '---'.")
+    frontmatter, _body = rest.split(marker, 1)
+    return frontmatter
+
+
+def _safe_child_path(root: Path, relative_path: str) -> Path:
+    normalized = relative_path.replace("\\", "/")
+    path = PurePosixPath(normalized)
+    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+        raise ValueError("Uploaded Skill contains an unsafe path.")
+    target = (root / Path(*path.parts)).resolve()
+    root_resolved = root.resolve()
+    if not target.is_relative_to(root_resolved):
+        raise ValueError("Uploaded Skill contains an unsafe path.")
+    return target

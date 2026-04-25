@@ -44,6 +44,17 @@ export async function apiPostText(path: string, payload: unknown): Promise<strin
   return response.text();
 }
 
+export async function apiPostForm<T>(path: string, payload: FormData): Promise<T> {
+  const response = await fetch(buildApiUrl(path), {
+    method: "POST",
+    body: payload,
+  });
+  if (!response.ok) {
+    throw new Error(`POST ${path} failed with status ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+}
+
 export async function apiDelete<T>(path: string): Promise<T> {
   const response = await fetch(buildApiUrl(path), {
     method: "DELETE",

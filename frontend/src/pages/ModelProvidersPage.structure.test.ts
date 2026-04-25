@@ -98,6 +98,9 @@ test("ModelProvidersPage shows and edits provider models from each card", () => 
   assert.match(pageSource, /<Close \/>/);
   assert.match(pageSource, /@click\.stop="removeProviderModel\(provider, modelName\)"/);
   assert.match(pageSource, /<ElPopover[\s\S]*popper-class="model-providers-page__model-picker-popper"/);
+  assert.match(pageSource, /const manualPopoverTrigger = \[\] as \[\];/);
+  assert.match(pageSource, /<ElPopover[\s\S]*:trigger="manualPopoverTrigger"[\s\S]*popper-class="model-providers-page__model-picker-popper"/);
+  assert.doesNotMatch(pageSource, /<ElPopover[\s\S]*trigger="click"[\s\S]*popper-class="model-providers-page__model-picker-popper"/);
   assert.match(pageSource, /:visible="activeModelPickerProviderId === provider\.provider_id"/);
   assert.match(pageSource, /:popper-style="modelPickerPopoverStyle"/);
   assert.match(pageSource, /class="model-providers-page__model-picker"/);
@@ -130,6 +133,24 @@ test("ModelProvidersPage shows and edits provider models from each card", () => 
   assert.match(pageSource, /\.model-providers-page__model-picker \{[\s\S]*background:\s*rgba\(255,\s*244,\s*232,\s*0\.96\);/);
   assert.match(pageSource, /\.model-providers-page__provider-model-pill \{[\s\S]*color:\s*rgb\(37,\s*99,\s*235\);/);
   assert.match(pageSource, /\.model-providers-page__model-picker-option--selected \{[\s\S]*color:\s*rgb\(37,\s*99,\s*235\);/);
+});
+
+test("ModelProvidersPage opens provider configuration in a compact popover", () => {
+  assert.match(pageSource, /const activeProviderConfigProviderId = ref<string \| null>\(null\);/);
+  assert.match(pageSource, /popper-class="model-providers-page__provider-editor-popper"/);
+  assert.match(pageSource, /:visible="activeProviderConfigProviderId === provider\.provider_id"/);
+  assert.match(pageSource, /:trigger="manualPopoverTrigger"[\s\S]*popper-class="model-providers-page__provider-editor-popper"/);
+  assert.match(pageSource, /@update:visible="\(visible: boolean\) => handleProviderConfigVisibleChange\(provider, visible\)"/);
+  assert.match(pageSource, /class="model-providers-page__provider-editor-panel model-providers-page__provider-editor-panel--popover"/);
+  assert.match(pageSource, /function handleProviderConfigVisibleChange\(provider: ProviderDraft, visible: boolean\)/);
+  assert.doesNotMatch(pageSource, /<section v-if="providerEditorDraft" class="model-providers-page__provider-editor-panel">/);
+  assert.match(pageSource, /<section v-if="providerEditorDraft && providerEditorMode === 'add'" class="model-providers-page__provider-editor-panel">/);
+  const addPanel = pageSource.match(/<section v-if="providerEditorDraft && providerEditorMode === 'add'" class="model-providers-page__provider-editor-panel">[\s\S]*?<\/section>/);
+  assert.ok(addPanel, "expected add-provider editor panel");
+  assert.doesNotMatch(addPanel[0], /providerEditorMode === 'edit'/);
+  const configPopover = pageSource.match(/class="model-providers-page__provider-editor-panel model-providers-page__provider-editor-panel--popover"[\s\S]*?<\/ElPopover>/);
+  assert.ok(configPopover, "expected provider config popover content");
+  assert.doesNotMatch(configPopover[0], /settings\.enabledModels/);
 });
 
 test("ModelProvidersPage opens an add-provider panel and immediately pre-fills templates", () => {

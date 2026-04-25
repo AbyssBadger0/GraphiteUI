@@ -1248,6 +1248,7 @@ const props = defineProps<{
   pendingStateInputSource?: { stateKey: string; label: string; stateColor: string } | null;
   humanReviewPending: boolean;
   selected: boolean;
+  interactionLocked?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -1270,6 +1271,7 @@ const emit = defineEmits<{
   (event: "delete-node", payload: { nodeId: string }): void;
   (event: "save-node-preset", payload: { nodeId: string }): void;
   (event: "open-human-review", payload: { nodeId: string }): void;
+  (event: "locked-edit-attempt"): void;
 }>();
 
 const outputDisplayModeOptions: Array<{ value: OutputNode["config"]["displayMode"]; label: string }> = [
@@ -2308,6 +2310,9 @@ function handleStateEditorActionClick(anchorId: string, stateKey: string | null 
   if (!stateKey) {
     return;
   }
+  if (guardLockedStateEditAttempt()) {
+    return;
+  }
   if (isStateEditorOpen(anchorId)) {
     return;
   }
@@ -2323,6 +2328,9 @@ function handleStateEditorActionClick(anchorId: string, stateKey: string | null 
 
 function handleRemovePortStateClick(anchorId: string, side: "input" | "output", stateKey: string | null | undefined) {
   if (!stateKey) {
+    return;
+  }
+  if (guardLockedStateEditAttempt()) {
     return;
   }
   clearStateEditorConfirmState();
@@ -2367,6 +2375,28 @@ function closeStateEditor() {
   stateEditorDraft.value = null;
   stateEditorError.value = null;
 }
+
+function guardLockedStateEditAttempt() {
+  if (!props.interactionLocked) {
+    return false;
+  }
+  closeStateEditor();
+  clearStateEditorConfirmState();
+  clearRemovePortStateConfirmState();
+  emit("locked-edit-attempt");
+  return true;
+}
+
+watch(
+  () => props.interactionLocked,
+  (locked) => {
+    if (locked) {
+      closeStateEditor();
+      clearStateEditorConfirmState();
+      clearRemovePortStateConfirmState();
+    }
+  },
+);
 
 function syncStateEditorDraft(nextDraft: StateFieldDraft, options?: { allowInvalidKey?: boolean }) {
   const currentAnchorId = activeStateEditorAnchorId.value;

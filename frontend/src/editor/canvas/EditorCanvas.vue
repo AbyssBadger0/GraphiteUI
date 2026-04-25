@@ -205,6 +205,7 @@
           :pending-state-input-source="pendingAgentInputSourceByNodeId[nodeId] ?? null"
           :human-review-pending="isHumanReviewNode(nodeId)"
           :selected="isNodeVisuallySelected(nodeId)"
+          :interaction-locked="isGraphEditingLocked()"
           @update-node-metadata="emit('update-node-metadata', $event)"
           @update-input-config="emit('update-input-config', $event)"
           @update-input-state="emit('update-input-state', $event)"
@@ -223,6 +224,7 @@
           @delete-node="emit('delete-node', $event)"
           @save-node-preset="emit('save-node-preset', $event)"
           @open-human-review="emit('open-human-review', $event)"
+          @locked-edit-attempt="emit('locked-edit-attempt')"
           @update-output-config="emit('update-output-config', $event)"
         />
       </div>
@@ -378,6 +380,7 @@ const emit = defineEmits<{
   (event: "save-node-preset", payload: { nodeId: string }): void;
   (event: "open-human-review", payload: { nodeId: string }): void;
   (event: "update-output-config", payload: { nodeId: string; patch: Partial<OutputNode["config"]> }): void;
+  (event: "locked-edit-attempt"): void;
   (event: "connect-flow", payload: { sourceNodeId: string; targetNodeId: string }): void;
   (event: "connect-state", payload: { sourceNodeId: string; sourceStateKey: string; targetNodeId: string; targetStateKey: string }): void;
   (event: "connect-route", payload: { sourceNodeId: string; branchKey: string; targetNodeId: string }): void;
@@ -1829,6 +1832,7 @@ function handleNodeClickCapture(nodeId: string, event: MouseEvent) {
 
 function handleCanvasDoubleClick(event: MouseEvent) {
   if (isGraphEditingLocked()) {
+    emit("locked-edit-attempt");
     return;
   }
   const target = event.target as HTMLElement | null;
@@ -1953,6 +1957,7 @@ function handleCanvasDragOver(event: DragEvent) {
 
 function handleCanvasDrop(event: DragEvent) {
   if (isGraphEditingLocked()) {
+    emit("locked-edit-attempt");
     return;
   }
   const target = event.target as HTMLElement | null;
@@ -2068,6 +2073,7 @@ function handleWheel(event: WheelEvent) {
 function handleEdgePointerDown(edge: ProjectedCanvasEdge, event: PointerEvent) {
   if (isGraphEditingLocked()) {
     event.preventDefault();
+    emit("locked-edit-attempt");
     return;
   }
   canvasRef.value?.focus();
@@ -2099,6 +2105,7 @@ function handleEdgePointerDown(edge: ProjectedCanvasEdge, event: PointerEvent) {
 
 function handleAnchorPointerDown(anchor: ProjectedCanvasAnchor) {
   if (isGraphEditingLocked()) {
+    emit("locked-edit-attempt");
     return;
   }
   canvasRef.value?.focus();
@@ -2366,6 +2373,23 @@ function isGraphEditingLocked() {
   return Boolean(props.interactionLocked);
 }
 
+function isLockedNodeEditTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest(
+      [
+        "[data-state-editor-trigger='true']",
+        ".node-card__port-pill-remove",
+        ".node-card__state-editor",
+        ".node-card__state-editor-popper",
+      ].join(", "),
+    ),
+  );
+}
+
 function handleLockedNodePointerCapture(nodeId: string, event: PointerEvent) {
   if (!isGraphEditingLocked()) {
     return;
@@ -2373,6 +2397,9 @@ function handleLockedNodePointerCapture(nodeId: string, event: PointerEvent) {
   const target = event.target;
   if (target instanceof HTMLElement && target.closest("[data-human-review-action='true']")) {
     return;
+  }
+  if (isLockedNodeEditTarget(target)) {
+    emit("locked-edit-attempt");
   }
   event.preventDefault();
   event.stopPropagation();

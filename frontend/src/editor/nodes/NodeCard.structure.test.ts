@@ -317,6 +317,8 @@ test("NodeCard shows a persistent human review capsule in the top action dock", 
 });
 
 test("NodeCard reveals state pills on hover and opens state editing only after a confirm click", () => {
+  assert.match(componentSource, /interactionLocked\?: boolean;/);
+  assert.match(componentSource, /\(event: "locked-edit-attempt"\): void;/);
   assert.match(componentSource, /import StateEditorPopover from "\.\/StateEditorPopover\.vue";/);
   assert.match(componentSource, /@click\.stop="handleStateEditorActionClick\(/);
   assert.match(componentSource, /const stateEditorDraft = ref<StateFieldDraft \| null>\(null\);/);
@@ -329,8 +331,11 @@ test("NodeCard reveals state pills on hover and opens state editing only after a
   assert.match(componentSource, /function handleStateEditorPillPointerEnter\(anchorId: string\)/);
   assert.match(componentSource, /function handleStateEditorPillPointerLeave\(anchorId: string\)/);
   assert.match(componentSource, /function handleStateEditorActionClick\(anchorId: string, stateKey: string \| null \| undefined\)/);
+  assert.match(componentSource, /function guardLockedStateEditAttempt\(\)/);
+  assert.match(componentSource, /emit\("locked-edit-attempt"\);/);
   assert.match(componentSource, /@pointerenter="handleStateEditorPillPointerEnter\(/);
   assert.match(componentSource, /@pointerleave="handleStateEditorPillPointerLeave\(/);
+  assert.match(componentSource, /if \(guardLockedStateEditAttempt\(\)\) \{[\s\S]*return;[\s\S]*\}/);
   assert.match(componentSource, /if \(activeStateEditorConfirmAnchorId\.value === anchorId\) \{[\s\S]*openStateEditor\(anchorId, stateKey\);[\s\S]*return;/);
   assert.match(componentSource, /startStateEditorConfirmWindow\(anchorId\);/);
   assert.match(componentSource, /emit\("rename-state", \{ currentKey:/);
@@ -410,6 +415,7 @@ test("NodeCard adds mirrored remove-binding buttons to non-output state pills", 
   assert.match(componentSource, /function startRemovePortStateConfirmWindow\(anchorId: string\)/);
   assert.match(componentSource, /function isRemovePortStateConfirmOpen\(anchorId: string\)/);
   assert.match(componentSource, /function handleRemovePortStateClick\(anchorId: string, side: "input" \| "output", stateKey: string \| null \| undefined\)/);
+  assert.match(componentSource, /function handleRemovePortStateClick\(anchorId: string, side: "input" \| "output", stateKey: string \| null \| undefined\) \{[\s\S]*if \(guardLockedStateEditAttempt\(\)\) \{[\s\S]*return;[\s\S]*\}/);
   assert.match(componentSource, /emit\("remove-port-state", \{[\s\S]*nodeId: props\.nodeId,[\s\S]*side,[\s\S]*stateKey,[\s\S]*\}\);/);
   assert.match(componentSource, /class="node-card__port-pill-remove node-card__port-pill-remove--trailing"/);
   assert.match(componentSource, /class="node-card__port-pill-remove node-card__port-pill-remove--leading"/);

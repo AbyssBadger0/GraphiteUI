@@ -218,6 +218,8 @@ function handleResumeClick() {
 
 <style scoped>
 .editor-human-review-panel {
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   flex-direction: column;
   min-width: 0;

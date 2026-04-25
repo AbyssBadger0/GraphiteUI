@@ -126,6 +126,7 @@
                 @open-node-creation-menu="openNodeCreationMenuForTab(tab.tabId, $event)"
                 @create-node-from-file="createNodeFromFileForTab(tab.tabId, $event)"
                 @open-human-review="openHumanReviewPanelForTab(tab.tabId, $event.nodeId)"
+                @locked-edit-attempt="showGraphLockedEditToast"
               />
               <EditorNodeCreationMenu
                 :open="Boolean(nodeCreationMenuState(tab.tabId)?.open)"
@@ -137,29 +138,6 @@
                 @select-entry="createNodeFromMenuForTab(tab.tabId, $event)"
                 @close="closeNodeCreationMenu(tab.tabId)"
               />
-              <div
-                v-if="feedbackForTab(tab.tabId)"
-                class="editor-workspace-shell__feedback"
-                :class="`editor-workspace-shell__feedback--${feedbackForTab(tab.tabId)?.tone ?? 'neutral'}`"
-              >
-                <span class="editor-workspace-shell__feedback-label">Status</span>
-                <span class="editor-workspace-shell__feedback-message">{{ feedbackForTab(tab.tabId)?.message }}</span>
-                <span v-if="feedbackForTab(tab.tabId)?.activeRunStatus" class="editor-workspace-shell__feedback-run">
-                  <span class="editor-workspace-shell__feedback-badge">{{ feedbackForTab(tab.tabId)?.activeRunStatus }}</span>
-                  <span>OK {{ feedbackForTab(tab.tabId)?.summary?.success ?? 0 }}</span>
-                  <span>Running {{ feedbackForTab(tab.tabId)?.summary?.running ?? 0 }}</span>
-                  <span>Pending {{ feedbackForTab(tab.tabId)?.summary?.idle ?? 0 }}</span>
-                  <span>Failed {{ feedbackForTab(tab.tabId)?.summary?.failed ?? 0 }}</span>
-                  <span v-if="feedbackForTab(tab.tabId)?.currentNodeLabel">Current {{ feedbackForTab(tab.tabId)?.currentNodeLabel }}</span>
-                </span>
-                <RouterLink
-                  v-if="feedbackForTab(tab.tabId)?.activeRunId"
-                  class="editor-workspace-shell__feedback-link"
-                  :to="`/runs/${feedbackForTab(tab.tabId)?.activeRunId}`"
-                >
-                  Latest run {{ feedbackForTab(tab.tabId)?.activeRunId }}
-                </RouterLink>
-              </div>
             </div>
 
             <div
@@ -215,6 +193,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 
 import { fetchPreset, fetchPresets, savePreset } from "@/api/presets";
 import { fetchKnowledgeBases } from "@/api/knowledge";
@@ -1003,17 +982,23 @@ function isGraphInteractionLocked(tabId: string) {
   return latestRunDetailByTabId.value[tabId]?.status === "awaiting_human";
 }
 
+function showGraphLockedEditToast() {
+  ElMessage({
+    customClass: "editor-workspace-shell__locked-toast",
+    type: "warning",
+    duration: 4200,
+    grouping: true,
+    placement: "top",
+    showClose: false,
+    message: "图已锁定。请在右侧 Human Review 面板填写需要的输入，然后点击 Continue Run 继续。",
+  });
+}
+
 function guardGraphEditForTab(tabId: string) {
   if (!isGraphInteractionLocked(tabId)) {
     return false;
   }
-  const run = latestRunDetailByTabId.value[tabId] ?? null;
-  setMessageFeedbackForTab(tabId, {
-    tone: "warning",
-    message: "Run is paused for human review. Continue or cancel the paused run before editing the graph.",
-    activeRunId: run?.run_id ?? undefined,
-    activeRunStatus: run?.status ?? "awaiting_human",
-  });
+  showGraphLockedEditToast();
   return true;
 }
 
@@ -2297,83 +2282,53 @@ onMounted(() => {
   pointer-events: auto;
 }
 
-.editor-workspace-shell__feedback {
-  position: absolute;
-  left: 18px;
-  bottom: 18px;
-  z-index: 3;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  max-width: min(720px, calc(100% - 36px));
-  border: 1px solid rgba(154, 52, 18, 0.16);
-  border-radius: 20px;
-  padding: 10px 14px;
-  background: var(--graphite-glass-bg);
-  box-shadow: var(--graphite-glass-shadow), var(--graphite-glass-highlight);
-  backdrop-filter: blur(18px) saturate(1.35);
+:global(.editor-workspace-shell__locked-toast.el-message) {
+  top: 50% !important;
+  left: 50%;
+  min-width: min(620px, calc(100vw - 40px));
+  max-width: min(760px, calc(100vw - 40px));
+  justify-content: flex-start;
+  border: 1px solid rgba(154, 52, 18, 0.56);
+  border-radius: 28px;
+  padding: 22px 26px;
+  background: rgba(255, 247, 237, 0.97);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.68) inset,
+    0 24px 64px rgba(124, 45, 18, 0.28),
+    0 0 44px rgba(234, 88, 12, 0.34);
+  backdrop-filter: blur(30px) saturate(1.7) contrast(1.04);
+  transform: translate(-50%, -50%);
+  animation: editor-workspace-shell-locked-toast-float 4.2s ease forwards;
 }
 
-.editor-workspace-shell__feedback--success {
-  border-color: rgba(21, 128, 61, 0.16);
-  background: rgba(240, 253, 244, 0.92);
+:global(.editor-workspace-shell__locked-toast .el-message__content) {
+  color: #7c2d12;
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.5;
 }
 
-.editor-workspace-shell__feedback--warning {
-  border-color: rgba(217, 119, 6, 0.18);
-  background: rgba(255, 251, 235, 0.94);
+:global(.editor-workspace-shell__locked-toast .el-message__icon) {
+  color: #c2410c;
+  font-size: 22px;
 }
 
-.editor-workspace-shell__feedback--danger {
-  border-color: rgba(185, 28, 28, 0.16);
-  background: rgba(254, 242, 242, 0.94);
-}
+@keyframes editor-workspace-shell-locked-toast-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -42%) scale(0.96);
+  }
 
-.editor-workspace-shell__feedback-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(154, 52, 18, 0.84);
-}
+  12%,
+  76% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 
-.editor-workspace-shell__feedback-message {
-  color: rgba(60, 41, 20, 0.92);
-  font-size: 0.92rem;
-  line-height: 1.55;
-}
-
-.editor-workspace-shell__feedback-run {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.76rem;
-  color: rgba(60, 41, 20, 0.76);
-}
-
-.editor-workspace-shell__feedback-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 22px;
-  border: 1px solid rgba(154, 52, 18, 0.12);
-  border-radius: 999px;
-  padding: 0 10px;
-  background: rgba(255, 255, 255, 0.74);
-  color: rgba(154, 52, 18, 0.9);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.editor-workspace-shell__feedback-link {
-  color: rgba(154, 52, 18, 0.96);
-  font-size: 0.82rem;
-  font-weight: 600;
-  text-decoration: underline;
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -66%) scale(0.98);
+  }
 }
 
 .editor-workspace-shell__status-card {

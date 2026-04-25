@@ -127,11 +127,17 @@ test("EditorCanvas keeps paused human-review graphs viewable but read-only", () 
   assert.match(componentSource, /return Boolean\(props\.interactionLocked\);/);
   assert.match(componentSource, /function handleLockedNodePointerCapture\(nodeId: string, event: PointerEvent\)/);
   assert.match(componentSource, /target\.closest\("\[data-human-review-action='true'\]"\)/);
+  assert.match(componentSource, /\(event: "locked-edit-attempt"\): void;/);
+  assert.match(componentSource, /:interaction-locked="isGraphEditingLocked\(\)"/);
+  assert.match(componentSource, /@locked-edit-attempt="emit\('locked-edit-attempt'\)"/);
+  assert.match(componentSource, /function isLockedNodeEditTarget\(target: EventTarget \| null\)/);
+  assert.match(componentSource, /\[data-state-editor-trigger='true'\]/);
+  assert.match(componentSource, /if \(isLockedNodeEditTarget\(target\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
   assert.match(componentSource, /if \(isGraphEditingLocked\(\)\) \{/);
-  assert.match(componentSource, /function handleCanvasDoubleClick\(event: MouseEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{/);
-  assert.match(componentSource, /function handleCanvasDrop\(event: DragEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{/);
-  assert.match(componentSource, /function handleEdgePointerDown\(edge: ProjectedCanvasEdge, event: PointerEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{/);
-  assert.match(componentSource, /function handleAnchorPointerDown\(anchor: ProjectedCanvasAnchor\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{/);
+  assert.match(componentSource, /function handleCanvasDoubleClick\(event: MouseEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
+  assert.match(componentSource, /function handleCanvasDrop\(event: DragEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
+  assert.match(componentSource, /function handleEdgePointerDown\(edge: ProjectedCanvasEdge, event: PointerEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
+  assert.match(componentSource, /function handleAnchorPointerDown\(anchor: ProjectedCanvasAnchor\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
 });
 
 test("EditorCanvas lets top-left floating tools respect workspace overlay clearance", () => {

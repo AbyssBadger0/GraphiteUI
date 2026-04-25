@@ -62,6 +62,8 @@ test("EditorHumanReviewPanel keeps the continue guard message near the action ba
 });
 
 test("EditorHumanReviewPanel uses the shared right-side glass inspector surface", () => {
+  assert.match(componentSource, /\.editor-human-review-panel \{[^}]*box-sizing:\s*border-box;/);
+  assert.match(componentSource, /\.editor-human-review-panel \{[^}]*width:\s*100%;/);
   assert.match(componentSource, /\.editor-human-review-panel \{[\s\S]*padding:\s*12px;/);
   assert.match(componentSource, /\.editor-human-review-panel \{[\s\S]*background:\s*transparent;/);
   assert.match(componentSource, /\.editor-human-review-panel__surface \{[\s\S]*border:\s*1px solid var\(--graphite-glass-border\);/);

@@ -148,11 +148,37 @@ test("EditorWorkspaceShell resumes restored pause snapshots against their origin
 });
 
 test("EditorWorkspaceShell locks graph editing while a run is awaiting human review", () => {
+  const guardFunctionSource = componentSource.match(/function guardGraphEditForTab\(tabId: string\) \{[\s\S]*?\n\}/)?.[0] ?? "";
+
+  assert.match(componentSource, /import \{ ElMessage \} from "element-plus";/);
   assert.match(componentSource, /:interaction-locked="isGraphInteractionLocked\(tab\.tabId\)"/);
   assert.match(componentSource, /function isGraphInteractionLocked\(tabId: string\)/);
   assert.match(componentSource, /return latestRunDetailByTabId\.value\[tabId\]\?\.status === "awaiting_human";/);
   assert.match(componentSource, /function guardGraphEditForTab\(tabId: string\)/);
+  assert.match(componentSource, /function showGraphLockedEditToast\(\)/);
+  assert.match(
+    componentSource,
+    /ElMessage\(\{[\s\S]*customClass:\s*"editor-workspace-shell__locked-toast",[\s\S]*type:\s*"warning",[\s\S]*duration:\s*4200,[\s\S]*grouping:\s*true,/,
+  );
+  assert.match(componentSource, /图已锁定。请在右侧 Human Review 面板填写需要的输入，然后点击 Continue Run 继续。/);
+  assert.match(componentSource, /@locked-edit-attempt="showGraphLockedEditToast"/);
+  assert.match(componentSource, /:global\(\.editor-workspace-shell__locked-toast\.el-message\) \{[\s\S]*top:\s*50% !important;/);
+  assert.match(componentSource, /:global\(\.editor-workspace-shell__locked-toast\.el-message\) \{[\s\S]*min-width:\s*min\(620px,\s*calc\(100vw - 40px\)\);/);
+  assert.match(componentSource, /:global\(\.editor-workspace-shell__locked-toast\.el-message\) \{[\s\S]*border:\s*1px solid rgba\(154,\s*52,\s*18,\s*0\.56\);/);
+  assert.match(componentSource, /:global\(\.editor-workspace-shell__locked-toast \.el-message__content\) \{[\s\S]*font-size:\s*1\.08rem;/);
+  assert.match(componentSource, /:global\(\.editor-workspace-shell__locked-toast\.el-message\) \{[\s\S]*animation:\s*editor-workspace-shell-locked-toast-float 4\.2s ease forwards;/);
+  assert.match(componentSource, /76% \{[\s\S]*transform:\s*translate\(-50%, -50%\) scale\(1\);/);
+  assert.match(componentSource, /@keyframes editor-workspace-shell-locked-toast-float/);
   assert.match(componentSource, /if \(guardGraphEditForTab\(tabId\)\) \{/);
+  assert.match(guardFunctionSource, /showGraphLockedEditToast\(\);/);
+  assert.doesNotMatch(guardFunctionSource, /setMessageFeedbackForTab/);
+});
+
+test("EditorWorkspaceShell removes the persistent bottom-left status feedback overlay", () => {
+  assert.doesNotMatch(componentSource, /class="editor-workspace-shell__feedback"/);
+  assert.doesNotMatch(componentSource, /editor-workspace-shell__feedback--/);
+  assert.doesNotMatch(componentSource, /\.editor-workspace-shell__feedback/);
+  assert.match(componentSource, /:latest-run-status="feedbackForTab\(tab\.tabId\)\?\.activeRunStatus \?\? null"/);
 });
 
 test("EditorWorkspaceShell renders the graph action controls as a detached capsule instead of passing them through EditorTabBar", () => {

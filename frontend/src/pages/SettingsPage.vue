@@ -127,17 +127,19 @@
                       class="settings-page__select graphite-select"
                       :teleported="false"
                       popper-class="graphite-select-popper"
+                      :disabled="isLoginProvider(provider)"
                     >
                       <ElOption label="OpenAI-compatible" value="openai-compatible" />
                       <ElOption label="Anthropic Messages" value="anthropic-messages" />
                       <ElOption label="Gemini generateContent" value="gemini-generate-content" />
+                      <ElOption label="Codex Responses" value="codex-responses" />
                     </ElSelect>
                   </label>
                   <label>
                     <span>{{ t("settings.providerBaseUrl") }}</span>
-                    <input v-model.trim="provider.base_url" type="url" />
+                    <input v-model.trim="provider.base_url" type="url" :disabled="isLoginProvider(provider)" />
                   </label>
-                  <label>
+                  <label v-if="!isLoginProvider(provider)">
                     <span>{{ t("settings.providerApiKey") }}</span>
                     <input
                       v-model.trim="provider.api_key"
@@ -146,14 +148,82 @@
                       :placeholder="provider.api_key_configured ? t('settings.keepExistingApiKey') : t('settings.optionalApiKey')"
                     />
                   </label>
-                  <label>
+                  <label v-if="!isLoginProvider(provider)">
                     <span>{{ t("settings.providerAuthHeader") }}</span>
                     <input v-model.trim="provider.auth_header" type="text" />
                   </label>
-                  <label>
+                  <label v-if="!isLoginProvider(provider)">
                     <span>{{ t("settings.providerAuthScheme") }}</span>
                     <input v-model.trim="provider.auth_scheme" type="text" />
                   </label>
+                  <div v-if="isLoginProvider(provider)" class="settings-page__login-panel">
+                    <div class="settings-page__login-status">
+                      <span>{{ t("settings.codexLoginStatus") }}</span>
+                      <strong>
+                        {{
+                          provider.auth_status?.authenticated
+                            ? t("settings.codexLoggedIn")
+                            : provider.auth_status?.configured
+                              ? t("settings.codexLoginExpired")
+                              : t("settings.codexNotLoggedIn")
+                        }}
+                      </strong>
+                    </div>
+                    <div v-if="codexLoginSession" class="settings-page__login-code">
+                      <label>
+                        <span>{{ t("settings.codexVerificationUrl") }}</span>
+                        <input :value="codexLoginSession.verification_url" type="text" readonly />
+                      </label>
+                      <label>
+                        <span>{{ t("settings.codexUserCode") }}</span>
+                        <input :value="codexLoginSession.user_code" type="text" readonly />
+                      </label>
+                    </div>
+                    <div class="settings-page__provider-actions settings-page__provider-actions--compact">
+                      <button
+                        type="button"
+                        class="settings-page__button settings-page__button--primary"
+                        :disabled="codexAuthBusy"
+                        @click="handleStartCodexLogin"
+                      >
+                        {{ codexAuthBusy ? t("settings.codexChecking") : t("settings.codexLogin") }}
+                      </button>
+                      <button
+                        v-if="codexLoginSession"
+                        type="button"
+                        class="settings-page__button"
+                        :disabled="codexAuthBusy"
+                        @click="() => handlePollCodexLogin()"
+                      >
+                        {{ t("settings.codexCheckLogin") }}
+                      </button>
+                      <button
+                        v-if="codexLoginSession"
+                        type="button"
+                        class="settings-page__button"
+                        @click="handleOpenCodexVerification"
+                      >
+                        {{ t("settings.codexOpenVerification") }}
+                      </button>
+                      <button
+                        v-if="codexLoginSession"
+                        type="button"
+                        class="settings-page__button"
+                        @click="handleCopyCodexCode"
+                      >
+                        {{ t("settings.codexCopyCode") }}
+                      </button>
+                      <button
+                        v-if="provider.auth_status?.configured"
+                        type="button"
+                        class="settings-page__button"
+                        :disabled="codexAuthBusy"
+                        @click="handleLogoutCodex"
+                      >
+                        {{ t("settings.codexLogout") }}
+                      </button>
+                    </div>
+                  </div>
                   <label>
                     <span>{{ t("settings.enabledModels") }}</span>
                     <ElSelect
@@ -182,7 +252,7 @@
                   <button
                     type="button"
                     class="settings-page__button settings-page__button--primary"
-                    :disabled="discoveringProviderId === provider.provider_id"
+                    :disabled="discoveringProviderId === provider.provider_id || (isLoginProvider(provider) && !provider.auth_status?.authenticated)"
                     @click="handleDiscoverModels(provider.provider_id)"
                   >
                     {{ discoveringProviderId === provider.provider_id ? t("settings.discoveringModels") : t("settings.discoverModels") }}
@@ -249,11 +319,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { ElOption, ElSelect } from "element-plus";
 import { useI18n } from "vue-i18n";
 
-import { discoverModelProviderModels, fetchSettings, updateSettings } from "@/api/settings";
+import {
+  discoverModelProviderModels,
+  fetchOpenAICodexAuthStatus,
+  fetchSettings,
+  logoutOpenAICodexAuth,
+  pollOpenAICodexAuth,
+  startOpenAICodexAuth,
+  updateSettings,
+  type OpenAICodexAuthStartResponse,
+} from "@/api/settings";
 import AppShell from "@/layouts/AppShell.vue";
 import type { SettingsModelProvider, SettingsPayload } from "@/types/settings";
 
@@ -298,6 +377,9 @@ const providerMessages = ref<Record<string, string>>({});
 const isSaving = ref(false);
 const isDiscoveringModels = ref(false);
 const discoveringProviderId = ref<string | null>(null);
+const codexLoginSession = ref<OpenAICodexAuthStartResponse | null>(null);
+const codexAuthBusy = ref(false);
+let codexPollTimer: number | null = null;
 const { t } = useI18n();
 
 function dedupeStrings(values: string[]) {
@@ -372,8 +454,12 @@ function buildProviderDraftFromTemplate(provider: SettingsModelProvider): Provid
     transport: provider.transport,
     base_url: provider.base_url,
     enabled: true,
+    saved: Boolean(provider.saved),
     auth_header: provider.auth_header ?? "Authorization",
     auth_scheme: provider.auth_scheme ?? (provider.transport === "openai-compatible" ? "Bearer" : ""),
+    auth_mode: provider.auth_mode ?? (provider.requires_login ? "chatgpt" : "api_key"),
+    requires_login: Boolean(provider.requires_login),
+    auth_status: provider.auth_status,
     api_key: "",
     api_key_configured: Boolean(provider.api_key_configured),
     discovered_models: modelNames,
@@ -460,6 +546,9 @@ function providerModelOptions(providerId: string) {
   }
   return dedupeStrings([...provider.discovered_models, ...provider.selected_models]);
 }
+function isLoginProvider(provider: ProviderDraft) {
+  return provider.requires_login || provider.auth_mode === "chatgpt";
+}
 const thinkingMode = computed({
   get: () => (draft.value?.thinking_enabled ? "on" : "off"),
   set: (value: string) => {
@@ -532,6 +621,31 @@ async function loadSettings() {
   }
 }
 
+function stopCodexAutoPoll() {
+  if (codexPollTimer !== null) {
+    window.clearInterval(codexPollTimer);
+    codexPollTimer = null;
+  }
+}
+
+function applyCodexAuthStatus(status: NonNullable<ProviderDraft["auth_status"]>) {
+  const provider = providerDrafts.value["openai-codex"];
+  if (!provider) {
+    return;
+  }
+  provider.auth_status = status;
+  provider.api_key_configured = Boolean(status.configured);
+  if (status.base_url) {
+    provider.base_url = status.base_url;
+  }
+}
+
+async function refreshCodexAuthStatus() {
+  const status = await fetchOpenAICodexAuthStatus();
+  applyCodexAuthStatus(status);
+  return status;
+}
+
 function setProviderMessage(providerId: string, message: string | null) {
   providerMessages.value = {
     ...providerMessages.value,
@@ -571,6 +685,10 @@ async function handleDiscoverModels(providerId: string) {
     setProviderMessage(providerId, t("settings.baseUrlRequired"));
     return;
   }
+  if (isLoginProvider(provider) && !provider.auth_status?.authenticated) {
+    setProviderMessage(providerId, t("settings.codexLoginRequired"));
+    return;
+  }
 
   try {
     discoveringProviderId.value = providerId;
@@ -602,6 +720,98 @@ async function handleDiscoverModels(providerId: string) {
     );
   } finally {
     discoveringProviderId.value = null;
+  }
+}
+
+function startCodexAutoPoll() {
+  stopCodexAutoPoll();
+  const intervalSeconds = Math.max(3, codexLoginSession.value?.interval ?? 5);
+  codexPollTimer = window.setInterval(() => {
+    void handlePollCodexLogin(false);
+  }, intervalSeconds * 1000);
+}
+
+async function handleStartCodexLogin() {
+  try {
+    codexAuthBusy.value = true;
+    setProviderMessage("openai-codex", null);
+    codexLoginSession.value = await startOpenAICodexAuth();
+    handleOpenCodexVerification();
+    startCodexAutoPoll();
+    setProviderMessage("openai-codex", t("settings.codexLoginStarted"));
+  } catch (authError) {
+    setProviderMessage(
+      "openai-codex",
+      t("settings.codexLoginFailed", { error: authError instanceof Error ? authError.message : "" }),
+    );
+  } finally {
+    codexAuthBusy.value = false;
+  }
+}
+
+async function handlePollCodexLogin(showPendingMessage = true) {
+  if (!codexLoginSession.value) {
+    await refreshCodexAuthStatus();
+    return;
+  }
+  try {
+    codexAuthBusy.value = true;
+    const status = await pollOpenAICodexAuth({
+      device_auth_id: codexLoginSession.value.device_auth_id,
+      user_code: codexLoginSession.value.user_code,
+    });
+    if (status.authenticated) {
+      stopCodexAutoPoll();
+      codexLoginSession.value = null;
+      applyCodexAuthStatus(status);
+      setProviderMessage("openai-codex", t("settings.codexLoginComplete"));
+      await handleDiscoverModels("openai-codex");
+      return;
+    }
+    if (showPendingMessage) {
+      setProviderMessage("openai-codex", t("settings.codexLoginPending"));
+    }
+  } catch (authError) {
+    stopCodexAutoPoll();
+    setProviderMessage(
+      "openai-codex",
+      t("settings.codexLoginFailed", { error: authError instanceof Error ? authError.message : "" }),
+    );
+  } finally {
+    codexAuthBusy.value = false;
+  }
+}
+
+function handleOpenCodexVerification() {
+  if (!codexLoginSession.value?.verification_url) {
+    return;
+  }
+  window.open(codexLoginSession.value.verification_url, "_blank", "noopener,noreferrer");
+}
+
+async function handleCopyCodexCode() {
+  if (!codexLoginSession.value?.user_code || !navigator.clipboard) {
+    return;
+  }
+  await navigator.clipboard.writeText(codexLoginSession.value.user_code);
+  setProviderMessage("openai-codex", t("settings.codexCodeCopied"));
+}
+
+async function handleLogoutCodex() {
+  try {
+    codexAuthBusy.value = true;
+    stopCodexAutoPoll();
+    codexLoginSession.value = null;
+    const status = await logoutOpenAICodexAuth();
+    applyCodexAuthStatus(status);
+    setProviderMessage("openai-codex", t("settings.codexLoggedOut"));
+  } catch (authError) {
+    setProviderMessage(
+      "openai-codex",
+      t("settings.codexLoginFailed", { error: authError instanceof Error ? authError.message : "" }),
+    );
+  } finally {
+    codexAuthBusy.value = false;
   }
 }
 
@@ -638,6 +848,7 @@ async function handleSave() {
 }
 
 onMounted(loadSettings);
+onBeforeUnmount(stopCodexAutoPoll);
 </script>
 
 <style scoped>
@@ -760,6 +971,36 @@ onMounted(loadSettings);
   align-items: center;
   gap: 10px;
   margin-top: 14px;
+}
+
+.settings-page__provider-actions--compact {
+  margin-top: 10px;
+}
+
+.settings-page__login-panel {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(154, 52, 18, 0.12);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 248, 240, 0.58);
+}
+
+.settings-page__login-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(60, 41, 20, 0.72);
+}
+
+.settings-page__login-status strong {
+  color: rgb(154, 52, 18);
+}
+
+.settings-page__login-code {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.36fr);
+  gap: 12px;
 }
 
 .settings-page__add-provider {

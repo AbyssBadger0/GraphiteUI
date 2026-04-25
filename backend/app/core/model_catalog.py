@@ -13,6 +13,7 @@ from app.tools.local_llm import (
     has_local_llm_api_key_configured,
 )
 from app.tools.model_provider_client import discover_provider_models
+from app.tools.openai_codex_client import get_codex_auth_status
 
 
 LOCAL_PROVIDER_LABEL = "OpenAI-compatible Custom Provider"
@@ -171,6 +172,9 @@ def _normalize_provider_config(
         "auth_header": auth_header,
         "auth_scheme": auth_scheme,
         "api_key": str(saved_provider.get("api_key") or "").strip(),
+        "auth_mode": str(saved_provider.get("auth_mode") or template.get("auth_mode") or "api_key"),
+        "requires_login": bool(template.get("requires_login") or saved_provider.get("requires_login")),
+        "saved": existing_saved_provider,
         "models": _normalize_provider_models(saved_provider.get("models") or template.get("models")),
         "example_model_refs": list(template.get("example_model_refs") or []),
         "template_group": str(template.get("template_group") or "custom"),
@@ -179,6 +183,8 @@ def _normalize_provider_config(
 
 def _provider_requires_api_key(provider: dict[str, Any]) -> bool:
     if provider["provider_id"] == "local":
+        return False
+    if provider.get("auth_mode") == "chatgpt":
         return False
     if _is_local_base_url(str(provider.get("base_url") or "")):
         return False
@@ -190,6 +196,8 @@ def _is_provider_configured(provider: dict[str, Any]) -> bool:
         return False
     if not str(provider.get("base_url") or "").strip():
         return False
+    if provider["provider_id"] == "openai-codex":
+        return bool(get_codex_auth_status().get("authenticated"))
     if _provider_requires_api_key(provider) and not str(provider.get("api_key") or "").strip():
         return False
     return True
@@ -346,8 +354,12 @@ def _build_provider_entry(
     runtime_config: dict[str, Any] | None,
 ) -> dict[str, Any]:
     api_key_configured = bool(str(provider.get("api_key") or "").strip())
+    auth_status = None
     if provider["provider_id"] == "local":
         api_key_configured = api_key_configured or has_local_llm_api_key_configured()
+    if provider["provider_id"] == "openai-codex":
+        auth_status = get_codex_auth_status()
+        api_key_configured = bool(auth_status.get("configured"))
 
     entry = {
         "provider_id": provider["provider_id"],
@@ -359,6 +371,9 @@ def _build_provider_entry(
         "base_url": provider["base_url"],
         "auth_header": provider.get("auth_header") or "Authorization",
         "auth_scheme": provider.get("auth_scheme") if provider.get("auth_scheme") is not None else "Bearer",
+        "auth_mode": provider.get("auth_mode") or "api_key",
+        "requires_login": bool(provider.get("requires_login")),
+        "saved": bool(provider.get("saved")),
         "api_key_configured": api_key_configured,
         "models": models,
         "example_model_refs": provider.get("example_model_refs") or [],
@@ -366,6 +381,8 @@ def _build_provider_entry(
     }
     if provider["provider_id"] == "local":
         entry["gateway"] = runtime_config or {}
+    if auth_status is not None:
+        entry["auth_status"] = auth_status
     return entry
 
 

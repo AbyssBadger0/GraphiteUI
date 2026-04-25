@@ -192,7 +192,7 @@ def _build_settings_payload(*, force_refresh_models: bool = False) -> dict:
 
 @router.get("")
 def get_settings_endpoint() -> dict:
-    return _build_settings_payload(force_refresh_models=True)
+    return _build_settings_payload(force_refresh_models=False)
 
 
 @router.post("")

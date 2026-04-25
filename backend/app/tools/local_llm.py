@@ -45,6 +45,7 @@ DEFAULT_AGENT_THINKING_ENABLED = True
 DEFAULT_LOCAL_MODEL_ALIAS = "lm-local"
 LOCAL_RUNTIME_CONFIG_CACHE_TTL_SEC = 5.0
 _LOCAL_RUNTIME_CONFIG_CACHE: tuple[float, dict[str, Any] | None] | None = None
+_LOCAL_MODEL_DISCOVERY_CACHE: tuple[float, list[str]] | None = None
 
 
 def _get_saved_local_provider_config() -> dict[str, Any]:
@@ -114,6 +115,8 @@ def get_local_gateway_runtime_config(*, force_refresh: bool = False) -> dict[str
     global _LOCAL_RUNTIME_CONFIG_CACHE
 
     now = time.monotonic()
+    if not force_refresh and _LOCAL_RUNTIME_CONFIG_CACHE is None:
+        return None
     if (
         not force_refresh
         and _LOCAL_RUNTIME_CONFIG_CACHE is not None
@@ -171,15 +174,21 @@ def get_local_route_model_names(
 
 
 def get_current_local_model_names(*, force_refresh: bool = False) -> list[str]:
-    _ = force_refresh
+    global _LOCAL_MODEL_DISCOVERY_CACHE
+
+    if not force_refresh:
+        return list(_LOCAL_MODEL_DISCOVERY_CACHE[1]) if _LOCAL_MODEL_DISCOVERY_CACHE is not None else []
+
     try:
-        return discover_openai_compatible_models(
+        models = discover_openai_compatible_models(
             base_url=get_local_llm_base_url(),
             api_key=get_local_llm_api_key(),
             timeout_sec=2.0,
         )
     except RuntimeError:
-        return []
+        models = []
+    _LOCAL_MODEL_DISCOVERY_CACHE = (time.monotonic(), list(models))
+    return list(models)
 
 
 def _extract_model_name_from_ref(model_ref: str | None) -> str:

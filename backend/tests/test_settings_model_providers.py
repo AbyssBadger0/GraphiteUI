@@ -149,6 +149,15 @@ class SettingsModelProviderTests(unittest.TestCase):
         self.assertEqual(payload["model"]["video_model_ref"], "local/current-video")
         self.assertEqual(payload["agent_runtime_defaults"]["model"], "local/current-text")
 
+    def test_get_settings_uses_cached_catalog_for_fast_page_loads(self) -> None:
+        with patch("app.api.routes_settings._build_settings_payload", return_value={"ok": True}) as build_payload:
+            with TestClient(app) as client:
+                response = client.get("/api/settings")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"ok": True})
+        build_payload.assert_called_once_with(force_refresh_models=False)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,6 +16,17 @@ test("EditorTabBar keeps the close control outside the tab activation button", (
   );
 });
 
+test("EditorTabBar prioritizes dirty state over the close control until hover", () => {
+  assert.match(componentSource, /<span v-if="tab\.dirty" class="editor-tab-bar__dirty-dot" \/>/);
+  assert.match(componentSource, /class="editor-tab-bar__close"/);
+  assert.doesNotMatch(componentSource, /editor-tab-bar__close--visible/);
+  assert.doesNotMatch(componentSource, /\.editor-tab-bar__tab-shell--active \.editor-tab-bar__dirty-dot/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell:hover \.editor-tab-bar__dirty-dot,[\s\S]*\.editor-tab-bar__tab-shell:focus-within \.editor-tab-bar__dirty-dot \{[\s\S]*opacity:\s*0;/);
+  assert.match(componentSource, /\.editor-tab-bar__close \{[\s\S]*opacity:\s*0;[\s\S]*pointer-events:\s*none;/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell:hover \.editor-tab-bar__close,[\s\S]*\.editor-tab-bar__tab-shell:focus-within \.editor-tab-bar__close \{[\s\S]*opacity:\s*1;/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell:hover \.editor-tab-bar__close,[\s\S]*\.editor-tab-bar__tab-shell:focus-within \.editor-tab-bar__close \{[\s\S]*pointer-events:\s*auto;/);
+});
+
 test("EditorTabBar renames graphs inline from the tab strip instead of a separate toolbar control", () => {
   assert.doesNotMatch(componentSource, /editor-tab-bar__graph-name/);
   assert.match(componentSource, /editor-tab-bar__tab-name-input/);

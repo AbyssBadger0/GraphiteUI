@@ -59,7 +59,6 @@
                       <button
                         type="button"
                         class="editor-tab-bar__close"
-                        :class="{ 'editor-tab-bar__close--visible': tab.tabId === activeTabId }"
                         aria-label="关闭标签页"
                         @mousedown.stop.prevent
                         @click.stop="$emit('close-tab', tab.tabId)"
@@ -667,7 +666,7 @@ function resolveTabsMaxScrollLeft(scrollContainer: HTMLElement) {
 }
 
 .editor-tab-bar__tab-shell:hover .editor-tab-bar__dirty-dot,
-.editor-tab-bar__tab-shell--active .editor-tab-bar__dirty-dot {
+.editor-tab-bar__tab-shell:focus-within .editor-tab-bar__dirty-dot {
   opacity: 0;
 }
 
@@ -683,18 +682,21 @@ function resolveTabsMaxScrollLeft(scrollContainer: HTMLElement) {
   color: rgba(124, 45, 18, 0.76);
   cursor: pointer;
   opacity: 0;
+  pointer-events: none;
   transform: scale(0.92);
-  transition: opacity 150ms ease, transform 150ms ease, background-color 150ms ease;
+  transition: opacity 150ms ease, transform 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
 .editor-tab-bar__tab-shell:hover .editor-tab-bar__close,
-.editor-tab-bar__close--visible {
+.editor-tab-bar__tab-shell:focus-within .editor-tab-bar__close {
   opacity: 1;
+  pointer-events: auto;
   transform: scale(1);
 }
 
 .editor-tab-bar__close:hover {
   background: rgba(246, 211, 184, 0.56);
+  color: rgba(124, 45, 18, 0.96);
 }
 
 @media (max-width: 1100px) {

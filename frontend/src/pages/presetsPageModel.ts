@@ -15,7 +15,7 @@ export type PresetOverview = {
 };
 
 export function buildPresetKindOptions(): PresetKindFilter[] {
-  return ["all", "input", "agent", "condition", "output"];
+  return ["all", "agent"];
 }
 
 export function filterPresetsForManagement(

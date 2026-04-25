@@ -72,7 +72,6 @@ test("EditorWorkspaceShell wires node top-action events into state updates, node
   assert.match(componentSource, /async function saveNodePresetForTab\(tabId: string, nodeId: string\)/);
   assert.match(componentSource, /function deleteNodeForTab\(tabId: string, nodeId: string\)/);
   assert.match(componentSource, /persistedPresets\.value = \[savedPreset, \.\.\.persistedPresets\.value\.filter/);
-  assert.doesNotMatch(componentSource, /node\.kind !== "agent"/);
   assert.doesNotMatch(componentSource, /Only agent nodes can be saved as presets\./);
   assert.match(componentSource, /showPresetSaveToast\("success", t\("feedback\.presetSaved"/);
   assert.match(componentSource, /showPresetSaveToast\("error", error instanceof Error \? error\.message : t\("feedback\.presetSaveFailed"\)\)/);

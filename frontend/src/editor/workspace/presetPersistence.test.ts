@@ -77,22 +77,16 @@ test("slugifyPresetBase creates stable preset id segments", () => {
   assert.equal(slugifyPresetBase("  !!!  "), "node");
 });
 
-test("buildPresetPayloadForNode saves every node family as a manageable preset", () => {
-  const expectedKinds = [
-    ["input_1", "preset.local.input.question_input.fixed"],
-    ["agent_1", "preset.local.agent.answer_agent.fixed"],
-    ["condition_1", "preset.local.condition.answer_check.fixed"],
-    ["output_1", "preset.local.output.final_output.fixed"],
-  ] as const;
+test("buildPresetPayloadForNode saves only agent nodes as manageable presets", () => {
+  const payload = buildPresetPayloadForNode(document, "agent_1", { idSuffix: "fixed" });
 
-  for (const [nodeId, presetId] of expectedKinds) {
-    const payload = buildPresetPayloadForNode(document, nodeId, { idSuffix: "fixed" });
-
-    assert.equal(payload?.presetId, presetId);
-    assert.equal(payload?.sourcePresetId, null);
-    assert.equal(payload?.definition.node.kind, document.nodes[nodeId].kind);
-    assert.equal(payload?.definition.label, document.nodes[nodeId].name);
-  }
+  assert.equal(payload?.presetId, "preset.local.agent.answer_agent.fixed");
+  assert.equal(payload?.sourcePresetId, null);
+  assert.equal(payload?.definition.node.kind, "agent");
+  assert.equal(payload?.definition.label, "Answer Agent");
+  assert.equal(buildPresetPayloadForNode(document, "input_1", { idSuffix: "fixed" }), null);
+  assert.equal(buildPresetPayloadForNode(document, "condition_1", { idSuffix: "fixed" }), null);
+  assert.equal(buildPresetPayloadForNode(document, "output_1", { idSuffix: "fixed" }), null);
 });
 
 test("buildPresetPayloadForNode keeps only state fields referenced by the saved node", () => {

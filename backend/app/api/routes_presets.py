@@ -28,7 +28,10 @@ def get_preset_endpoint(preset_id: str) -> NodeSystemPresetDocument:
 
 @router.post("", response_model=NodeSystemPresetSaveResponse)
 def create_preset_endpoint(payload: NodeSystemPresetPayload) -> NodeSystemPresetSaveResponse:
-    document = save_preset(payload)
+    try:
+        document = save_preset(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return NodeSystemPresetSaveResponse(presetId=document.preset_id, updatedAt=document.updated_at)
 
 
@@ -36,7 +39,10 @@ def create_preset_endpoint(payload: NodeSystemPresetPayload) -> NodeSystemPreset
 def update_preset_endpoint(preset_id: str, payload: NodeSystemPresetPayload) -> NodeSystemPresetSaveResponse:
     if preset_id != payload.preset_id:
         raise HTTPException(status_code=400, detail="Preset id in path must match payload presetId.")
-    document = save_preset(payload)
+    try:
+        document = save_preset(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return NodeSystemPresetSaveResponse(presetId=document.preset_id, updatedAt=document.updated_at)
 
 

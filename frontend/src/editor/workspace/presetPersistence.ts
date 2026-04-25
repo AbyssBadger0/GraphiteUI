@@ -22,7 +22,7 @@ export function buildPresetPayloadForNode(
   options: { idSuffix?: string } = {},
 ): PresetPayload | null {
   const node = document.nodes[nodeId];
-  if (!node) {
+  if (!node || node.kind !== "agent") {
     return null;
   }
 

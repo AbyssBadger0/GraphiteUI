@@ -88,6 +88,6 @@ test("buildPresetOverview summarizes operational preset inventory", () => {
   });
 });
 
-test("buildPresetKindOptions keeps the all option ahead of node families", () => {
-  assert.deepEqual(buildPresetKindOptions(), ["all", "input", "agent", "condition", "output"]);
+test("buildPresetKindOptions keeps preset management focused on agent presets", () => {
+  assert.deepEqual(buildPresetKindOptions(), ["all", "agent"]);
 });

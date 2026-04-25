@@ -340,7 +340,7 @@ function handleTabsWheel(event: WheelEvent) {
 
 <style scoped>
 .editor-tab-bar {
-  --editor-tab-strip-max-width: min(980px, calc(100vw - var(--app-sidebar-width) - 220px));
+  --editor-tab-strip-max-width: min(1320px, calc(100vw - var(--app-sidebar-width) - 360px));
   --editor-tab-width: 176px;
   --editor-tab-height: 40px;
   --editor-tab-gap: 12px;
@@ -412,7 +412,8 @@ function handleTabsWheel(event: WheelEvent) {
 .editor-tab-bar__tabs :deep(.el-tabs__nav-wrap.is-scrollable) {
   width: fit-content;
   max-width: 100%;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 8px var(--editor-tab-gap);
   border: 1px solid rgba(208, 177, 138, 0.88);
   border-radius: 20px;
@@ -420,11 +421,23 @@ function handleTabsWheel(event: WheelEvent) {
   box-shadow:
     inset 0 1px 0 rgba(255, 252, 247, 0.58),
     0 1px 0 rgba(255, 255, 255, 0.2);
-  scrollbar-width: none;
+  scrollbar-color: rgba(154, 52, 18, 0.28) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
 }
 
 .editor-tab-bar__tabs :deep(.el-tabs__nav-wrap::-webkit-scrollbar) {
-  display: none;
+  height: 8px;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__nav-wrap::-webkit-scrollbar-track) {
+  background: transparent;
+}
+
+.editor-tab-bar__tabs :deep(.el-tabs__nav-wrap::-webkit-scrollbar-thumb) {
+  border: 2px solid rgba(236, 219, 190, 0.95);
+  border-radius: 999px;
+  background: rgba(154, 52, 18, 0.28);
 }
 
 .editor-tab-bar__tabs :deep(.el-tabs__nav-wrap::after),

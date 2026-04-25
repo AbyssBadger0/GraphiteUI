@@ -78,7 +78,7 @@ test("EditorTabBar keeps the plus launcher on the same visual strip as the tabs 
 });
 
 test("EditorTabBar behaves like a floating card group instead of reserving a full-width header lane", () => {
-  assert.match(componentSource, /--editor-tab-strip-max-width:\s*min\(980px,\s*calc\(100vw - var\(--app-sidebar-width\) - 220px\)\);/);
+  assert.match(componentSource, /--editor-tab-strip-max-width:\s*min\(1320px,\s*calc\(100vw - var\(--app-sidebar-width\) - 360px\)\);/);
   assert.match(componentSource, /\.editor-tab-bar \{[\s\S]*pointer-events:\s*auto;/);
   assert.match(componentSource, /\.editor-tab-bar__inner \{[\s\S]*padding:\s*12px 0 0 12px;/);
   assert.doesNotMatch(componentSource, /editor-action-capsule-desktop-reserve/);
@@ -86,11 +86,18 @@ test("EditorTabBar behaves like a floating card group instead of reserving a ful
 });
 
 test("EditorTabBar normalizes Element Plus tab spacing with shared size variables", () => {
+  const navWrapScrollbarBlock =
+    componentSource.match(/\.editor-tab-bar__tabs\s+:deep\(.el-tabs__nav-wrap::-webkit-scrollbar\) \{[^}]*\}/)?.[0] ?? "";
+
   assert.match(componentSource, /--editor-tab-width:\s*\d+px;/);
   assert.match(componentSource, /--editor-tab-height:\s*\d+px;/);
   assert.match(componentSource, /--editor-tab-gap:\s*\d+px;/);
   assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__nav\) \{[\s\S]*gap:\s*var\(--editor-tab-gap\);/);
   assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__nav-wrap\),[\s\S]*padding:\s*\d+px var\(--editor-tab-gap\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__nav-wrap\),[\s\S]*overflow-x:\s*auto;/);
+  assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__nav-wrap\),[\s\S]*scrollbar-width:\s*thin;/);
+  assert.match(navWrapScrollbarBlock, /height:\s*8px;/);
+  assert.doesNotMatch(navWrapScrollbarBlock, /display:\s*none;/);
   assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item\) \{[\s\S]*margin:\s*0 !important;/);
   assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item\) \{[\s\S]*width:\s*var\(--editor-tab-width\);/);
   assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item\) \{[\s\S]*flex:\s*0 0 var\(--editor-tab-width\);/);

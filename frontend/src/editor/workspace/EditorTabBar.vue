@@ -549,13 +549,13 @@ function resolveTabsMaxScrollLeft(scrollContainer: HTMLElement) {
   align-items: center;
   gap: 10px;
   padding: 0 14px 0 16px;
-  border: 1px solid rgba(208, 177, 138, 0.88);
+  border: 1px solid rgba(213, 184, 146, 0.62);
   border-radius: 14px;
   background: linear-gradient(180deg, rgba(250, 242, 228, 0.98) 0%, rgba(245, 233, 212, 0.95) 100%);
-  color: rgba(96, 63, 36, 0.92);
+  color: rgba(88, 61, 39, 0.82);
   box-shadow:
-    inset 0 1px 0 rgba(255, 251, 244, 0.58),
-    0 1px 0 rgba(92, 58, 28, 0.04);
+    inset 0 1px 0 rgba(255, 251, 244, 0.48),
+    0 1px 1px rgba(92, 58, 28, 0.03);
   transition:
     background-color 160ms ease,
     border-color 160ms ease,
@@ -567,20 +567,24 @@ function resolveTabsMaxScrollLeft(scrollContainer: HTMLElement) {
 
 .editor-tab-bar__tab-shell:hover {
   background: linear-gradient(180deg, rgba(255, 248, 237, 0.99) 0%, rgba(249, 237, 218, 0.97) 100%);
-  border-color: rgba(177, 105, 46, 0.22);
+  border-color: rgba(177, 105, 46, 0.32);
   color: rgba(104, 55, 24, 0.98);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.66),
+    0 4px 10px rgba(92, 58, 28, 0.08);
   transform: none;
 }
 
 .editor-tab-bar__tab-shell--active {
-  z-index: 1;
-  border-color: rgba(154, 52, 18, 0.3);
-  background: linear-gradient(180deg, rgba(255, 250, 242, 1) 0%, rgba(250, 236, 214, 1) 100%);
+  z-index: 2;
+  border-color: rgba(154, 52, 18, 0.56);
+  background: linear-gradient(180deg, rgba(255, 250, 242, 1) 0%, rgba(252, 233, 205, 1) 100%);
   color: rgba(111, 52, 22, 1);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 8px 18px rgba(154, 52, 18, 0.13),
-    0 0 0 1px rgba(255, 242, 224, 0.55);
+    inset 0 3px 0 rgba(154, 52, 18, 0.82),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    0 12px 24px rgba(154, 52, 18, 0.2),
+    0 0 0 1px rgba(154, 52, 18, 0.12);
 }
 
 .editor-tab-bar__tab-shell--active:hover {
@@ -635,7 +639,7 @@ function resolveTabsMaxScrollLeft(scrollContainer: HTMLElement) {
 }
 
 .editor-tab-bar__tab-shell--active .editor-tab-bar__tab-title {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .editor-tab-bar__tab-status {

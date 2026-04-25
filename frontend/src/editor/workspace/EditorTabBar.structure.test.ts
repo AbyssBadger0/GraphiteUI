@@ -142,6 +142,16 @@ test("EditorTabBar keeps the warm project palette instead of the default blue El
   assert.match(componentSource, /\.editor-tab-bar__tabs\s+:deep\(.el-tabs__item\.is-active\) \{/);
 });
 
+test("EditorTabBar makes the active tab visually dominant without adding seam layers", () => {
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*border:\s*1px solid rgba\(213,\s*184,\s*146,\s*0\.62\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell \{[\s\S]*color:\s*rgba\(88,\s*61,\s*39,\s*0\.82\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*z-index:\s*2;/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*border-color:\s*rgba\(154,\s*52,\s*18,\s*0\.56\);/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*inset 0 3px 0 rgba\(154,\s*52,\s*18,\s*0\.82\)/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \{[\s\S]*0 12px 24px rgba\(154,\s*52,\s*18,\s*0\.2\)/);
+  assert.match(componentSource, /\.editor-tab-bar__tab-shell--active \.editor-tab-bar__tab-title \{[\s\S]*font-weight:\s*700;/);
+});
+
 test("EditorTabBar removes the old lower seam layers and keeps the active tab on one plane", () => {
   assert.doesNotMatch(componentSource, /\.editor-tab-bar__tab-shell--active::after \{/);
   assert.doesNotMatch(componentSource, /\.editor-tab-bar__tab-shell--active::before \{/);

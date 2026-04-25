@@ -54,6 +54,22 @@ test("RunsPage presents a restrained dashboard toolbar with status segments and 
   assert.match(componentSource, /\.runs-page__overview-card \{[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.62\);/);
 });
 
+test("RunsPage paginates run history instead of rendering every run at once", () => {
+  assert.match(componentSource, /import \{[\s\S]*ElPagination[\s\S]*\} from "element-plus";/);
+  assert.match(componentSource, /RUNS_PAGE_SIZE/);
+  assert.match(componentSource, /const currentPage = ref\(1\);/);
+  assert.match(componentSource, /const paginatedRuns = computed\(\(\) => paginateRuns\(runs\.value, currentPage\.value\)\);/);
+  assert.match(componentSource, /v-for="run in paginatedRuns"/);
+  assert.doesNotMatch(componentSource, /v-for="run in runs"/);
+  assert.match(componentSource, /<ElPagination[\s\S]*v-model:current-page="currentPage"[\s\S]*:page-size="RUNS_PAGE_SIZE"[\s\S]*:total="runs\.length"/);
+  assert.match(componentSource, /v-if="runs\.length > RUNS_PAGE_SIZE"/);
+  assert.match(componentSource, /class="runs-page__pagination"/);
+  assert.match(componentSource, /function resetRunsPagination\(\)/);
+  assert.match(componentSource, /watch\(graphNameQuery[\s\S]*resetRunsPagination\(\);[\s\S]*scheduleRunsLoad\(\);/);
+  assert.match(componentSource, /watch\(statusFilter[\s\S]*resetRunsPagination\(\);[\s\S]*loadRuns\(\);/);
+  assert.match(componentSource, /\.runs-page__pagination \{[\s\S]*justify-content:\s*center;/);
+});
+
 test("RunsPage gives status segments warm hover and selected states instead of Element Plus defaults", () => {
   assert.match(componentSource, /\.runs-page__segments\s+:deep\(\.el-segmented__group\) \{[\s\S]*gap:\s*4px;/);
   assert.match(componentSource, /\.runs-page__segments\s+:deep\(\.el-segmented__item:not\(\.is-selected\):hover\) \{[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.56\);/);

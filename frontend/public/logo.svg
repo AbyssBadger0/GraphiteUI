@@ -1,54 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="409" height="396" viewBox="0 0 409 396" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-256 -256 512 512" role="img" aria-labelledby="title desc">
   <title id="title">GraphiteUI cat logo</title>
-  <desc id="desc">A black cat head with warm gold eyes inside a warm gold ring.</desc>
+  <desc id="desc">A black cat head with warm gold eyes revealed through a circular gold ring.</desc>
   <defs>
-    <radialGradient id="background" cx="50%" cy="24%" r="82%">
+    <radialGradient id="paper" cx="0" cy="-112" r="352" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="72%" stop-color="#fefefe"/>
-      <stop offset="100%" stop-color="#fbfaf5"/>
+      <stop offset="72%" stop-color="#fffefd"/>
+      <stop offset="100%" stop-color="#fbf8f1"/>
     </radialGradient>
-    <linearGradient id="ringGold" x1="88" y1="54" x2="312" y2="378" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#d39c45"/>
-      <stop offset="35%" stop-color="#e2b55f"/>
-      <stop offset="66%" stop-color="#c99237"/>
-      <stop offset="100%" stop-color="#e1b65f"/>
+    <linearGradient id="ringGold" x1="-168" y1="-224" x2="168" y2="224" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#d49c44"/>
+      <stop offset="36%" stop-color="#e2b65f"/>
+      <stop offset="68%" stop-color="#c89136"/>
+      <stop offset="100%" stop-color="#e1b75f"/>
     </linearGradient>
-    <linearGradient id="eyeGold" x1="144" y1="232" x2="268" y2="298" gradientUnits="userSpaceOnUse">
+    <linearGradient id="eyeGold" x1="-104" y1="32" x2="104" y2="136" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#efbd61"/>
-      <stop offset="50%" stop-color="#d7a64f"/>
+      <stop offset="52%" stop-color="#d8a650"/>
       <stop offset="100%" stop-color="#cf963d"/>
     </linearGradient>
-    <radialGradient id="catBlack" cx="48%" cy="20%" r="92%">
+    <radialGradient id="catBlack" cx="-44" cy="-132" r="360" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#282928"/>
-      <stop offset="42%" stop-color="#222222"/>
+      <stop offset="44%" stop-color="#222222"/>
       <stop offset="100%" stop-color="#171818"/>
     </radialGradient>
-    <clipPath id="roundCutout">
-      <ellipse cx="204.5" cy="211.5" rx="160.5" ry="155.5"/>
+    <clipPath id="innerWindow">
+      <circle cx="0" cy="0" r="240"/>
     </clipPath>
-    <filter id="catSoftness" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.08"/>
+    <filter id="catSoftness" x="-256" y="-256" width="512" height="512" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000000" flood-opacity="0.08"/>
     </filter>
   </defs>
 
-  <rect width="409" height="396" fill="url(#background)"/>
-  <g clip-path="url(#roundCutout)">
+  <circle cx="0" cy="0" r="240" fill="url(#paper)"/>
+  <g clip-path="url(#innerWindow)">
     <path
       fill="url(#catBlack)"
       filter="url(#catSoftness)"
-      d="M107 119
-         C126 124 149 143 168 172
-         C188 169 219 167 240 172
-         C258 143 280 124 301 119
-         C313 144 320 178 317 209
-         C335 225 346 252 349 286
-         C356 346 302 383 205 383
-         C108 383 54 347 60 284
-         C63 254 75 227 92 209
-         C90 174 94 142 107 119Z"
+      d="M-146-143
+         C-116-135-82-106-55-61
+         C-25-66 25-66 55-61
+         C82-106 116-135 146-143
+         C164-106 174-52 168-4
+         C196 22 214 66 218 116
+         C226 208 145 264 0 264
+         C-145 264-226 208-218 116
+         C-214 66-196 22-168-4
+         C-174-52-164-106-146-143Z"
     />
-    <ellipse cx="153" cy="264.5" rx="16" ry="33" fill="url(#eyeGold)"/>
-    <ellipse cx="257" cy="264.5" rx="16" ry="33" fill="url(#eyeGold)"/>
+    <ellipse cx="-80" cy="82" rx="24" ry="52" fill="url(#eyeGold)"/>
+    <ellipse cx="80" cy="82" rx="24" ry="52" fill="url(#eyeGold)"/>
   </g>
-  <ellipse cx="204.5" cy="211.5" rx="166.5" ry="161.5" fill="none" stroke="url(#ringGold)" stroke-width="12"/>
+  <circle cx="0" cy="0" r="248" fill="none" stroke="url(#ringGold)" stroke-width="16"/>
 </svg>

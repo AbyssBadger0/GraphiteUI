@@ -58,7 +58,18 @@ test("ModelProvidersPage refreshes discovered models instead of manually creatin
 
 test("ModelProvidersPage lets provider management occupy the full card grid", () => {
   assert.match(pageSource, /\.model-providers-page__panel--wide \{[\s\S]*grid-column: 1 \/ -1;/);
-  assert.match(pageSource, /\.model-providers-page__provider-cards \{[\s\S]*repeat\(auto-fill, minmax\(260px, 1fr\)\)/);
+  assert.match(pageSource, /\.model-providers-page__provider-cards \{[\s\S]*repeat\(auto-fill, minmax\(420px, 1fr\)\)/);
+  assert.match(pageSource, /\.model-providers-page__provider-card \{[\s\S]*padding:\s*18px;/);
+});
+
+test("ModelProvidersPage keeps provider card controls on one row with capsule switches", () => {
+  assert.match(pageSource, /import \{ ElIcon, ElMessage, ElOption, ElSelect, ElSwitch \} from "element-plus";/);
+  assert.match(pageSource, /class="model-providers-page__switch"/);
+  assert.match(pageSource, /:width="54"/);
+  assert.match(pageSource, /inline-prompt/);
+  assert.match(pageSource, /\.model-providers-page__provider-card \.model-providers-page__provider-actions \{[\s\S]*flex-wrap:\s*nowrap;/);
+  assert.match(pageSource, /\.model-providers-page__provider-card \.model-providers-page__button \{[\s\S]*white-space:\s*nowrap;/);
+  assert.doesNotMatch(pageSource, /class="model-providers-page__toggle"/);
 });
 
 test("ModelProvidersPage opens an add-provider panel and immediately pre-fills templates", () => {
@@ -94,7 +105,7 @@ test("ModelProvidersPage shows ChatGPT device-code entry as part of the normal l
 });
 
 test("ModelProvidersPage uses toast feedback for ChatGPT copy attempts", () => {
-  assert.match(pageSource, /import \{ ElIcon, ElMessage, ElOption, ElSelect \} from "element-plus";/);
+  assert.match(pageSource, /import \{ ElIcon, ElMessage, ElOption, ElSelect, ElSwitch \} from "element-plus";/);
   assert.match(pageSource, /import \{ CircleCheck, CopyDocument \} from "@element-plus\/icons-vue";/);
   assert.match(pageSource, /function showCodexToast\(type: "success" \| "error", message: string\)/);
   assert.match(pageSource, /ElMessage\(\{[\s\S]*customClass:\s*"model-providers-page__copy-toast"[\s\S]*message,[\s\S]*\}\);/);

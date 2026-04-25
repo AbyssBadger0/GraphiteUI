@@ -100,10 +100,16 @@
                       <span v-if="provider.api_key_configured">{{ t("settings.apiKeyStored") }}</span>
                     </div>
                   </div>
-                  <label class="model-providers-page__toggle">
-                    <input v-model="provider.enabled" type="checkbox" @change="handleProviderEnabledChange(provider)" />
-                    <span>{{ provider.enabled ? t("common.on") : t("common.off") }}</span>
-                  </label>
+                  <ElSwitch
+                    v-model="provider.enabled"
+                    class="model-providers-page__switch"
+                    :width="54"
+                    inline-prompt
+                    :active-text="t('common.on')"
+                    :inactive-text="t('common.off')"
+                    :aria-label="provider.enabled ? t('settings.enabledProvider') : t('settings.disabledProvider')"
+                    @change="handleProviderEnabledChange(provider)"
+                  />
                 </div>
                 <div class="model-providers-page__provider-card-meta">
                   <span>{{ provider.selected_models.length }} {{ t("settings.availableModels") }}</span>
@@ -280,10 +286,16 @@
                     <span v-if="providerEditorDraft.api_key_configured">{{ t("settings.apiKeyStored") }}</span>
                   </div>
                 </div>
-                <label class="model-providers-page__toggle">
-                  <input v-model="providerEditorDraft.enabled" type="checkbox" @change="handleProviderDraftChange" />
-                  <span>{{ providerEditorDraft.enabled ? t("common.on") : t("common.off") }}</span>
-                </label>
+                <ElSwitch
+                  v-model="providerEditorDraft.enabled"
+                  class="model-providers-page__switch"
+                  :width="54"
+                  inline-prompt
+                  :active-text="t('common.on')"
+                  :inactive-text="t('common.off')"
+                  :aria-label="providerEditorDraft.enabled ? t('settings.enabledProvider') : t('settings.disabledProvider')"
+                  @change="handleProviderDraftChange"
+                />
               </div>
                 <div class="model-providers-page__provider-fields">
                   <label>
@@ -420,7 +432,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { ElIcon, ElMessage, ElOption, ElSelect } from "element-plus";
+import { ElIcon, ElMessage, ElOption, ElSelect, ElSwitch } from "element-plus";
 import { CircleCheck, CopyDocument } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 
@@ -1161,6 +1173,15 @@ onBeforeUnmount(stopCodexAutoPoll);
   gap: 10px;
 }
 
+.model-providers-page__provider-card .model-providers-page__provider-actions {
+  flex-wrap: nowrap;
+}
+
+.model-providers-page__provider-card .model-providers-page__button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .model-providers-page__provider-actions--compact {
   margin-top: 10px;
 }
@@ -1177,6 +1198,7 @@ onBeforeUnmount(stopCodexAutoPoll);
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 0 0 auto;
   min-height: 42px;
   border: 1px solid rgba(22, 101, 52, 0.16);
   border-radius: 14px;
@@ -1329,7 +1351,7 @@ onBeforeUnmount(stopCodexAutoPoll);
 
 .model-providers-page__provider-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
   gap: 12px;
   margin-top: 16px;
 }
@@ -1345,7 +1367,7 @@ onBeforeUnmount(stopCodexAutoPoll);
 .model-providers-page__provider-card {
   display: grid;
   gap: 12px;
-  padding: 14px;
+  padding: 18px;
 }
 
 .model-providers-page__provider-card--codex {
@@ -1399,20 +1421,24 @@ onBeforeUnmount(stopCodexAutoPoll);
   font-weight: 650;
 }
 
-.model-providers-page__toggle {
-  display: inline-flex !important;
-  grid-template-columns: none !important;
-  align-items: center;
-  min-height: 42px;
-  margin-top: 0 !important;
-  white-space: nowrap;
+.model-providers-page__switch {
+  flex: 0 0 auto;
+  margin-top: 0;
+  --el-switch-on-color: rgb(22, 101, 52);
+  --el-switch-off-color: rgba(120, 113, 108, 0.42);
 }
 
-.model-providers-page__toggle input {
-  min-height: auto;
-  width: 18px;
-  height: 18px;
-  padding: 0;
+.model-providers-page__switch :deep(.el-switch__core) {
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  box-shadow:
+    inset 0 1px 2px rgba(60, 41, 20, 0.16),
+    0 2px 8px rgba(60, 41, 20, 0.08);
+}
+
+.model-providers-page__switch :deep(.el-switch__inner) {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 .model-providers-page__login-panel {
@@ -1523,6 +1549,14 @@ onBeforeUnmount(stopCodexAutoPoll);
   .model-providers-page__provider-cards,
   .model-providers-page__provider-fields {
     grid-template-columns: 1fr;
+  }
+
+  .model-providers-page__provider-card .model-providers-page__provider-actions {
+    flex-wrap: wrap;
+  }
+
+  .model-providers-page__provider-card .model-providers-page__button {
+    flex: 1 1 auto;
   }
 }
 

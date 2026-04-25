@@ -72,6 +72,9 @@
               <button type="button" class="model-providers-page__button" @click="() => handleOpenCodexVerification()">
                 {{ t("settings.codexOpenVerification") }}
               </button>
+              <button type="button" class="model-providers-page__button" @click="handleCopyCodexVerificationUrl">
+                {{ t("settings.codexCopyVerificationUrl") }}
+              </button>
               <button type="button" class="model-providers-page__button" @click="handleCopyCodexCode">
                 {{ t("settings.codexCopyCode") }}
               </button>
@@ -678,11 +681,7 @@ function startCodexAutoPoll() {
 }
 
 function openCodexVerificationWindow() {
-  const authWindow = window.open("about:blank", "_blank");
-  if (authWindow) {
-    authWindow.opener = null;
-  }
-  return authWindow;
+  return window.open("about:blank", "_blank");
 }
 
 async function handleStartCodexLogin() {
@@ -695,12 +694,12 @@ async function handleStartCodexLogin() {
     codexAuthBusy.value = true;
     setProviderMessage("openai-codex", null);
     codexLoginSession.value = await startOpenAICodexAuth();
-    handleOpenCodexVerification(authWindow);
-    if (!authWindow) {
-      setProviderMessage("openai-codex", t("settings.codexPopupBlocked"));
-    }
+    const verificationOpened = handleOpenCodexVerification(authWindow);
     startCodexAutoPoll();
-    setProviderMessage("openai-codex", t("settings.codexLoginStarted"));
+    setProviderMessage(
+      "openai-codex",
+      t(verificationOpened ? "settings.codexLoginStarted" : "settings.codexPopupBlocked"),
+    );
   } catch (authError) {
     if (authWindow && !authWindow.closed) {
       authWindow.close();
@@ -753,13 +752,31 @@ function handleOpenCodexVerification(authWindow: Window | null = null) {
     if (authWindow && !authWindow.closed) {
       authWindow.close();
     }
-    return;
+    return false;
   }
   if (authWindow && !authWindow.closed) {
-    authWindow.location.href = codexLoginSession.value.verification_url;
+    try {
+      authWindow.location.href = codexLoginSession.value.verification_url;
+      return true;
+    } catch {
+      authWindow.close();
+    }
+  }
+  const openedWindow = window.open(codexLoginSession.value.verification_url, "_blank", "noopener,noreferrer");
+  return Boolean(openedWindow);
+}
+
+async function handleCopyCodexVerificationUrl() {
+  if (!codexLoginSession.value?.verification_url || !navigator.clipboard) {
+    setProviderMessage("openai-codex", t("settings.codexVerificationUrlCopyFailed"));
     return;
   }
-  window.open(codexLoginSession.value.verification_url, "_blank", "noopener,noreferrer");
+  try {
+    await navigator.clipboard.writeText(codexLoginSession.value.verification_url);
+    setProviderMessage("openai-codex", t("settings.codexVerificationUrlCopied"));
+  } catch {
+    setProviderMessage("openai-codex", t("settings.codexVerificationUrlCopyFailed"));
+  }
 }
 
 async function handleCopyCodexCode() {

@@ -39,3 +39,13 @@ test("ModelProvidersPage handles clipboard-denied fallback copy attempts", () =>
   assert.match(pageSource, /settings\.codexCodeCopyFailed/);
   assert.match(pageSource, /try \{[\s\S]*navigator\.clipboard\.writeText\(codexLoginSession\.value\.user_code\);[\s\S]*\} catch/);
 });
+
+test("ModelProvidersPage keeps ChatGPT authorization usable in embedded browsers", () => {
+  assert.doesNotMatch(pageSource, /authWindow\.opener\s*=/);
+  assert.match(pageSource, /const verificationOpened = handleOpenCodexVerification\(authWindow\);/);
+  assert.match(pageSource, /verificationOpened \? "settings\.codexLoginStarted" : "settings\.codexPopupBlocked"/);
+  assert.match(pageSource, /try \{[\s\S]*authWindow\.location\.href = codexLoginSession\.value\.verification_url;[\s\S]*\} catch/);
+  assert.match(pageSource, /const openedWindow = window\.open\(codexLoginSession\.value\.verification_url, "_blank", "noopener,noreferrer"\);/);
+  assert.match(pageSource, /settings\.codexCopyVerificationUrl/);
+  assert.match(pageSource, /navigator\.clipboard\.writeText\(codexLoginSession\.value\.verification_url\)/);
+});

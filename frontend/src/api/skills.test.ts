@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { fetchSkillDefinitions } from "./skills.ts";
+import { fetchSkillCatalog, fetchSkillDefinitions } from "./skills.ts";
 
 const originalFetch = globalThis.fetch;
 
@@ -93,6 +93,27 @@ test("fetchSkillDefinitions requests the skill definitions endpoint", async () =
       compatibility: [],
     },
   ]);
+
+  globalThis.fetch = originalFetch;
+});
+
+test("fetchSkillCatalog requests the full management catalog including disabled skills", async () => {
+  let requestedUrl = "";
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    requestedUrl = String(input);
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }) as typeof fetch;
+
+  const skillDefinitions = await fetchSkillCatalog();
+
+  assert.equal(requestedUrl, "/api/skills/catalog?include_disabled=true");
+  assert.deepEqual(skillDefinitions, []);
 
   globalThis.fetch = originalFetch;
 });

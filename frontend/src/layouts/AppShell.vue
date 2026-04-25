@@ -57,6 +57,24 @@
           <span class="app-shell__link-label">{{ t("nav.runs") }}</span>
         </RouterLink>
         <RouterLink
+          to="/presets"
+          class="app-shell__link"
+          :class="{ 'app-shell__link--active': activeNavigationSection === 'presets' }"
+          :title="t('nav.presets')"
+        >
+          <ElIcon class="app-shell__link-icon"><CollectionTag /></ElIcon>
+          <span class="app-shell__link-label">{{ t("nav.presets") }}</span>
+        </RouterLink>
+        <RouterLink
+          to="/skills"
+          class="app-shell__link"
+          :class="{ 'app-shell__link--active': activeNavigationSection === 'skills' }"
+          :title="t('nav.skills')"
+        >
+          <ElIcon class="app-shell__link-icon"><Opportunity /></ElIcon>
+          <span class="app-shell__link-label">{{ t("nav.skills") }}</span>
+        </RouterLink>
+        <RouterLink
           to="/settings"
           class="app-shell__link"
           :class="{ 'app-shell__link--active': activeNavigationSection === 'settings' }"
@@ -78,7 +96,7 @@
 
 <script setup lang="ts">
 import { ElIcon } from "element-plus";
-import { House, EditPen, Clock, Setting } from "@element-plus/icons-vue";
+import { House, EditPen, Clock, CollectionTag, Opportunity, Setting } from "@element-plus/icons-vue";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";

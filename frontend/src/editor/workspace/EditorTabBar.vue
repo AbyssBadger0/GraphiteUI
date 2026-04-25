@@ -2,7 +2,21 @@
   <header class="editor-tab-bar">
     <div class="editor-tab-bar__inner">
       <div class="editor-tab-bar__strip">
-        <div class="editor-tab-bar__tabs-shell" @wheel.prevent="handleTabsWheel" @dragleave="handleTabsShellDragLeave">
+        <div
+          ref="tabsShell"
+          class="editor-tab-bar__tabs-shell"
+          @wheel.prevent="handleTabsWheel"
+          @dragleave="handleTabsShellDragLeave"
+        >
+          <button
+            type="button"
+            class="editor-tab-bar__scroll-button editor-tab-bar__scroll-button--left"
+            aria-label="向左滚动标签页"
+            @click="scrollTabsBy(-1)"
+          >
+            <ElIcon aria-hidden="true"><ArrowLeft /></ElIcon>
+          </button>
+
           <ElTabs
             class="editor-tab-bar__tabs"
             type="card"
@@ -65,6 +79,15 @@
               </template>
             </ElTabPane>
           </ElTabs>
+
+          <button
+            type="button"
+            class="editor-tab-bar__scroll-button editor-tab-bar__scroll-button--right"
+            aria-label="向右滚动标签页"
+            @click="scrollTabsBy(1)"
+          >
+            <ElIcon aria-hidden="true"><ArrowRight /></ElIcon>
+          </button>
         </div>
 
         <ElPopover trigger="click" placement="bottom-start" :width="352" popper-class="editor-tab-bar__launcher-popper">
@@ -90,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { Plus } from "@element-plus/icons-vue";
+import { ArrowLeft, ArrowRight, Plus } from "@element-plus/icons-vue";
 import { ElIcon, ElPopover, ElTabPane, ElTabs } from "element-plus";
 import { computed, nextTick, ref, watch, type ComponentPublicInstance } from "vue";
 
@@ -125,6 +148,7 @@ const emit = defineEmits<{
 const editingTabId = ref<string | null>(null);
 const draftGraphName = ref("");
 const tabNameInput = ref<HTMLInputElement | null>(null);
+const tabsShell = ref<HTMLElement | null>(null);
 const draggedTabId = ref<string | null>(null);
 const dropTargetTabId = ref<string | null>(null);
 const dropPlacement = ref<"before" | "after" | null>(null);
@@ -329,27 +353,44 @@ function handleTabsWheel(event: WheelEvent) {
     return;
   }
 
-  const scrollContainer = currentTarget.querySelector(".el-tabs__nav-wrap");
-  if (!(scrollContainer instanceof HTMLElement)) {
+  const scrollContainer = resolveTabsScrollContainer(currentTarget);
+  if (!scrollContainer) {
     return;
   }
 
   scrollContainer.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
 }
+
+function scrollTabsBy(direction: -1 | 1) {
+  const scrollContainer = resolveTabsScrollContainer(tabsShell.value);
+  if (!scrollContainer) {
+    return;
+  }
+
+  scrollContainer.scrollBy({
+    left: direction * Math.max(260, Math.round(scrollContainer.clientWidth * 0.72)),
+    behavior: "smooth",
+  });
+}
+
+function resolveTabsScrollContainer(root: HTMLElement | null) {
+  const scrollContainer = root?.querySelector(".el-tabs__nav-wrap") ?? null;
+  return scrollContainer instanceof HTMLElement ? scrollContainer : null;
+}
 </script>
 
 <style scoped>
 .editor-tab-bar {
-  --editor-tab-strip-max-width: min(1320px, calc(100vw - var(--app-sidebar-width) - 360px));
+  --editor-tab-strip-max-width: 100%;
   --editor-tab-width: 176px;
   --editor-tab-height: 40px;
   --editor-tab-gap: 12px;
   --editor-tab-bar-paper: rgba(244, 237, 225, 0.98);
   position: relative;
-  display: inline-flex;
+  display: flex;
   box-sizing: border-box;
-  width: auto;
-  max-width: min(100%, var(--editor-tab-strip-max-width));
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   background: transparent;
   box-shadow: none;
@@ -358,26 +399,63 @@ function handleTabsWheel(event: WheelEvent) {
 
 .editor-tab-bar__inner {
   box-sizing: border-box;
-  display: inline-flex;
-  width: auto;
+  display: flex;
+  width: 100%;
   max-width: 100%;
   min-width: 0;
   padding: 12px 0 0 12px;
 }
 
 .editor-tab-bar__strip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
 }
 
 .editor-tab-bar__tabs-shell {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
-  width: fit-content;
-  max-width: min(100%, var(--editor-tab-strip-max-width));
-  flex: 0 1 auto;
+  width: auto;
+  max-width: var(--editor-tab-strip-max-width);
+  flex: 1 1 auto;
+  border: 1px solid rgba(208, 177, 138, 0.88);
+  border-radius: 20px;
+  background: rgba(236, 219, 190, 0.95);
+  padding: 6px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 252, 247, 0.58),
+    0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.editor-tab-bar__scroll-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(193, 151, 106, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 250, 242, 0.66);
+  color: rgba(111, 52, 22, 0.78);
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.editor-tab-bar__scroll-button:hover {
+  border-color: rgba(154, 52, 18, 0.24);
+  background: rgba(255, 250, 242, 0.92);
+  color: rgba(111, 52, 22, 0.96);
+}
+
+.editor-tab-bar__scroll-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(210, 162, 117, 0.34);
 }
 
 .editor-tab-bar__add-tab {
@@ -392,8 +470,7 @@ function handleTabsWheel(event: WheelEvent) {
 }
 
 .editor-tab-bar__tabs {
-  width: fit-content;
-  flex: 0 1 auto;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
 }
@@ -410,17 +487,11 @@ function handleTabsWheel(event: WheelEvent) {
 
 .editor-tab-bar__tabs :deep(.el-tabs__nav-wrap),
 .editor-tab-bar__tabs :deep(.el-tabs__nav-wrap.is-scrollable) {
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   padding: 8px var(--editor-tab-gap);
-  border: 1px solid rgba(208, 177, 138, 0.88);
-  border-radius: 20px;
-  background: rgba(236, 219, 190, 0.95);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 252, 247, 0.58),
-    0 1px 0 rgba(255, 255, 255, 0.2);
   scrollbar-color: rgba(154, 52, 18, 0.28) transparent;
   scrollbar-gutter: stable;
   scrollbar-width: thin;

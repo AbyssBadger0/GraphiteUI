@@ -1,44 +1,72 @@
 # GraphiteUI
 
-GraphiteUI 是一个面向 LangGraph 风格 Agent 工作流的可视化编排与运行工作台。它把 graph、state、节点、数据流、顺序流、条件分支和运行反馈统一到一套可保存、可校验、可运行的 `node_system` 协议里。
+GraphiteUI 是一个面向 Agent 工作流的可视化编排与运行工作台。它把 graph、state、节点、数据流、顺序流、条件分支、运行记录和人工确认统一到一套可保存、可校验、可运行的 `node_system` 协议里。
 
-当前项目已经完成 Vue 前端迁移，正式主链是：
+项目当前由 Vue 前端、FastAPI 后端和 LangGraph 运行时组成，适合用来搭建、调试和观察基于状态流转的 Agent graph。
 
-- 前端：Vue 3 + Vite + TypeScript + Pinia + Element Plus
-- 后端：FastAPI + Pydantic + LangGraph
-- 协议：`node_system` 是唯一正式图协议，`state_schema` 是唯一正式数据源
-- 存储：graph / preset / run / settings / skill state 使用 JSON 文件，knowledge base 使用 SQLite + FTS
+## 当前仓库状态
 
-## 当前能力
+- 前端：Vue 3、Vite、TypeScript、Pinia、Vue Router、Element Plus、vue-i18n。
+- 后端：FastAPI、Pydantic、LangGraph、SQLite FTS、JSON 文件存储。
+- 图协议：`node_system` 描述节点、状态、边、运行配置和画布布局；`state_schema` 是节点读写状态的统一来源。
+- 开发启动：仓库根目录使用 `npm run dev`，实际执行 `node scripts/start.mjs`，同时启动前端和后端并释放占用端口。
+- 本地数据：graph、preset、run、settings、skill state 和 checkpoint 写入 `backend/data/`；knowledge base 使用 SQLite + FTS。
+- 主要页面：Home、Editor、Runs、Run Detail、Settings。
 
-### 可视化编排
+## 核心能力
 
-- 四类核心节点：`input`、`agent`、`condition`、`output`
-- 数据流：节点通过 state 引用读写同一份 `state_schema`
-- 顺序流：普通执行边和条件节点分支边都能在画布上编辑
-- 条件节点：作为 LangGraph 条件边的具象化入口，支持 true / false / exhausted 分支和 1-10 次循环上限
-- 节点创建：支持空画布双击创建、从输出/流程手柄拖出创建、文件拖入生成 input 节点、保存并复用 agent preset
-- 画布交互：节点拖拽、线条吸附、边删除确认、状态端口编辑、右下角缩略图、线条显示模式工具条
-- UI 策略：优先使用 Element Plus 和 `@element-plus/icons-vue`，自定义 UI 主要集中在画布、节点和连线这些编辑器专属区域
+### 可视化编辑器
+
+- 支持 `input`、`agent`、`condition`、`output` 四类核心节点。
+- 通过 `state_schema` 连接节点输入和输出，区分数据流、顺序流和条件分支。
+- `condition` 节点支持 true / false / exhausted 分支和循环上限配置。
+- 支持画布拖拽、节点选择、连线、边删除确认、节点端口编辑、右下角缩略图、线条显示模式和运行态高亮。
+- 支持从空画布、节点输出端口、流程端口和文件拖入创建节点。
+- 支持多图页签、保存状态提示、未保存关闭确认、模板创建、已有图打开和运行记录恢复编辑。
+- 支持编辑器内 State 面板和 Human Review 面板；图进入人工确认暂停时，画布保持可查看但不可编辑。
+- 支持多语言界面：简体中文、繁體中文、English、日本語、한국어、Español、Français、Deutsch。
 
 ### 运行与观察
 
-- graph 保存、校验、运行
-- run 列表和 run detail
-- 节点级执行状态、active path 高亮和 output preview
-- LangGraph runtime 只把 agent 编译为真实节点；input / output / condition 作为视觉边界和条件边代理
-- state snapshot、state events、skill outputs、knowledge summary
-- cycle summary / cycle iterations
-- 后端具备 LangGraph Python 源码导出接口
-- 后端具备 interrupt / checkpoint / resume 主链，前端人类在环闭环仍在路线图中
+- 支持保存、校验、运行 graph。
+- LangGraph runtime 会把可执行 graph 编译为后端运行计划，并记录状态快照、节点状态、输出预览、artifacts、warnings 和 errors。
+- 支持 checkpoint、pause snapshot、completed snapshot，以及从可恢复快照继续运行。
+- 支持断点暂停后的 Human Review 输入，继续运行前可以填写当前需要人工补充的 state。
+- Runs 首页支持状态筛选、搜索、分页、断点结果和最终结果切换。
+- Run Detail 页面展示运行概览、节点过程、循环信息、state、artifacts、输出预览和恢复编辑入口。
+- 后端提供 LangGraph Python 源码导出和 Python 源码导入接口。
+
+### 模型 Provider
+
+GraphiteUI 把默认模型入口视为 OpenAI-compatible 自定义 Provider。你可以接本地模型网关、私有模型网关或云端兼容网关。
+
+主要环境变量：
+
+```bash
+LOCAL_BASE_URL=http://127.0.0.1:8888/v1
+LOCAL_API_KEY=sk-local
+LOCAL_TEXT_MODEL=your-model-name
+```
+
+也支持这些别名：
+
+- `OPENAI_BASE_URL`
+- `OPENAI_API_KEY`
+- `TEXT_MODEL`
+- `LOCAL_LLM_BASE_URL`
+- `LOCAL_LLM_API_KEY`
+- `LOCAL_LLM_MODEL`
+
+Settings 页面会读取后端模型目录。当前代码里 `local` Provider 是可用入口，OpenAI、Anthropic、Google Gemini 和 OpenRouter 作为 Provider 配置入口保留在模型目录中。
 
 ### Skills 与知识库
 
-- agent 节点显式挂载 skills
-- knowledge base 可以通过 input 节点进入图
-- 当 agent 读取 knowledge base state 时，编辑器会同步 `search_knowledge_base` skill
-- 项目内置 GraphiteUI / Python / LangGraph 三类正式知识库导入路径
-- 技能定义会从 `skill/`、`backend/app/skills` 和兼容的外部 skill 目录中解析
+- Agent 节点可以显式挂载 skills。
+- Knowledge base 可以通过 input 节点进入 graph。
+- Agent 读取 knowledge base 类型 state 时，会使用 `search_knowledge_base` 能力检索本地知识库。
+- 项目自带 `knowledge/GraphiteUI-official/` 作为 GraphiteUI 官方知识库源文档。
+- 后端支持 knowledge base 导入、切分、FTS 检索和 catalog 查询。
+- Skill 定义来自 `skill/`、`backend/app/skills` 和已配置的外部 skill 目录。
 
 ## 快速开始
 
@@ -46,11 +74,9 @@ GraphiteUI 是一个面向 LangGraph 风格 Agent 工作流的可视化编排与
 
 - Node.js 20.9+
 - Python 3.11+
-- 可选：OpenAI-compatible API、本地网关或私有网关
+- 一个可选的 OpenAI-compatible 模型网关
 
 ### 安装依赖
-
-首次运行前先安装前后端依赖：
 
 ```bash
 git clone https://github.com/AbyssBadger0/GraphiteUI.git
@@ -59,172 +85,124 @@ npm --prefix frontend install
 python -m pip install -r backend/requirements.txt
 ```
 
-如果系统里的 Python 命令是 `python3`，可以把最后一行换成：
+如果系统里的 Python 命令是 `python3`：
 
 ```bash
 python3 -m pip install -r backend/requirements.txt
 ```
 
-### 启动
+### 配置模型入口
 
-推荐使用 Node 跨平台启动器，Windows / macOS / Linux / WSL 都可以走同一套流程：
+如果需要运行 Agent 节点，先在启动 GraphiteUI 前配置模型入口：
+
+```bash
+export LOCAL_BASE_URL=http://127.0.0.1:8888/v1
+export LOCAL_API_KEY=sk-local
+export LOCAL_TEXT_MODEL=your-model-name
+```
+
+PowerShell 示例：
+
+```powershell
+$env:LOCAL_BASE_URL = "http://127.0.0.1:8888/v1"
+$env:LOCAL_API_KEY = "sk-local"
+$env:LOCAL_TEXT_MODEL = "your-model-name"
+```
+
+如果只查看 UI、编辑 graph 或浏览已有运行记录，可以先不配置模型入口。
+
+### 启动开发环境
+
+推荐从仓库根目录启动：
 
 ```bash
 npm run dev
 ```
 
-这条命令等价于：
+这条命令会执行：
 
 ```bash
 node scripts/start.mjs
 ```
 
-Windows PowerShell 如果拦截 `npm.ps1`，使用 `npm.cmd` 即可绕过执行策略限制：
+默认地址：
+
+- 前端：http://127.0.0.1:3477
+- 后端：http://127.0.0.1:8765
+- 健康检查：http://127.0.0.1:8765/health
+
+启动器会释放前后端端口占用，并把日志写入：
+
+- `.dev_frontend.log`
+- `.dev_backend.log`
+
+Windows PowerShell 如果拦截 `npm.ps1`，使用：
 
 ```powershell
 npm.cmd run dev
 ```
 
-如果 Python 安装在 Conda 环境中，或没有加入 PATH，可以显式指定解释器后再启动：
+如果 Python 没有加入 PATH，可以显式指定解释器：
 
 ```powershell
 $env:PYTHON = "C:\ProgramData\miniconda3\python.exe"
 npm.cmd run dev
 ```
 
-类 Unix 环境也可以继续使用 Bash 启动脚本：
+类 Unix 环境也可以使用 Bash wrapper：
 
 ```bash
 ./scripts/start.sh
 ```
 
-默认端口：
+## 第一次运行一个 graph
 
-- 前端：http://127.0.0.1:3477
-- 后端：http://127.0.0.1:8765
-- 健康检查：http://127.0.0.1:8765/health
+1. 打开 http://127.0.0.1:3477。
+2. 进入 Editor，新建 graph 或选择内置模板。
+3. 创建 `input -> agent -> output` 的最小流程。
+4. 在 `input` 节点填写输入，在 `agent` 节点选择模型并填写提示词。
+5. 保存并校验 graph。
+6. 点击 Run。
+7. 在 Editor 查看节点运行态和输出预览，或进入 Runs / Run Detail 查看完整记录。
 
-Node 启动器和 `scripts/start.sh` 都会释放已占用的前后端端口，并把日志写入：
+如果 graph 触发断点暂停，编辑器会进入锁定状态，并显示 Human Review 面板。填写需要人工补充的 state 后，可以继续运行到下一个断点或最终完成。
 
-在 macOS / Linux 上，Node 启动器会优先使用 `lsof` 查找端口占用，其次尝试 `fuser`；Windows 下会使用 `netstat` / `taskkill`。
-
-- `.dev_frontend.log`
-- `.dev_backend.log`
-
-### 手动命令
+## 常用命令
 
 ```bash
+# 启动前后端开发环境
+npm run dev
+
+# 仅安装前端依赖
 make frontend-install
+
+# 仅启动前端
 make frontend-dev
+
+# 构建前端
 make frontend-build
 
+# 仅安装后端依赖
 make backend-install
+
+# 仅启动后端
 make backend-dev
+
+# 检查后端健康状态
 make backend-health
-```
 
-### OpenAI-compatible 自定义 Provider
-
-GraphiteUI 默认把本地或私有模型入口视为 OpenAI 协议兼容的自定义 provider。先启动你自己的网关，再用环境变量指向它：
-
-```bash
-LOCAL_BASE_URL=http://127.0.0.1:8000/v1
-LOCAL_TEXT_MODEL=your-local-model
-```
-
-如果你的网关需要鉴权，再额外设置 `LOCAL_API_KEY`。GraphiteUI 自身的开发环境仍然使用上面的 `npm run dev` 或 `node scripts/start.mjs` 启动。
-
-也兼容这些别名：
-
-- `OPENAI_BASE_URL`
-- `OPENAI_API_KEY`
-- `TEXT_MODEL`
-
-### 怎么用（第一次上手）
-
-如果你是第一次把 GraphiteUI 跑起来，最短路径可以按下面走：
-
-1. 安装前后端依赖
-2. 准备一个模型入口
-   - 本地模型或私有网关：设置 `LOCAL_BASE_URL`、`LOCAL_API_KEY`、`LOCAL_TEXT_MODEL`
-   - 云端 OpenAI-compatible 网关：同样使用这组变量
-3. 启动 GraphiteUI
-4. 打开编辑器，新建一张最小 graph
-5. 保存、校验、运行，然后到 Runs 页面看结果
-
-#### 方案 A：接本地 OpenAI-compatible 网关
-
-先启动你的本地模型网关，再启动 GraphiteUI。
-
-PowerShell 示例：
-
-```powershell
-$env:LOCAL_BASE_URL = "http://127.0.0.1:8000/v1"
-$env:LOCAL_TEXT_MODEL = "lm-local"
-npm.cmd run dev
-```
-
-Bash 示例：
-
-```bash
-export LOCAL_BASE_URL=http://127.0.0.1:8000/v1
-export LOCAL_TEXT_MODEL=lm-local
-npm run dev
-```
-
-启动后打开：
-
-- 编辑器：http://127.0.0.1:3477
-- 后端健康检查：http://127.0.0.1:8765/health
-- 本地网关日志页：以你所使用的网关为准
-
-#### 方案 B：接现有 OpenAI-compatible 网关
-
-如果你已经有可用的网关，只要在启动 GraphiteUI 前设置这些环境变量：
-
-```bash
-LOCAL_BASE_URL=https://your-gateway.example.com/v1
-LOCAL_API_KEY=your-api-key
-LOCAL_TEXT_MODEL=your-model-name
-```
-
-然后启动：
-
-```bash
-npm run dev
-```
-
-如果你修改了这些环境变量，需要重启 GraphiteUI 后端；直接重新执行 `npm run dev` 即可。
-
-### 一个最小可运行流程
-
-第一次进入后，推荐先跑通一张最小图：
-
-1. 打开首页，进入 Editor
-2. 新建一个 graph
-3. 在画布上放 3 个节点：`input -> agent -> output`
-4. 在 `input` 节点里提供一段文本输入
-5. 在 `agent` 节点里选择模型，并填写一个简单提示词
-6. 把 `agent` 的输出接到 `output`
-7. 点击保存、校验，再点击运行
-
-运行完成后可以在这些地方看结果：
-
-- Editor 里的节点状态和 output preview
-- Runs 页面里的运行记录
-- Run Detail 页面里的执行细节
-
-### 常见用法
-
-- 想检查后端是否正常：访问 `http://127.0.0.1:8765/health`
-- 想看模型网关当前 runtime 和日志：访问你所使用网关提供的管理页面
-- 想导入项目自带知识库：运行 `python scripts/import_official_knowledge_bases.py`
-- 想切换模型入口：修改 `LOCAL_BASE_URL` / `LOCAL_TEXT_MODEL` 后重新执行 `npm run dev`
-
-### 导入官方知识库
-
-```bash
+# 导入项目自带知识库
 python scripts/import_official_knowledge_bases.py
+```
+
+常用测试命令：
+
+```bash
+# 前端结构与纯逻辑测试
+node --test $(find frontend/src -name '*.test.ts' -print)
+
+# 后端测试
+python -m pytest backend/tests
 ```
 
 ## 项目结构
@@ -234,29 +212,40 @@ GraphiteUI/
 ├── frontend/
 │   ├── src/api/              # 前端 API 封装
 │   ├── src/editor/           # 画布、节点、状态面板、工作区
-│   ├── src/layouts/          # 应用壳层和侧栏
+│   ├── src/i18n/             # 多语言文案和 Element Plus locale 适配
+│   ├── src/layouts/          # 应用壳层、侧栏、语言切换
 │   ├── src/pages/            # Home / Editor / Runs / Run Detail / Settings
 │   ├── src/router/           # Vue Router
 │   ├── src/stores/           # Pinia stores
-│   ├── src/styles/           # 全局样式和 Element Plus 主题覆盖
-│   └── src/types/            # 图协议和运行态类型
+│   ├── src/styles/           # 全局样式和主题覆盖
+│   └── src/types/            # 图协议、运行态和 API 类型
 ├── backend/
-│   └── app/
-│       ├── api/              # graphs / runs / templates / presets / settings / skills / knowledge
-│       ├── core/compiler/    # node_system 校验
-│       ├── core/langgraph/   # LangGraph runtime 与 codegen
-│       ├── core/runtime/     # 执行状态、state、输出边界工具
-│       ├── core/schemas/     # Pydantic schemas
-│       ├── core/storage/     # JSON 和 SQLite 存储
-│       ├── knowledge/        # 知识库导入、切分、检索
-│       └── templates/        # 内置 graph 模板
+│   ├── app/
+│   │   ├── api/              # graphs / runs / templates / presets / settings / skills / knowledge / memories
+│   │   ├── core/compiler/    # node_system 校验
+│   │   ├── core/langgraph/   # LangGraph runtime、checkpoint、codegen
+│   │   ├── core/runtime/     # 节点执行、state、输出边界工具
+│   │   ├── core/schemas/     # Pydantic schemas
+│   │   ├── core/storage/     # JSON 文件和 SQLite 存储
+│   │   ├── knowledge/        # 知识库导入、切分、检索
+│   │   ├── memory/           # memory API 支撑模块
+│   │   ├── skills/           # 内置 skill registry 和 definitions
+│   │   ├── templates/        # 内置 graph 模板
+│   │   └── tools/            # OpenAI-compatible 调用工具
+│   └── tests/                # 后端 pytest 测试
 ├── knowledge/GraphiteUI-official/
-│   └── *.md                  # GraphiteUI 项目知识库源文档
+│   └── *.md                  # 项目官方知识库源文档
 ├── docs/
 │   ├── current_project_status.md
 │   └── future/
+├── scripts/
+│   ├── start.mjs             # 跨平台开发启动器
+│   ├── start.sh              # Bash 启动 wrapper
+│   ├── start.cmd             # Windows 启动 wrapper
+│   └── import_official_knowledge_bases.py
 ├── skill/                    # 可挂载 skill 定义
-└── scripts/
+├── Makefile
+└── README.md
 ```
 
 ## 核心 API
@@ -265,13 +254,16 @@ GraphiteUI/
 | --- | --- |
 | `GET /health` | 后端健康检查 |
 | `GET /api/graphs` | 列出已保存 graph |
+| `GET /api/graphs/{graph_id}` | 读取指定 graph |
 | `POST /api/graphs/save` | 保存 graph |
 | `POST /api/graphs/validate` | 校验 graph |
 | `POST /api/graphs/run` | 运行 graph |
 | `POST /api/graphs/export/langgraph-python` | 导出 LangGraph Python 源码 |
-| `GET /api/runs` | 列出运行记录 |
+| `POST /api/graphs/import/python` | 从 Python 源码导入 graph payload |
+| `GET /api/runs` | 列出运行记录，支持 graph name 和 status 过滤 |
 | `GET /api/runs/{run_id}` | 查看运行详情 |
-| `POST /api/runs/{run_id}/resume` | 从 failed / paused / awaiting_human 状态恢复运行 |
+| `GET /api/runs/{run_id}/nodes/{node_id}` | 查看单个节点执行详情 |
+| `POST /api/runs/{run_id}/resume` | 从可恢复 checkpoint 或暂停快照继续运行 |
 | `GET /api/templates` | 列出内置模板 |
 | `GET /api/presets` | 列出 agent presets |
 | `GET /api/knowledge/bases` | 列出知识库 |
@@ -280,50 +272,33 @@ GraphiteUI/
 
 ## 内置模板
 
-当前内置模板位于 `backend/app/templates/`：
+内置模板位于 `backend/app/templates/`：
 
 - `hello_world.json`
+- `human_review_demo.json`
 - `knowledge_base_validation.json`
 - `conditional_edge_validation.json`
 - `cycle_counter_demo.json`
 
-这些模板都使用当前 `node_system` 协议，不再保留旧协议兼容模板。
+## 文档与知识库
 
-## 文档策略
-
-当前文档只保留仍有维护价值的内容：
-
-- `README.md`：项目主入口和当前能力说明
-- `docs/current_project_status.md`：当前状态快照，也是知识库导入源之一
-- `docs/future/`：仍然有效的长期设想
-- `knowledge/GraphiteUI-official/`：项目知识库源文档
-- `CLAUDE.md` / `AGENTS.md`：协作代理工作说明
-
-已经完成使命的迁移计划、临时进度记录、一次性分析报告和偏离当前实现的设计稿不再保留。
+- `README.md`：项目入口、启动方式、当前能力和未来方向。
+- `docs/current_project_status.md`：当前状态快照。
+- `docs/future/`：长期设想和架构讨论。
+- `knowledge/GraphiteUI-official/`：可导入的项目官方知识库源文档。
+- `AGENTS.md`：协作代理工作约定。
 
 ## 未来方向
 
-### 近期路线图
-
-- WebSocket 实时运行推送
-- 更完整的人类在环前端：断点配置、恢复输入、暂停审计
-- LangGraph Python 导出 UI：源码预览、下载、运行说明
-- memory 的写入、召回、展示和调试
-- cycles 更高级的终止策略和可视化
-- 知识库管理：更新、删除、重建索引、检索质量评估
-
-### 桌宠 Agent 与自动编排图
-
-GraphiteUI 的长期方向不是只提供一个画布，而是提供一个可见、可控、可验证的 Agent 协作层。
-
-未来可以引入一个桌宠 Agent 作为交互入口。它可以用轻量 HTML/CSS、SVG 或前端动画能力绘制，停靠在画布或侧栏附近，具备待机、观察、思考、建议、执行、等待确认、完成和失败等状态。它不应该模拟 DOM 点击，而应该通过明确的图编辑命令操作 GraphiteUI，例如创建节点、连接 state、连接流程线、打开面板、校验图、运行图和保存图。
-
-自动编排图分两种模式：
-
-1. 规划后等待人类确认：Agent 根据任务生成 graph 草案，用户检查和调整后手动运行。
-2. 边走边画的自主编排：Agent 在授权后逐步创建节点、连接线、运行校验、根据反馈继续生长图，直到认为图能完成任务，再保存和运行。
-
-这条路线的硬性边界是：所有修改必须可见、可撤销、可审计；删除、覆盖、运行和可能产生费用的操作必须确认；Agent 不能绕过 GraphiteUI 的校验器，也不能直接写不可见状态。
+- 完善运行事件的实时推送，让 Editor 和 Run Detail 更快反映后端状态变化。
+- 扩展 Provider 管理能力，在 Settings 中完成更多 OpenAI-compatible 网关、云端 Provider 和模型目录配置。
+- 强化 Human Review 的审计信息、批量输入体验和多断点恢复路径。
+- 完善知识库管理，包括更新、删除、重建索引、检索质量评估和引用展示。
+- 扩展 memory 的写入、召回、展示和调试能力。
+- 增加端到端 UI 测试，覆盖编辑器、运行记录、断点暂停和多语言切换。
+- 梳理桌面端、Docker 或单机部署流程，降低非开发环境的启动成本。
+- 完成项目 logo、应用图标和品牌资产。
+- 推进可见、可撤销、可审计的自动编排能力，让 Agent 可以在授权下辅助创建和调整 graph。
 
 ## License
 

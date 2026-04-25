@@ -229,14 +229,19 @@ def _build_local_provider_models(
     force_refresh: bool,
 ) -> tuple[list[dict[str, Any]], str]:
     llama_config = _dict_or_empty(runtime_config.get("llama")) if isinstance(runtime_config, dict) else {}
-    local_route_models = get_local_route_model_names(force_refresh=force_refresh)
+    local_route_models = get_local_route_model_names(force_refresh=force_refresh, runtime_config=runtime_config)
     saved_local_models = list(provider.get("models") or [])
     saved_text_model_ref = str(saved_settings.get("text_model_ref") or "").strip()
-    saved_text_provider, saved_text_model = split_model_ref(saved_text_model_ref, default_provider="local")
+    if saved_text_model_ref:
+        saved_text_provider, saved_text_model = split_model_ref(saved_text_model_ref, default_provider="local")
+    else:
+        saved_text_provider, saved_text_model = "local", ""
     preferred_local_text_model = (
         saved_text_model
         if saved_text_model_ref and saved_text_provider == "local"
-        else get_default_text_model(force_refresh=force_refresh)
+        else local_route_models[0]
+        if local_route_models
+        else get_default_text_model(force_refresh=False)
     )
 
     if local_route_models:
@@ -417,7 +422,7 @@ def build_model_catalog(*, force_refresh: bool = False) -> dict[str, Any]:
             provider_ids.append(provider_id)
 
     provider_entries: list[dict[str, Any]] = []
-    local_text_model = get_default_text_model(force_refresh=force_refresh)
+    local_text_model = ""
     for provider_id in provider_ids:
         provider = _normalize_provider_config(provider_id, saved_providers.get(provider_id), runtime_config=runtime_config)
         if provider_id == "local":
@@ -432,6 +437,8 @@ def build_model_catalog(*, force_refresh: bool = False) -> dict[str, Any]:
             catalog_models = [_build_catalog_model(provider_id, model) for model in model_items]
         provider_entries.append(_build_provider_entry(provider, models=catalog_models, runtime_config=runtime_config))
 
+    if not local_text_model:
+        local_text_model = get_default_text_model(force_refresh=False)
     fallback_text_ref = build_model_ref("local", local_text_model)
     saved_text_model_ref = str(saved_settings.get("text_model_ref") or "").strip()
     saved_video_model_ref = str(saved_settings.get("video_model_ref") or "").strip()

@@ -77,11 +77,13 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
             _local_llm, model_catalog = self._reload_target_modules()
 
             with patch.object(model_catalog, "get_local_gateway_runtime_config", return_value=runtime_config):
-                with patch.object(model_catalog, "get_local_route_model_names", return_value=["llama-3.1-8b"]):
-                    with patch.object(model_catalog, "get_default_text_model", return_value="llama-3.1-8b"):
+                with patch.object(model_catalog, "get_local_route_model_names", return_value=["llama-3.1-8b"]) as route_models:
+                    with patch.object(model_catalog, "get_default_text_model", return_value="llama-3.1-8b") as default_text_model:
                         with patch.object(model_catalog, "get_default_video_model_name", return_value="llava-1.6"):
                             catalog = model_catalog.build_model_catalog()
 
+        route_models.assert_called_once_with(force_refresh=False, runtime_config=runtime_config)
+        default_text_model.assert_not_called()
         local_provider = next(provider for provider in catalog["providers"] if provider["provider_id"] == "local")
 
         self.assertEqual(local_provider["label"], "OpenAI-compatible Custom Provider")

@@ -148,9 +148,9 @@ def _merge_model_providers(
 
 
 def _build_settings_payload(*, force_refresh_models: bool = False) -> dict:
-    text_model_ref = get_default_text_model_ref(force_refresh=force_refresh_models)
-    video_model_ref = get_default_video_model_ref(force_refresh=force_refresh_models)
     model_catalog = build_model_catalog(force_refresh=force_refresh_models)
+    text_model_ref = str(model_catalog.get("default_text_model_ref") or get_default_text_model_ref(force_refresh=False))
+    video_model_ref = str(model_catalog.get("default_video_model_ref") or get_default_video_model_ref(force_refresh=False))
     return {
         "model": {
             "text_model": resolve_runtime_model_name(text_model_ref),

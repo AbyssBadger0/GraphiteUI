@@ -107,6 +107,9 @@ def _dedupe_strings(values: list[str]) -> list[str]:
     return items
 
 
+LOCAL_RUNTIME_CONFIG_TIMEOUT_SEC = _parse_float_env("LOCAL_RUNTIME_CONFIG_TIMEOUT_SEC", 1.0)
+
+
 def get_local_gateway_runtime_config(*, force_refresh: bool = False) -> dict[str, Any] | None:
     global _LOCAL_RUNTIME_CONFIG_CACHE
 
@@ -120,7 +123,7 @@ def get_local_gateway_runtime_config(*, force_refresh: bool = False) -> dict[str
 
     runtime_config: dict[str, Any] | None = None
     try:
-        with httpx.Client(timeout=3.0, trust_env=False) as client:
+        with httpx.Client(timeout=LOCAL_RUNTIME_CONFIG_TIMEOUT_SEC, trust_env=False) as client:
             response = client.get(f"{_get_gateway_base_url()}/runtime-config")
             response.raise_for_status()
             payload = response.json()
@@ -133,12 +136,17 @@ def get_local_gateway_runtime_config(*, force_refresh: bool = False) -> dict[str
     return runtime_config
 
 
-def get_local_route_model_names(*, force_refresh: bool = False) -> list[str]:
+def get_local_route_model_names(
+    *,
+    force_refresh: bool = False,
+    runtime_config: dict[str, Any] | None = None,
+) -> list[str]:
     discovered_models = get_current_local_model_names(force_refresh=force_refresh)
     if discovered_models:
         return discovered_models
 
-    runtime_config = get_local_gateway_runtime_config(force_refresh=force_refresh)
+    if runtime_config is None:
+        runtime_config = get_local_gateway_runtime_config(force_refresh=force_refresh)
     llama_config = runtime_config.get("llama") if isinstance(runtime_config, dict) else None
     aliases = llama_config.get("local_route_model_names") if isinstance(llama_config, dict) else None
     if isinstance(aliases, list):

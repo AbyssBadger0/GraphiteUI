@@ -1,17 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectory = dirname(currentFilePath);
 const mascotSource = readMascotAsset("mascot.svg");
-const curlMascotSource = readMascotAsset("mascot-curl.svg");
-const simpleMascotSource = readMascotAsset("mascot-simple.svg");
 
 function readMascotAsset(fileName: string): string {
   return readFileSync(resolve(currentDirectory, "../../public", fileName), "utf8");
+}
+
+function publicAssetExists(fileName: string): boolean {
+  return existsSync(resolve(currentDirectory, "../../public", fileName));
 }
 
 function assertSharedMascotShape(source: string): void {
@@ -31,24 +33,15 @@ function assertSharedMascotShape(source: string): void {
   assert.match(source, /<ellipse cx="80" cy="82" rx="24" ry="52" fill="url\(#eyeGold\)"\/>/);
 }
 
-test("brand mascot default asset stays aligned with the short curled-tail version", () => {
-  assert.equal(mascotSource, curlMascotSource);
-});
-
-test("brand mascot curled-tail asset is short, thick, and ends outside the cat head", () => {
-  assertSharedMascotShape(curlMascotSource);
-  assert.match(curlMascotSource, /A short curled-tail variant/);
-  assert.match(curlMascotSource, /d="M206 154/);
-  assert.match(curlMascotSource, /C246 156 284 130 296 90/);
-  assert.match(curlMascotSource, /C306 56 288 26 258 28/);
-  assert.match(curlMascotSource, /C236 30 232 54 254 60"/);
-});
-
-test("brand mascot simple-tail asset only reveals a compact tail cue", () => {
-  assertSharedMascotShape(simpleMascotSource);
-  assert.match(simpleMascotSource, /A simple short-tail variant/);
-  assert.match(simpleMascotSource, /d="M206 154/);
-  assert.match(simpleMascotSource, /C240 154 268 136 282 108"/);
-  assert.doesNotMatch(simpleMascotSource, /C306 56 288 26 258 28/);
-  assert.doesNotMatch(simpleMascotSource, /C236 30 232 54 254 60"/);
+test("brand mascot keeps the simple short-tail variant as the only public mascot asset", () => {
+  assertSharedMascotShape(mascotSource);
+  assert.match(mascotSource, /A simple short-tail variant/);
+  assert.match(mascotSource, /d="M206 154/);
+  assert.match(mascotSource, /C240 154 268 136 282 108"/);
+  assert.doesNotMatch(mascotSource, /A short curled-tail variant/);
+  assert.doesNotMatch(mascotSource, /C246 156 284 130 296 90/);
+  assert.doesNotMatch(mascotSource, /C306 56 288 26 258 28/);
+  assert.doesNotMatch(mascotSource, /C236 30 232 54 254 60"/);
+  assert.equal(publicAssetExists("mascot-curl.svg"), false);
+  assert.equal(publicAssetExists("mascot-simple.svg"), false);
 });

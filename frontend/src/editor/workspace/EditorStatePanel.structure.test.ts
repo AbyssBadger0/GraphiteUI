@@ -18,10 +18,17 @@ test("EditorStatePanel presents the right sidebar as a compact inspector", () =>
   assert.doesNotMatch(componentSource, /State Panel/);
   assert.match(componentSource, /\.editor-state-panel \{[\s\S]*padding:\s*12px;/);
   assert.match(componentSource, /\.editor-state-panel \{[\s\S]*background:\s*transparent;/);
-  assert.match(componentSource, /\.editor-state-panel__surface \{[\s\S]*border:\s*1px solid rgba\(154,\s*52,\s*18,\s*0\.14\);/);
-  assert.match(componentSource, /\.editor-state-panel__surface \{[\s\S]*border-radius:\s*28px;[\s\S]*background:\s*rgba\(255,\s*252,\s*247,\s*0\.98\);/);
-  assert.match(componentSource, /\.editor-state-panel__surface \{[\s\S]*box-shadow:\s*none;/);
-  assert.match(componentSource, /\.editor-state-panel__surface \{[\s\S]*backdrop-filter:\s*none;/);
+  assert.match(componentSource, /\.editor-state-panel__surface \{[\s\S]*border:\s*1px solid var\(--graphite-glass-border\);/);
+  assert.match(
+    componentSource,
+    /\.editor-state-panel__surface \{[\s\S]*border-radius:\s*28px;[\s\S]*background:\s*var\(--graphite-glass-specular\),\s*var\(--graphite-glass-lens\),\s*var\(--graphite-glass-bg-strong\);/,
+  );
+  assert.match(componentSource, /\.editor-state-panel__surface \{[\s\S]*background-blend-mode:\s*screen,\s*screen,\s*normal;/);
+  assert.match(
+    componentSource,
+    /\.editor-state-panel__surface \{[\s\S]*box-shadow:\s*var\(--graphite-glass-shadow\),\s*var\(--graphite-glass-highlight\),\s*var\(--graphite-glass-rim\);/,
+  );
+  assert.match(componentSource, /\.editor-state-panel__surface \{[\s\S]*backdrop-filter:\s*blur\(34px\) saturate\(1\.7\) contrast\(1\.02\);/);
   assert.match(componentSource, /\.editor-state-panel__inspector-header \{[\s\S]*padding:\s*14px 14px 10px;/);
   assert.match(componentSource, /\.editor-state-panel__quick-action \{[\s\S]*border-radius:\s*999px;/);
 });

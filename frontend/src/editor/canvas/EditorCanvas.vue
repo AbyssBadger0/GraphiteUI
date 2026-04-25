@@ -45,7 +45,7 @@
       </button>
     </div>
     <div v-if="interactionLocked" class="editor-canvas__lock-banner" aria-live="polite">
-      Run paused · Graph locked
+      Human Review Paused · Graph Locked
     </div>
     <div class="editor-canvas__viewport" :style="viewportStyle">
       <div v-if="nodeEntries.length === 0" class="editor-canvas__empty-state">
@@ -2424,18 +2424,25 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   position: absolute;
   top: var(--editor-canvas-floating-top-clearance, 18px);
   left: 50%;
-  z-index: 25;
+  z-index: 33;
   transform: translateX(-50%);
-  padding: 7px 14px;
-  border: 1px solid rgba(154, 52, 18, 0.16);
+  padding: 10px 18px;
+  border: 1px solid rgba(154, 52, 18, 0.48);
   border-radius: 999px;
-  background: var(--graphite-glass-bg);
-  color: #9a3412;
-  font-size: 0.76rem;
+  background: var(--graphite-glass-specular), var(--graphite-glass-lens), rgba(255, 247, 237, 0.78);
+  background-blend-mode: screen, screen, normal;
+  color: #7c2d12;
+  font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  box-shadow: var(--graphite-glass-shadow), var(--graphite-glass-highlight);
-  backdrop-filter: blur(18px) saturate(1.4);
+  text-transform: uppercase;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.72) inset,
+    0 0 0 4px rgba(234, 88, 12, 0.1),
+    0 14px 34px rgba(124, 45, 18, 0.16),
+    0 0 26px rgba(234, 88, 12, 0.2);
+  backdrop-filter: blur(28px) saturate(1.7) contrast(1.03);
+  animation: editor-canvas-lock-banner-breathe 2.4s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -2820,6 +2827,16 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 .editor-canvas__edge--active-run {
   stroke-width: 3px;
   opacity: 1;
+  filter: drop-shadow(0 0 10px var(--editor-edge-stroke, rgba(16, 185, 129, 0.38)));
+}
+
+.editor-canvas__edge--flow.editor-canvas__edge--active-run,
+.editor-canvas__edge--route.editor-canvas__edge--active-run {
+  animation: editor-canvas-flow-line 1.8s linear infinite, editor-canvas-active-run-edge-breathe 2.2s ease-in-out infinite;
+}
+
+.editor-canvas__edge--data.editor-canvas__edge--active-run {
+  animation: editor-canvas-ant-line 1.2s linear infinite, editor-canvas-active-run-edge-breathe 2.2s ease-in-out infinite;
 }
 
 @keyframes editor-canvas-ant-line {
@@ -3082,16 +3099,148 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   z-index: 8;
 }
 
-@keyframes editor-canvas-node-execution-glow-pulse {
+@keyframes editor-canvas-lock-banner-breathe {
   0%,
   100% {
-    opacity: 0.82;
-    transform: scale(0.992);
+    transform: translateX(-50%) scale(1);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.72) inset,
+      0 0 0 4px rgba(234, 88, 12, 0.1),
+      0 14px 34px rgba(124, 45, 18, 0.16),
+      0 0 22px rgba(234, 88, 12, 0.16);
   }
 
-  50% {
+  48% {
+    transform: translateX(-50%) scale(1.018);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.84) inset,
+      0 0 0 5px rgba(234, 88, 12, 0.14),
+      0 18px 42px rgba(124, 45, 18, 0.22),
+      0 0 34px rgba(234, 88, 12, 0.32);
+  }
+
+  58% {
+    transform: translateX(-50%) scale(1.006);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.78) inset,
+      0 0 0 4px rgba(234, 88, 12, 0.11),
+      0 14px 34px rgba(124, 45, 18, 0.18),
+      0 0 26px rgba(234, 88, 12, 0.22);
+  }
+}
+
+@keyframes editor-canvas-active-run-edge-breathe {
+  0%,
+  100% {
+    opacity: 0.78;
+    filter: drop-shadow(0 0 6px var(--editor-edge-stroke, rgba(16, 185, 129, 0.28)));
+  }
+
+  44% {
     opacity: 1;
-    transform: scale(1.004);
+    filter: drop-shadow(0 0 14px var(--editor-edge-stroke, rgba(16, 185, 129, 0.5)));
+  }
+
+  56% {
+    opacity: 0.86;
+    filter: drop-shadow(0 0 9px var(--editor-edge-stroke, rgba(16, 185, 129, 0.36)));
+  }
+
+  66% {
+    opacity: 0.97;
+    filter: drop-shadow(0 0 12px var(--editor-edge-stroke, rgba(16, 185, 129, 0.46)));
+  }
+}
+
+@keyframes editor-canvas-running-halo-breathe {
+  0%,
+  100% {
+    opacity: 0.64;
+    transform: scale(0.986);
+    filter: blur(8px);
+  }
+
+  44% {
+    opacity: 1;
+    transform: scale(1.012);
+    filter: blur(12px);
+  }
+
+  55% {
+    opacity: 0.78;
+    transform: scale(1.002);
+    filter: blur(10px);
+  }
+
+  66% {
+    opacity: 0.96;
+    transform: scale(1.008);
+    filter: blur(11px);
+  }
+}
+
+@keyframes editor-canvas-paused-halo-breathe {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scale(0.988);
+    filter: blur(8px);
+  }
+
+  46% {
+    opacity: 1;
+    transform: scale(1.014);
+    filter: blur(13px);
+  }
+
+  58% {
+    opacity: 0.8;
+    transform: scale(1.002);
+    filter: blur(10px);
+  }
+
+  70% {
+    opacity: 0.95;
+    transform: scale(1.008);
+    filter: blur(12px);
+  }
+}
+
+@keyframes editor-canvas-running-card-breathe {
+  0%,
+  100% {
+    box-shadow: var(--editor-canvas-node-card-shadow-rest);
+  }
+
+  46% {
+    box-shadow: var(--editor-canvas-node-card-shadow-peak);
+  }
+
+  56% {
+    box-shadow: var(--editor-canvas-node-card-shadow-flicker);
+  }
+
+  66% {
+    box-shadow: var(--editor-canvas-node-card-shadow-peak);
+  }
+}
+
+@keyframes editor-canvas-paused-card-breathe {
+  0%,
+  100% {
+    box-shadow: var(--editor-canvas-node-card-shadow-rest);
+  }
+
+  48% {
+    box-shadow: var(--editor-canvas-node-card-shadow-peak);
+  }
+
+  60% {
+    box-shadow: var(--editor-canvas-node-card-shadow-flicker);
+  }
+
+  70% {
+    box-shadow: var(--editor-canvas-node-card-shadow-peak);
   }
 }
 
@@ -3110,6 +3259,7 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   opacity: 1;
   filter: blur(10px);
   transition: opacity 180ms ease, transform 180ms ease;
+  will-change: opacity, transform, filter;
 }
 
 .editor-canvas__node-halo--running {
@@ -3120,7 +3270,7 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
       rgba(16, 185, 129, 0.28) 34%,
       rgba(16, 185, 129, 0) 64%
     );
-  animation: editor-canvas-node-execution-glow-pulse 1.2s ease-in-out infinite;
+  animation: editor-canvas-running-halo-breathe 2.2s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--running-current {
@@ -3131,7 +3281,7 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
       rgba(16, 185, 129, 0.38) 36%,
       rgba(16, 185, 129, 0) 66%
     );
-  animation: editor-canvas-node-execution-glow-pulse 0.95s ease-in-out infinite;
+  animation: editor-canvas-running-halo-breathe 1.85s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--paused {
@@ -3142,7 +3292,7 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
       rgba(217, 119, 6, 0.25) 34%,
       rgba(217, 119, 6, 0) 64%
     );
-  animation: editor-canvas-node-execution-glow-pulse 1.35s ease-in-out infinite;
+  animation: editor-canvas-paused-halo-breathe 2.45s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--paused-current {
@@ -3153,35 +3303,93 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
       rgba(245, 158, 11, 0.34) 36%,
       rgba(245, 158, 11, 0) 66%
     );
-  animation: editor-canvas-node-execution-glow-pulse 1.05s ease-in-out infinite;
+  animation: editor-canvas-paused-halo-breathe 2.05s ease-in-out infinite;
 }
 
 .editor-canvas__node--running {
-  box-shadow:
+  --editor-canvas-node-card-shadow-rest:
     0 18px 36px rgba(60, 41, 20, 0.1),
     0 0 0 1.5px rgba(16, 185, 129, 0.62),
     0 0 14px rgba(16, 185, 129, 0.22);
+  --editor-canvas-node-card-shadow-peak:
+    0 22px 44px rgba(60, 41, 20, 0.12),
+    0 0 0 1.5px rgba(16, 185, 129, 0.78),
+    0 0 24px rgba(16, 185, 129, 0.36);
+  --editor-canvas-node-card-shadow-flicker:
+    0 18px 36px rgba(60, 41, 20, 0.1),
+    0 0 0 1.5px rgba(16, 185, 129, 0.66),
+    0 0 16px rgba(16, 185, 129, 0.26);
+  box-shadow: var(--editor-canvas-node-card-shadow-rest);
+  animation: editor-canvas-running-card-breathe 2.2s ease-in-out infinite;
 }
 
 .editor-canvas__node--running-current {
-  box-shadow:
+  --editor-canvas-node-card-shadow-rest:
     0 20px 40px rgba(60, 41, 20, 0.12),
     0 0 0 1.5px rgba(16, 185, 129, 0.86),
     0 0 18px rgba(16, 185, 129, 0.32);
+  --editor-canvas-node-card-shadow-peak:
+    0 24px 48px rgba(60, 41, 20, 0.14),
+    0 0 0 1.5px rgba(16, 185, 129, 0.94),
+    0 0 30px rgba(16, 185, 129, 0.48);
+  --editor-canvas-node-card-shadow-flicker:
+    0 20px 40px rgba(60, 41, 20, 0.12),
+    0 0 0 1.5px rgba(16, 185, 129, 0.82),
+    0 0 20px rgba(16, 185, 129, 0.36);
+  box-shadow: var(--editor-canvas-node-card-shadow-rest);
+  animation: editor-canvas-running-card-breathe 1.85s ease-in-out infinite;
 }
 
 .editor-canvas__node--paused {
-  box-shadow:
+  --editor-canvas-node-card-shadow-rest:
     0 18px 36px rgba(60, 41, 20, 0.1),
     0 0 0 1.5px rgba(245, 158, 11, 0.62),
     0 0 14px rgba(245, 158, 11, 0.2);
+  --editor-canvas-node-card-shadow-peak:
+    0 22px 44px rgba(60, 41, 20, 0.12),
+    0 0 0 1.5px rgba(245, 158, 11, 0.78),
+    0 0 24px rgba(245, 158, 11, 0.34);
+  --editor-canvas-node-card-shadow-flicker:
+    0 18px 36px rgba(60, 41, 20, 0.1),
+    0 0 0 1.5px rgba(245, 158, 11, 0.66),
+    0 0 16px rgba(245, 158, 11, 0.24);
+  box-shadow: var(--editor-canvas-node-card-shadow-rest);
+  animation: editor-canvas-paused-card-breathe 2.45s ease-in-out infinite;
 }
 
 .editor-canvas__node--paused-current {
-  box-shadow:
+  --editor-canvas-node-card-shadow-rest:
     0 20px 40px rgba(60, 41, 20, 0.12),
     0 0 0 1.5px rgba(245, 158, 11, 0.86),
     0 0 18px rgba(245, 158, 11, 0.3);
+  --editor-canvas-node-card-shadow-peak:
+    0 24px 48px rgba(60, 41, 20, 0.14),
+    0 0 0 1.5px rgba(245, 158, 11, 0.94),
+    0 0 30px rgba(245, 158, 11, 0.46);
+  --editor-canvas-node-card-shadow-flicker:
+    0 20px 40px rgba(60, 41, 20, 0.12),
+    0 0 0 1.5px rgba(245, 158, 11, 0.82),
+    0 0 20px rgba(245, 158, 11, 0.34);
+  box-shadow: var(--editor-canvas-node-card-shadow-rest);
+  animation: editor-canvas-paused-card-breathe 2.05s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-canvas__lock-banner,
+  .editor-canvas__node-halo--running,
+  .editor-canvas__node-halo--running-current,
+  .editor-canvas__node-halo--paused,
+  .editor-canvas__node-halo--paused-current,
+  .editor-canvas__node--running,
+  .editor-canvas__node--running-current,
+  .editor-canvas__node--paused,
+  .editor-canvas__node--paused-current,
+  .editor-canvas__edge--active-run,
+  .editor-canvas__edge--flow.editor-canvas__edge--active-run,
+  .editor-canvas__edge--route.editor-canvas__edge--active-run,
+  .editor-canvas__edge--data.editor-canvas__edge--active-run {
+    animation: none;
+  }
 }
 
 .editor-canvas__node--success {

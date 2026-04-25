@@ -62,21 +62,45 @@ test("EditorCanvas renders anchors in a dedicated overlay layer above nodes", ()
 });
 
 test("EditorCanvas restores legacy runtime feedback styling on node cards and active edges", () => {
-  assert.match(componentSource, /@keyframes editor-canvas-node-execution-glow-pulse/);
+  assert.match(componentSource, /@keyframes editor-canvas-running-halo-breathe/);
+  assert.match(componentSource, /@keyframes editor-canvas-paused-halo-breathe/);
+  assert.match(componentSource, /@keyframes editor-canvas-running-card-breathe/);
+  assert.match(componentSource, /@keyframes editor-canvas-paused-card-breathe/);
+  assert.match(componentSource, /@keyframes editor-canvas-active-run-edge-breathe/);
   assert.match(componentSource, /\.editor-canvas__node-halo--running \{[\s\S]*rgba\(52,\s*211,\s*153,\s*0\.52\)/);
+  assert.match(componentSource, /\.editor-canvas__node-halo--running \{[\s\S]*animation:\s*editor-canvas-running-halo-breathe 2\.2s ease-in-out infinite;/);
   assert.match(componentSource, /\.editor-canvas__node-halo--running-current \{[\s\S]*rgba\(110,\s*231,\s*183,\s*0\.72\)/);
+  assert.match(componentSource, /\.editor-canvas__node-halo--running-current \{[\s\S]*animation:\s*editor-canvas-running-halo-breathe 1\.85s ease-in-out infinite;/);
   assert.match(componentSource, /\.editor-canvas__node-halo--paused \{[\s\S]*rgba\(245,\s*158,\s*11,\s*0\.5\)/);
+  assert.match(componentSource, /\.editor-canvas__node-halo--paused \{[\s\S]*animation:\s*editor-canvas-paused-halo-breathe 2\.45s ease-in-out infinite;/);
   assert.match(componentSource, /\.editor-canvas__node-halo--paused-current \{[\s\S]*rgba\(251,\s*191,\s*36,\s*0\.7\)/);
+  assert.match(componentSource, /\.editor-canvas__node-halo--paused-current \{[\s\S]*animation:\s*editor-canvas-paused-halo-breathe 2\.05s ease-in-out infinite;/);
   assert.match(componentSource, /\.editor-canvas__node--running \{[\s\S]*0 0 0 1\.5px rgba\(16,\s*185,\s*129,\s*0\.62\)/);
+  assert.match(componentSource, /\.editor-canvas__node--running \{[\s\S]*animation:\s*editor-canvas-running-card-breathe 2\.2s ease-in-out infinite;/);
   assert.match(componentSource, /\.editor-canvas__node--running-current \{[\s\S]*0 0 0 1\.5px rgba\(16,\s*185,\s*129,\s*0\.86\)/);
+  assert.match(componentSource, /\.editor-canvas__node--running-current \{[\s\S]*animation:\s*editor-canvas-running-card-breathe 1\.85s ease-in-out infinite;/);
   assert.match(componentSource, /\.editor-canvas__node--paused \{[\s\S]*0 0 0 1\.5px rgba\(245,\s*158,\s*11,\s*0\.62\)/);
+  assert.match(componentSource, /\.editor-canvas__node--paused \{[\s\S]*animation:\s*editor-canvas-paused-card-breathe 2\.45s ease-in-out infinite;/);
   assert.match(componentSource, /\.editor-canvas__node--paused-current \{[\s\S]*0 0 0 1\.5px rgba\(245,\s*158,\s*11,\s*0\.86\)/);
+  assert.match(componentSource, /\.editor-canvas__node--paused-current \{[\s\S]*animation:\s*editor-canvas-paused-card-breathe 2\.05s ease-in-out infinite;/);
   assert.match(componentSource, /\.editor-canvas__node--success \{[\s\S]*0 0 0 1\.5px rgba\(180,\s*83,\s*9,\s*0\.34\)/);
   assert.match(componentSource, /\.editor-canvas__node--failed \{[\s\S]*0 0 0 1\.5px rgba\(239,\s*68,\s*68,\s*0\.56\)/);
   assert.match(componentSource, /\.editor-canvas__edge--active-run \{[\s\S]*stroke-width:\s*3px;/);
   assert.match(componentSource, /\.editor-canvas__edge--active-run \{[\s\S]*opacity:\s*1;/);
+  assert.match(componentSource, /\.editor-canvas__edge--active-run \{[\s\S]*filter:\s*drop-shadow\(0 0 10px var\(--editor-edge-stroke,\s*rgba\(16,\s*185,\s*129,\s*0\.38\)\)\);/);
+  assert.match(
+    componentSource,
+    /\.editor-canvas__edge--flow\.editor-canvas__edge--active-run,\s*\.editor-canvas__edge--route\.editor-canvas__edge--active-run \{[\s\S]*animation:\s*editor-canvas-flow-line 1\.8s linear infinite,\s*editor-canvas-active-run-edge-breathe 2\.2s ease-in-out infinite;/,
+  );
+  assert.match(
+    componentSource,
+    /\.editor-canvas__edge--data\.editor-canvas__edge--active-run \{[\s\S]*animation:\s*editor-canvas-ant-line 1\.2s linear infinite,\s*editor-canvas-active-run-edge-breathe 2\.2s ease-in-out infinite;/,
+  );
   assert.doesNotMatch(componentSource, /\.editor-canvas__edge--active-run \{[^}]*stroke:/);
-  assert.doesNotMatch(componentSource, /\.editor-canvas__edge--active-run \{[^}]*filter:/);
+  assert.match(
+    componentSource,
+    /@media \(prefers-reduced-motion:\s*reduce\) \{[\s\S]*\.editor-canvas__node-halo--running,[\s\S]*\.editor-canvas__edge--active-run \{[\s\S]*animation:\s*none;/,
+  );
 });
 
 test("EditorCanvas treats awaiting-human current node as a persistent review node", () => {
@@ -95,6 +119,10 @@ test("EditorCanvas keeps paused human-review graphs viewable but read-only", () 
   assert.match(componentSource, /'editor-canvas--locked': interactionLocked/);
   assert.match(componentSource, /v-if="interactionLocked"/);
   assert.match(componentSource, /class="editor-canvas__lock-banner"/);
+  assert.match(componentSource, /Human Review Paused · Graph Locked/);
+  assert.match(componentSource, /@keyframes editor-canvas-lock-banner-breathe/);
+  assert.match(componentSource, /\.editor-canvas__lock-banner \{[\s\S]*border:\s*1px solid rgba\(154,\s*52,\s*18,\s*0\.48\);/);
+  assert.match(componentSource, /\.editor-canvas__lock-banner \{[\s\S]*animation:\s*editor-canvas-lock-banner-breathe 2\.4s ease-in-out infinite;/);
   assert.match(componentSource, /function isGraphEditingLocked\(\)/);
   assert.match(componentSource, /return Boolean\(props\.interactionLocked\);/);
   assert.match(componentSource, /function handleLockedNodePointerCapture\(nodeId: string, event: PointerEvent\)/);

@@ -67,7 +67,7 @@ defineEmits<{
   border: 1px solid var(--graphite-glass-border);
   border-radius: 999px;
   background: var(--graphite-glass-bg);
-  padding: 6px;
+  padding: 8px;
   box-shadow: var(--graphite-glass-shadow), var(--graphite-glass-highlight), var(--graphite-glass-rim);
   backdrop-filter: blur(28px) saturate(1.65) contrast(1.02);
 }
@@ -98,14 +98,14 @@ defineEmits<{
 .editor-action-capsule__icon-button,
 .editor-action-capsule__state-pill,
 .editor-action-capsule__run {
-  min-height: 36px;
+  min-height: 40px;
   border-radius: 999px;
   transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease,
     transform 0.16s ease;
 }
 
 .editor-action-capsule__icon-button {
-  width: 36px;
+  width: 40px;
   border: 1px solid transparent;
   background: transparent;
   color: rgba(90, 58, 34, 0.94);

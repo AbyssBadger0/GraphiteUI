@@ -237,11 +237,12 @@ function handleResumeClick() {
   gap: 12px;
   overflow: auto;
   padding: 14px;
-  border: 1px solid var(--graphite-border);
+  border: 1px solid var(--graphite-glass-border);
   border-radius: 28px;
-  background: var(--graphite-surface-panel);
-  box-shadow: none;
-  backdrop-filter: none;
+  background: var(--graphite-glass-specular), var(--graphite-glass-lens), var(--graphite-glass-bg-strong);
+  background-blend-mode: screen, screen, normal;
+  box-shadow: var(--graphite-glass-shadow), var(--graphite-glass-highlight), var(--graphite-glass-rim);
+  backdrop-filter: blur(34px) saturate(1.7) contrast(1.02);
 }
 
 .editor-human-review-panel__action-bar {

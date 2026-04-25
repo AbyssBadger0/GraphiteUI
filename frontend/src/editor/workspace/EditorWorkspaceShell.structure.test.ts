@@ -75,7 +75,7 @@ test("EditorWorkspaceShell wires node top-action events into state updates, node
 
 test("EditorWorkspaceShell floats the right side panel above the canvas while preserving responsive panel widths", () => {
   assert.match(componentSource, /\.editor-workspace-shell \{[\s\S]*--editor-state-panel-open-width:\s*clamp\(340px,\s*32vw,\s*480px\);/);
-  assert.match(componentSource, /\.editor-workspace-shell \{[\s\S]*--editor-human-review-panel-open-width:\s*clamp\(360px,\s*34vw,\s*520px\);/);
+  assert.match(componentSource, /\.editor-workspace-shell \{[\s\S]*--editor-human-review-panel-open-width:\s*var\(--editor-state-panel-open-width\);/);
   assert.match(componentSource, /\.editor-workspace-shell \{[\s\S]*height:\s*100%;/);
   assert.doesNotMatch(componentSource, /\.editor-workspace-shell \{[\s\S]*height:\s*100vh;/);
   assert.match(componentSource, /class="editor-workspace-shell__side-panel-layer"/);
@@ -90,7 +90,7 @@ test("EditorWorkspaceShell floats the right side panel above the canvas while pr
   assert.match(componentSource, /width:\s*sidePanelOpenWidth\(tabId\),/);
   assert.doesNotMatch(componentSource, /56px/);
   assert.match(componentSource, /@media \(max-width:\s*760px\) \{[\s\S]*\.editor-workspace-shell \{[\s\S]*--editor-state-panel-open-width:\s*min\(320px,\s*calc\(100vw - var\(--app-sidebar-width\) - 24px\)\);/);
-  assert.match(componentSource, /@media \(max-width:\s*760px\) \{[\s\S]*\.editor-workspace-shell \{[\s\S]*--editor-human-review-panel-open-width:\s*min\(360px,\s*calc\(100vw - var\(--app-sidebar-width\) - 24px\)\);/);
+  assert.match(componentSource, /@media \(max-width:\s*760px\) \{[\s\S]*\.editor-workspace-shell \{[\s\S]*--editor-human-review-panel-open-width:\s*var\(--editor-state-panel-open-width\);/);
   assert.match(componentSource, /\.editor-workspace-shell__editor-grid \{[\s\S]*position:\s*relative;[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   assert.match(componentSource, /\.editor-workspace-shell \{[\s\S]*--editor-workspace-floating-top-clearance:\s*72px;/);
   assert.match(componentSource, /\.editor-workspace-shell__side-panel-layer \{[\s\S]*position:\s*absolute;[\s\S]*top:\s*var\(--editor-workspace-floating-top-clearance\);[\s\S]*right:\s*12px;[\s\S]*bottom:\s*12px;[\s\S]*z-index:\s*30;/);

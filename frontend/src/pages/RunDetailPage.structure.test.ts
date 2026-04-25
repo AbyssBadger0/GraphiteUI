@@ -51,3 +51,25 @@ test("RunDetailPage supports restrained expandable long content cards", () => {
   assert.match(componentSource, /\.run-detail__content \{[\s\S]*max-height:\s*180px;[\s\S]*overflow:\s*hidden;/);
   assert.match(componentSource, /\.run-detail__content--expanded \{[\s\S]*max-height:\s*none;/);
 });
+
+test("RunDetailPage uses one immediate route watcher for loading run details", () => {
+  assert.match(componentSource, /import \{ computed, onBeforeUnmount, ref, watch \} from "vue";/);
+  assert.doesNotMatch(componentSource, /onMounted/);
+  assert.match(componentSource, /const loading = ref\(false\);/);
+  assert.match(componentSource, /<article v-else-if="loading" class="run-detail__empty">Loading run…<\/article>/);
+  assert.doesNotMatch(componentSource, /v-else-if="!run" class="run-detail__empty">Loading run/);
+  assert.match(componentSource, /watch\(\s*runId,[\s\S]*\{ immediate: true \},[\s\S]*\);/);
+});
+
+test("RunDetailPage cancels stale detail requests and exposes retry after failure", () => {
+  assert.match(componentSource, /const runDetailRequestTimeoutMs = 10_000;/);
+  assert.match(componentSource, /let activeRunRequestId = 0;/);
+  assert.match(componentSource, /let activeRunController: AbortController \| null = null;/);
+  assert.match(componentSource, /function clearPendingRunRequest\(\)/);
+  assert.match(componentSource, /activeRunController\?\.abort\(\);/);
+  assert.match(componentSource, /const controller = new AbortController\(\);/);
+  assert.match(componentSource, /fetchRun\(normalizedRunId, \{ signal: controller\.signal \}\)/);
+  assert.match(componentSource, /if \(requestId !== activeRunRequestId\) \{/);
+  assert.match(componentSource, /加载运行记录超时，请重试。/);
+  assert.match(componentSource, /class="run-detail__retry"[\s\S]*@click="loadRun\(runId\)"/);
+});

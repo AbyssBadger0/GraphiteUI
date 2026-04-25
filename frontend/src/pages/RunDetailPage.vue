@@ -42,8 +42,12 @@
         </div>
       </header>
 
-      <article v-if="error" class="run-detail__empty">加载失败：{{ error }}</article>
-      <article v-else-if="!run" class="run-detail__empty">Loading run…</article>
+      <article v-if="error" class="run-detail__empty">
+        <p>加载失败：{{ error }}</p>
+        <button type="button" class="run-detail__retry" @click="loadRun(runId)">重新加载</button>
+      </article>
+      <article v-else-if="loading" class="run-detail__empty">Loading run…</article>
+      <article v-else-if="!run" class="run-detail__empty">没有找到运行记录。</article>
       <template v-else>
         <article class="run-detail__panel run-detail__panel--result">
           <div class="run-detail__panel-heading">
@@ -209,7 +213,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
 import { fetchRun } from "@/api/runs";
@@ -223,10 +227,12 @@ import { buildRunStatusFacts, listRunOutputArtifacts, shouldPollRunStatus } from
 
 const route = useRoute();
 const run = ref<RunDetail | null>(null);
+const loading = ref(false);
 const error = ref<string | null>(null);
 const selectedSnapshotIdDraft = ref<string | null>(null);
 const expandedContentKeys = ref<Set<string>>(new Set());
 const runId = computed(() => String(route.params.runId ?? ""));
+const runDetailRequestTimeoutMs = 10_000;
 const snapshotOptions = computed(() => {
   const snapshots = Array.isArray(run.value?.run_snapshots) ? run.value.run_snapshots : [];
   if (snapshots.length <= 1) {
@@ -258,6 +264,9 @@ const outputArtifacts = computed(() => (viewedRun.value ? listRunOutputArtifacts
 const canRestore = computed(() => (run.value ? canRestoreRunDetail(run.value) : false));
 const restoreEditorHref = computed(() => (run.value ? resolveRunRestoreUrl(run.value.run_id, selectedSnapshotId.value) : "/editor/new"));
 let pollTimer: number | null = null;
+let activeRunRequestId = 0;
+let activeRunController: AbortController | null = null;
+let activeRunTimeout: number | null = null;
 
 function selectSnapshot(snapshotId: string) {
   selectedSnapshotIdDraft.value = snapshotId;
@@ -278,41 +287,105 @@ function isContentExpanded(key: string) {
   return expandedContentKeys.value.has(key);
 }
 
-async function loadRun() {
+function clearRunPollTimer() {
   if (pollTimer !== null) {
     window.clearTimeout(pollTimer);
     pollTimer = null;
   }
-  try {
-    run.value = await fetchRun(runId.value);
-    error.value = null;
-    if (shouldPollRunStatus(run.value.status)) {
-      pollTimer = window.setTimeout(() => {
-        void loadRun();
-      }, 750);
-    }
-  } catch (fetchError) {
-    error.value = fetchError instanceof Error ? fetchError.message : "Failed to load run detail.";
+}
+
+function clearPendingRunRequest() {
+  activeRunController?.abort();
+  activeRunController = null;
+  if (activeRunTimeout !== null) {
+    window.clearTimeout(activeRunTimeout);
+    activeRunTimeout = null;
   }
 }
 
-onMounted(() => {
-  void loadRun();
+function resolveRunFetchErrorMessage(fetchError: unknown) {
+  if (fetchError instanceof Error && fetchError.name === "AbortError") {
+    return "加载运行记录超时，请重试。";
+  }
+  return fetchError instanceof Error ? fetchError.message : "Failed to load run detail.";
+}
+
+async function loadRun(nextRunId = runId.value) {
+  const requestId = activeRunRequestId + 1;
+  activeRunRequestId = requestId;
+  clearRunPollTimer();
+  clearPendingRunRequest();
+
+  const normalizedRunId = nextRunId.trim();
+  if (!normalizedRunId) {
+    run.value = null;
+    loading.value = false;
+    error.value = "缺少运行记录 ID。";
+    return;
+  }
+
+  const controller = new AbortController();
+  activeRunController = controller;
+  activeRunTimeout = window.setTimeout(() => {
+    controller.abort();
+  }, runDetailRequestTimeoutMs);
+
+  loading.value = !run.value;
+  error.value = null;
+
+  try {
+    const nextRun = await fetchRun(normalizedRunId, { signal: controller.signal });
+    if (requestId !== activeRunRequestId) {
+      return;
+    }
+    run.value = nextRun;
+    error.value = null;
+    if (shouldPollRunStatus(nextRun.status)) {
+      pollTimer = window.setTimeout(() => {
+        void loadRun(normalizedRunId);
+      }, 750);
+    }
+  } catch (fetchError) {
+    if (requestId !== activeRunRequestId) {
+      return;
+    }
+    run.value = null;
+    error.value = resolveRunFetchErrorMessage(fetchError);
+  } finally {
+    if (requestId === activeRunRequestId) {
+      loading.value = false;
+      if (activeRunController === controller) {
+        activeRunController = null;
+      }
+      if (activeRunTimeout !== null) {
+        window.clearTimeout(activeRunTimeout);
+        activeRunTimeout = null;
+      }
+    }
+  }
+}
+
+watch(
+  runId,
+  (nextRunId) => {
+    resetRunView();
+    void loadRun(nextRunId);
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(() => {
+  activeRunRequestId += 1;
+  clearRunPollTimer();
+  clearPendingRunRequest();
 });
 
-watch(runId, () => {
+function resetRunView() {
   run.value = null;
   error.value = null;
   selectedSnapshotIdDraft.value = null;
   expandedContentKeys.value = new Set();
-  void loadRun();
-});
-
-onBeforeUnmount(() => {
-  if (pollTimer !== null) {
-    window.clearTimeout(pollTimer);
-  }
-});
+}
 
 function snapshotLabel(kind: string, order: number) {
   if (kind === "pause") {
@@ -363,6 +436,15 @@ function statusBadgeClass(status: string) {
 .run-detail__hero,
 .run-detail__empty {
   padding: 24px;
+}
+
+.run-detail__empty {
+  display: grid;
+  gap: 12px;
+}
+
+.run-detail__empty p {
+  margin: 0;
 }
 
 .run-detail__hero {
@@ -417,7 +499,8 @@ function statusBadgeClass(status: string) {
 
 .run-detail__restore-link,
 .run-detail__snapshot-chip,
-.run-detail__content-toggle {
+.run-detail__content-toggle,
+.run-detail__retry {
   border: 1px solid rgba(154, 52, 18, 0.18);
   border-radius: 999px;
   color: rgb(154, 52, 18);
@@ -428,7 +511,8 @@ function statusBadgeClass(status: string) {
 }
 
 .run-detail__restore-link,
-.run-detail__content-toggle {
+.run-detail__content-toggle,
+.run-detail__retry {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -440,7 +524,8 @@ function statusBadgeClass(status: string) {
 
 .run-detail__restore-link:hover,
 .run-detail__snapshot-chip:hover,
-.run-detail__content-toggle:hover {
+.run-detail__content-toggle:hover,
+.run-detail__retry:hover {
   border-color: rgba(154, 52, 18, 0.3);
   background: rgba(255, 244, 232, 0.98);
   transform: translateY(-1px);

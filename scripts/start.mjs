@@ -1,7 +1,9 @@
 import { spawn, execFile } from "node:child_process";
-import { createWriteStream, existsSync } from "node:fs";
+import { createWriteStream, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { createPortReleasePlan } from "./dev-port-ownership.mjs";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const backendDir = resolve(rootDir, "backend");
@@ -12,6 +14,7 @@ const backendPort = String(process.env.BACKEND_PORT || "8765");
 const frontendPort = String(process.env.FRONTEND_PORT || "3477");
 const backendLogPath = resolve(rootDir, ".dev_backend.log");
 const frontendLogPath = resolve(rootDir, ".dev_frontend.log");
+const devPidPath = resolve(rootDir, ".dev_pids.json");
 
 let backendProcess;
 let frontendProcess;
@@ -90,42 +93,208 @@ async function findPortPids(port) {
   }
 }
 
-async function killPortPids(port) {
-  const pids = await findPortPids(port);
-  if (pids.length === 0) {
+function addPid(pids, value) {
+  const pid = String(value ?? "").trim();
+  if (/^\d+$/.test(pid)) {
+    pids.add(pid);
+  }
+}
+
+function addLogPids(pids, logPath) {
+  if (!existsSync(logPath)) {
     return;
   }
 
-  console.log(`Releasing port ${port} used by PID(s): ${pids.join(", ")}`);
+  const content = readFileSync(logPath, "utf8");
+  const patterns = [
+    /Started (?:reloader|server) process \[(\d+)\]/g,
+    /\b(?:Backend|Frontend) PID:\s*(\d+)/g,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of content.matchAll(pattern)) {
+      addPid(pids, match[1]);
+    }
+  }
+}
+
+function loadKnownGraphitePids() {
+  const pids = new Set();
+
+  if (existsSync(devPidPath)) {
+    try {
+      const state = JSON.parse(readFileSync(devPidPath, "utf8"));
+      if (state.rootDir === rootDir) {
+        addPid(pids, state.launcherPid);
+        addPid(pids, state.backend?.pid);
+        addPid(pids, state.frontend?.pid);
+      }
+    } catch {
+      // A corrupt stale PID file should not block startup.
+    }
+  }
+
+  addLogPids(pids, backendLogPath);
+  addLogPids(pids, frontendLogPath);
+  return pids;
+}
+
+function parseProcessJson(stdout) {
+  const trimmed = stdout.trim();
+  if (!trimmed) {
+    return [];
+  }
+  const parsed = JSON.parse(trimmed);
+  return Array.isArray(parsed) ? parsed : [parsed];
+}
+
+async function listWindowsProcessInfos() {
+  const script = [
+    "$ErrorActionPreference = 'Stop';",
+    "Get-CimInstance Win32_Process | ForEach-Object {",
+    "[pscustomobject]@{",
+    "pid=[string]$_.ProcessId;",
+    "parentPid=[string]$_.ParentProcessId;",
+    "name=$_.Name;",
+    "executablePath=$_.ExecutablePath;",
+    "commandLine=$_.CommandLine",
+    "}",
+    "} | ConvertTo-Json -Compress",
+  ].join(" ");
+  const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-Command", script]);
+  return parseProcessJson(stdout);
+}
+
+async function listUnixProcessInfos() {
+  const { stdout } = await execFileAsync("ps", ["-eo", "pid=,ppid=,comm=,args="]);
+  return stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim().match(/^(\d+)\s+(\d+)\s+(\S+)\s*(.*)$/))
+    .filter(Boolean)
+    .map((match) => ({
+      pid: match[1],
+      parentPid: match[2],
+      name: match[3],
+      commandLine: match[4],
+    }));
+}
+
+async function listProcessInfos() {
+  try {
+    return isWindows ? await listWindowsProcessInfos() : await listUnixProcessInfos();
+  } catch {
+    return [];
+  }
+}
+
+async function terminatePids(pids) {
   if (isWindows) {
     await Promise.all(
       pids.map((pid) =>
         execFileAsync("taskkill", ["/PID", pid, "/T", "/F"]).catch(() => undefined),
       ),
     );
-  } else {
-    for (const pid of pids) {
-      try {
-        process.kill(Number(pid), "SIGTERM");
-      } catch {
-        // The process may already be gone.
-      }
-    }
-    await sleep(1000);
-    for (const pid of await findPortPids(port)) {
-      try {
-        process.kill(Number(pid), "SIGKILL");
-      } catch {
-        // The process may already be gone.
-      }
-    }
+    return;
   }
 
+  for (const pid of pids) {
+    try {
+      process.kill(Number(pid), "SIGTERM");
+    } catch {
+      // The process may already be gone.
+    }
+  }
+  await sleep(1000);
+  for (const pid of pids) {
+    try {
+      process.kill(Number(pid), "SIGKILL");
+    } catch {
+      // The process may already be gone.
+    }
+  }
+}
+
+async function killPortPids(port) {
+  const pids = await findPortPids(port);
+  if (pids.length === 0) {
+    return;
+  }
+
+  const processInfos = await listProcessInfos();
+  const plan = createPortReleasePlan({
+    port,
+    portPids: pids,
+    processInfos,
+    context: {
+      knownGraphitePids: loadKnownGraphitePids(),
+      rootDir,
+      backendDir,
+      frontendDir,
+      backendPort,
+      frontendPort,
+    },
+  });
+
+  if (plan.blockedOwners.length > 0) {
+    console.error(`Port ${port} is used by process(es) that do not look like GraphiteUI:`);
+    for (const owner of plan.blockedOwners) {
+      console.error(`  ${owner}`);
+    }
+    throw new Error(`Port ${port} is occupied by another program. Stop that program or change the port.`);
+  }
+
+  if (plan.killPids.length === 0) {
+    throw new Error(
+      `Port ${port} is occupied by PID(s): ${pids.join(
+        ", ",
+      )}, but no live GraphiteUI process could be found to terminate.`,
+    );
+  }
+
+  console.log(`Releasing GraphiteUI process(es) on port ${port}: ${plan.killPids.join(", ")}`);
+  await terminatePids(plan.killPids);
   await sleep(1000);
   const remainingPids = await findPortPids(port);
   if (remainingPids.length > 0) {
     throw new Error(`Failed to release port ${port}; still used by PID(s): ${remainingPids.join(", ")}`);
   }
+}
+
+function writeDevPidState() {
+  writeFileSync(
+    devPidPath,
+    `${JSON.stringify(
+      {
+        rootDir,
+        startedAt: new Date().toISOString(),
+        launcherPid: process.pid,
+        backend: {
+          pid: backendProcess?.pid,
+          port: backendPort,
+        },
+        frontend: {
+          pid: frontendProcess?.pid,
+          port: frontendPort,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+function clearDevPidState() {
+  if (existsSync(devPidPath)) {
+    try {
+      const state = JSON.parse(readFileSync(devPidPath, "utf8"));
+      if (String(state.launcherPid ?? "") !== String(process.pid)) {
+        return;
+      }
+    } catch {
+      // Remove unreadable state written by this launcher path.
+    }
+  }
+  rmSync(devPidPath, { force: true });
 }
 
 async function resolvePythonCommand() {
@@ -222,7 +391,9 @@ function spawnLoggedProcess(command, args, options, logPath, label) {
   child.stdout.pipe(logStream);
   child.stderr.pipe(logStream);
   child.once("spawn", () => {
-    console.log(`${label} PID: ${child.pid}`);
+    const pidLine = `${label} PID: ${child.pid}`;
+    console.log(pidLine);
+    logStream.write(`${pidLine}\n`);
   });
   child.once("error", (error) => {
     logStream.write(`\nFailed to start ${label}: ${error.message}\n`);
@@ -284,6 +455,7 @@ async function stopServices() {
 
   console.log("\nStopping GraphiteUI services...");
   await Promise.all([stopProcessTree(frontendProcess), stopProcessTree(backendProcess)]);
+  clearDevPidState();
   console.log("Services stopped.");
 }
 
@@ -342,6 +514,8 @@ async function main() {
     frontendLogPath,
     "Frontend",
   );
+
+  writeDevPidState();
 
   const backendReady = await waitForHttp(`http://127.0.0.1:${backendPort}/health`, 20, 500);
   if (!backendReady) {

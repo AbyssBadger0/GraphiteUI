@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-256 -256 512 512" role="img" aria-labelledby="title desc">
   <title id="title">GraphiteUI cat logo</title>
-  <desc id="desc">A black cat head with warm gold eyes revealed through a circular gold ring.</desc>
+  <desc id="desc">A black cat head with warm gold eyes and a gold sparkle revealed through a circular gold ring.</desc>
   <defs>
     <radialGradient id="paper" cx="0" cy="-112" r="352" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#ffffff"/>
@@ -33,6 +33,15 @@
 
   <circle cx="0" cy="0" r="240" fill="url(#paper)"/>
   <g clip-path="url(#innerWindow)">
+    <path
+      id="logoSparkle"
+      fill="url(#ringGold)"
+      d="M0-224
+         C7-204 15-196 42-194
+         C15-192 7-184 0-164
+         C-7-184-15-192-42-194
+         C-15-196-7-204 0-224Z"
+    />
     <path
       fill="url(#catBlack)"
       filter="url(#catSoftness)"

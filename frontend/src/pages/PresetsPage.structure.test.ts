@@ -13,7 +13,10 @@ test("PresetsPage loads persisted node presets into a searchable management surf
   assert.match(componentSource, /const presets = ref<PresetDocument\[\]>\(\[\]\);/);
   assert.match(componentSource, /const filteredPresets = computed\(\(\) => filterPresetsForManagement/);
   assert.match(componentSource, /<ElInput[\s\S]*v-model="query"[\s\S]*class="presets-page__search"/);
-  assert.match(componentSource, /<ElSegmented[\s\S]*v-model="kindFilter"[\s\S]*:options="kindOptions"/);
+  assert.match(componentSource, /role="tablist"[\s\S]*class="presets-page__filter-tabs"/);
+  assert.match(componentSource, /v-for="option in kindOptions"/);
+  assert.match(componentSource, /@click="kindFilter = option\.value"/);
+  assert.doesNotMatch(componentSource, /ElSegmented/);
   assert.match(componentSource, /v-for="preset in filteredPresets"/);
   assert.match(componentSource, /preset\.definition\.node\.kind/);
 });
@@ -40,8 +43,14 @@ test("PresetsPage participates in i18n source coverage", () => {
 
 test("PresetsPage prevents management controls from overflowing narrow shells", () => {
   assert.match(componentSource, /\.presets-page \{[\s\S]*min-width:\s*0;/);
-  assert.match(componentSource, /\.presets-page__segments \{[\s\S]*max-width:\s*100%;[\s\S]*overflow-x:\s*auto;/);
+  assert.match(componentSource, /\.presets-page__filter-tabs \{[\s\S]*max-width:\s*100%;[\s\S]*overflow-x:\s*auto;/);
   assert.match(componentSource, /@media \(max-width:\s*700px\) \{[\s\S]*\.presets-page__refresh \{[\s\S]*width:\s*100%;/);
+});
+
+test("PresetsPage uses compact local filter tabs for node type filtering", () => {
+  assert.match(componentSource, /\.presets-page__filter-tabs \{[\s\S]*border:\s*1px solid rgba\(154,\s*52,\s*18,\s*0\.08\);/);
+  assert.match(componentSource, /\.presets-page__filter-tab \{[\s\S]*background:\s*transparent;/);
+  assert.match(componentSource, /\.presets-page__filter-tab--active \{[\s\S]*box-shadow:\s*inset 0 0 0 1px rgba\(154,\s*52,\s*18,\s*0\.1\),\s*0 4px 10px rgba\(154,\s*52,\s*18,\s*0\.06\);/);
 });
 
 test("PresetsPage uses local short shadows so dense management cards do not stack into bands", () => {

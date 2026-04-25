@@ -41,6 +41,16 @@ test("i18n messages preserve product and technical proper nouns", () => {
   assert.match(messages["en-US"].settings.openAiCompatibleProvider, /OpenAI/);
 });
 
+test("Preset management labels localize node families in Chinese", () => {
+  assert.equal(messages["zh-CN"].presets.agents, "智能体预设");
+  assert.equal(messages["zh-CN"].presets.input, "输入");
+  assert.equal(messages["zh-CN"].presets.agent, "智能体");
+  assert.equal(messages["zh-CN"].presets.condition, "条件");
+  assert.equal(messages["zh-CN"].presets.output, "输出");
+  assert.equal(messages["en-US"].presets.input, "Input");
+  assert.equal(messages["en-US"].presets.agent, "Agent");
+});
+
 test("new language packs use handwritten localized UI copy for high-traffic surfaces", () => {
   assert.equal(messages["zh-TW"].nav.runs, "執行記錄");
   assert.equal(messages["ja-JP"].editor.runGraph, "実行");

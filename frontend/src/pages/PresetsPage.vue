@@ -38,7 +38,21 @@
         </label>
         <div class="presets-page__kind-filter">
           <span>{{ t("presets.kindFilter") }}</span>
-          <ElSegmented v-model="kindFilter" class="presets-page__segments" :options="kindOptions" />
+          <div role="tablist" class="presets-page__filter-tabs" :aria-label="t('presets.kindFilter')">
+            <button
+              v-for="option in kindOptions"
+              :key="option.value"
+              type="button"
+              role="tab"
+              class="presets-page__filter-tab"
+              :class="{ 'presets-page__filter-tab--active': kindFilter === option.value }"
+              :aria-selected="kindFilter === option.value"
+              :tabindex="kindFilter === option.value ? 0 : -1"
+              @click="kindFilter = option.value"
+            >
+              {{ option.label }}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -141,7 +155,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ElInput, ElSegmented } from "element-plus";
+import { ElInput } from "element-plus";
 import { useI18n } from "vue-i18n";
 
 import { deletePreset, fetchPresets, updatePresetStatus } from "@/api/presets";
@@ -408,25 +422,45 @@ onMounted(loadPresets);
   width: 100%;
 }
 
-.presets-page__segments {
-  display: block;
+.presets-page__filter-tabs {
+  display: flex;
+  gap: 4px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
+  border: 1px solid rgba(154, 52, 18, 0.08);
+  border-radius: 14px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.42);
 }
 
-.presets-page__segments :deep(.el-segmented__group) {
-  gap: 4px;
+.presets-page__filter-tab {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: transparent;
+  color: rgba(60, 41, 20, 0.68);
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
-.presets-page__segments :deep(.el-segmented__item.is-selected) {
-  color: var(--graphite-accent-strong);
+.presets-page__filter-tab:hover {
+  color: rgb(154, 52, 18);
+  background: rgba(255, 248, 240, 0.68);
 }
 
-.presets-page__segments :deep(.el-segmented__item-selected) {
+.presets-page__filter-tab--active {
   background: rgba(255, 248, 240, 0.96);
-  box-shadow: 0 8px 18px rgba(154, 52, 18, 0.12);
+  color: rgb(154, 52, 18);
+  box-shadow: inset 0 0 0 1px rgba(154, 52, 18, 0.1), 0 4px 10px rgba(154, 52, 18, 0.06);
+}
+
+.presets-page__filter-tab:focus-visible {
+  outline: 2px solid rgba(216, 166, 80, 0.5);
+  outline-offset: 2px;
 }
 
 .presets-page__list {

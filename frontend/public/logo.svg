@@ -13,6 +13,11 @@
       <stop offset="68%" stop-color="#c89136"/>
       <stop offset="100%" stop-color="#e1b75f"/>
     </linearGradient>
+    <radialGradient id="sparkleGold" cx="0" cy="-192" r="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f2c968"/>
+      <stop offset="62%" stop-color="#dfad50"/>
+      <stop offset="100%" stop-color="#c89136"/>
+    </radialGradient>
     <linearGradient id="eyeGold" x1="-104" y1="32" x2="104" y2="136" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#efbd61"/>
       <stop offset="52%" stop-color="#d8a650"/>
@@ -35,12 +40,10 @@
   <g clip-path="url(#innerWindow)">
     <path
       id="logoSparkle"
-      fill="url(#ringGold)"
-      d="M0-224
-         C7-204 15-196 42-194
-         C15-192 7-184 0-164
-         C-7-184-15-192-42-194
-         C-15-196-7-204 0-224Z"
+      fill="url(#sparkleGold)"
+      d="M0-236
+         L18-210 L56-192 L18-174 L0-148
+         L-18-174 L-56-192 L-18-210Z"
     />
     <path
       fill="url(#catBlack)"

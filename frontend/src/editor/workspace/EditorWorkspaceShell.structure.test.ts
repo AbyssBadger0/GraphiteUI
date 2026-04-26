@@ -227,6 +227,19 @@ test("EditorWorkspaceShell runs the latest document after async model refresh", 
   assert.doesNotMatch(runActiveGraphSource, /const response = await runGraph\(document\);/);
 });
 
+test("EditorWorkspaceShell persists graph document drafts across route changes and app restarts", () => {
+  assert.match(componentSource, /readPersistedEditorDocumentDraft/);
+  assert.match(componentSource, /writePersistedEditorDocumentDraft/);
+  assert.match(componentSource, /removePersistedEditorDocumentDraft/);
+  assert.match(componentSource, /prunePersistedEditorDocumentDrafts/);
+  assert.match(componentSource, /const persistedDraft = readPersistedEditorDocumentDraft\(tab\.tabId\);/);
+  assert.match(componentSource, /registerDocumentForTab\(tab\.tabId, persistedDraft \?\? createDraftForTab\(tab\)\);/);
+  assert.match(componentSource, /const persistedDraft = readPersistedEditorDocumentDraft\(tabId\);[\s\S]*if \(persistedDraft\) \{[\s\S]*registerDocumentForTab\(tabId, persistedDraft\);[\s\S]*return;/);
+  assert.match(componentSource, /writePersistedEditorDocumentDraft\(tabId, syncedDocument\);/);
+  assert.match(componentSource, /removePersistedEditorDocumentDraft\(tabId\);/);
+  assert.match(componentSource, /prunePersistedEditorDocumentDrafts\(nextWorkspace\.tabs\.map\(\(tab\) => tab\.tabId\)\);/);
+});
+
 test("EditorWorkspaceShell renders the graph action controls as a detached capsule instead of passing them through EditorTabBar", () => {
   const editorTabBarUsage = componentSource.match(/<EditorTabBar[\s\S]*?\/>/)?.[0] ?? "";
 

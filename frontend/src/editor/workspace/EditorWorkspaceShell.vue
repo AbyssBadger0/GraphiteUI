@@ -240,10 +240,14 @@ import {
   closeWorkspaceTabTransition,
   createUnsavedWorkspaceTab,
   ensureSavedGraphTab,
+  prunePersistedEditorDocumentDrafts,
+  readPersistedEditorDocumentDraft,
   readPersistedEditorWorkspace,
   reorderWorkspaceTab,
+  removePersistedEditorDocumentDraft,
   resolveEditorUrl,
   resolveWorkspaceTabUrl,
+  writePersistedEditorDocumentDraft,
   writePersistedEditorWorkspace,
   type EditorWorkspaceTab,
   type PersistedEditorWorkspace,
@@ -731,11 +735,12 @@ function updateWorkspaceTab(tabId: string, updater: (tab: EditorWorkspaceTab) =>
 }
 
 function registerDocumentForTab(tabId: string, graph: GraphPayload | GraphDocument) {
-  const nextDocument = syncKnowledgeBaseSkillsInDocument(graph);
+  const syncedDocument = syncKnowledgeBaseSkillsInDocument(graph);
   documentsByTabId.value = {
     ...documentsByTabId.value,
-    [tabId]: nextDocument,
+    [tabId]: syncedDocument,
   };
+  writePersistedEditorDocumentDraft(tabId, syncedDocument);
   loadingByTabId.value = {
     ...loadingByTabId.value,
     [tabId]: false,
@@ -747,7 +752,7 @@ function registerDocumentForTab(tabId: string, graph: GraphPayload | GraphDocume
   if (!feedbackByTabId.value[tabId]) {
     setMessageFeedbackForTab(tabId, {
       tone: "neutral",
-      message: `Ready to edit ${nextDocument.name}.`,
+      message: `Ready to edit ${syncedDocument.name}.`,
     });
   }
 }
@@ -825,7 +830,8 @@ function ensureUnsavedTabDocuments() {
     if (tab.graphId || documentsByTabId.value[tab.tabId]) {
       continue;
     }
-    registerDocumentForTab(tab.tabId, createDraftForTab(tab));
+    const persistedDraft = readPersistedEditorDocumentDraft(tab.tabId);
+    registerDocumentForTab(tab.tabId, persistedDraft ?? createDraftForTab(tab));
   }
 }
 
@@ -937,6 +943,11 @@ async function loadExistingGraphIntoTab(tabId: string, graphId: string) {
   };
 
   try {
+    const persistedDraft = readPersistedEditorDocumentDraft(tabId);
+    if (persistedDraft) {
+      registerDocumentForTab(tabId, persistedDraft);
+      return;
+    }
     const graph = await fetchGraph(graphId);
     registerDocumentForTab(tabId, graph);
   } catch (error) {
@@ -960,10 +971,15 @@ function openExistingGraph(graphId: string, navigation: "push" | "replace" | "no
   updateWorkspace(nextWorkspace);
 
   const nextTabId = nextWorkspace.activeTabId;
-  if (nextTabId && graph) {
-    registerDocumentForTab(nextTabId, cloneGraphDocument(graph));
-  } else if (nextTabId) {
-    void loadExistingGraphIntoTab(nextTabId, graphId);
+  if (nextTabId && !documentsByTabId.value[nextTabId]) {
+    const persistedDraft = readPersistedEditorDocumentDraft(nextTabId);
+    if (persistedDraft) {
+      registerDocumentForTab(nextTabId, persistedDraft);
+    } else if (graph) {
+      registerDocumentForTab(nextTabId, cloneGraphDocument(graph));
+    } else {
+      void loadExistingGraphIntoTab(nextTabId, graphId);
+    }
   }
 
   if (navigation !== "none") {
@@ -1000,6 +1016,7 @@ function finalizeTabClose(tabId: string) {
   const transition = closeWorkspaceTabTransition(workspace.value, tabId);
   updateWorkspace(transition.workspace);
   writePersistedEditorWorkspace(transition.workspace);
+  removePersistedEditorDocumentDraft(tabId);
   clearTabRuntime(tabId);
 
   if (transition.closedActiveTab) {
@@ -1045,6 +1062,7 @@ function setDocumentForTab(tabId: string, nextDocument: GraphPayload | GraphDocu
     ...documentsByTabId.value,
     [tabId]: syncedDocument,
   };
+  writePersistedEditorDocumentDraft(tabId, syncedDocument);
 }
 
 function isStatePanelOpen(tabId: string) {
@@ -2220,6 +2238,7 @@ watch(
       return;
     }
     writePersistedEditorWorkspace(nextWorkspace);
+    prunePersistedEditorDocumentDrafts(nextWorkspace.tabs.map((tab) => tab.tabId));
   },
   { deep: true },
 );

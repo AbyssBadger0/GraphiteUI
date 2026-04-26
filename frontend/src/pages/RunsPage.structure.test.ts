@@ -76,6 +76,27 @@ test("RunsPage paginates run history instead of rendering every run at once", ()
   assert.match(componentSource, /\.runs-page__pagination \{[\s\S]*justify-content:\s*center;/);
 });
 
+test("RunsPage uses a two-column run card grid on wide screens and returns to one column below desktop", () => {
+  assert.match(
+    componentSource,
+    /\.runs-page__list \{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[\s\S]*align-items:\s*stretch;/
+  );
+  assert.match(
+    componentSource,
+    /\.runs-page__run-row \{[\s\S]*grid-template-columns:\s*5px minmax\(0,\s*1fr\) auto;[\s\S]*align-items:\s*center;/
+  );
+  assert.doesNotMatch(componentSource, /min-height:\s*172px;/);
+  assert.match(componentSource, /\.runs-page__card-actions \{[\s\S]*align-self:\s*center;[\s\S]*justify-content:\s*flex-end;/);
+  assert.match(
+    componentSource,
+    /@media \(max-width:\s*980px\) \{[\s\S]*\.runs-page__list \{[\s\S]*grid-template-columns:\s*1fr;/
+  );
+  assert.match(
+    componentSource,
+    /@media \(max-width:\s*1120px\) \{[\s\S]*\.runs-page__run-row \{[\s\S]*grid-template-columns:\s*5px minmax\(0,\s*1fr\);/
+  );
+});
+
 test("RunsPage gives status segments warm hover and selected states instead of Element Plus defaults", () => {
   assert.match(componentSource, /\.runs-page__segments\s+:deep\(\.el-segmented__group\) \{[\s\S]*gap:\s*4px;/);
   assert.match(componentSource, /\.runs-page__segments\s+:deep\(\.el-segmented__item:not\(\.is-selected\):hover\) \{[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.56\);/);

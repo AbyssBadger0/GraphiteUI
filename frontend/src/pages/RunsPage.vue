@@ -432,7 +432,9 @@ function statusBadgeClass(status: string) {
 
 .runs-page__list {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 14px;
 }
 
 .runs-page__pagination {
@@ -468,11 +470,10 @@ function statusBadgeClass(status: string) {
   position: relative;
   display: grid;
   grid-template-columns: 5px minmax(0, 1fr) auto;
-  gap: 16px;
+  gap: 10px 14px;
   align-items: center;
-  min-height: 96px;
   overflow: hidden;
-  padding: 18px;
+  padding: 16px 18px;
   background: rgba(255, 253, 249, 0.86);
   cursor: pointer;
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease;
@@ -553,6 +554,7 @@ function statusBadgeClass(status: string) {
 }
 
 .runs-page__card-actions {
+  align-self: center;
   display: inline-flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -621,6 +623,7 @@ function statusBadgeClass(status: string) {
 }
 
 .runs-page__empty {
+  grid-column: 1 / -1;
   display: grid;
   gap: 14px;
   padding: 24px;
@@ -638,16 +641,24 @@ function statusBadgeClass(status: string) {
   padding: 0 14px;
 }
 
+@media (max-width: 980px) {
+  .runs-page__list {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1120px) {
   .runs-page__run-row {
     grid-template-columns: 5px minmax(0, 1fr);
   }
 
-  .runs-page__card-actions {
-    grid-column: 2;
+  .runs-page__status-rail {
+    grid-row: 1 / span 2;
   }
 
   .runs-page__card-actions {
+    grid-column: 2;
+    align-self: start;
     justify-content: flex-start;
   }
 }

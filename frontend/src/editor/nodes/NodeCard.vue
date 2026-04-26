@@ -652,18 +652,18 @@
               >
                 <Opportunity />
               </span>
-              <ElSwitch
-                class="node-card__agent-toggle-switch node-card__agent-thinking-switch"
-                :model-value="agentThinkingEnabled"
-                :width="56"
-                inline-prompt
-                active-text="ON"
-                inactive-text="OFF"
+              <ElSelect
+                class="node-card__agent-thinking-select graphite-select"
+                :model-value="agentThinkingModeValue"
+                :teleported="false"
+                popper-class="graphite-select-popper node-card__agent-thinking-popper"
                 :aria-label="t('nodeCard.toggleThinking')"
                 @pointerdown.stop
                 @click.stop
-                @update:model-value="handleAgentThinkingToggle"
-              />
+                @update:model-value="handleAgentThinkingModeSelect"
+              >
+                <ElOption v-for="option in agentThinkingOptions" :key="option.value" :label="option.label" :value="option.value" />
+              </ElSelect>
             </div>
           </template>
           <div class="node-card__confirm-hint node-card__confirm-hint--toggle">{{ t("nodeCard.thinkingMode") }}</div>
@@ -1340,6 +1340,15 @@ const agentAddPopoverStyle = {
 } as const;
 const stateTypeOptions = STATE_FIELD_TYPE_OPTIONS;
 const conditionRuleOperatorOptions = CONDITION_RULE_OPERATOR_OPTIONS;
+type AgentThinkingControlMode = Exclude<AgentNode["config"]["thinkingMode"], "on">;
+const agentThinkingOptions = computed<Array<{ value: AgentThinkingControlMode; label: string }>>(() => [
+  { value: "auto", label: t("nodeCard.thinkingAuto") },
+  { value: "off", label: t("nodeCard.thinkingOff") },
+  { value: "low", label: t("nodeCard.thinkingFast") },
+  { value: "medium", label: t("nodeCard.thinkingBalanced") },
+  { value: "high", label: t("nodeCard.thinkingDeep") },
+  { value: "xhigh", label: t("nodeCard.thinkingExtreme") },
+]);
 const agentPortPickerActions: Array<{ side: "input" | "output"; label: string; toneClass: string; placement: "bottom-start" | "bottom-end" }> = [
   { side: "input", label: "+ input", toneClass: "node-card__action-pill--input", placement: "bottom-start" },
   { side: "output", label: "+ output", toneClass: "node-card__action-pill--output", placement: "bottom-end" },
@@ -1534,7 +1543,10 @@ const agentResolvedModelValue = computed(() => {
   const overrideModel = props.node.config.model.trim();
   return props.node.config.modelSource === "override" && overrideModel ? overrideModel : trimmedGlobalTextModelRef.value;
 });
-const agentThinkingEnabled = computed(() => props.node.kind === "agent" ? props.node.config.thinkingMode === "on" : true);
+const agentThinkingModeValue = computed<AgentThinkingControlMode>(() =>
+  props.node.kind === "agent" ? normalizeAgentThinkingMode(props.node.config.thinkingMode) : "auto",
+);
+const agentThinkingEnabled = computed(() => props.node.kind === "agent" ? agentThinkingModeValue.value !== "off" : true);
 const agentBreakpointTimingValue = computed(() => props.agentBreakpointTiming ?? "after");
 const agentModelOptions = computed(() =>
   buildAgentModelSelectOptions(agentResolvedModelValue.value, props.availableAgentModelRefs, props.agentModelDisplayLookup),
@@ -2879,11 +2891,21 @@ function collapseAgentModelSelect() {
   agentModelSelectRef.value?.blur?.();
 }
 
-function handleAgentThinkingToggle(nextValue: string | number | boolean) {
-  if (typeof nextValue !== "boolean") {
+function normalizeAgentThinkingMode(value: string | null | undefined): AgentThinkingControlMode {
+  if (value === "off" || value === "minimal" || value === "low" || value === "medium" || value === "high" || value === "xhigh") {
+    return value;
+  }
+  if (value === "on") {
+    return "medium";
+  }
+  return "auto";
+}
+
+function handleAgentThinkingModeSelect(nextValue: string | number | boolean | undefined) {
+  if (typeof nextValue !== "string") {
     return;
   }
-  updateAgentThinkingMode(nextValue ? "on" : "off");
+  updateAgentThinkingMode(normalizeAgentThinkingMode(nextValue));
 }
 
 function updateAgentThinkingMode(thinkingMode: AgentNode["config"]["thinkingMode"]) {
@@ -3890,6 +3912,10 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
     box-shadow 140ms ease;
 }
 
+.node-card__agent-toggle-card--thinking {
+  grid-template-columns: 20px minmax(0, 1fr);
+}
+
 .node-card__agent-toggle-card:hover {
   border-color: rgba(154, 52, 18, 0.22);
   background: rgba(255, 252, 247, 0.94);
@@ -3942,6 +3968,27 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
   justify-self: end;
   --el-switch-on-color: #c96b1f;
   --el-switch-off-color: rgba(154, 52, 18, 0.24);
+}
+
+.node-card__agent-thinking-select {
+  width: 100%;
+  min-width: 0;
+  --el-color-primary: #c96b1f;
+  --el-border-radius-base: 999px;
+}
+
+.node-card__agent-thinking-select :deep(.el-select__wrapper) {
+  min-height: 32px;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 0 0 1px rgba(154, 52, 18, 0.12) inset;
+}
+
+.node-card__agent-thinking-select :deep(.el-select__placeholder) {
+  color: #7c3d12;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 :deep(.node-card__agent-toggle-hint-popper.el-popper) {

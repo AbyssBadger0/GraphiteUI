@@ -140,12 +140,12 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   );
   assert.match(agentSection, /class="node-card__agent-toggle-card node-card__agent-toggle-card--thinking"/);
   assert.match(agentSection, /class="node-card__agent-thinking-icon"/);
-  assert.match(agentSection, /<ElSwitch/);
-  assert.match(agentSection, /class="node-card__agent-toggle-switch node-card__agent-thinking-switch"/);
-  assert.match(agentSection, /:model-value="agentThinkingEnabled"/);
-  assert.match(agentSection, /:width="56"/);
-  assert.match(agentSection, /active-text="ON"/);
-  assert.match(agentSection, /inactive-text="OFF"/);
+  assert.match(agentSection, /<ElSelect/);
+  assert.match(agentSection, /class="node-card__agent-thinking-select graphite-select"/);
+  assert.match(agentSection, /:model-value="agentThinkingModeValue"/);
+  assert.match(agentSection, /v-for="option in agentThinkingOptions"/);
+  assert.match(agentSection, /@update:model-value="handleAgentThinkingModeSelect"/);
+  assert.doesNotMatch(agentSection, /class="node-card__agent-toggle-switch node-card__agent-thinking-switch"/);
   assert.match(agentSection, /class="node-card__confirm-hint node-card__confirm-hint--toggle">\{\{ t\("nodeCard\.thinkingMode"\) \}\}<\/div>/);
   assert.match(agentSection, /class="node-card__agent-toggle-card node-card__agent-toggle-card--breakpoint"/);
   assert.match(agentSection, /class="node-card__agent-breakpoint-icon"/);
@@ -165,6 +165,7 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(componentSource, /\.node-card__agent-model-select-shell \{[\s\S]*width:\s*100%;/);
   assert.match(componentSource, /\.node-card__agent-toggle-card \{/);
   assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*grid-template-columns:\s*20px\s*56px;/);
+  assert.match(componentSource, /\.node-card__agent-toggle-card--thinking \{[\s\S]*grid-template-columns:\s*20px\s*minmax\(0,\s*1fr\);/);
   assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*width:\s*100%;/);
   assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*min-height:\s*48px;/);
   assert.match(componentSource, /\.node-card__agent-toggle-card \{[\s\S]*border-radius:\s*16px;/);
@@ -174,6 +175,9 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(componentSource, /\.node-card__agent-thinking-icon \{[\s\S]*width:\s*20px;/);
   assert.match(componentSource, /\.node-card__agent-thinking-icon \{[\s\S]*height:\s*20px;/);
   assert.doesNotMatch(componentSource, /\.node-card__agent-thinking-icon \{[^}]*background:/);
+  assert.match(componentSource, /const agentThinkingOptions = computed/);
+  assert.match(componentSource, /value:\s*"auto"/);
+  assert.match(componentSource, /function normalizeAgentThinkingMode/);
   assert.match(componentSource, /agentBreakpointEnabled\?:\s*boolean;/);
   assert.match(componentSource, /agentBreakpointTiming\?:\s*"before" \| "after";/);
   assert.match(componentSource, /\(event: "toggle-agent-breakpoint", payload: \{ nodeId: string; enabled: boolean \}\): void;/);

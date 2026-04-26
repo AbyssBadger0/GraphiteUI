@@ -14,6 +14,12 @@ from app.core.model_provider_templates import (
     normalize_transport,
 )
 from app.core.storage.settings_store import load_app_settings
+from app.core.thinking_levels import (
+    THINKING_LEVEL_MEDIUM,
+    THINKING_LEVEL_OFF,
+    build_native_thinking_payload,
+    normalize_thinking_level,
+)
 from app.tools.openai_codex_client import (
     DEFAULT_CODEX_MODEL_IDS,
     refresh_codex_access_token,
@@ -310,6 +316,7 @@ def _chat_openai_compatible(
     max_tokens: int | None,
     auth_header: str,
     auth_scheme: str,
+    thinking_level: str,
 ) -> tuple[str, dict[str, Any]]:
     request_payload: dict[str, Any] = {
         "model": model,
@@ -322,6 +329,13 @@ def _chat_openai_compatible(
     }
     if max_tokens is not None:
         request_payload["max_tokens"] = max_tokens
+    native_thinking_payload = build_native_thinking_payload(
+        provider_id=provider_id,
+        transport=TRANSPORT_OPENAI_COMPATIBLE,
+        model=model,
+        thinking_level=thinking_level,
+    )
+    request_payload.update(native_thinking_payload)
 
     response_payload = _request_json(
         method="POST",
@@ -340,6 +354,9 @@ def _chat_openai_compatible(
         "usage": response_payload.get("usage"),
         "timings": response_payload.get("timings"),
         "response_id": response_payload.get("id"),
+        "thinking_enabled": bool(native_thinking_payload),
+        "thinking_level": thinking_level,
+        "reasoning_format": "reasoning_effort" if native_thinking_payload else None,
     }
 
 
@@ -353,14 +370,26 @@ def _chat_anthropic(
     user_prompt: str,
     temperature: float,
     max_tokens: int | None,
+    thinking_level: str,
 ) -> tuple[str, dict[str, Any]]:
+    native_thinking_payload = build_native_thinking_payload(
+        provider_id=provider_id,
+        transport=TRANSPORT_ANTHROPIC_MESSAGES,
+        model=model,
+        thinking_level=thinking_level,
+    )
+    budget_tokens = native_thinking_payload.get("thinking", {}).get("budget_tokens")
+    max_output_tokens = max_tokens or 4096
+    if isinstance(budget_tokens, int):
+        max_output_tokens = max(max_output_tokens, budget_tokens + 1024)
     request_payload: dict[str, Any] = {
         "model": model,
         "system": system_prompt,
-        "max_tokens": max_tokens or 4096,
+        "max_tokens": max_output_tokens,
         "temperature": temperature,
         "messages": [{"role": "user", "content": user_prompt}],
     }
+    request_payload.update(native_thinking_payload)
     response_payload = _request_json(
         method="POST",
         url=f"{base_url}/messages",
@@ -377,6 +406,9 @@ def _chat_anthropic(
         "usage": response_payload.get("usage"),
         "timings": None,
         "response_id": response_payload.get("id"),
+        "thinking_enabled": bool(native_thinking_payload),
+        "thinking_level": thinking_level,
+        "reasoning_format": "anthropic-thinking" if native_thinking_payload else None,
     }
 
 
@@ -390,6 +422,7 @@ def _chat_gemini(
     user_prompt: str,
     temperature: float,
     max_tokens: int | None,
+    thinking_level: str,
 ) -> tuple[str, dict[str, Any]]:
     request_payload: dict[str, Any] = {
         "system_instruction": {
@@ -409,6 +442,14 @@ def _chat_gemini(
     }
     if max_tokens is not None:
         request_payload["generationConfig"]["maxOutputTokens"] = max_tokens
+    native_thinking_payload = build_native_thinking_payload(
+        provider_id=provider_id,
+        transport=TRANSPORT_GEMINI_GENERATE_CONTENT,
+        model=model,
+        thinking_level=thinking_level,
+    )
+    if isinstance(native_thinking_payload.get("generationConfig"), dict):
+        request_payload["generationConfig"].update(native_thinking_payload["generationConfig"])
 
     model_name = model.removeprefix("models/")
     response_payload = _request_json(
@@ -427,6 +468,9 @@ def _chat_gemini(
         "usage": response_payload.get("usageMetadata"),
         "timings": None,
         "response_id": response_payload.get("responseId"),
+        "thinking_enabled": bool(native_thinking_payload),
+        "thinking_level": thinking_level,
+        "reasoning_format": "gemini-thinking-config" if native_thinking_payload else None,
     }
 
 
@@ -504,6 +548,7 @@ def _chat_codex_responses(
     system_prompt: str,
     user_prompt: str,
     temperature: float,
+    thinking_level: str,
 ) -> tuple[str, dict[str, Any]]:
     request_payload: dict[str, Any] = {
         "model": model,
@@ -512,6 +557,13 @@ def _chat_codex_responses(
         "store": False,
         "temperature": temperature,
     }
+    native_thinking_payload = build_native_thinking_payload(
+        provider_id=provider_id,
+        transport=TRANSPORT_CODEX_RESPONSES,
+        model=model,
+        thinking_level=thinking_level,
+    )
+    request_payload.update(native_thinking_payload)
 
     access_token = resolve_codex_access_token()
     try:
@@ -538,6 +590,9 @@ def _chat_codex_responses(
         "usage": response_payload.get("usage"),
         "timings": None,
         "response_id": response_payload.get("id"),
+        "thinking_enabled": bool(native_thinking_payload),
+        "thinking_level": thinking_level,
+        "reasoning_format": "responses-reasoning" if native_thinking_payload else None,
     }
 
 
@@ -553,16 +608,17 @@ def chat_with_model_provider(
     temperature: float,
     max_tokens: int | None = None,
     thinking_enabled: bool = False,
+    thinking_level: str | None = None,
     auth_header: str = "Authorization",
     auth_scheme: str = "Bearer",
 ) -> tuple[str, dict[str, Any]]:
     normalized_transport = normalize_transport(transport)
     normalized_base_url = _normalize_base_url(base_url)
     warnings: list[str] = []
-    if thinking_enabled and provider_id != "local":
-        warnings.append(
-            f"Thinking mode was requested for provider '{provider_id}', but GraphiteUI currently only maps provider-specific thinking fields for the local gateway."
-        )
+    resolved_thinking_level = normalize_thinking_level(
+        thinking_level if thinking_level is not None else (THINKING_LEVEL_MEDIUM if thinking_enabled else THINKING_LEVEL_OFF),
+        fallback=THINKING_LEVEL_OFF,
+    )
 
     if normalized_transport == TRANSPORT_OPENAI_COMPATIBLE:
         content, meta = _chat_openai_compatible(
@@ -576,6 +632,7 @@ def chat_with_model_provider(
             max_tokens=max_tokens,
             auth_header=auth_header,
             auth_scheme=auth_scheme,
+            thinking_level=resolved_thinking_level,
         )
     elif normalized_transport == TRANSPORT_ANTHROPIC_MESSAGES:
         content, meta = _chat_anthropic(
@@ -587,6 +644,7 @@ def chat_with_model_provider(
             user_prompt=user_prompt,
             temperature=temperature,
             max_tokens=max_tokens,
+            thinking_level=resolved_thinking_level,
         )
     elif normalized_transport == TRANSPORT_GEMINI_GENERATE_CONTENT:
         content, meta = _chat_gemini(
@@ -598,6 +656,7 @@ def chat_with_model_provider(
             user_prompt=user_prompt,
             temperature=temperature,
             max_tokens=max_tokens,
+            thinking_level=resolved_thinking_level,
         )
     elif normalized_transport == TRANSPORT_CODEX_RESPONSES:
         content, meta = _chat_codex_responses(
@@ -607,15 +666,21 @@ def chat_with_model_provider(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=temperature,
+            thinking_level=resolved_thinking_level,
         )
     else:  # pragma: no cover - guarded by normalize_transport
         raise RuntimeError(f"Unsupported provider transport: {normalized_transport}")
 
     if not content:
         raise RuntimeError(f"{provider_id} returned an empty response.")
+    if resolved_thinking_level != THINKING_LEVEL_OFF and not bool(meta.get("thinking_enabled")):
+        warnings.append(
+            f"Thinking level '{resolved_thinking_level}' was requested for provider '{provider_id}', but GraphiteUI did not find a native thinking field for this provider/model."
+        )
     meta["warnings"] = warnings
-    meta["thinking_enabled"] = False
-    meta["reasoning_format"] = None
+    meta.setdefault("thinking_enabled", False)
+    meta.setdefault("thinking_level", resolved_thinking_level)
+    meta.setdefault("reasoning_format", None)
     meta["base_url"] = normalized_base_url
     return content, meta
 
@@ -628,6 +693,7 @@ def chat_with_model_ref_with_meta(
     temperature: float,
     max_tokens: int | None = None,
     thinking_enabled: bool = False,
+    thinking_level: str | None = None,
 ) -> tuple[str, dict[str, Any]]:
     provider_id, model_name = model_ref.split("/", 1) if "/" in model_ref else ("local", model_ref)
     provider_id = provider_id.strip() or "local"
@@ -644,6 +710,7 @@ def chat_with_model_ref_with_meta(
             temperature=temperature,
             max_tokens=max_tokens,
             thinking_enabled=thinking_enabled,
+            thinking_level=thinking_level,
         )
 
     saved_settings = load_app_settings()
@@ -669,6 +736,7 @@ def chat_with_model_ref_with_meta(
         temperature=temperature,
         max_tokens=max_tokens,
         thinking_enabled=thinking_enabled,
+        thinking_level=thinking_level,
         auth_header=str(provider_config.get("auth_header") or template.get("auth_header") or "Authorization"),
         auth_scheme=str(auth_scheme or ""),
     )

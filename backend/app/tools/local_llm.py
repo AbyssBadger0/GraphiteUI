@@ -8,6 +8,11 @@ from typing import Any
 
 import httpx
 
+from app.core.thinking_levels import (
+    THINKING_LEVEL_MEDIUM,
+    THINKING_LEVEL_OFF,
+    normalize_thinking_level,
+)
 from app.core.storage.settings_store import load_app_settings
 from app.tools.model_provider_client import discover_provider_models
 
@@ -41,6 +46,7 @@ LOCAL_LLM_REQUEST_TIMEOUT_SEC = _parse_float_env("LOCAL_LLM_REQUEST_TIMEOUT_SEC"
 ROOT_DIR = Path(__file__).resolve().parents[3]
 LOCAL_ONBOARDING_GUIDE_PATH = ROOT_DIR / "knowledge" / "GraphiteUI-official" / "getting-started.md"
 DEFAULT_AGENT_TEMPERATURE = 0.2
+DEFAULT_AGENT_THINKING_LEVEL = "auto"
 DEFAULT_AGENT_THINKING_ENABLED = True
 DEFAULT_LOCAL_MODEL_ALIAS = "lm-local"
 LOCAL_RUNTIME_CONFIG_CACHE_TTL_SEC = 5.0
@@ -218,11 +224,19 @@ def get_default_agent_temperature() -> float:
 
 
 def get_default_agent_thinking_enabled() -> bool:
+    return get_default_agent_thinking_level() != THINKING_LEVEL_OFF
+
+
+def get_default_agent_thinking_level() -> str:
     saved_settings = load_app_settings()
     runtime_defaults = saved_settings.get("agent_runtime_defaults")
-    if isinstance(runtime_defaults, dict) and isinstance(runtime_defaults.get("thinking_enabled"), bool):
-        return bool(runtime_defaults["thinking_enabled"])
-    return DEFAULT_AGENT_THINKING_ENABLED
+    if isinstance(runtime_defaults, dict):
+        saved_level = runtime_defaults.get("thinking_level")
+        if isinstance(saved_level, str):
+            return normalize_thinking_level(saved_level, fallback=DEFAULT_AGENT_THINKING_LEVEL)
+        if isinstance(runtime_defaults.get("thinking_enabled"), bool):
+            return DEFAULT_AGENT_THINKING_LEVEL if bool(runtime_defaults["thinking_enabled"]) else THINKING_LEVEL_OFF
+    return DEFAULT_AGENT_THINKING_LEVEL
 
 
 def _normalize_message_text(value: Any) -> str:
@@ -295,6 +309,7 @@ def _chat_with_local_model_with_meta(
     temperature: float = DEFAULT_AGENT_TEMPERATURE,
     max_tokens: int | None = None,
     thinking_enabled: bool = False,
+    thinking_level: str | None = None,
 ) -> tuple[str, dict[str, Any]]:
     request_payload: dict[str, Any] = {
         "model": model or get_default_text_model(),
@@ -309,7 +324,11 @@ def _chat_with_local_model_with_meta(
         request_payload["max_tokens"] = max_tokens
 
     warnings: list[str] = []
-    used_thinking = bool(thinking_enabled and provider_id == "local")
+    resolved_thinking_level = normalize_thinking_level(
+        thinking_level if thinking_level is not None else (THINKING_LEVEL_MEDIUM if thinking_enabled else THINKING_LEVEL_OFF),
+        fallback=THINKING_LEVEL_OFF,
+    )
+    used_thinking = bool(resolved_thinking_level != THINKING_LEVEL_OFF and provider_id == "local")
     if used_thinking:
         request_payload["return_progress"] = True
         request_payload["reasoning_format"] = "auto"
@@ -357,6 +376,7 @@ def _chat_with_local_model_with_meta(
         "provider_id": provider_id,
         "temperature": temperature,
         "thinking_enabled": used_thinking,
+        "thinking_level": resolved_thinking_level,
         "reasoning_format": "auto" if used_thinking and provider_id == "local" else None,
         "reasoning": reasoning,
         "usage": response_payload.get("usage"),

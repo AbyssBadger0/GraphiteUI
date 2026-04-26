@@ -97,11 +97,11 @@
           <section class="model-logs-page__raw-grid">
             <article class="model-logs-page__raw-panel model-logs-page__request-raw">
               <h4>{{ t("modelLogs.rawRequest") }}</h4>
-              <pre>{{ formatRequestRaw(selectedLog) }}</pre>
+              <pre v-html="highlightJson(formatRequestRaw(selectedLog))"></pre>
             </article>
             <article class="model-logs-page__raw-panel model-logs-page__response-raw">
               <h4>{{ t("modelLogs.rawResponse") }}</h4>
-              <pre>{{ formatResponseRaw(selectedLog) }}</pre>
+              <pre v-html="highlightJson(formatResponseRaw(selectedLog))"></pre>
             </article>
           </section>
         </section>
@@ -147,6 +147,7 @@ const query = ref("");
 const loading = ref(true);
 const error = ref<string | null>(null);
 let searchTimer: number | null = null;
+const JSON_TOKEN_PATTERN = /("(?:\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
 
 const selectedLog = computed(() => {
   if (!logs.value.length) {
@@ -224,6 +225,29 @@ function formatRequestRaw(selectedLog: ModelLogEntry) {
 
 function formatResponseRaw(selectedLog: ModelLogEntry) {
   return JSON.stringify(selectedLog.response_raw, null, 2);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function highlightJson(jsonText: string) {
+  return jsonText.replace(JSON_TOKEN_PATTERN, (token) => {
+    let tokenClass = "model-logs-page__json-number";
+    if (token.startsWith('"')) {
+      tokenClass = /:\s*$/.test(token) ? "model-logs-page__json-key" : "model-logs-page__json-string";
+    } else if (token === "true" || token === "false") {
+      tokenClass = "model-logs-page__json-boolean";
+    } else if (token === "null") {
+      tokenClass = "model-logs-page__json-null";
+    }
+    return `<span class="${tokenClass}">${escapeHtml(token)}</span>`;
+  });
 }
 
 watch(query, () => {
@@ -602,6 +626,29 @@ onBeforeUnmount(() => {
 .model-logs-page__raw-panel pre {
   max-height: 460px;
   padding: 12px;
+}
+
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-key) {
+  color: rgb(37, 99, 235);
+  font-weight: 800;
+}
+
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-string) {
+  color: rgb(4, 120, 87);
+}
+
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-number) {
+  color: rgb(147, 51, 234);
+}
+
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-boolean) {
+  color: rgb(194, 65, 12);
+  font-weight: 800;
+}
+
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-null) {
+  color: rgba(60, 41, 20, 0.48);
+  font-style: italic;
 }
 
 .model-logs-page__pagination {

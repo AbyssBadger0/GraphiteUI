@@ -2064,7 +2064,12 @@ async function runActiveGraph() {
 
   try {
     await refreshAgentModels();
-    const response = await runGraph(document);
+    const latestDocument = documentsByTabId.value[tab.tabId];
+    if (!latestDocument) {
+      return;
+    }
+
+    const response = await runGraph(latestDocument);
     cancelRunPolling(tab.tabId);
     const generation = runPollGenerationByTabId.get(tab.tabId) ?? 0;
     runNodeStatusByTabId.value = {
@@ -2097,11 +2102,11 @@ async function runActiveGraph() {
     };
     setFeedbackForTab(tab.tabId, {
       tone: "warning",
-      message: t("feedback.runQueued", { runId: response.run_id, pending: Object.keys(document.nodes).length, cycle: "" }),
+      message: t("feedback.runQueued", { runId: response.run_id, pending: Object.keys(latestDocument.nodes).length, cycle: "" }),
       activeRunId: response.run_id,
       activeRunStatus: response.status,
       summary: {
-        idle: Object.keys(document.nodes).length,
+        idle: Object.keys(latestDocument.nodes).length,
         running: 0,
         paused: 0,
         success: 0,

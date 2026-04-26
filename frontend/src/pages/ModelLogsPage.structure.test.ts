@@ -42,6 +42,8 @@ test("ModelLogsPage renders a themed paginated raw model request log", () => {
   assert.match(pageSource, /rawStreamSource/);
   assert.match(pageSource, /formatReadableContent/);
   assert.match(pageSource, /formatReadableReasoning/);
+  assert.match(pageSource, /formatRequestThinking/);
+  assert.match(pageSource, /requestThinking/);
   assert.match(pageSource, /JSON\.stringify\(selectedLog\.request_raw, null, 2\)/);
   assert.match(pageSource, /JSON\.stringify\(selectedLog\.response_raw, null, 2\)/);
   assert.match(pageSource, /v-html="highlightJson\(rawDialogContent\)"/);

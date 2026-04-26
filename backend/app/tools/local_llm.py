@@ -431,12 +431,15 @@ def _build_local_thinking_request_payload(
     thinking_level: str,
     warnings: list[str],
 ) -> tuple[dict[str, Any], str | None]:
+    normalized_level = normalize_thinking_level(thinking_level, fallback=THINKING_LEVEL_OFF)
+    codex_style_reasoning = {"reasoning": {"effort": normalized_level}} if normalized_level != THINKING_LEVEL_OFF else {}
     runtime_config = _get_runtime_config_for_local_thinking()
     llama_config = runtime_config.get("llama") if isinstance(runtime_config, dict) else None
     if isinstance(llama_config, dict):
         reasoning_format = str(llama_config.get("reasoning_format") or "auto").strip() or "auto"
         return (
             {
+                **codex_style_reasoning,
                 "return_progress": True,
                 "reasoning_format": reasoning_format,
                 "timings_per_token": True,
@@ -456,6 +459,7 @@ def _build_local_thinking_request_payload(
 
     return (
         {
+            **codex_style_reasoning,
             "return_progress": True,
             "reasoning_format": "auto",
             "timings_per_token": True,

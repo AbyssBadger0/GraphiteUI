@@ -45,7 +45,7 @@ def _build_runtime_graph_document(graph_payload: NodeSystemGraphPayload) -> Node
     runtime_graph_id = graph_payload.graph_id or f"runtime_graph_{uuid4().hex[:10]}"
     return NodeSystemGraphDocument.model_validate(
         {
-            **graph_payload.model_dump(exclude={"graph_id"}, by_alias=True),
+            **graph_payload.model_dump(exclude={"graph_id"}, by_alias=True, mode="json"),
             "graph_id": runtime_graph_id,
         }
     )

@@ -217,6 +217,16 @@ test("EditorWorkspaceShell subscribes to run events for live output previews", (
   assert.match(componentSource, /startRunEventStreamForTab\(tab\.tabId, response\.run_id\);/);
 });
 
+test("EditorWorkspaceShell runs the latest document after async model refresh", () => {
+  const runActiveGraphSource = componentSource.match(/async function runActiveGraph\(\) \{[\s\S]*?\n\}/)?.[0] ?? "";
+
+  assert.match(runActiveGraphSource, /await refreshAgentModels\(\);/);
+  assert.match(runActiveGraphSource, /const latestDocument = documentsByTabId\.value\[tab\.tabId\];/);
+  assert.match(runActiveGraphSource, /if \(!latestDocument\) \{[\s\S]*?return;[\s\S]*?\}/);
+  assert.match(runActiveGraphSource, /const response = await runGraph\(latestDocument\);/);
+  assert.doesNotMatch(runActiveGraphSource, /const response = await runGraph\(document\);/);
+});
+
 test("EditorWorkspaceShell renders the graph action controls as a detached capsule instead of passing them through EditorTabBar", () => {
   const editorTabBarUsage = componentSource.match(/<EditorTabBar[\s\S]*?\/>/)?.[0] ?? "";
 

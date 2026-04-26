@@ -78,6 +78,16 @@
             <span>{{ selectedLog.path }}</span>
           </div>
 
+          <section v-if="formatRequestThinking(selectedLog)" class="model-logs-page__section">
+            <div class="model-logs-page__section-heading">
+              <h4>{{ t("modelLogs.requestThinking") }}</h4>
+            </div>
+            <pre
+              class="model-logs-page__text-block model-logs-page__json-block model-logs-page__request-thinking"
+              v-html="highlightJson(formatRequestThinking(selectedLog))"
+            ></pre>
+          </section>
+
           <section class="model-logs-page__section">
             <h4>{{ t("modelLogs.messages") }}</h4>
             <div v-if="selectedLog.messages.length > 0" class="model-logs-page__messages">
@@ -295,6 +305,21 @@ function formatReadableReasoning(log: ModelLogEntry) {
 
 function formatReadableContent(log: ModelLogEntry) {
   return log.content || getStreamSummary(log)?.outputChunks.join("") || "";
+}
+
+function formatRequestThinking(log: ModelLogEntry) {
+  const raw = log.request_raw;
+  const requestThinking: Record<string, unknown> = {};
+  for (const key of ["reasoning", "reasoning_effort", "thinking", "return_progress", "reasoning_format", "timings_per_token"]) {
+    if (Object.prototype.hasOwnProperty.call(raw, key)) {
+      requestThinking[key] = raw[key];
+    }
+  }
+  const generationConfig = raw.generationConfig;
+  if (isRecord(generationConfig) && Object.prototype.hasOwnProperty.call(generationConfig, "thinkingConfig")) {
+    requestThinking.generationConfig = { thinkingConfig: generationConfig.thinkingConfig };
+  }
+  return Object.keys(requestThinking).length > 0 ? JSON.stringify(requestThinking, null, 2) : "";
 }
 
 function hasStreamRaw(log: ModelLogEntry) {
@@ -820,6 +845,11 @@ onBeforeUnmount(() => {
 .model-logs-page__text-block {
   max-height: 260px;
   padding: 12px;
+}
+
+.model-logs-page__request-thinking {
+  max-height: 170px;
+  background: rgba(239, 246, 255, 0.58);
 }
 
 .model-logs-page__chunk-block {

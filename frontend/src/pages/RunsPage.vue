@@ -54,13 +54,13 @@
               <strong>{{ formatRunDisplayName(run) }}</strong>
               <span :class="statusBadgeClass(run.status)">{{ run.status }}</span>
             </div>
+            <p class="runs-page__run-meta">
+              <span>{{ formatRunDisplayTimestamp(run.started_at) }}</span>
+              <span>{{ t("runs.elapsed", { duration: formatRunDuration(run.duration_ms) }) }}</span>
+              <span v-if="run.revision_round > 0">{{ t("runs.revision", { revision: run.revision_round }) }}</span>
+              <span v-if="run.final_score">{{ t("common.score") }} {{ run.final_score }}</span>
+            </p>
             <p class="runs-page__run-id">{{ run.run_id }}</p>
-          </div>
-          <div class="runs-page__run-meta">
-            <span>{{ formatRunDisplayTimestamp(run.started_at) }}</span>
-            <span>{{ t("runs.elapsed", { duration: formatRunDuration(run.duration_ms) }) }}</span>
-            <span>{{ t("runs.revision", { revision: run.revision_round }) }}</span>
-            <span v-if="run.final_score">{{ t("common.score") }} {{ run.final_score }}</span>
           </div>
           <div class="runs-page__card-actions">
             <button type="button" class="runs-page__detail-link" @click.stop="openRunDetail(run.run_id)">{{ runCardDetail }}</button>
@@ -467,7 +467,7 @@ function statusBadgeClass(status: string) {
 .runs-page__run-row {
   position: relative;
   display: grid;
-  grid-template-columns: 5px minmax(0, 1.25fr) minmax(260px, 0.9fr) auto;
+  grid-template-columns: 5px minmax(0, 1fr) auto;
   gap: 16px;
   align-items: center;
   min-height: 96px;
@@ -529,7 +529,7 @@ function statusBadgeClass(status: string) {
 }
 
 .runs-page__run-id {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   overflow: hidden;
   color: rgba(60, 41, 20, 0.58);
   font-family: var(--graphite-font-mono);
@@ -541,16 +541,15 @@ function statusBadgeClass(status: string) {
 .runs-page__run-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  color: rgba(60, 41, 20, 0.64);
-  font-size: 0.82rem;
+  gap: 6px 12px;
+  margin: 7px 0 0;
+  color: rgba(60, 41, 20, 0.6);
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .runs-page__run-meta span {
-  border: 1px solid rgba(154, 52, 18, 0.08);
-  border-radius: 999px;
-  padding: 5px 9px;
-  background: rgba(255, 248, 240, 0.68);
+  min-width: 0;
 }
 
 .runs-page__card-actions {
@@ -644,7 +643,6 @@ function statusBadgeClass(status: string) {
     grid-template-columns: 5px minmax(0, 1fr);
   }
 
-  .runs-page__run-meta,
   .runs-page__card-actions {
     grid-column: 2;
   }

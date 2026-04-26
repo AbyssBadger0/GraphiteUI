@@ -43,6 +43,12 @@ test("RunsPage uses semantic status styling and keeps run identifiers monospace"
   assert.match(componentSource, /\.runs-page__run-id \{[\s\S]*font-family:\s*var\(--graphite-font-mono\);/);
 });
 
+test("RunsPage keeps timing metadata under the graph title without duplicating the title date", () => {
+  assert.match(componentSource, /<p class="runs-page__run-meta">[\s\S]*formatRunDisplayTimestamp\(run\.started_at\)[\s\S]*formatRunDuration\(run\.duration_ms\)[\s\S]*v-if="run\.revision_round > 0"/);
+  assert.doesNotMatch(componentSource, /grid-template-columns:\s*5px minmax\(0,\s*1\.25fr\) minmax\(260px,\s*0\.9fr\) auto/);
+  assert.match(componentSource, /\.runs-page__run-meta span \{\s*min-width:\s*0;\s*\}/);
+});
+
 test("RunsPage presents a restrained dashboard toolbar with status segments and overview metrics", () => {
   assert.match(componentSource, /const statusOptions = computed\(\(\) => \{[\s\S]*return buildRunStatusFilterOptions\(\);/);
   assert.match(componentSource, /const runOverview = computed\(\(\) => \{[\s\S]*return buildRunStatusOverview\(runs\.value\);/);

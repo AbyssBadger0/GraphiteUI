@@ -135,6 +135,7 @@ import { useI18n } from "vue-i18n";
 import { fetchModelLogs } from "@/api/modelLogs";
 import AppShell from "@/layouts/AppShell.vue";
 import type { ModelLogEntry } from "@/types/model-log";
+import { highlightJson } from "./modelLogsJsonHighlight.ts";
 
 const { t } = useI18n();
 const pageSize = 12;
@@ -147,7 +148,6 @@ const query = ref("");
 const loading = ref(true);
 const error = ref<string | null>(null);
 let searchTimer: number | null = null;
-const JSON_TOKEN_PATTERN = /("(?:\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
 
 const selectedLog = computed(() => {
   if (!logs.value.length) {
@@ -225,29 +225,6 @@ function formatRequestRaw(selectedLog: ModelLogEntry) {
 
 function formatResponseRaw(selectedLog: ModelLogEntry) {
   return JSON.stringify(selectedLog.response_raw, null, 2);
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function highlightJson(jsonText: string) {
-  return jsonText.replace(JSON_TOKEN_PATTERN, (token) => {
-    let tokenClass = "model-logs-page__json-number";
-    if (token.startsWith('"')) {
-      tokenClass = /:\s*$/.test(token) ? "model-logs-page__json-key" : "model-logs-page__json-string";
-    } else if (token === "true" || token === "false") {
-      tokenClass = "model-logs-page__json-boolean";
-    } else if (token === "null") {
-      tokenClass = "model-logs-page__json-null";
-    }
-    return `<span class="${tokenClass}">${escapeHtml(token)}</span>`;
-  });
 }
 
 watch(query, () => {
@@ -649,6 +626,14 @@ onBeforeUnmount(() => {
 .model-logs-page__raw-panel pre :deep(.model-logs-page__json-null) {
   color: rgba(60, 41, 20, 0.48);
   font-style: italic;
+}
+
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-line-break) {
+  color: rgba(37, 99, 235, 0.64);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
+  user-select: none;
 }
 
 .model-logs-page__pagination {

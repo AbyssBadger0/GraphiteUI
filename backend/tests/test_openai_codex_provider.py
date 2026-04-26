@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -26,10 +27,19 @@ class FakeResponse:
     ) -> None:
         self._payload = payload
         self.status_code = status_code
-        self.text = text or str(payload)
+        self.text = text or json.dumps(payload or {}, ensure_ascii=False)
         self.headers = headers or {}
         self._json_error = json_error
         self.request = httpx.Request("POST", "https://example.test")
+
+    def __enter__(self) -> "FakeResponse":
+        return self
+
+    def __exit__(self, *_args: Any) -> None:
+        return None
+
+    def iter_lines(self) -> list[str]:
+        return self.text.splitlines()
 
     def json(self) -> dict[str, Any]:
         if self._json_error:
@@ -70,6 +80,10 @@ class FakeHttpClient:
 
     def post(self, url: str, **kwargs: Any) -> FakeResponse:
         self.post_calls.append({"url": url, **kwargs})
+        return self._next()
+
+    def stream(self, method: str, url: str, **kwargs: Any) -> FakeResponse:
+        self.post_calls.append({"method": method, "url": url, **kwargs})
         return self._next()
 
 

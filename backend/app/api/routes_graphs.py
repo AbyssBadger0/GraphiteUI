@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from app.core.compiler.validator import validate_graph
 from app.core.langgraph import execute_node_system_graph_langgraph, get_langgraph_runtime_unsupported_reasons
+from app.core.runtime.run_events import publish_run_event
 from app.core.langgraph.codegen import generate_langgraph_python_source, import_graph_payload_from_python_source
 from app.core.runtime.state import create_initial_run_state, set_run_status, touch_run_lifecycle
 from app.core.schemas.node_system import (
@@ -185,3 +186,8 @@ def _run_graph_worker(
         set_run_status(run_state, "failed")
         run_state.setdefault("errors", []).append(str(exc))
         save_run(run_state)
+        publish_run_event(
+            str(run_state.get("run_id") or ""),
+            "run.failed",
+            {"status": "failed", "error": str(exc)},
+        )

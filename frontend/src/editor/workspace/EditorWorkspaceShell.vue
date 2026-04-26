@@ -192,7 +192,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
@@ -347,6 +347,7 @@ const nodeCreationMenuByTabId = ref<
 >({});
 const runPollGenerationByTabId = new Map<string, number>();
 const runPollTimerByTabId = new Map<string, number>();
+const runEventSourceByTabId = new Map<string, EventSource>();
 
 const templateById = computed(() => new Map(props.templates.map((template) => [template.template_id, template])));
 const graphById = computed(() => new Map(props.graphs.map((graph) => [graph.graph_id, graph])));
@@ -490,6 +491,96 @@ function cancelRunPolling(tabId: string) {
   }
 }
 
+function cancelRunEventStreamForTab(tabId: string) {
+  runEventSourceByTabId.get(tabId)?.close();
+  runEventSourceByTabId.delete(tabId);
+}
+
+function parseRunEventPayload(event: Event) {
+  if (!(event instanceof MessageEvent)) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(String(event.data ?? ""));
+    return typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveStreamingOutputNodeIds(tabId: string, outputKeys: string[]) {
+  const document = documentsByTabId.value[tabId];
+  if (!document || outputKeys.length === 0) {
+    return [];
+  }
+  const outputKeySet = new Set(outputKeys);
+  return Object.entries(document.nodes)
+    .filter(([, node]) => node.kind === "output" && node.reads.some((read) => outputKeySet.has(read.state)))
+    .map(([nodeId]) => nodeId);
+}
+
+function applyStreamingOutputPreviewToTab(tabId: string, payload: Record<string, unknown>) {
+  const text = typeof payload.text === "string" ? payload.text : "";
+  if (!text) {
+    return;
+  }
+  const outputKeys = Array.isArray(payload.output_keys)
+    ? payload.output_keys.map((key) => String(key)).filter(Boolean)
+    : [];
+  const fallbackNodeId = String(payload.node_id ?? "").trim();
+  const targetNodeIds = resolveStreamingOutputNodeIds(tabId, outputKeys);
+  const previewNodeIds = targetNodeIds.length > 0 ? targetNodeIds : fallbackNodeId ? [fallbackNodeId] : [];
+  if (previewNodeIds.length === 0) {
+    return;
+  }
+  const currentPreview = runOutputPreviewByTabId.value[tabId] ?? {};
+  const nextPreview = { ...currentPreview };
+  for (const nodeId of previewNodeIds) {
+    nextPreview[nodeId] = {
+      text,
+      displayMode: "plain",
+    };
+  }
+  runOutputPreviewByTabId.value = {
+    ...runOutputPreviewByTabId.value,
+    [tabId]: nextPreview,
+  };
+}
+
+function startRunEventStreamForTab(tabId: string, runId: string) {
+  cancelRunEventStreamForTab(tabId);
+  if (!runId || typeof EventSource === "undefined") {
+    return;
+  }
+  const source = new EventSource(`/api/runs/${runId}/events`);
+  runEventSourceByTabId.set(tabId, source);
+  source.addEventListener("node.output.delta", (event) => {
+    const payload = parseRunEventPayload(event);
+    if (payload) {
+      applyStreamingOutputPreviewToTab(tabId, payload);
+    }
+  });
+  source.addEventListener("node.output.completed", (event) => {
+    const payload = parseRunEventPayload(event);
+    if (payload) {
+      applyStreamingOutputPreviewToTab(tabId, payload);
+    }
+  });
+  source.addEventListener("run.completed", () => {
+    cancelRunEventStreamForTab(tabId);
+    void pollRunForTab(tabId, runId);
+  });
+  source.addEventListener("run.failed", () => {
+    cancelRunEventStreamForTab(tabId);
+    void pollRunForTab(tabId, runId);
+  });
+  source.onerror = () => {
+    if (runEventSourceByTabId.get(tabId) === source) {
+      cancelRunEventStreamForTab(tabId);
+    }
+  };
+}
+
 function scheduleRunPoll(tabId: string, runId: string, delayMs: number, generation: number) {
   const timerId = window.setTimeout(() => {
     void pollRunForTab(tabId, runId, generation);
@@ -562,6 +653,7 @@ async function pollRunForTab(tabId: string, runId: string, generation = runPollG
     }
 
     runPollTimerByTabId.delete(tabId);
+    cancelRunEventStreamForTab(tabId);
   } catch (error) {
     if ((runPollGenerationByTabId.get(tabId) ?? 0) !== generation) {
       return;
@@ -662,6 +754,7 @@ function registerDocumentForTab(tabId: string, graph: GraphPayload | GraphDocume
 
 function clearTabRuntime(tabId: string) {
   cancelRunPolling(tabId);
+  cancelRunEventStreamForTab(tabId);
   const nextDocuments = { ...documentsByTabId.value };
   const nextLoading = { ...loadingByTabId.value };
   const nextErrors = { ...errorByTabId.value };
@@ -2016,6 +2109,7 @@ async function runActiveGraph() {
       },
       currentNodeLabel: null,
     });
+    startRunEventStreamForTab(tab.tabId, response.run_id);
     void pollRunForTab(tab.tabId, response.run_id, generation);
   } catch (error) {
     setMessageFeedbackForTab(tab.tabId, {
@@ -2062,6 +2156,7 @@ async function resumeHumanReviewRun(tabId: string, payload: Record<string, unkno
       activeRunId: response.run_id,
       activeRunStatus: response.status,
     });
+    startRunEventStreamForTab(tabId, response.run_id);
     void pollRunForTab(tabId, response.run_id, generation);
   } catch (error) {
     humanReviewErrorByTabId.value = {
@@ -2166,6 +2261,15 @@ watch(
     syncRouteToTab(nextActiveTab, "replace");
   },
 );
+
+onBeforeUnmount(() => {
+  for (const tabId of Array.from(runEventSourceByTabId.keys())) {
+    cancelRunEventStreamForTab(tabId);
+  }
+  for (const tabId of Array.from(runPollTimerByTabId.keys())) {
+    cancelRunPolling(tabId);
+  }
+});
 
 onMounted(() => {
   void loadKnowledgeBases();

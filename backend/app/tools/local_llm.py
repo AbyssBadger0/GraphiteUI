@@ -4,7 +4,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -22,6 +22,7 @@ from app.core.storage.model_log_store import append_model_request_log
 from app.core.storage.settings_store import load_app_settings
 from app.tools.model_provider_client import (
     _coalesce_openai_chat_stream_response,
+    _extract_openai_chat_stream_delta,
     discover_provider_models,
     post_streaming_json_with_fallback,
 )
@@ -467,7 +468,11 @@ def _build_local_thinking_request_payload(
     )
 
 
-def _request_local_chat_completion(request_payload: dict[str, Any]) -> dict[str, Any]:
+def _request_local_chat_completion(
+    request_payload: dict[str, Any],
+    *,
+    on_delta: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
     headers = {
         "Authorization": f"Bearer {get_local_llm_api_key()}",
         "Content-Type": "application/json",
@@ -486,6 +491,8 @@ def _request_local_chat_completion(request_payload: dict[str, Any]) -> dict[str,
             fallback_payload=fallback_payload,
             parse_stream=_coalesce_openai_chat_stream_response,
             error_label="Local LLM request failed",
+            on_delta=on_delta,
+            extract_stream_delta=_extract_openai_chat_stream_delta,
         )
         request_payload.clear()
         request_payload.update(sent_payload)
@@ -516,6 +523,7 @@ def _chat_with_local_model_with_meta(
     max_tokens: int | None = None,
     thinking_enabled: bool = False,
     thinking_level: str | None = None,
+    on_delta: Callable[[str], None] | None = None,
 ) -> tuple[str, dict[str, Any]]:
     request_payload: dict[str, Any] = {
         "model": model or get_default_text_model(),
@@ -553,7 +561,11 @@ def _chat_with_local_model_with_meta(
     logged_request_payload = request_payload
     response_payload: dict[str, Any] = {}
     try:
-        response_payload = _request_local_chat_completion(request_payload)
+        response_payload = (
+            _request_local_chat_completion(request_payload, on_delta=on_delta)
+            if on_delta is not None
+            else _request_local_chat_completion(request_payload)
+        )
         content, reasoning = _extract_chat_completion_text(response_payload)
         stream_fallback = response_payload.get("_stream_fallback")
         if isinstance(stream_fallback, dict) and stream_fallback.get("error"):

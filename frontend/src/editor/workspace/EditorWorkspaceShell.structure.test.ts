@@ -207,6 +207,16 @@ test("EditorWorkspaceShell removes the persistent bottom-left status feedback ov
   assert.match(componentSource, /:latest-run-status="feedbackForTab\(tab\.tabId\)\?\.activeRunStatus \?\? null"/);
 });
 
+test("EditorWorkspaceShell subscribes to run events for live output previews", () => {
+  assert.match(componentSource, /const runEventSourceByTabId = new Map<string, EventSource>\(\);/);
+  assert.match(componentSource, /function startRunEventStreamForTab\(tabId: string, runId: string\)/);
+  assert.match(componentSource, /new EventSource\(`\/api\/runs\/\$\{runId\}\/events`\)/);
+  assert.match(componentSource, /addEventListener\("node\.output\.delta"/);
+  assert.match(componentSource, /function applyStreamingOutputPreviewToTab/);
+  assert.match(componentSource, /resolveStreamingOutputNodeIds/);
+  assert.match(componentSource, /startRunEventStreamForTab\(tab\.tabId, response\.run_id\);/);
+});
+
 test("EditorWorkspaceShell renders the graph action controls as a detached capsule instead of passing them through EditorTabBar", () => {
   const editorTabBarUsage = componentSource.match(/<EditorTabBar[\s\S]*?\/>/)?.[0] ?? "";
 

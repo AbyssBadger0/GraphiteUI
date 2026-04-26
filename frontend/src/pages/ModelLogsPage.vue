@@ -110,14 +110,14 @@
           </section>
 
           <section class="model-logs-page__raw-grid">
-            <details class="model-logs-page__raw-panel model-logs-page__request-raw">
+            <details open class="model-logs-page__raw-panel model-logs-page__request-raw">
               <summary class="model-logs-page__raw-summary">
                 <span>{{ t("modelLogs.rawRequest") }}</span>
                 <small>{{ t("modelLogs.rawRequestHint") }}</small>
               </summary>
               <pre v-html="highlightJson(formatRequestRaw(selectedLog))"></pre>
             </details>
-            <details class="model-logs-page__raw-panel model-logs-page__response-raw">
+            <details open class="model-logs-page__raw-panel model-logs-page__response-raw">
               <summary class="model-logs-page__raw-summary">
                 <span>{{ t("modelLogs.rawResponse") }}</span>
                 <small>{{ t("modelLogs.rawResponseHint") }}</small>
@@ -700,6 +700,8 @@ onBeforeUnmount(() => {
 }
 
 .model-logs-page__raw-panel {
+  display: grid;
+  max-height: 560px;
   min-width: 0;
   overflow: hidden;
   border: 1px solid rgba(154, 52, 18, 0.1);
@@ -751,6 +753,8 @@ onBeforeUnmount(() => {
   border-top: 1px solid rgba(154, 52, 18, 0.1);
   border-radius: 0;
   max-height: 460px;
+  min-height: 0;
+  overflow: auto;
   padding: 12px;
 }
 

@@ -20,7 +20,11 @@ from app.core.thinking_levels import (
 )
 from app.core.storage.model_log_store import append_model_request_log
 from app.core.storage.settings_store import load_app_settings
-from app.tools.model_provider_client import discover_provider_models
+from app.tools.model_provider_client import (
+    _coalesce_openai_chat_stream_response,
+    discover_provider_models,
+    post_streaming_json_with_fallback,
+)
 
 
 def _env_first(*keys: str, default: str) -> str:
@@ -468,12 +472,23 @@ def _request_local_chat_completion(request_payload: dict[str, Any]) -> dict[str,
         "Authorization": f"Bearer {get_local_llm_api_key()}",
         "Content-Type": "application/json",
     }
+    stream_payload = dict(request_payload)
+    stream_payload["stream"] = True
+    fallback_payload = dict(request_payload)
+    fallback_payload["stream"] = False
 
     try:
-        with httpx.Client(timeout=LOCAL_LLM_REQUEST_TIMEOUT_SEC, trust_env=False) as client:
-            response = client.post(f"{get_local_llm_base_url()}/chat/completions", headers=headers, json=request_payload)
-            response.raise_for_status()
-            payload = response.json()
+        payload, sent_payload, stream_fallback_error, _used_stream = post_streaming_json_with_fallback(
+            stream_url=f"{get_local_llm_base_url()}/chat/completions",
+            timeout_sec=LOCAL_LLM_REQUEST_TIMEOUT_SEC,
+            headers=headers,
+            stream_payload=stream_payload,
+            fallback_payload=fallback_payload,
+            parse_stream=_coalesce_openai_chat_stream_response,
+            error_label="Local LLM request failed",
+        )
+        request_payload.clear()
+        request_payload.update(sent_payload)
     except httpx.HTTPStatusError as exc:  # pragma: no cover - network path
         detail = exc.response.text.strip()
         raise RuntimeError(
@@ -486,6 +501,8 @@ def _request_local_chat_completion(request_payload: dict[str, Any]) -> dict[str,
 
     if not isinstance(payload, dict):
         raise RuntimeError("Local LLM returned an unexpected payload shape.")
+    if stream_fallback_error:
+        payload["_stream_fallback"] = {"error": stream_fallback_error}
     return payload
 
 
@@ -503,7 +520,7 @@ def _chat_with_local_model_with_meta(
     request_payload: dict[str, Any] = {
         "model": model or get_default_text_model(),
         "temperature": temperature,
-        "stream": False,
+        "stream": True,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -538,6 +555,9 @@ def _chat_with_local_model_with_meta(
     try:
         response_payload = _request_local_chat_completion(request_payload)
         content, reasoning = _extract_chat_completion_text(response_payload)
+        stream_fallback = response_payload.get("_stream_fallback")
+        if isinstance(stream_fallback, dict) and stream_fallback.get("error"):
+            warnings.append(f"Streaming request failed; retried once without streaming. {stream_fallback['error']}")
 
         if not content and max_tokens is not None:
             retry_payload = dict(request_payload)

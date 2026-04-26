@@ -199,6 +199,7 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
                     )
 
         self.assertEqual(sent_payloads[0]["reasoning_format"], "deepseek")
+        self.assertEqual(sent_payloads[0]["stream"], True)
         self.assertEqual(meta["reasoning_format"], "local-gateway:deepseek")
 
     def test_lm_studio_thinking_payload_uses_reasoning_effort_when_advertised(self) -> None:
@@ -257,6 +258,7 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
                         )
 
         self.assertEqual(sent_payloads[0]["reasoning_effort"], "medium")
+        self.assertEqual(sent_payloads[0]["stream"], True)
         self.assertNotIn("return_progress", sent_payloads[0])
         self.assertEqual(meta["reasoning_format"], "lmstudio:reasoning_effort")
 

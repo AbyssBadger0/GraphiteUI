@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -139,6 +139,65 @@ def _request_json(
     if not isinstance(payload, dict):
         raise RuntimeError(f"{error_label}: unexpected payload shape.")
     return payload
+
+
+def _format_request_error(error_label: str, exc: Exception) -> str:
+    if isinstance(exc, httpx.HTTPStatusError):
+        detail = exc.response.text.strip()
+        return f"{error_label}: HTTP {exc.response.status_code} {detail[:600]}"
+    if isinstance(exc, httpx.HTTPError):
+        return f"{error_label}: {exc}"
+    if isinstance(exc, ValueError):
+        return f"{error_label}: invalid JSON: {exc}"
+    return f"{error_label}: {exc}"
+
+
+def post_streaming_json_with_fallback(
+    *,
+    stream_url: str,
+    fallback_url: str | None = None,
+    timeout_sec: float,
+    headers: dict[str, str] | None = None,
+    stream_params: dict[str, str] | None = None,
+    fallback_params: dict[str, str] | None = None,
+    stream_payload: dict[str, Any],
+    fallback_payload: dict[str, Any],
+    parse_stream: Callable[[str], dict[str, Any]],
+    error_label: str,
+) -> tuple[dict[str, Any], dict[str, Any], str | None, bool]:
+    try:
+        with httpx.Client(timeout=timeout_sec, trust_env=False) as client:
+            stream_headers = dict(headers or {})
+            stream_headers.setdefault("Accept", "text/event-stream")
+            response = client.post(
+                stream_url,
+                headers=stream_headers or None,
+                params=stream_params,
+                json=stream_payload,
+            )
+            response.raise_for_status()
+            try:
+                payload = response.json()
+            except ValueError:
+                payload = parse_stream(response.text)
+    except Exception as exc:
+        stream_error = _format_request_error(error_label, exc)
+    else:
+        if not isinstance(payload, dict):
+            raise RuntimeError(f"{error_label}: unexpected payload shape.")
+        return payload, stream_payload, None, True
+
+    fallback_response = _request_json(
+        method="POST",
+        url=fallback_url or stream_url,
+        timeout_sec=timeout_sec,
+        headers=headers,
+        params=fallback_params,
+        json_payload=fallback_payload,
+        error_label=error_label,
+    )
+    fallback_response["_stream_fallback"] = {"error": stream_error}
+    return fallback_response, fallback_payload, stream_error, False
 
 
 def _normalize_message_text(value: Any) -> str:
@@ -351,7 +410,7 @@ def _chat_openai_compatible(
     request_payload: dict[str, Any] = {
         "model": model,
         "temperature": temperature,
-        "stream": False,
+        "stream": True,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -369,13 +428,17 @@ def _chat_openai_compatible(
 
     started_at = time.monotonic()
     path = "/chat/completions"
+    fallback_payload = {**request_payload, "stream": False}
+    logged_request_payload = request_payload
+    stream_fallback_error: str | None = None
     try:
-        response_payload = _request_json(
-            method="POST",
-            url=f"{base_url}{path}",
+        response_payload, logged_request_payload, stream_fallback_error, _used_stream = post_streaming_json_with_fallback(
+            stream_url=f"{base_url}{path}",
             timeout_sec=DEFAULT_REQUEST_TIMEOUT_SEC,
             headers=_build_auth_headers(api_key=api_key, auth_header=auth_header, auth_scheme=auth_scheme),
-            json_payload=request_payload,
+            stream_payload=request_payload,
+            fallback_payload=fallback_payload,
+            parse_stream=_coalesce_openai_chat_stream_response,
             error_label=f"{provider_id} request failed",
         )
     except Exception as exc:
@@ -384,7 +447,7 @@ def _chat_openai_compatible(
             transport=TRANSPORT_OPENAI_COMPATIBLE,
             model=model,
             path=path,
-            request_raw=request_payload,
+            request_raw=logged_request_payload,
             response_raw={"error": str(exc)},
             started_at=started_at,
             status_code=None,
@@ -396,7 +459,7 @@ def _chat_openai_compatible(
         transport=TRANSPORT_OPENAI_COMPATIBLE,
         model=model,
         path=path,
-        request_raw=request_payload,
+        request_raw=logged_request_payload,
         response_raw=response_payload,
         started_at=started_at,
         status_code=200,
@@ -413,6 +476,7 @@ def _chat_openai_compatible(
         "thinking_enabled": bool(native_thinking_payload),
         "thinking_level": thinking_level,
         "reasoning_format": "reasoning_effort" if native_thinking_payload else None,
+        "stream_fallback_error": stream_fallback_error,
     }
 
 
@@ -443,18 +507,23 @@ def _chat_anthropic(
         "system": system_prompt,
         "max_tokens": max_output_tokens,
         "temperature": temperature,
+        "stream": True,
         "messages": [{"role": "user", "content": user_prompt}],
     }
     request_payload.update(native_thinking_payload)
     started_at = time.monotonic()
     path = "/messages"
+    fallback_payload = {**request_payload, "stream": False}
+    logged_request_payload = request_payload
+    stream_fallback_error: str | None = None
     try:
-        response_payload = _request_json(
-            method="POST",
-            url=f"{base_url}{path}",
+        response_payload, logged_request_payload, stream_fallback_error, _used_stream = post_streaming_json_with_fallback(
+            stream_url=f"{base_url}{path}",
             timeout_sec=DEFAULT_REQUEST_TIMEOUT_SEC,
             headers=_anthropic_headers(api_key),
-            json_payload=request_payload,
+            stream_payload=request_payload,
+            fallback_payload=fallback_payload,
+            parse_stream=_coalesce_anthropic_stream_response,
             error_label=f"{provider_id} request failed",
         )
     except Exception as exc:
@@ -463,7 +532,7 @@ def _chat_anthropic(
             transport=TRANSPORT_ANTHROPIC_MESSAGES,
             model=model,
             path=path,
-            request_raw=request_payload,
+            request_raw=logged_request_payload,
             response_raw={"error": str(exc)},
             started_at=started_at,
             status_code=None,
@@ -475,7 +544,7 @@ def _chat_anthropic(
         transport=TRANSPORT_ANTHROPIC_MESSAGES,
         model=model,
         path=path,
-        request_raw=request_payload,
+        request_raw=logged_request_payload,
         response_raw=response_payload,
         started_at=started_at,
         status_code=200,
@@ -484,13 +553,14 @@ def _chat_anthropic(
         "model": response_payload.get("model") or model,
         "provider_id": provider_id,
         "temperature": temperature,
-        "reasoning": "",
+        "reasoning": _normalize_message_text(response_payload.get("reasoning")).strip(),
         "usage": response_payload.get("usage"),
         "timings": None,
         "response_id": response_payload.get("id"),
         "thinking_enabled": bool(native_thinking_payload),
         "thinking_level": thinking_level,
         "reasoning_format": "anthropic-thinking" if native_thinking_payload else None,
+        "stream_fallback_error": stream_fallback_error,
     }
 
 
@@ -535,14 +605,23 @@ def _chat_gemini(
 
     model_name = model.removeprefix("models/")
     started_at = time.monotonic()
-    path = f"/models/{model_name}:generateContent"
+    path = f"/models/{model_name}:streamGenerateContent"
+    fallback_path = f"/models/{model_name}:generateContent"
+    params = {"key": str(api_key or "").strip(), "alt": "sse"} if str(api_key or "").strip() else {"alt": "sse"}
+    fallback_params = {"key": str(api_key or "").strip()} if str(api_key or "").strip() else None
+    logged_request_payload = request_payload
+    stream_fallback_error: str | None = None
+    used_stream = True
     try:
-        response_payload = _request_json(
-            method="POST",
-            url=f"{base_url}{path}",
+        response_payload, logged_request_payload, stream_fallback_error, used_stream = post_streaming_json_with_fallback(
+            stream_url=f"{base_url}{path}",
+            fallback_url=f"{base_url}{fallback_path}",
             timeout_sec=DEFAULT_REQUEST_TIMEOUT_SEC,
-            params={"key": str(api_key or "").strip()} if str(api_key or "").strip() else None,
-            json_payload=request_payload,
+            stream_params=params,
+            fallback_params=fallback_params,
+            stream_payload=request_payload,
+            fallback_payload=request_payload,
+            parse_stream=_coalesce_gemini_stream_response,
             error_label=f"{provider_id} request failed",
         )
     except Exception as exc:
@@ -550,8 +629,8 @@ def _chat_gemini(
             provider_id=provider_id,
             transport=TRANSPORT_GEMINI_GENERATE_CONTENT,
             model=model_name,
-            path=path,
-            request_raw=request_payload,
+            path=path if used_stream else fallback_path,
+            request_raw=logged_request_payload,
             response_raw={"error": str(exc)},
             started_at=started_at,
             status_code=None,
@@ -562,8 +641,8 @@ def _chat_gemini(
         provider_id=provider_id,
         transport=TRANSPORT_GEMINI_GENERATE_CONTENT,
         model=model_name,
-        path=path,
-        request_raw=request_payload,
+        path=path if used_stream else fallback_path,
+        request_raw=logged_request_payload,
         response_raw=response_payload,
         started_at=started_at,
         status_code=200,
@@ -579,6 +658,7 @@ def _chat_gemini(
         "thinking_enabled": bool(native_thinking_payload),
         "thinking_level": thinking_level,
         "reasoning_format": "gemini-thinking-config" if native_thinking_payload else None,
+        "stream_fallback_error": stream_fallback_error,
     }
 
 
@@ -655,6 +735,168 @@ def _parse_sse_json_events(stream_text: str) -> list[dict[str, Any]]:
             data_lines.append(line[len("data:") :].lstrip())
     flush_event()
     return events
+
+
+def _coalesce_openai_chat_stream_response(stream_text: str) -> dict[str, Any]:
+    events = _parse_sse_json_events(stream_text)
+    if not events:
+        raise ValueError("OpenAI-compatible stream response did not include JSON events.")
+
+    response_id = ""
+    response_model = ""
+    usage: dict[str, Any] | None = None
+    finish_reason: str | None = None
+    text_parts: list[str] = []
+    reasoning_parts: list[str] = []
+    for event in events:
+        response_id = str(event.get("id") or response_id)
+        response_model = str(event.get("model") or response_model)
+        if isinstance(event.get("usage"), dict):
+            usage = event["usage"]
+        choices = event.get("choices")
+        if not isinstance(choices, list) or not choices:
+            continue
+        first_choice = choices[0] if isinstance(choices[0], dict) else {}
+        finish_reason = first_choice.get("finish_reason") or finish_reason
+        source = first_choice.get("delta") or first_choice.get("message") or {}
+        if not isinstance(source, dict):
+            continue
+        content = _normalize_message_text(source.get("content"))
+        reasoning = _normalize_message_text(source.get("reasoning_content") or source.get("reasoning"))
+        if content:
+            text_parts.append(content)
+        if reasoning:
+            reasoning_parts.append(reasoning)
+
+    if not text_parts and not reasoning_parts:
+        raise ValueError("OpenAI-compatible stream response did not include text deltas.")
+
+    message: dict[str, Any] = {"content": "".join(text_parts)}
+    if reasoning_parts:
+        message["reasoning_content"] = "".join(reasoning_parts)
+    choice: dict[str, Any] = {"message": message}
+    if finish_reason is not None:
+        choice["finish_reason"] = finish_reason
+    payload: dict[str, Any] = {"choices": [choice]}
+    if response_id:
+        payload["id"] = response_id
+    if response_model:
+        payload["model"] = response_model
+    if usage:
+        payload["usage"] = usage
+    payload["_stream"] = {
+        "event_count": len(events),
+        "events": events,
+        "output_chunks": text_parts,
+        "reasoning_chunks": reasoning_parts,
+        "raw_text": stream_text,
+    }
+    return payload
+
+
+def _coalesce_anthropic_stream_response(stream_text: str) -> dict[str, Any]:
+    events = _parse_sse_json_events(stream_text)
+    if not events:
+        raise ValueError("Anthropic stream response did not include JSON events.")
+
+    response_id = ""
+    response_model = ""
+    usage: dict[str, Any] | None = None
+    text_parts: list[str] = []
+    reasoning_parts: list[str] = []
+    for event in events:
+        message = event.get("message")
+        if isinstance(message, dict):
+            response_id = str(message.get("id") or response_id)
+            response_model = str(message.get("model") or response_model)
+            if isinstance(message.get("usage"), dict):
+                usage = message["usage"]
+
+        delta = event.get("delta")
+        if isinstance(delta, dict):
+            if isinstance(delta.get("usage"), dict):
+                usage = {**(usage or {}), **delta["usage"]}
+            delta_type = str(delta.get("type") or "").strip()
+            text = _normalize_message_text(delta.get("text"))
+            thinking = _normalize_message_text(delta.get("thinking") or delta.get("reasoning"))
+            if delta_type == "text_delta" and text:
+                text_parts.append(text)
+            elif delta_type in {"thinking_delta", "reasoning_delta"} and (thinking or text):
+                reasoning_parts.append(thinking or text)
+
+        if isinstance(event.get("usage"), dict):
+            usage = {**(usage or {}), **event["usage"]}
+
+    if not text_parts and not reasoning_parts:
+        raise ValueError("Anthropic stream response did not include text deltas.")
+
+    payload: dict[str, Any] = {
+        "content": [{"type": "text", "text": "".join(text_parts)}],
+    }
+    if response_id:
+        payload["id"] = response_id
+    if response_model:
+        payload["model"] = response_model
+    if usage:
+        payload["usage"] = usage
+    if reasoning_parts:
+        payload["reasoning"] = "".join(reasoning_parts)
+    payload["_stream"] = {
+        "event_count": len(events),
+        "events": events,
+        "output_chunks": text_parts,
+        "reasoning_chunks": reasoning_parts,
+        "raw_text": stream_text,
+    }
+    return payload
+
+
+def _coalesce_gemini_stream_response(stream_text: str) -> dict[str, Any]:
+    events = _parse_sse_json_events(stream_text)
+    if not events:
+        raise ValueError("Gemini stream response did not include JSON events.")
+
+    response_id = ""
+    usage: dict[str, Any] | None = None
+    text_parts: list[str] = []
+    for event in events:
+        response_id = str(event.get("responseId") or response_id)
+        if isinstance(event.get("usageMetadata"), dict):
+            usage = event["usageMetadata"]
+        candidates = event.get("candidates")
+        if not isinstance(candidates, list):
+            continue
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            content = candidate.get("content")
+            parts = content.get("parts") if isinstance(content, dict) else None
+            if not isinstance(parts, list):
+                continue
+            for part in parts:
+                if isinstance(part, dict):
+                    text = _normalize_message_text(part.get("text"))
+                    if text:
+                        text_parts.append(text)
+
+    if not text_parts:
+        raise ValueError("Gemini stream response did not include text deltas.")
+
+    payload: dict[str, Any] = {
+        "candidates": [{"content": {"parts": [{"text": "".join(text_parts)}]}}],
+    }
+    if response_id:
+        payload["responseId"] = response_id
+    if usage:
+        payload["usageMetadata"] = usage
+    payload["_stream"] = {
+        "event_count": len(events),
+        "events": events,
+        "output_chunks": text_parts,
+        "reasoning_chunks": [],
+        "raw_text": stream_text,
+    }
+    return payload
 
 
 def _coalesce_codex_stream_response(stream_text: str) -> dict[str, Any]:
@@ -899,6 +1141,9 @@ def chat_with_model_provider(
     else:  # pragma: no cover - guarded by normalize_transport
         raise RuntimeError(f"Unsupported provider transport: {normalized_transport}")
 
+    stream_fallback_error = str(meta.get("stream_fallback_error") or "").strip()
+    if stream_fallback_error:
+        warnings.append(f"Streaming request failed; retried once without streaming. {stream_fallback_error}")
     if not content:
         raise RuntimeError(f"{provider_id} returned an empty response.")
     if resolved_thinking_level != THINKING_LEVEL_OFF and not bool(meta.get("thinking_enabled")):

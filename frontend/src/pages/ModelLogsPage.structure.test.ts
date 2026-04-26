@@ -16,7 +16,8 @@ test("ModelLogsPage renders a themed paginated raw model request log", () => {
   assert.match(pageSource, /model-logs-page__entry/);
   assert.match(pageSource, /model-logs-page__request-raw/);
   assert.match(pageSource, /model-logs-page__response-raw/);
-  assert.match(pageSource, /<details class="model-logs-page__raw-panel model-logs-page__request-raw">/);
+  assert.match(pageSource, /<details open class="model-logs-page__raw-panel model-logs-page__request-raw">/);
+  assert.match(pageSource, /<details open class="model-logs-page__raw-panel model-logs-page__response-raw">/);
   assert.match(pageSource, /model-logs-page__raw-summary/);
   assert.match(pageSource, /rawRequestHint/);
   assert.match(pageSource, /rawResponseHint/);
@@ -45,6 +46,8 @@ test("ModelLogsPage renders a themed paginated raw model request log", () => {
   assert.match(pageSource, /log\.reasoning/);
   assert.match(pageSource, /log\.content/);
   assert.match(pageSource, /\.model-logs-page__raw-grid \{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/);
+  assert.match(pageSource, /\.model-logs-page__raw-panel \{[\s\S]*max-height:\s*560px;/);
+  assert.match(pageSource, /\.model-logs-page__raw-panel pre \{[\s\S]*overflow:\s*auto;/);
   assert.match(pageSource, /@media \(max-width:\s*980px\) \{[\s\S]*\.model-logs-page__raw-grid \{[\s\S]*grid-template-columns:\s*1fr;/);
   assert.doesNotMatch(pageSource, /LM Core Monitor/);
 });

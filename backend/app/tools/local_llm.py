@@ -9,11 +9,9 @@ from typing import Any, Callable
 import httpx
 
 from app.core.thinking_levels import (
-    THINKING_LEVEL_AUTO,
     THINKING_LEVEL_HIGH,
     THINKING_LEVEL_LOW,
     THINKING_LEVEL_MEDIUM,
-    THINKING_LEVEL_MINIMAL,
     THINKING_LEVEL_OFF,
     THINKING_LEVEL_XHIGH,
     normalize_thinking_level,
@@ -57,8 +55,8 @@ LOCAL_LLM_REQUEST_TIMEOUT_SEC = _parse_float_env("LOCAL_LLM_REQUEST_TIMEOUT_SEC"
 ROOT_DIR = Path(__file__).resolve().parents[3]
 LOCAL_ONBOARDING_GUIDE_PATH = ROOT_DIR / "knowledge" / "GraphiteUI-official" / "getting-started.md"
 DEFAULT_AGENT_TEMPERATURE = 0.2
-DEFAULT_AGENT_THINKING_LEVEL = "auto"
-DEFAULT_AGENT_THINKING_ENABLED = True
+DEFAULT_AGENT_THINKING_LEVEL = THINKING_LEVEL_OFF
+DEFAULT_AGENT_THINKING_ENABLED = False
 DEFAULT_LOCAL_MODEL_ALIAS = "lm-local"
 LOCAL_RUNTIME_CONFIG_CACHE_TTL_SEC = 5.0
 _LOCAL_RUNTIME_CONFIG_CACHE: tuple[float, dict[str, Any] | None] | None = None
@@ -275,7 +273,7 @@ def get_default_agent_thinking_level() -> str:
         if isinstance(saved_level, str):
             return normalize_thinking_level(saved_level, fallback=DEFAULT_AGENT_THINKING_LEVEL)
         if isinstance(runtime_defaults.get("thinking_enabled"), bool):
-            return DEFAULT_AGENT_THINKING_LEVEL if bool(runtime_defaults["thinking_enabled"]) else THINKING_LEVEL_OFF
+            return THINKING_LEVEL_MEDIUM if bool(runtime_defaults["thinking_enabled"]) else THINKING_LEVEL_OFF
     return DEFAULT_AGENT_THINKING_LEVEL
 
 
@@ -420,10 +418,8 @@ def _get_lm_studio_model_reasoning_metadata(model: str) -> dict[str, Any] | None
 
 def _map_lm_studio_reasoning_effort(level: str) -> str | None:
     normalized = normalize_thinking_level(level, fallback=THINKING_LEVEL_OFF)
-    if normalized in {THINKING_LEVEL_AUTO, THINKING_LEVEL_OFF}:
+    if normalized == THINKING_LEVEL_OFF:
         return None
-    if normalized == THINKING_LEVEL_MINIMAL:
-        return THINKING_LEVEL_LOW
     if normalized == THINKING_LEVEL_XHIGH:
         return THINKING_LEVEL_HIGH
     return normalized

@@ -838,8 +838,6 @@ def _resolve_agent_runtime_config(node: NodeSystemAgentNode) -> dict[str, Any]:
     resolved_provider_id, _resolved_model_name = resolved_model.split("/", 1) if "/" in resolved_model else ("local", resolved_model)
     runtime_model_name = resolve_runtime_model_name(resolved_model)
     configured_thinking_level = normalize_thinking_level(node.config.thinking_mode.value)
-    if configured_thinking_level == "auto" and global_thinking_level != "auto":
-        configured_thinking_level = normalize_thinking_level(global_thinking_level)
     resolved_thinking_level = resolve_effective_thinking_level(
         configured_level=configured_thinking_level,
         provider_id=resolved_provider_id,

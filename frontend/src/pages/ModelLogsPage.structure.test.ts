@@ -26,7 +26,10 @@ test("ModelLogsPage renders a themed paginated raw model request log", () => {
   assert.match(pageSource, /model-logs-page__json-number/);
   assert.match(pageSource, /model-logs-page__json-boolean/);
   assert.match(pageSource, /model-logs-page__json-null/);
-  assert.match(pageSource, /model-logs-page__json-line-break/);
+  assert.match(pageSource, /model-logs-page__json-string--multiline/);
+  assert.match(pageSource, /model-logs-page__json-string-lines/);
+  assert.match(pageSource, /model-logs-page__json-string-line/);
+  assert.doesNotMatch(pageSource, /model-logs-page__json-line-break/);
   assert.match(pageSource, /v-for="message in selectedLog\.messages"/);
   assert.match(pageSource, /selectedLog\.reasoning/);
   assert.match(pageSource, /selectedLog\.content/);

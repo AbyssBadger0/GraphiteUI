@@ -614,6 +614,34 @@ onBeforeUnmount(() => {
   color: rgb(4, 120, 87);
 }
 
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-string--multiline) {
+  display: inline-grid;
+  max-width: min(100%, 78ch);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  vertical-align: top;
+}
+
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-string-quote) {
+  color: rgba(4, 120, 87, 0.62);
+  font-weight: 700;
+}
+
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-string-lines) {
+  display: grid;
+  min-width: 0;
+  border-left: 1px solid rgba(4, 120, 87, 0.18);
+  margin: 0 2px;
+  padding-left: 8px;
+}
+
+.model-logs-page__raw-panel pre :deep(.model-logs-page__json-string-line) {
+  display: block;
+  min-height: 1.45em;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .model-logs-page__raw-panel pre :deep(.model-logs-page__json-number) {
   color: rgb(147, 51, 234);
 }
@@ -626,14 +654,6 @@ onBeforeUnmount(() => {
 .model-logs-page__raw-panel pre :deep(.model-logs-page__json-null) {
   color: rgba(60, 41, 20, 0.48);
   font-style: italic;
-}
-
-.model-logs-page__raw-panel pre :deep(.model-logs-page__json-line-break) {
-  color: rgba(37, 99, 235, 0.64);
-  font-size: 0.72rem;
-  font-style: normal;
-  font-weight: 800;
-  user-select: none;
 }
 
 .model-logs-page__pagination {

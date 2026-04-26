@@ -22,38 +22,51 @@ function isUnescapedBackslash(value: string, index: number) {
   return value[index] === "\\" && previousBackslashCount(value, index) % 2 === 0;
 }
 
-function renderLineBreak() {
-  return '<span class="model-logs-page__json-line-break" aria-hidden="true">↵</span><br>';
-}
-
-function renderJsonStringToken(token: string) {
-  let html = "";
+function splitJsonStringLines(token: string) {
+  const innerToken = token.slice(1, -1);
+  const lines: string[] = [];
   let chunkStart = 0;
 
-  for (let index = 0; index < token.length - 1; index += 1) {
-    if (!isUnescapedBackslash(token, index)) {
+  for (let index = 0; index < innerToken.length - 1; index += 1) {
+    if (!isUnescapedBackslash(innerToken, index)) {
       continue;
     }
 
-    const escapeKind = token[index + 1];
+    const escapeKind = innerToken[index + 1];
     let skipLength = 0;
     if (escapeKind === "n") {
       skipLength = 2;
     } else if (escapeKind === "r") {
-      skipLength = isUnescapedBackslash(token, index + 2) && token[index + 3] === "n" ? 4 : 2;
+      skipLength = isUnescapedBackslash(innerToken, index + 2) && innerToken[index + 3] === "n" ? 4 : 2;
     }
 
     if (skipLength === 0) {
       continue;
     }
 
-    html += escapeHtml(token.slice(chunkStart, index));
-    html += renderLineBreak();
+    lines.push(innerToken.slice(chunkStart, index));
     index += skipLength - 1;
     chunkStart = index + 1;
   }
 
-  return html + escapeHtml(token.slice(chunkStart));
+  lines.push(innerToken.slice(chunkStart));
+  return lines;
+}
+
+function renderJsonStringToken(token: string) {
+  const lines = splitJsonStringLines(token);
+  if (lines.length <= 1) {
+    return escapeHtml(token);
+  }
+
+  const renderedLines = lines
+    .map((line) => `<span class="model-logs-page__json-string-line">${line ? escapeHtml(line) : "&nbsp;"}</span>`)
+    .join("");
+  return [
+    '<span class="model-logs-page__json-string-quote">&quot;</span>',
+    `<span class="model-logs-page__json-string-lines">${renderedLines}</span>`,
+    '<span class="model-logs-page__json-string-quote">&quot;</span>',
+  ].join("");
 }
 
 export function highlightJson(jsonText: string) {
@@ -61,8 +74,12 @@ export function highlightJson(jsonText: string) {
     let tokenClass = "model-logs-page__json-number";
     let tokenHtml = escapeHtml(token);
     if (token.startsWith('"')) {
-      tokenClass = /:\s*$/.test(token) ? "model-logs-page__json-key" : "model-logs-page__json-string";
-      tokenHtml = renderJsonStringToken(token);
+      const isKey = /:\s*$/.test(token);
+      tokenClass = isKey ? "model-logs-page__json-key" : "model-logs-page__json-string";
+      tokenHtml = isKey ? escapeHtml(token) : renderJsonStringToken(token);
+      if (!isKey && tokenHtml !== escapeHtml(token)) {
+        tokenClass += " model-logs-page__json-string--multiline";
+      }
     } else if (token === "true" || token === "false") {
       tokenClass = "model-logs-page__json-boolean";
     } else if (token === "null") {

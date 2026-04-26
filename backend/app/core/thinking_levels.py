@@ -129,6 +129,17 @@ def _map_openai_reasoning_effort(level: str, model: str) -> str | None:
     return normalized
 
 
+def _map_openai_compatible_reasoning_effort(level: str) -> str | None:
+    normalized = normalize_thinking_level(level, fallback=THINKING_LEVEL_OFF)
+    if normalized in {THINKING_LEVEL_AUTO, THINKING_LEVEL_OFF}:
+        return None
+    if normalized == THINKING_LEVEL_MINIMAL:
+        return THINKING_LEVEL_LOW
+    if normalized == THINKING_LEVEL_XHIGH:
+        return THINKING_LEVEL_HIGH
+    return normalized
+
+
 def build_native_thinking_payload(
     *,
     provider_id: str,
@@ -149,6 +160,10 @@ def build_native_thinking_payload(
 
     if normalized_transport == TRANSPORT_OPENAI_COMPATIBLE and provider == "openai" and is_openai_reasoning_model(model):
         effort = _map_openai_reasoning_effort(level, model)
+        return {"reasoning_effort": effort} if effort else {}
+
+    if normalized_transport == TRANSPORT_OPENAI_COMPATIBLE and provider == "lmstudio":
+        effort = _map_openai_compatible_reasoning_effort(level)
         return {"reasoning_effort": effort} if effort else {}
 
     if normalized_transport == TRANSPORT_OPENAI_COMPATIBLE and provider == "mistral" and str(model).lower().startswith("mistral-small"):

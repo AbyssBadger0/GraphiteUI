@@ -170,6 +170,96 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
 
         self.assertEqual(models, ["lm-local"])
 
+    def test_local_gateway_thinking_payload_uses_runtime_reasoning_format(self) -> None:
+        with self._patched_local_provider_env(LOCAL_BASE_URL="http://127.0.0.1:8888/v1"):
+            local_llm, _model_catalog = self._reload_target_modules()
+
+            sent_payloads: list[dict[str, object]] = []
+
+            def fake_request(payload: dict[str, object]) -> dict[str, object]:
+                sent_payloads.append(dict(payload))
+                return {
+                    "id": "chatcmpl-1",
+                    "model": "gemma-4-26b-a4b-it",
+                    "choices": [{"message": {"content": '{"answer":"ok"}', "reasoning_content": "<think>ok</think>"}}],
+                }
+
+            with patch.object(
+                local_llm,
+                "get_local_gateway_runtime_config",
+                return_value={"llama": {"reasoning_format": "deepseek"}},
+            ):
+                with patch.object(local_llm, "_request_local_chat_completion", side_effect=fake_request):
+                    _content, meta = local_llm._chat_with_local_model_with_meta(
+                        system_prompt="sys",
+                        user_prompt="user",
+                        model="gemma-4-26b-a4b-it",
+                        thinking_enabled=True,
+                        thinking_level="medium",
+                    )
+
+        self.assertEqual(sent_payloads[0]["reasoning_format"], "deepseek")
+        self.assertEqual(meta["reasoning_format"], "local-gateway:deepseek")
+
+    def test_lm_studio_thinking_payload_uses_reasoning_effort_when_advertised(self) -> None:
+        class FakeResponse:
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict[str, object]:
+                return {
+                    "models": [
+                        {
+                            "key": "openai-gpt-oss-20b",
+                            "loaded_instances": [{"id": "openai-gpt-oss-20b"}],
+                            "reasoning": {"type": "effort"},
+                        }
+                    ]
+                }
+
+        class FakeClient:
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def __enter__(self) -> "FakeClient":
+                return self
+
+            def __exit__(self, *args: object) -> None:
+                return None
+
+            def get(self, url: str, headers: dict[str, str] | None = None) -> FakeResponse:
+                self.last_url = url
+                self.last_headers = headers
+                return FakeResponse()
+
+        with self._patched_local_provider_env(LOCAL_BASE_URL="http://127.0.0.1:1234/v1"):
+            local_llm, _model_catalog = self._reload_target_modules()
+
+            sent_payloads: list[dict[str, object]] = []
+
+            def fake_request(payload: dict[str, object]) -> dict[str, object]:
+                sent_payloads.append(dict(payload))
+                return {
+                    "id": "chatcmpl-1",
+                    "model": "openai-gpt-oss-20b",
+                    "choices": [{"message": {"content": '{"answer":"ok"}', "reasoning": "reasoning"}}],
+                }
+
+            with patch.object(local_llm, "get_local_gateway_runtime_config", return_value=None):
+                with patch.object(local_llm.httpx, "Client", FakeClient):
+                    with patch.object(local_llm, "_request_local_chat_completion", side_effect=fake_request):
+                        _content, meta = local_llm._chat_with_local_model_with_meta(
+                            system_prompt="sys",
+                            user_prompt="user",
+                            model="openai-gpt-oss-20b",
+                            thinking_enabled=True,
+                            thinking_level="medium",
+                        )
+
+        self.assertEqual(sent_payloads[0]["reasoning_effort"], "medium")
+        self.assertNotIn("return_progress", sent_payloads[0])
+        self.assertEqual(meta["reasoning_format"], "lmstudio:reasoning_effort")
+
     def test_build_model_catalog_keeps_discovered_models_separate_from_saved_models(self) -> None:
         saved_settings = {
             "text_model_ref": "local/stale-model",

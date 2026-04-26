@@ -107,6 +107,15 @@ class ThinkingLevelTests(unittest.TestCase):
             ),
             {"generationConfig": {"thinkingConfig": {"thinkingBudget": 400}}},
         )
+        self.assertEqual(
+            build_native_thinking_payload(
+                provider_id="lmstudio",
+                transport="openai-compatible",
+                model="openai/gpt-oss-20b",
+                thinking_level="xhigh",
+            ),
+            {"reasoning_effort": "high"},
+        )
 
 
 if __name__ == "__main__":

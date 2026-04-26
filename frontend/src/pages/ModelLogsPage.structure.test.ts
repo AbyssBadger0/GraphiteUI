@@ -26,6 +26,15 @@ test("ModelLogsPage renders a themed paginated raw model request log", () => {
   assert.match(pageSource, /streamMerged/);
   assert.match(pageSource, /hasStreamRaw/);
   assert.match(pageSource, /model-logs-page__raw-text/);
+  assert.match(pageSource, /outputDisplayMode/);
+  assert.match(pageSource, /outputMode/);
+  assert.match(pageSource, /outputNormal/);
+  assert.match(pageSource, /outputChunks/);
+  assert.match(pageSource, /model-logs-page__output-chunk/);
+  assert.match(pageSource, /formatStreamEventLabel/);
+  assert.match(pageSource, /formatStreamEvent/);
+  assert.match(pageSource, /model-logs-page__stream-event/);
+  assert.match(pageSource, /rawStreamSource/);
   assert.match(pageSource, /formatReadableContent/);
   assert.match(pageSource, /formatReadableReasoning/);
   assert.match(pageSource, /JSON\.stringify\(selectedLog\.request_raw, null, 2\)/);
@@ -48,6 +57,9 @@ test("ModelLogsPage renders a themed paginated raw model request log", () => {
   assert.match(pageSource, /\.model-logs-page__raw-grid \{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/);
   assert.match(pageSource, /\.model-logs-page__raw-panel \{[\s\S]*max-height:\s*560px;/);
   assert.match(pageSource, /\.model-logs-page__raw-panel pre \{[\s\S]*overflow:\s*auto;/);
+  assert.match(pageSource, /\.model-logs-page__output-chunk:nth-child\(odd\)/);
+  assert.match(pageSource, /\.model-logs-page__output-chunk:nth-child\(even\)/);
+  assert.match(pageSource, /\.model-logs-page__stream-raw \{[\s\S]*overflow:\s*auto;/);
   assert.match(pageSource, /@media \(max-width:\s*980px\) \{[\s\S]*\.model-logs-page__raw-grid \{[\s\S]*grid-template-columns:\s*1fr;/);
   assert.doesNotMatch(pageSource, /LM Core Monitor/);
 });

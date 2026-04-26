@@ -105,8 +105,31 @@
               <span v-if="selectedStreamSummary?.outputChunks.length" class="model-logs-page__section-pill">
                 {{ t("modelLogs.streamChunks", { count: selectedStreamSummary.outputChunks.length }) }}
               </span>
+              <div v-if="hasOutputChunks(selectedLog)" class="model-logs-page__output-mode" :aria-label="t('modelLogs.outputMode')">
+                <button
+                  type="button"
+                  :class="{ 'model-logs-page__output-mode-button--active': outputDisplayMode === 'normal' }"
+                  @click="outputDisplayMode = 'normal'"
+                >
+                  {{ t("modelLogs.outputNormal") }}
+                </button>
+                <button
+                  type="button"
+                  :class="{ 'model-logs-page__output-mode-button--active': outputDisplayMode === 'chunks' }"
+                  @click="outputDisplayMode = 'chunks'"
+                >
+                  {{ t("modelLogs.outputChunks") }}
+                </button>
+              </div>
             </div>
-            <pre class="model-logs-page__text-block">{{ formatReadableContent(selectedLog) }}</pre>
+            <pre v-if="outputDisplayMode === 'normal' || !hasOutputChunks(selectedLog)" class="model-logs-page__text-block">{{ formatReadableContent(selectedLog) }}</pre>
+            <div v-else class="model-logs-page__text-block model-logs-page__chunk-block">
+              <span
+                v-for="(chunk, chunkIndex) in getOutputChunks(selectedLog)"
+                :key="`${chunkIndex}-${chunk.slice(0, 12)}`"
+                class="model-logs-page__output-chunk"
+              >{{ chunk }}</span>
+            </div>
           </section>
 
           <section class="model-logs-page__raw-grid">
@@ -122,7 +145,21 @@
                 <span>{{ t("modelLogs.rawResponse") }}</span>
                 <small>{{ t("modelLogs.rawResponseHint") }}</small>
               </summary>
-              <pre v-if="hasStreamRaw(selectedLog)" class="model-logs-page__raw-text">{{ formatResponseRaw(selectedLog) }}</pre>
+              <div v-if="hasStreamRaw(selectedLog)" class="model-logs-page__stream-raw">
+                <div v-if="selectedStreamSummary?.events.length" class="model-logs-page__stream-events">
+                  <article v-for="(event, eventIndex) in selectedStreamSummary.events" :key="eventIndex" class="model-logs-page__stream-event">
+                    <header class="model-logs-page__stream-event-header">
+                      <span>{{ formatStreamEventLabel(event, eventIndex) }}</span>
+                      <small>#{{ eventIndex + 1 }}</small>
+                    </header>
+                    <pre v-html="highlightJson(formatStreamEvent(event))"></pre>
+                  </article>
+                </div>
+                <section class="model-logs-page__stream-source">
+                  <h4>{{ t("modelLogs.rawStreamSource") }}</h4>
+                  <pre class="model-logs-page__raw-text">{{ formatResponseRaw(selectedLog) }}</pre>
+                </section>
+              </div>
               <pre v-else v-html="highlightJson(formatResponseRaw(selectedLog))"></pre>
             </details>
           </section>
@@ -169,6 +206,7 @@ const selectedLogId = ref<string | null>(null);
 const query = ref("");
 const loading = ref(true);
 const error = ref<string | null>(null);
+const outputDisplayMode = ref<"normal" | "chunks">("normal");
 let searchTimer: number | null = null;
 
 const selectedLog = computed(() => {
@@ -183,6 +221,7 @@ const selectedStreamSummary = computed(() => (selectedLog.value ? getStreamSumma
 
 type StreamSummary = {
   eventCount: number;
+  events: Record<string, unknown>[];
   outputChunks: string[];
   reasoningChunks: string[];
   rawText: string;
@@ -196,13 +235,19 @@ function getStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
+function getRecordArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => isRecord(item)) : [];
+}
+
 function getStreamSummary(log: ModelLogEntry): StreamSummary | null {
   const stream = log.response_raw._stream;
   if (!isRecord(stream)) {
     return null;
   }
+  const events = getRecordArray(stream.events);
   return {
-    eventCount: typeof stream.event_count === "number" ? stream.event_count : Array.isArray(stream.events) ? stream.events.length : 0,
+    eventCount: typeof stream.event_count === "number" ? stream.event_count : events.length,
+    events,
     outputChunks: getStringArray(stream.output_chunks),
     reasoningChunks: getStringArray(stream.reasoning_chunks),
     rawText: typeof stream.raw_text === "string" ? stream.raw_text : "",
@@ -219,6 +264,23 @@ function formatReadableContent(log: ModelLogEntry) {
 
 function hasStreamRaw(log: ModelLogEntry) {
   return Boolean(getStreamSummary(log)?.rawText);
+}
+
+function getOutputChunks(log: ModelLogEntry) {
+  return getStreamSummary(log)?.outputChunks ?? [];
+}
+
+function hasOutputChunks(log: ModelLogEntry) {
+  return getOutputChunks(log).length > 0;
+}
+
+function formatStreamEventLabel(event: Record<string, unknown>, eventIndex: number) {
+  const label = event.type || event._event || event.event;
+  return String(label || `event-${eventIndex + 1}`);
+}
+
+function formatStreamEvent(event: Record<string, unknown>) {
+  return JSON.stringify(event, null, 2);
 }
 
 async function loadLogs() {
@@ -301,6 +363,10 @@ watch(query, () => {
 
 watch(currentPage, () => {
   void loadLogs();
+});
+
+watch(selectedLogId, () => {
+  outputDisplayMode.value = "normal";
 });
 
 onMounted(loadLogs);
@@ -622,6 +688,32 @@ onBeforeUnmount(() => {
   margin-bottom: 10px;
 }
 
+.model-logs-page__output-mode {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: 999px;
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.model-logs-page__output-mode button {
+  min-height: 30px;
+  border: 0;
+  padding: 0 12px;
+  background: transparent;
+  color: rgba(60, 41, 20, 0.64);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.model-logs-page__output-mode button:hover,
+.model-logs-page__output-mode-button--active {
+  background: rgba(37, 99, 235, 0.1);
+  color: rgb(37, 99, 235);
+}
+
 .model-logs-page__section h4,
 .model-logs-page__raw-summary span {
   margin: 0;
@@ -692,6 +784,26 @@ onBeforeUnmount(() => {
   padding: 12px;
 }
 
+.model-logs-page__chunk-block {
+  display: block;
+}
+
+.model-logs-page__output-chunk {
+  border-radius: 5px;
+  padding: 1px 3px;
+  white-space: pre-wrap;
+}
+
+.model-logs-page__output-chunk:nth-child(odd) {
+  background: rgba(219, 234, 254, 0.82);
+  color: rgb(29, 78, 216);
+}
+
+.model-logs-page__output-chunk:nth-child(even) {
+  background: rgba(220, 252, 231, 0.8);
+  color: rgb(4, 120, 87);
+}
+
 .model-logs-page__raw-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -760,6 +872,68 @@ onBeforeUnmount(() => {
 
 .model-logs-page__raw-text {
   color: rgba(31, 23, 15, 0.82);
+}
+
+.model-logs-page__stream-raw {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid rgba(154, 52, 18, 0.1);
+  padding: 12px;
+}
+
+.model-logs-page__stream-events {
+  display: grid;
+  gap: 10px;
+}
+
+.model-logs-page__stream-event {
+  overflow: hidden;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.model-logs-page__stream-event-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.1);
+  padding: 8px 10px;
+  background: rgba(239, 246, 255, 0.72);
+  color: rgb(37, 99, 235);
+  font-family: var(--graphite-font-mono);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.model-logs-page__stream-event-header span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-logs-page__stream-event-header small {
+  color: rgba(37, 99, 235, 0.58);
+}
+
+.model-logs-page__stream-event pre {
+  border: 0;
+  border-radius: 0;
+  max-height: 180px;
+}
+
+.model-logs-page__stream-source {
+  display: grid;
+  gap: 8px;
+}
+
+.model-logs-page__stream-source h4 {
+  margin: 0;
+  color: rgba(60, 41, 20, 0.66);
+  font-size: 0.78rem;
 }
 
 .model-logs-page__raw-panel pre :deep(.model-logs-page__json-key) {

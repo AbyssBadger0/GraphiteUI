@@ -416,7 +416,7 @@ import {
   canStartGraphConnection,
   type PendingGraphConnection,
 } from "@/lib/graph-connections";
-import { CREATE_AGENT_INPUT_STATE_KEY, VIRTUAL_ANY_INPUT_STATE_KEY } from "@/lib/virtual-any-input";
+import { CREATE_AGENT_INPUT_STATE_KEY, VIRTUAL_ANY_INPUT_STATE_KEY, VIRTUAL_ANY_OUTPUT_STATE_KEY } from "@/lib/virtual-any-input";
 import { resolveFocusedViewport } from "@/editor/canvas/focusNodeViewport";
 import { resolveViewportForMinimapCenter } from "./minimapModel";
 import { useNodeSelectionFocus, type NodeFocusRequest } from "./useNodeSelectionFocus";
@@ -445,6 +445,7 @@ const props = defineProps<{
   activeRunEdgeIds?: string[];
   interactionLocked?: boolean;
   initialViewport?: CanvasViewport | null;
+  stateEditorRequest?: { requestId: string; sourceNodeId: string; targetNodeId: string; stateKey: string; position: GraphPosition } | null;
 }>();
 
 const { t, locale } = useI18n();
@@ -582,6 +583,7 @@ const activeDataEdgeStateEditor = ref<{
   x: number;
   y: number;
 } | null>(null);
+const lastOpenedStateEditorRequestId = ref<string | null>(null);
 const dataEdgeStateDraft = ref<StateFieldDraft | null>(null);
 const dataEdgeStateError = ref<string | null>(null);
 const hoveredNodeId = ref<string | null>(null);
@@ -960,6 +962,20 @@ watch(pendingAgentInputSourceByNodeId, () => {
   });
 });
 
+watch(
+  () => props.stateEditorRequest,
+  (request) => {
+    if (!request || lastOpenedStateEditorRequestId.value === request.requestId) {
+      return;
+    }
+    lastOpenedStateEditorRequestId.value = request.requestId;
+    void nextTick().then(() => {
+      openDataEdgeStateEditorFromRequest(request);
+    });
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   updateCanvasSize();
   attachCanvasResizeObserver();
@@ -1182,6 +1198,35 @@ function openDataEdgeStateEditor() {
   dataEdgeStateDraft.value = nextDraft;
   dataEdgeStateError.value = null;
   clearDataEdgeStateConfirmState();
+}
+
+function openDataEdgeStateEditorFromRequest(request: NonNullable<typeof props.stateEditorRequest>) {
+  if (isGraphEditingLocked()) {
+    return;
+  }
+
+  const nextDraft = buildStateDraftFromSchema(request.stateKey);
+  if (!nextDraft) {
+    return;
+  }
+
+  clearFlowEdgeDeleteConfirmState();
+  clearDataEdgeStateConfirmState();
+  selectedEdgeId.value = buildDataEdgeId(request.sourceNodeId, request.stateKey, request.targetNodeId);
+  activeDataEdgeStateEditor.value = {
+    id: buildDataEdgeId(request.sourceNodeId, request.stateKey, request.targetNodeId),
+    source: request.sourceNodeId,
+    target: request.targetNodeId,
+    stateKey: request.stateKey,
+    x: request.position.x,
+    y: request.position.y,
+  };
+  dataEdgeStateDraft.value = nextDraft;
+  dataEdgeStateError.value = null;
+}
+
+function buildDataEdgeId(sourceNodeId: string, stateKey: string, targetNodeId: string) {
+  return `data:${sourceNodeId}:${stateKey}->${targetNodeId}`;
 }
 
 function shouldOfferDataEdgeFlowDisconnect() {
@@ -2497,7 +2542,9 @@ function openCreationMenuFromPendingConnection(event: PointerEvent) {
     sourceBranchKey: activeConnection.value.branchKey,
     sourceStateKey: activeConnection.value.sourceStateKey,
     sourceValueType: activeConnection.value.sourceStateKey
-      ? props.document.state_schema[activeConnection.value.sourceStateKey]?.type ?? null
+      ? activeConnection.value.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY
+        ? null
+        : props.document.state_schema[activeConnection.value.sourceStateKey]?.type ?? null
       : null,
     clientX: event.clientX,
     clientY: event.clientY,

@@ -97,6 +97,7 @@
                 :active-run-edge-ids="activeRunEdgeIdsByTabId[tab.tabId] ?? undefined"
                 :interaction-locked="isGraphInteractionLocked(tab.tabId)"
                 :initial-viewport="viewportByTabId[tab.tabId] ?? null"
+                :state-editor-request="dataEdgeStateEditorRequestByTabId[tab.tabId] ?? null"
                 @select-node="focusNodeForTab(tab.tabId, $event)"
                 @update-node-metadata="updateNodeMetadataForTab(tab.tabId, $event.nodeId, $event.patch)"
                 @update-input-config="updateInputConfigForTab(tab.tabId, $event.nodeId, $event.patch)"
@@ -306,6 +307,14 @@ import { buildPythonExportFileName, downloadPythonSource } from "./pythonExportM
 import { isGraphiteUiPythonExportFile, isGraphiteUiPythonExportSource } from "./pythonImportModel.ts";
 import { buildPresetPayloadForNode } from "./presetPersistence.ts";
 
+type DataEdgeStateEditorRequest = {
+  requestId: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  stateKey: string;
+  position: GraphPosition;
+};
+
 const props = defineProps<{
   routeMode: "root" | "new" | "existing";
   routeGraphId?: string | null;
@@ -339,6 +348,7 @@ const sidePanelModeByTabId = ref<Record<string, "state" | "human-review">>({});
 const focusedNodeIdByTabId = ref<Record<string, string | null>>({});
 const focusRequestByTabId = ref<Record<string, NodeFocusRequest | null>>({});
 const viewportByTabId = ref<Record<string, CanvasViewport>>({});
+const dataEdgeStateEditorRequestByTabId = ref<Record<string, DataEdgeStateEditorRequest | null>>({});
 const runNodeStatusByTabId = ref<Record<string, Record<string, string>>>({});
 const currentRunNodeIdByTabId = ref<Record<string, string | null>>({});
 const latestRunDetailByTabId = ref<Record<string, RunDetail | null>>({});
@@ -1371,6 +1381,7 @@ function createNodeFromMenuForTab(tabId: string, _entry: NodeCreationEntry) {
       persistedPresets: persistedPresets.value,
     });
     markDocumentDirty(tabId, result.document);
+    openCreatedStateEdgeEditorForTab(tabId, menuState.context, result);
     setMessageFeedbackForTab(tabId, {
       tone: "neutral",
       message: `Created ${result.document.nodes[result.createdNodeId]?.name ?? _entry.label}.`,
@@ -1382,6 +1393,27 @@ function createNodeFromMenuForTab(tabId: string, _entry: NodeCreationEntry) {
       message: error instanceof Error ? error.message : "Failed to create node.",
     });
   }
+}
+
+function openCreatedStateEdgeEditorForTab(
+  tabId: string,
+  context: NodeCreationContext,
+  result: { createdNodeId: string; createdStateKey: string | null },
+) {
+  if (!context.sourceNodeId || !result.createdStateKey) {
+    return;
+  }
+
+  dataEdgeStateEditorRequestByTabId.value = {
+    ...dataEdgeStateEditorRequestByTabId.value,
+    [tabId]: {
+      requestId: `${result.createdNodeId}:${result.createdStateKey}:${Date.now()}`,
+      sourceNodeId: context.sourceNodeId,
+      targetNodeId: result.createdNodeId,
+      stateKey: result.createdStateKey,
+      position: context.position,
+    },
+  };
 }
 
 async function createNodeFromFileForTab(tabId: string, _payload: { file: File; position: GraphPosition }) {

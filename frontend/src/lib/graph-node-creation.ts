@@ -1,4 +1,6 @@
 import { cloneGraphDocument } from "./graph-document.ts";
+import { buildNextDefaultStateField, rememberDefaultStateKeyIndex } from "../editor/workspace/statePanelFields.ts";
+import { isVirtualAnyOutputStateKey } from "./virtual-any-input.ts";
 
 import type {
   AgentNode,
@@ -25,6 +27,12 @@ type ApplyNodeCreationResultInput = {
   createdNode: GraphNode;
   mergedStateSchema?: Record<string, StateDefinition>;
   context?: NodeCreationContext | null;
+};
+
+type ApplyNodeCreationResultOutput<T extends GraphPayload | GraphDocument> = {
+  document: T;
+  createdNodeId: string;
+  createdStateKey: string | null;
 };
 
 function defaultStateDefinitionForType(stateKey: string, type: string): StateDefinition {
@@ -197,6 +205,15 @@ function bindCreatedStateToNode(node: GraphNode, stateKey: string) {
   }
 }
 
+function bindCreatedStateToSourceNode(node: GraphNode | undefined, stateKey: string) {
+  if (!node || node.kind !== "agent") {
+    return;
+  }
+  if (!node.writes.some((binding) => binding.state === stateKey)) {
+    node.writes = [...node.writes, { state: stateKey, mode: "replace" }];
+  }
+}
+
 function applyStateNameToCreatedOutputNode(
   node: GraphNode,
   stateKey: string,
@@ -237,10 +254,16 @@ function buildCreationFlowEdge<T extends GraphPayload | GraphDocument>(
   }
 }
 
+function resolveVirtualAnyOutputStateName(document: GraphPayload | GraphDocument, sourceNodeId: string | undefined) {
+  const sourceNode = sourceNodeId ? document.nodes[sourceNodeId] : null;
+  const sourceName = sourceNode?.name.trim();
+  return sourceName ? `${sourceName} output` : "Agent output";
+}
+
 export function applyNodeCreationResult<T extends GraphPayload | GraphDocument>(
   document: T,
   input: ApplyNodeCreationResultInput,
-): { document: T; createdNodeId: string } {
+): ApplyNodeCreationResultOutput<T> {
   const nextDocument = cloneGraphDocument(document);
   nextDocument.nodes[input.createdNodeId] = input.createdNode;
 
@@ -250,8 +273,26 @@ export function applyNodeCreationResult<T extends GraphPayload | GraphDocument>(
     }
   }
 
-  const sourceStateKey = input.context?.sourceStateKey?.trim();
+  const rawSourceStateKey = input.context?.sourceStateKey?.trim();
   const sourceValueType = input.context?.sourceValueType?.trim() || "text";
+  let sourceStateKey = rawSourceStateKey;
+  let createdStateKey: string | null = null;
+
+  if (isVirtualAnyOutputStateKey(rawSourceStateKey)) {
+    const sourceStateField = buildNextDefaultStateField(nextDocument, {
+      name: resolveVirtualAnyOutputStateName(nextDocument, input.context?.sourceNodeId),
+      type: sourceValueType,
+    });
+    nextDocument.state_schema[sourceStateField.key] = sourceStateField.definition;
+    rememberDefaultStateKeyIndex(nextDocument, sourceStateField.key);
+    bindCreatedStateToSourceNode(
+      input.context?.sourceNodeId ? nextDocument.nodes[input.context.sourceNodeId] : undefined,
+      sourceStateField.key,
+    );
+    sourceStateKey = sourceStateField.key;
+    createdStateKey = sourceStateField.key;
+  }
+
   if (sourceStateKey && (input.createdNode.kind === "output" || input.createdNode.kind === "agent" || input.createdNode.kind === "condition")) {
     ensureStateDefinitionForCreation(nextDocument, sourceStateKey, sourceValueType);
     bindCreatedStateToNode(nextDocument.nodes[input.createdNodeId], sourceStateKey);
@@ -265,6 +306,7 @@ export function applyNodeCreationResult<T extends GraphPayload | GraphDocument>(
   return {
     document: nextDocument,
     createdNodeId: input.createdNodeId,
+    createdStateKey,
   };
 }
 

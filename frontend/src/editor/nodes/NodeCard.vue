@@ -555,8 +555,10 @@
             >
               <template #reference>
                 <span
-                  class="node-card__port-pill node-card__port-pill--output node-card__port-pill--dock-end node-card__port-pill--removable"
+                  class="node-card__port-pill node-card__port-pill--output node-card__port-pill--dock-end"
                   :class="{
+                    'node-card__port-pill--removable': !port.virtual,
+                    'node-card__port-pill--create': port.virtual,
                     'node-card__port-pill--revealed': isStateEditorPillRevealed(`agent-output:${port.key}`),
                     'node-card__port-pill--confirm': isStateEditorConfirmOpen(`agent-output:${port.key}`),
                   }"
@@ -565,9 +567,10 @@
                   @pointerenter="handleStateEditorPillPointerEnter(`agent-output:${port.key}`)"
                   @pointerleave="handleStateEditorPillPointerLeave(`agent-output:${port.key}`)"
                   @pointerdown.stop
-                  @click.stop="handleStateEditorActionClick(`agent-output:${port.key}`, port.key)"
+                  @click.stop="!port.virtual && handleStateEditorActionClick(`agent-output:${port.key}`, port.key)"
                 >
                   <button
+                    v-if="!port.virtual"
                     type="button"
                     class="node-card__port-pill-remove node-card__port-pill-remove--leading"
                     :class="{ 'node-card__port-pill-remove--confirm': isRemovePortStateConfirmOpen(`agent-output:${port.key}`) }"
@@ -1867,7 +1870,7 @@ function updateOutputDisplayMode(displayMode: OutputNode["config"]["displayMode"
 }
 
 function isOutputDisplayModeActive(displayMode: OutputNode["config"]["displayMode"]) {
-  return props.node.kind === "output" && props.node.config.displayMode === displayMode;
+  return view.value.body.kind === "output" && view.value.body.displayMode === displayMode;
 }
 
 function updateOutputPersistFormat(persistFormat: OutputNode["config"]["persistFormat"]) {

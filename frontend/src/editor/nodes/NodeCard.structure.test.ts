@@ -713,6 +713,7 @@ test("NodeCard renders output previews through a rich content presenter while ke
 
   assert.match(componentSource, /import \{ resolveOutputPreviewContent \} from "\.\/outputPreviewContentModel";/);
   assert.match(componentSource, /const outputPreviewContent = computed\(/);
+  assert.match(componentSource, /function isOutputDisplayModeActive[\s\S]*view\.value\.body\.kind === "output" && view\.value\.body\.displayMode === displayMode/);
   assert.match(outputSection, /node-card__preview--markdown/);
   assert.match(outputSection, /v-html="outputPreviewContent\.html"/);
   assert.match(outputSection, /node-card__preview--json/);

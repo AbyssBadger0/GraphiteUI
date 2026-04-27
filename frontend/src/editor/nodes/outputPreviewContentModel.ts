@@ -15,7 +15,7 @@ const UNBOUND_EMPTY_TEXT = "Connect an upstream output to preview/export it.";
 export function resolveOutputPreviewContent(text: string, displayMode: string): OutputPreviewContent {
   const normalizedText = text || "";
   const normalizedDisplayMode = displayMode.trim().toLowerCase();
-  const kind = resolvePreviewKind(normalizedText, normalizedDisplayMode);
+  const kind = resolveOutputPreviewDisplayMode(normalizedText, normalizedDisplayMode);
 
   if (kind === "markdown") {
     return {
@@ -43,7 +43,7 @@ export function resolveOutputPreviewContent(text: string, displayMode: string): 
   };
 }
 
-function resolvePreviewKind(text: string, displayMode: string): OutputPreviewContentKind {
+export function resolveOutputPreviewDisplayMode(text: string, displayMode: string): OutputPreviewContentKind {
   if (displayMode === "markdown") {
     return "markdown";
   }

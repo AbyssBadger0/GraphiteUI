@@ -408,8 +408,10 @@ test("EditorCanvas tints route edge outlines from the branch palette", () => {
 
 test("EditorCanvas gives data edges the same two-step state editing entry pattern as state ports with disconnect actions", () => {
   assert.match(componentSource, /import StateEditorPopover from "@\/editor\/nodes\/StateEditorPopover\.vue";/);
+  assert.match(componentSource, /stateEditorRequest\?: \{ requestId: string; sourceNodeId: string; targetNodeId: string; stateKey: string; position: GraphPosition \} \| null;/);
   assert.match(componentSource, /const activeDataEdgeStateConfirm = ref<\{/);
   assert.match(componentSource, /const activeDataEdgeStateEditor = ref<\{/);
+  assert.match(componentSource, /const lastOpenedStateEditorRequestId = ref<string \| null>\(null\);/);
   assert.match(componentSource, /const dataEdgeStateDraft = ref<StateFieldDraft \| null>\(null\);/);
   assert.match(componentSource, /const dataEdgeStateError = ref<string \| null>\(null\);/);
   assert.match(componentSource, /const dataEdgeStateColorOptions = computed\(\(\) => resolveStateColorOptions\(dataEdgeStateDraft\.value\?\.definition\.color \?\? ""\)\);/);
@@ -417,9 +419,12 @@ test("EditorCanvas gives data edges the same two-step state editing entry patter
   assert.match(componentSource, /forceVisibleEdgeIds: forceVisibleProjectedEdgeIds\.value/);
   assert.match(componentSource, /function startDataEdgeStateConfirm\(edge: ProjectedCanvasEdge, event: PointerEvent\)/);
   assert.match(componentSource, /function openDataEdgeStateEditor\(\)/);
+  assert.match(componentSource, /function openDataEdgeStateEditorFromRequest\(request: NonNullable<typeof props\.stateEditorRequest>\)/);
   assert.match(componentSource, /function syncDataEdgeStateDraft\(nextDraft: StateFieldDraft\)/);
+  assert.match(componentSource, /watch\(\s*\(\) => props\.stateEditorRequest,[\s\S]*openDataEdgeStateEditorFromRequest\(request\);/);
   assert.match(componentSource, /selectedEdgeId\.value = edge\.id;[\s\S]*dataEdgeStateConfirmTimeoutRef\.value = window\.setTimeout/);
   assert.match(componentSource, /activeDataEdgeStateEditor\.value = \{[\s\S]*id: activeDataEdgeStateConfirm\.value\.id,/);
+  assert.match(componentSource, /activeDataEdgeStateEditor\.value = \{[\s\S]*id: buildDataEdgeId\(request\.sourceNodeId, request\.stateKey, request\.targetNodeId\),/);
   assert.match(componentSource, /if \(edge\.kind === "data"\) \{[\s\S]*startDataEdgeStateConfirm\(edge, event\);[\s\S]*return;/);
   assert.match(componentSource, /<div[\s\S]*v-if="activeDataEdgeStateConfirm"[\s\S]*class="editor-canvas__edge-state-confirm"/);
   assert.match(componentSource, /<div class="editor-canvas__confirm-hint editor-canvas__confirm-hint--state">\{\{ t\("nodeCard\.editStateQuestion"\) \}\}<\/div>/);
@@ -529,7 +534,7 @@ test("EditorCanvas snaps flow drags to eligible target node bodies before mouseu
 });
 
 test("EditorCanvas exposes transient new agent input anchors while state dragging", () => {
-  assert.match(componentSource, /import \{ CREATE_AGENT_INPUT_STATE_KEY, VIRTUAL_ANY_INPUT_STATE_KEY \} from "@\/lib\/virtual-any-input";/);
+  assert.match(componentSource, /import \{ CREATE_AGENT_INPUT_STATE_KEY, VIRTUAL_ANY_INPUT_STATE_KEY, VIRTUAL_ANY_OUTPUT_STATE_KEY \} from "@\/lib\/virtual-any-input";/);
   assert.match(componentSource, /const pendingAgentInputSourceByNodeId = computed<Record<string, PendingStateInputSource>>\(\(\) =>/);
   assert.match(componentSource, /canCompleteGraphConnection\(props\.document, connection, \{[\s\S]*stateKey: CREATE_AGENT_INPUT_STATE_KEY/);
   assert.match(componentSource, /:pending-state-input-source="pendingAgentInputSourceByNodeId\[nodeId\] \?\? null"/);
@@ -540,6 +545,12 @@ test("EditorCanvas exposes transient new agent input anchors while state draggin
   assert.match(componentSource, /const baseProjectedAnchorsWithoutReplacedAnyInputs = computed\(\(\) =>/);
   assert.match(componentSource, /anchor\.stateKey === VIRTUAL_ANY_INPUT_STATE_KEY &&[\s\S]*pendingAgentInputSourceByNodeId\.value\[anchor\.nodeId\]/);
   assert.match(componentSource, /const projectedAnchors = computed\(\(\) => \[\.\.\.baseProjectedAnchorsWithoutReplacedAnyInputs\.value, \.\.\.transientAgentInputAnchors\.value\]\);/);
+});
+
+test("EditorCanvas opens node creation from the virtual agent any output", () => {
+  assert.match(componentSource, /activeConnection\.value\.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY/);
+  assert.match(componentSource, /sourceValueType: activeConnection\.value\.sourceStateKey[\s\S]*activeConnection\.value\.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY/);
+  assert.match(componentSource, /\? null[\s\S]*: props\.document\.state_schema\[activeConnection\.value\.sourceStateKey\]\?\.type \?\? null/);
 });
 
 test("EditorCanvas snaps state drags to transient or matching state inputs from the whole target node body", () => {

@@ -44,27 +44,6 @@
         {{ option.label }}
       </button>
     </div>
-    <div
-      class="editor-canvas__zoom-toolbar"
-      role="toolbar"
-      :aria-label="t('canvasZoom.toolbar')"
-      @pointerdown.stop
-      @pointerup.stop
-      @dblclick.stop
-      @click.stop
-      @wheel.stop
-    >
-      <button type="button" class="editor-canvas__zoom-button" :aria-label="t('canvasZoom.zoomOut')" :title="t('canvasZoom.zoomOut')" @click.stop="handleZoomOut">
-        <ElIcon aria-hidden="true"><Minus /></ElIcon>
-      </button>
-      <span class="editor-canvas__zoom-label" aria-live="polite">{{ zoomPercentLabel }}</span>
-      <button type="button" class="editor-canvas__zoom-button" :aria-label="t('canvasZoom.zoomIn')" :title="t('canvasZoom.zoomIn')" @click.stop="handleZoomIn">
-        <ElIcon aria-hidden="true"><Plus /></ElIcon>
-      </button>
-      <button type="button" class="editor-canvas__zoom-button" :aria-label="t('canvasZoom.reset')" :title="t('canvasZoom.reset')" @click.stop="handleZoomReset">
-        <ElIcon aria-hidden="true"><RefreshLeft /></ElIcon>
-      </button>
-    </div>
     <button
       v-if="interactionLocked"
       type="button"
@@ -319,14 +298,37 @@
         />
       </svg>
     </div>
-    <EditorMinimap
-      class="editor-canvas__minimap"
-      :nodes="minimapNodes"
-      :edges="minimapEdges"
-      :viewport="viewport.viewport"
-      :canvas-size="canvasSize"
-      @center-view="handleMinimapCenterView"
-    />
+    <div class="editor-canvas__navigation-stack">
+      <div
+        class="editor-canvas__zoom-toolbar"
+        role="toolbar"
+        :aria-label="t('canvasZoom.toolbar')"
+        @pointerdown.stop
+        @pointerup.stop
+        @dblclick.stop
+        @click.stop
+        @wheel.stop
+      >
+        <button type="button" class="editor-canvas__zoom-button" :aria-label="t('canvasZoom.zoomOut')" :title="t('canvasZoom.zoomOut')" @click.stop="handleZoomOut">
+          <ElIcon aria-hidden="true"><Minus /></ElIcon>
+        </button>
+        <span class="editor-canvas__zoom-label" aria-live="polite">{{ zoomPercentLabel }}</span>
+        <button type="button" class="editor-canvas__zoom-button" :aria-label="t('canvasZoom.zoomIn')" :title="t('canvasZoom.zoomIn')" @click.stop="handleZoomIn">
+          <ElIcon aria-hidden="true"><Plus /></ElIcon>
+        </button>
+        <button type="button" class="editor-canvas__zoom-button" :aria-label="t('canvasZoom.reset')" :title="t('canvasZoom.reset')" @click.stop="handleZoomReset">
+          <ElIcon aria-hidden="true"><RefreshLeft /></ElIcon>
+        </button>
+      </div>
+      <EditorMinimap
+        class="editor-canvas__minimap"
+        :nodes="minimapNodes"
+        :edges="minimapEdges"
+        :viewport="viewport.viewport"
+        :canvas-size="canvasSize"
+        @center-view="handleMinimapCenterView"
+      />
+    </div>
   </section>
 </template>
 
@@ -2727,15 +2729,30 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   color: rgba(255, 250, 242, 0.98);
 }
 
-.editor-canvas__zoom-toolbar {
+.editor-canvas__navigation-stack {
+  --editor-canvas-navigation-width: 224px;
   position: absolute;
-  left: 18px;
-  top: calc(var(--editor-canvas-floating-top-clearance, 18px) + 62px);
-  z-index: 24;
+  right: calc(22px + var(--editor-canvas-minimap-right-clearance, 0px));
+  bottom: 22px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: var(--editor-canvas-navigation-width);
+  pointer-events: none;
+  transition: right 180ms ease;
+}
+
+.editor-canvas__zoom-toolbar {
+  box-sizing: border-box;
+  position: relative;
   isolation: isolate;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  width: 100%;
   overflow: hidden;
   padding: 5px;
   border: 1px solid var(--graphite-glass-border);

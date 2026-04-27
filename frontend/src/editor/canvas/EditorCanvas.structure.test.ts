@@ -25,9 +25,20 @@ test("EditorCanvas mounts a right-bottom minimap backed by measured node geometr
   assert.match(componentSource, /resolveViewportForMinimapCenter\(/);
 });
 
-test("EditorMinimap can be displaced by workspace side panels", () => {
-  assert.match(minimapSource, /\.editor-minimap \{[\s\S]*right:\s*calc\(22px \+ var\(--editor-canvas-minimap-right-clearance,\s*0px\)\);/);
-  assert.match(minimapSource, /\.editor-minimap \{[\s\S]*transition:\s*right 180ms ease;/);
+test("EditorCanvas stacks zoom controls above the minimap at the bottom right", () => {
+  assert.match(
+    componentSource,
+    /class="editor-canvas__navigation-stack"[\s\S]*class="editor-canvas__zoom-toolbar"[\s\S]*<EditorMinimap[\s\S]*class="editor-canvas__minimap"/,
+  );
+  assert.match(componentSource, /\.editor-canvas__navigation-stack \{[\s\S]*--editor-canvas-navigation-width:\s*224px;/);
+  assert.match(componentSource, /\.editor-canvas__navigation-stack \{[\s\S]*right:\s*calc\(22px \+ var\(--editor-canvas-minimap-right-clearance,\s*0px\)\);/);
+  assert.match(componentSource, /\.editor-canvas__navigation-stack \{[\s\S]*bottom:\s*22px;/);
+  assert.match(componentSource, /\.editor-canvas__navigation-stack \{[\s\S]*width:\s*var\(--editor-canvas-navigation-width\);/);
+  assert.match(componentSource, /\.editor-canvas__navigation-stack \{[\s\S]*transition:\s*right 180ms ease;/);
+  assert.match(componentSource, /\.editor-canvas__zoom-toolbar \{[\s\S]*width:\s*100%;/);
+  assert.match(componentSource, /\.editor-canvas__zoom-toolbar \{[\s\S]*box-sizing:\s*border-box;/);
+  assert.match(minimapSource, /\.editor-minimap \{[\s\S]*width:\s*var\(--editor-canvas-navigation-width,\s*224px\);/);
+  assert.match(minimapSource, /\.editor-minimap \{[\s\S]*height:\s*160px;/);
   assert.match(minimapSource, /\.editor-minimap \{[\s\S]*background:\s*var\(--graphite-glass-bg\);/);
   assert.match(minimapSource, /\.editor-minimap \{[\s\S]*box-shadow:\s*var\(--graphite-glass-shadow\),\s*var\(--graphite-glass-highlight\),\s*var\(--graphite-glass-rim\);/);
   assert.match(minimapSource, /\.editor-minimap \{[\s\S]*backdrop-filter:\s*blur\(24px\) saturate\(1\.6\) contrast\(1\.02\);/);
@@ -309,7 +320,7 @@ test("EditorCanvas exposes page zoom controls and emits viewport draft updates",
   assert.match(componentSource, /function handleZoomIn\(\)/);
   assert.match(componentSource, /function handleZoomReset\(\)/);
   assert.match(componentSource, /function zoomViewportAroundCanvasCenter\(nextScale: number\)/);
-  assert.match(componentSource, /\.editor-canvas__zoom-toolbar \{[\s\S]*position:\s*absolute;[\s\S]*left:\s*18px;/);
+  assert.doesNotMatch(componentSource, /\.editor-canvas__zoom-toolbar \{[\s\S]*position:\s*absolute;[\s\S]*left:\s*18px;/);
 });
 
 test("EditorCanvas shows a clicked-position delete confirm for flow edges before removing them", () => {

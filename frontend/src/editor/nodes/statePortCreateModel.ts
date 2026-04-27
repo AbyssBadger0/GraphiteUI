@@ -11,6 +11,10 @@ export type StatePortDraft = {
   definition: StateDefinition;
 };
 
+export type CreateStateDraftOptions = {
+  side?: "input" | "output";
+};
+
 export function matchesStatePortSearch(field: StatePortSearchField, query: string) {
   const normalizedQuery = normalizeStateSearchText(query);
   if (!normalizedQuery) {
@@ -38,9 +42,9 @@ export function matchesStatePortSearch(field: StatePortSearchField, query: strin
   return isSubsequence(queryCompact, initials) || haystacks.some((value) => isSubsequence(queryCompact, value.replace(/\s+/g, "")));
 }
 
-export function createStateDraftFromQuery(query: string, existingKeys: string[]): StatePortDraft {
+export function createStateDraftFromQuery(query: string, existingKeys: string[], options: CreateStateDraftOptions = {}): StatePortDraft {
   const trimmedQuery = query.trim();
-  const key = createStateKey(trimmedQuery || "state", existingKeys);
+  const key = createStateKey(trimmedQuery, existingKeys, options.side);
 
   return {
     key,
@@ -54,8 +58,11 @@ export function createStateDraftFromQuery(query: string, existingKeys: string[])
   };
 }
 
-function createStateKey(base: string, existingKeys: string[]) {
-  const normalizedBase = base.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "state";
+function createStateKey(base: string, existingKeys: string[], side: CreateStateDraftOptions["side"] = undefined) {
+  const normalizedBase = base.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (!normalizedBase) {
+    return createIndexedStateKey(side === "input" ? "input" : side === "output" ? "output" : "state", existingKeys);
+  }
   let nextKey = normalizedBase;
   let index = 2;
   const existing = new Set(existingKeys);
@@ -65,6 +72,17 @@ function createStateKey(base: string, existingKeys: string[]) {
     index += 1;
   }
 
+  return nextKey;
+}
+
+function createIndexedStateKey(prefix: string, existingKeys: string[]) {
+  const existing = new Set(existingKeys);
+  let index = 1;
+  let nextKey = `${prefix}_${index}`;
+  while (existing.has(nextKey)) {
+    index += 1;
+    nextKey = `${prefix}_${index}`;
+  }
   return nextKey;
 }
 

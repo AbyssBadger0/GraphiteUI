@@ -1971,7 +1971,9 @@ function beginPortStateCreate() {
   if (guardLockedGraphInteraction()) {
     return;
   }
-  portStateDraft.value = createStateDraftFromQuery(portStateSearch.value, Object.keys(props.stateSchema));
+  portStateDraft.value = createStateDraftFromQuery(portStateSearch.value, Object.keys(props.stateSchema), {
+    side: activePortPickerSide.value ?? undefined,
+  });
   portStateError.value = null;
 }
 

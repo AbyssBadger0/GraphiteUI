@@ -51,3 +51,19 @@ test("createStateDraftFromQuery creates a unique text state draft from the searc
     },
   });
 });
+
+test("createStateDraftFromQuery keeps Chinese names while using side-specific machine keys", () => {
+  assert.deepEqual(createStateDraftFromQuery("最终答案", [], { side: "output" }), {
+    key: "output_1",
+    definition: {
+      name: "最终答案",
+      description: "",
+      type: "text",
+      value: "",
+      color: "",
+    },
+  });
+
+  assert.equal(createStateDraftFromQuery("最终答案", ["output_1"], { side: "output" }).key, "output_2");
+  assert.equal(createStateDraftFromQuery("用户问题", [], { side: "input" }).key, "input_1");
+});

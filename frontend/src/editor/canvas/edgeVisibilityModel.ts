@@ -74,7 +74,7 @@ export function filterProjectedEdgesForVisibilityMode(
   return edges.filter((edge) => visibleEdgeIds.has(edge.id) || forceVisibleEdgeIds.has(edge.id));
 }
 
-export function isOutputFlowHandleVisibleForEdgeMode(options: {
+export function isOutputFlowHandleAllowedForEdgeMode(options: {
   mode: EdgeVisibilityMode;
   anchorKind: "flow-out" | "route-out";
 }) {
@@ -85,4 +85,19 @@ export function isOutputFlowHandleVisibleForEdgeMode(options: {
     return options.anchorKind === "route-out";
   }
   return false;
+}
+
+export function shouldShowOutputFlowHandle(options: {
+  mode: EdgeVisibilityMode;
+  anchorKind: "flow-out" | "route-out";
+  isNodeInteracted: boolean;
+  isActiveConnectionSource: boolean;
+}) {
+  return (
+    isOutputFlowHandleAllowedForEdgeMode({
+      mode: options.mode,
+      anchorKind: options.anchorKind,
+    }) &&
+    (options.isNodeInteracted || options.isActiveConnectionSource)
+  );
 }

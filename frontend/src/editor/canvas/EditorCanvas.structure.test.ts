@@ -270,7 +270,7 @@ test("EditorCanvas resolves rendered anchor geometry from measured node slot off
   assert.match(componentSource, /querySelectorAll\("\[data-anchor-slot-id\]"\)/);
 });
 
-test("EditorCanvas renders flow hotspots whose output visibility follows the edge mode", () => {
+test("EditorCanvas renders output flow hotspots only for allowed modes and interacted nodes", () => {
   assert.match(componentSource, /v-for="anchor in flowAnchors"/);
   assert.match(componentSource, /class="editor-canvas__flow-hotspot"/);
   assert.match(componentSource, /:style="\[flowHotspotStyle\(anchor\), flowHotspotConnectStyle\(anchor\)\]"/);
@@ -280,8 +280,9 @@ test("EditorCanvas renders flow hotspots whose output visibility follows the edg
   assert.match(componentSource, /'editor-canvas__flow-hotspot--outbound': anchor\.kind === 'flow-out'/);
   assert.match(componentSource, /'editor-canvas__flow-hotspot--visible': isFlowHotspotVisible\(anchor\)/);
   assert.match(componentSource, /anchor\.kind === "flow-out" \|\| anchor\.kind === "route-out"/);
-  assert.match(componentSource, /isOutputFlowHandleVisibleForEdgeMode\(\{[\s\S]*mode: edgeVisibilityMode\.value,[\s\S]*anchorKind: anchor\.kind,[\s\S]*\}\)/);
+  assert.match(componentSource, /shouldShowOutputFlowHandle\(\{[\s\S]*mode: edgeVisibilityMode\.value,[\s\S]*anchorKind: anchor\.kind,[\s\S]*isNodeInteracted: isOutputFlowHandleNodeInteracted\(anchor\.nodeId\),[\s\S]*isActiveConnectionSource: activeConnectionSourceAnchorId\.value === anchor\.id,[\s\S]*\}\)/);
   const flowHotspotVisibleBlock = componentSource.match(/function isFlowHotspotVisible\(anchor: ProjectedCanvasAnchor\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
+  assert.match(componentSource, /function isOutputFlowHandleNodeInteracted\(nodeId: string\) \{[\s\S]*selection\.selectedNodeId\.value === nodeId[\s\S]*hoveredNodeId\.value === nodeId[\s\S]*hoveredFlowHandleNodeId\.value === nodeId/);
   assert.doesNotMatch(flowHotspotVisibleBlock, /selection\.selectedNodeId\.value === anchor\.nodeId/);
   assert.doesNotMatch(flowHotspotVisibleBlock, /hoveredNodeId\.value === anchor\.nodeId/);
   assert.doesNotMatch(flowHotspotVisibleBlock, /hoveredFlowHandleNodeId\.value === anchor\.nodeId/);
@@ -320,7 +321,7 @@ test("EditorCanvas renders flow hotspots whose output visibility follows the edg
 });
 
 test("EditorCanvas exposes a top-left capsule toolbar for edge visibility modes", () => {
-  assert.match(componentSource, /import \{[\s\S]*buildEdgeVisibilityModeOptions,[\s\S]*filterProjectedEdgesForVisibilityMode,[\s\S]*isOutputFlowHandleVisibleForEdgeMode,[\s\S]*type EdgeVisibilityMode[\s\S]*\} from "\.\/edgeVisibilityModel";/);
+  assert.match(componentSource, /import \{[\s\S]*buildEdgeVisibilityModeOptions,[\s\S]*filterProjectedEdgesForVisibilityMode,[\s\S]*shouldShowOutputFlowHandle,[\s\S]*type EdgeVisibilityMode[\s\S]*\} from "\.\/edgeVisibilityModel";/);
   assert.match(componentSource, /const edgeVisibilityModeOptions = computed\(\(\) => \{[\s\S]*return buildEdgeVisibilityModeOptions\(\);/);
   assert.match(componentSource, /const edgeVisibilityMode = ref<EdgeVisibilityMode>\("smart"\);/);
   assert.doesNotMatch(componentSource, /const edgeVisibilityRelatedNodeIds = computed\(\(\) =>/);

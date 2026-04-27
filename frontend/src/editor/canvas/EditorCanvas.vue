@@ -375,7 +375,7 @@ import {
 import {
   buildEdgeVisibilityModeOptions,
   filterProjectedEdgesForVisibilityMode,
-  isOutputFlowHandleVisibleForEdgeMode,
+  shouldShowOutputFlowHandle,
   type EdgeVisibilityMode,
 } from "./edgeVisibilityModel";
 import {
@@ -2273,15 +2273,22 @@ function clearHoveredFlowHandleNode(nodeId: string) {
   }
 }
 
+function isOutputFlowHandleNodeInteracted(nodeId: string) {
+  return (
+    selection.selectedNodeId.value === nodeId ||
+    hoveredNodeId.value === nodeId ||
+    hoveredFlowHandleNodeId.value === nodeId
+  );
+}
+
 function isFlowHotspotVisible(anchor: ProjectedCanvasAnchor) {
   if (anchor.kind === "flow-out" || anchor.kind === "route-out") {
-    return (
-      isOutputFlowHandleVisibleForEdgeMode({
-        mode: edgeVisibilityMode.value,
-        anchorKind: anchor.kind,
-      }) ||
-      activeConnectionSourceAnchorId.value === anchor.id
-    );
+    return shouldShowOutputFlowHandle({
+      mode: edgeVisibilityMode.value,
+      anchorKind: anchor.kind,
+      isNodeInteracted: isOutputFlowHandleNodeInteracted(anchor.nodeId),
+      isActiveConnectionSource: activeConnectionSourceAnchorId.value === anchor.id,
+    });
   }
 
   return eligibleTargetAnchorIds.value.has(anchor.id);

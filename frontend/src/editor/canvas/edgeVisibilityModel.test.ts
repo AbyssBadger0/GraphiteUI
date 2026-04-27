@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import {
   EDGE_VISIBILITY_MODE_OPTIONS,
   filterProjectedEdgesForVisibilityMode,
-  isOutputFlowHandleVisibleForEdgeMode,
+  isOutputFlowHandleAllowedForEdgeMode,
+  shouldShowOutputFlowHandle,
   type EdgeVisibilityMode,
 } from "./edgeVisibilityModel.ts";
 import type { ProjectedCanvasEdge } from "./edgeProjection.ts";
@@ -39,15 +40,72 @@ test("smart mode ignores hovered and selected nodes when choosing visible edges"
   );
 });
 
-test("output flow handles follow sequence edge visibility by mode", () => {
-  assert.equal(isOutputFlowHandleVisibleForEdgeMode({ mode: "smart", anchorKind: "route-out" }), true);
-  assert.equal(isOutputFlowHandleVisibleForEdgeMode({ mode: "smart", anchorKind: "flow-out" }), false);
-  assert.equal(isOutputFlowHandleVisibleForEdgeMode({ mode: "data", anchorKind: "route-out" }), false);
-  assert.equal(isOutputFlowHandleVisibleForEdgeMode({ mode: "data", anchorKind: "flow-out" }), false);
-  assert.equal(isOutputFlowHandleVisibleForEdgeMode({ mode: "flow", anchorKind: "route-out" }), true);
-  assert.equal(isOutputFlowHandleVisibleForEdgeMode({ mode: "flow", anchorKind: "flow-out" }), true);
-  assert.equal(isOutputFlowHandleVisibleForEdgeMode({ mode: "all", anchorKind: "route-out" }), true);
-  assert.equal(isOutputFlowHandleVisibleForEdgeMode({ mode: "all", anchorKind: "flow-out" }), true);
+test("edge modes allow only matching output flow handle kinds", () => {
+  assert.equal(isOutputFlowHandleAllowedForEdgeMode({ mode: "smart", anchorKind: "route-out" }), true);
+  assert.equal(isOutputFlowHandleAllowedForEdgeMode({ mode: "smart", anchorKind: "flow-out" }), false);
+  assert.equal(isOutputFlowHandleAllowedForEdgeMode({ mode: "data", anchorKind: "route-out" }), false);
+  assert.equal(isOutputFlowHandleAllowedForEdgeMode({ mode: "data", anchorKind: "flow-out" }), false);
+  assert.equal(isOutputFlowHandleAllowedForEdgeMode({ mode: "flow", anchorKind: "route-out" }), true);
+  assert.equal(isOutputFlowHandleAllowedForEdgeMode({ mode: "flow", anchorKind: "flow-out" }), true);
+  assert.equal(isOutputFlowHandleAllowedForEdgeMode({ mode: "all", anchorKind: "route-out" }), true);
+  assert.equal(isOutputFlowHandleAllowedForEdgeMode({ mode: "all", anchorKind: "flow-out" }), true);
+});
+
+test("output flow handles require an allowed mode and node interaction", () => {
+  assert.equal(
+    shouldShowOutputFlowHandle({
+      mode: "smart",
+      anchorKind: "route-out",
+      isNodeInteracted: false,
+      isActiveConnectionSource: false,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldShowOutputFlowHandle({
+      mode: "smart",
+      anchorKind: "route-out",
+      isNodeInteracted: true,
+      isActiveConnectionSource: false,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldShowOutputFlowHandle({
+      mode: "smart",
+      anchorKind: "flow-out",
+      isNodeInteracted: true,
+      isActiveConnectionSource: false,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldShowOutputFlowHandle({
+      mode: "flow",
+      anchorKind: "flow-out",
+      isNodeInteracted: true,
+      isActiveConnectionSource: false,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldShowOutputFlowHandle({
+      mode: "flow",
+      anchorKind: "flow-out",
+      isNodeInteracted: false,
+      isActiveConnectionSource: true,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldShowOutputFlowHandle({
+      mode: "data",
+      anchorKind: "route-out",
+      isNodeInteracted: true,
+      isActiveConnectionSource: true,
+    }),
+    false,
+  );
 });
 
 test("data mode shows only data flow lines", () => {

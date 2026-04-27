@@ -426,6 +426,37 @@ test("buildNodeCardViewModel prefers latest run output preview and display mode 
   assert.equal(model.body.displayModeLabel, "MD");
 });
 
+test("buildNodeCardViewModel lets manual output display mode override detected runtime format", () => {
+  const node: GraphNode = {
+    kind: "output",
+    name: "output_answer",
+    description: "Preview the final answer.",
+    ui: { position: { x: 980, y: 220 } },
+    reads: [{ state: "answer", required: true }],
+    writes: [],
+    config: {
+      displayMode: "plain",
+      persistEnabled: false,
+      persistFormat: "auto",
+      fileNameTemplate: "",
+    },
+  };
+
+  const model = buildNodeCardViewModel("output_answer", node, stateSchema, {
+    runtime: {
+      latestRunStatus: "completed",
+      outputPreviewText: "# 最终答案\n\nGraphiteUI 已迁移完成。",
+      outputDisplayMode: "markdown",
+      failedMessage: null,
+    },
+  });
+
+  assert.equal(model.body.kind, "output");
+  assert.equal(model.body.previewText, "# 最终答案\n\nGraphiteUI 已迁移完成。");
+  assert.equal(model.body.displayMode, "plain");
+  assert.equal(model.body.displayModeLabel, "PLAIN");
+});
+
 test("buildNodeCardViewModel keeps active output runs in a stable pending preview state", () => {
   const node: GraphNode = {
     kind: "output",

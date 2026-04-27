@@ -42,6 +42,34 @@ class AgentStatePromptSemanticTests(unittest.TestCase):
         self.assertIn("description: 给用户看的中文总结", prompt)
         self.assertIn('"state_1": "..."', prompt)
 
+    def test_auto_prompt_emphasizes_output_state_value_formats(self) -> None:
+        state_schema = {
+            "state_1": NodeSystemStateDefinition(
+                name="最终答案",
+                description="给用户看的中文总结",
+                type=NodeSystemStateType.MARKDOWN,
+                value="",
+            ),
+            "state_2": NodeSystemStateDefinition(
+                name="结构化评分",
+                description="模型评分结果",
+                type=NodeSystemStateType.JSON,
+                value={},
+            ),
+        }
+
+        prompt = _build_auto_system_prompt(
+            ["state_1", "state_2"],
+            {},
+            {},
+            state_schema=state_schema,
+        )
+
+        self.assertIn("output_format: markdown string inside the JSON value", prompt)
+        self.assertIn("这个字段的值必须是 Markdown 内容字符串", prompt)
+        self.assertIn("output_format: JSON object inside the JSON value", prompt)
+        self.assertIn("不要把对象再序列化成字符串", prompt)
+
     def test_llm_json_response_can_map_unique_state_name_alias_back_to_output_key(self) -> None:
         parsed = _parse_llm_json_response(
             '{"最终答案": "这是中文语义字段返回的内容"}',

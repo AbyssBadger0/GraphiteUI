@@ -1,4 +1,5 @@
 import type { StateDefinition } from "../../types/node-system.ts";
+import { resolveDefaultStateColor } from "../workspace/statePanelFields.ts";
 
 export type StatePortSearchField = {
   key: string;
@@ -48,7 +49,7 @@ export function createStateDraftFromQuery(query: string, existingKeys: string[])
       description: "",
       type: "text",
       value: "",
-      color: "",
+      color: resolveDefaultStateColor(key, existingKeys),
     },
   };
 }

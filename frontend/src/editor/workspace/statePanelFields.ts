@@ -57,6 +57,8 @@ export const STATE_COLOR_OPTIONS: StateColorOption[] = [
   { value: "#9a3412", label: "Walnut", swatch: "#9a3412" },
 ];
 
+const DEFAULT_STATE_COLOR_VALUES = STATE_COLOR_OPTIONS.map((option) => option.value).filter(Boolean);
+
 export function resolveStateColorOptions(currentColor: string): StateColorOption[] {
   const normalized = currentColor.trim();
   if (!normalized) {
@@ -73,6 +75,13 @@ export function resolveStateColorOptions(currentColor: string): StateColorOption
   ];
 }
 
+export function resolveDefaultStateColor(stateKey: string, existingKeys: string[] = []) {
+  const match = stateKey.match(/^state_(\d+)$/);
+  const seed = match ? Number(match[1]) - 1 : existingKeys.length;
+  const normalizedSeed = Number.isInteger(seed) && seed >= 0 ? seed : 0;
+  return DEFAULT_STATE_COLOR_VALUES[normalizedSeed % DEFAULT_STATE_COLOR_VALUES.length] ?? "#d97706";
+}
+
 export function buildDefaultStateField(existingKeys: string[], startIndex = 1) {
   let index = Math.max(1, Math.floor(startIndex));
   while (existingKeys.includes(`state_${index}`)) {
@@ -87,7 +96,7 @@ export function buildDefaultStateField(existingKeys: string[], startIndex = 1) {
       description: "",
       type: "text" as const,
       value: defaultValueForStateType("text"),
-      color: "",
+      color: resolveDefaultStateColor(key, existingKeys),
     },
   };
 }
@@ -99,6 +108,11 @@ export function buildNextDefaultStateField(
   const nextField = buildDefaultStateField(Object.keys(document.state_schema), resolveNextDefaultStateKeyIndex(document));
   const nextType = (definitionPatch.type ?? nextField.definition.type) as StateFieldType;
   const hasValuePatch = Object.prototype.hasOwnProperty.call(definitionPatch, "value");
+  const hasColorPatch = Object.prototype.hasOwnProperty.call(definitionPatch, "color");
+  const nextColor =
+    hasColorPatch && typeof definitionPatch.color === "string" && definitionPatch.color.trim()
+      ? definitionPatch.color
+      : nextField.definition.color;
   return {
     key: nextField.key,
     definition: {
@@ -106,6 +120,7 @@ export function buildNextDefaultStateField(
       ...definitionPatch,
       type: nextType,
       value: hasValuePatch ? definitionPatch.value : defaultValueForStateType(nextType),
+      color: nextColor,
     },
   };
 }

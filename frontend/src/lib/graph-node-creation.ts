@@ -1,5 +1,5 @@
 import { cloneGraphDocument } from "./graph-document.ts";
-import { buildNextDefaultStateField, rememberDefaultStateKeyIndex } from "../editor/workspace/statePanelFields.ts";
+import { buildNextDefaultStateField, rememberDefaultStateKeyIndex, resolveDefaultStateColor } from "../editor/workspace/statePanelFields.ts";
 import { isVirtualAnyOutputStateKey } from "./virtual-any-input.ts";
 
 import type {
@@ -41,7 +41,7 @@ function defaultStateDefinitionForType(stateKey: string, type: string): StateDef
     description: "",
     type,
     value: defaultValueForStateType(type),
-    color: "",
+    color: resolveDefaultStateColor(stateKey),
   };
 }
 

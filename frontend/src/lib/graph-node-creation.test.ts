@@ -28,7 +28,7 @@ test("buildGenericInputNode creates an expanded input node that writes a default
     description: "",
     type: "text",
     value: "",
-    color: "",
+    color: "#7c3aed",
   });
 });
 
@@ -279,7 +279,7 @@ test("applyNodeCreationResult materializes a virtual agent any output when it sp
     description: "",
     type: "markdown",
     value: "",
-    color: "",
+    color: "#7c3aed",
   });
   assert.equal(result.document.metadata.graphiteui_state_key_counter, 3);
   assert.deepEqual(result.document.edges, [{ source: "empty_agent", target: "output_created" }]);

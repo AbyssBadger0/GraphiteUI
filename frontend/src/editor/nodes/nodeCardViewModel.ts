@@ -198,7 +198,10 @@ function buildBody(
 
   const connectedState = node.reads[0]?.state ?? null;
   const runtime = options.runtime;
-  const configuredDisplayMode = runtime?.outputDisplayMode?.trim() || node.config.displayMode;
+  const configuredDisplayMode =
+    node.config.displayMode === "auto"
+      ? runtime?.outputDisplayMode?.trim() || node.config.displayMode
+      : node.config.displayMode;
   const previewText = resolveOutputPreviewText({
     connectedState,
     stateSchema,

@@ -4,14 +4,18 @@ import assert from "node:assert/strict";
 import {
   addStateFieldToDocument,
   buildDefaultStateField,
+  buildNextDefaultStateField,
   deleteStateFieldFromDocument,
   insertStateFieldIntoDocument,
   listStateFieldUsageLabels,
   parseStateValueInput,
   renameStateFieldInDocument,
+  STATE_COLOR_OPTIONS,
   updateStateFieldInDocument,
 } from "./statePanelFields.ts";
 import type { GraphPayload } from "@/types/node-system";
+
+const defaultStateColorValues = STATE_COLOR_OPTIONS.map((option) => option.value).filter(Boolean);
 
 function buildDocument(): GraphPayload {
   return {
@@ -90,6 +94,29 @@ test("buildDefaultStateField returns a unique text state", () => {
   assert.equal(field.definition.name, "State 3");
   assert.equal(field.definition.type, "text");
   assert.equal(field.definition.value, "");
+  assert.ok(defaultStateColorValues.includes(field.definition.color));
+});
+
+test("buildNextDefaultStateField assigns a non-empty default color unless one is provided", () => {
+  const document = buildDocument();
+  const defaultField = buildNextDefaultStateField(document, {
+    name: "Review Notes",
+    type: "markdown",
+  });
+  const explicitColorField = buildNextDefaultStateField(document, {
+    name: "Scored Answer",
+    type: "text",
+    color: "#10b981",
+  });
+  const emptyColorPatchField = buildNextDefaultStateField(document, {
+    name: "Empty Color Patch",
+    type: "text",
+    color: "",
+  });
+
+  assert.ok(defaultStateColorValues.includes(defaultField.definition.color));
+  assert.equal(explicitColorField.definition.color, "#10b981");
+  assert.ok(defaultStateColorValues.includes(emptyColorPatchField.definition.color));
 });
 
 test("renameStateFieldInDocument updates bindings and condition rule source", () => {
@@ -149,6 +176,7 @@ test("addStateFieldToDocument inserts a new default field", () => {
 
   assert.ok(nextDocument.state_schema.state_1);
   assert.equal(nextDocument.state_schema.state_1.type, "text");
+  assert.ok(defaultStateColorValues.includes(nextDocument.state_schema.state_1.color));
 });
 
 test("addStateFieldToDocument does not reuse deleted default state keys in the same graph", () => {

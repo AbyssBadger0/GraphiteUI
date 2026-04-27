@@ -11,10 +11,6 @@ export type StatePortDraft = {
   definition: StateDefinition;
 };
 
-export type CreateStateDraftOptions = {
-  side?: "input" | "output";
-};
-
 export function matchesStatePortSearch(field: StatePortSearchField, query: string) {
   const normalizedQuery = normalizeStateSearchText(query);
   if (!normalizedQuery) {
@@ -42,9 +38,9 @@ export function matchesStatePortSearch(field: StatePortSearchField, query: strin
   return isSubsequence(queryCompact, initials) || haystacks.some((value) => isSubsequence(queryCompact, value.replace(/\s+/g, "")));
 }
 
-export function createStateDraftFromQuery(query: string, existingKeys: string[], options: CreateStateDraftOptions = {}): StatePortDraft {
+export function createStateDraftFromQuery(query: string, existingKeys: string[]): StatePortDraft {
   const trimmedQuery = query.trim();
-  const key = createStateKey(trimmedQuery, existingKeys, options.side);
+  const key = createIndexedStateKey("state", existingKeys);
 
   return {
     key,
@@ -56,23 +52,6 @@ export function createStateDraftFromQuery(query: string, existingKeys: string[],
       color: "",
     },
   };
-}
-
-function createStateKey(base: string, existingKeys: string[], side: CreateStateDraftOptions["side"] = undefined) {
-  const normalizedBase = base.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-  if (!normalizedBase) {
-    return createIndexedStateKey(side === "input" ? "input" : side === "output" ? "output" : "state", existingKeys);
-  }
-  let nextKey = normalizedBase;
-  let index = 2;
-  const existing = new Set(existingKeys);
-
-  while (existing.has(nextKey)) {
-    nextKey = `${normalizedBase}_${index}`;
-    index += 1;
-  }
-
-  return nextKey;
 }
 
 function createIndexedStateKey(prefix: string, existingKeys: string[]) {

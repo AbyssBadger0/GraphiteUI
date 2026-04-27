@@ -413,7 +413,7 @@ import {
   type StateFieldType,
 } from "@/editor/workspace/statePanelFields";
 import { canCompleteGraphConnection, canStartGraphConnection, type PendingGraphConnection } from "@/lib/graph-connections";
-import { CREATE_AGENT_INPUT_STATE_KEY } from "@/lib/virtual-any-input";
+import { CREATE_AGENT_INPUT_STATE_KEY, VIRTUAL_ANY_INPUT_STATE_KEY } from "@/lib/virtual-any-input";
 import { resolveFocusedViewport } from "@/editor/canvas/focusNodeViewport";
 import { resolveViewportForMinimapCenter } from "./minimapModel";
 import { useNodeSelectionFocus, type NodeFocusRequest } from "./useNodeSelectionFocus";
@@ -678,6 +678,16 @@ const pendingAgentInputSourceByNodeId = computed<Record<string, PendingStateInpu
   );
 });
 const baseProjectedAnchors = computed(() => resolvedCanvasLayout.value.anchors);
+const baseProjectedAnchorsWithoutReplacedAnyInputs = computed(() =>
+  baseProjectedAnchors.value.filter(
+    (anchor) =>
+      !(
+        anchor.kind === "state-in" &&
+        anchor.stateKey === VIRTUAL_ANY_INPUT_STATE_KEY &&
+        pendingAgentInputSourceByNodeId.value[anchor.nodeId]
+      ),
+  ),
+);
 const transientAgentInputAnchors = computed<ProjectedCanvasAnchor[]>(() =>
   Object.entries(pendingAgentInputSourceByNodeId.value).flatMap(([nodeId, source]) => {
     const node = props.document.nodes[nodeId];
@@ -701,7 +711,7 @@ const transientAgentInputAnchors = computed<ProjectedCanvasAnchor[]>(() =>
     ];
   }),
 );
-const projectedAnchors = computed(() => [...baseProjectedAnchors.value, ...transientAgentInputAnchors.value]);
+const projectedAnchors = computed(() => [...baseProjectedAnchorsWithoutReplacedAnyInputs.value, ...transientAgentInputAnchors.value]);
 const flowAnchors = computed(() =>
   projectedAnchors.value.filter((anchor) => anchor.kind === "flow-in" || anchor.kind === "flow-out"),
 );
@@ -1172,17 +1182,6 @@ function openDataEdgeStateEditor() {
   clearDataEdgeStateConfirmState();
 }
 
-function activeDataEdgePairStateCount() {
-  const editor = activeDataEdgeStateEditor.value;
-  if (!editor) {
-    return 0;
-  }
-
-  return projectedEdges.value.filter(
-    (edge) => edge.kind === "data" && edge.source === editor.source && edge.target === editor.target,
-  ).length;
-}
-
 function shouldOfferDataEdgeFlowDisconnect() {
   const editor = activeDataEdgeStateEditor.value;
   if (!editor) {
@@ -1194,7 +1193,6 @@ function shouldOfferDataEdgeFlowDisconnect() {
   return (
     sourceNode?.kind === "agent" &&
     targetNode?.kind === "agent" &&
-    activeDataEdgePairStateCount() > 1 &&
     props.document.edges.some((edge) => edge.source === editor.source && edge.target === editor.target)
   );
 }
@@ -2190,11 +2188,21 @@ function resolveEligibleTargetAnchorForNodeBody(nodeId: string) {
 }
 
 function resolveEligibleStateTargetAnchorForNodeBody(nodeId: string) {
-  const candidateAnchor = projectedAnchors.value.find(
+  const createInputAnchor = projectedAnchors.value.find(
     (anchor) =>
       anchor.nodeId === nodeId &&
       anchor.kind === "state-in" &&
       anchor.stateKey === CREATE_AGENT_INPUT_STATE_KEY,
+  );
+  if (createInputAnchor && eligibleTargetAnchorIds.value.has(createInputAnchor.id)) {
+    return createInputAnchor;
+  }
+
+  const candidateAnchor = projectedAnchors.value.find(
+    (anchor) =>
+      anchor.nodeId === nodeId &&
+      anchor.kind === "state-in" &&
+      isStateTargetAnchorAllowedForActiveConnection(anchor),
   );
   if (!candidateAnchor || !eligibleTargetAnchorIds.value.has(candidateAnchor.id)) {
     return null;
@@ -2202,8 +2210,16 @@ function resolveEligibleStateTargetAnchorForNodeBody(nodeId: string) {
   return candidateAnchor;
 }
 
+function isStateTargetAnchorAllowedForActiveConnection(anchor: ProjectedCanvasAnchor) {
+  if (activeConnection.value?.sourceKind !== "state-out") {
+    return true;
+  }
+
+  return anchor.stateKey === CREATE_AGENT_INPUT_STATE_KEY || anchor.stateKey === activeConnection.value?.sourceStateKey;
+}
+
 function canCompleteCanvasConnection(anchor: ProjectedCanvasAnchor) {
-  if (activeConnection.value?.sourceKind === "state-out" && anchor.stateKey !== CREATE_AGENT_INPUT_STATE_KEY) {
+  if (activeConnection.value?.sourceKind === "state-out" && !isStateTargetAnchorAllowedForActiveConnection(anchor)) {
     return false;
   }
 

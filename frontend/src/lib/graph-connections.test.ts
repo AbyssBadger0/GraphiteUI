@@ -263,6 +263,35 @@ test("canCompleteGraphConnection allows state-out sources to target a concrete s
   );
 });
 
+test("canCompleteGraphConnection allows an existing state binding to restore a missing ordering edge", () => {
+  const pending: PendingGraphConnection = {
+    sourceNodeId: "input_question",
+    sourceKind: "state-out",
+    sourceStateKey: "question",
+  };
+  const disconnectedGraph: GraphPayload = {
+    ...document,
+    edges: [],
+  };
+
+  assert.equal(
+    canCompleteGraphConnection(disconnectedGraph, pending, {
+      nodeId: "answer_helper",
+      kind: "state-in",
+      stateKey: "question",
+    }),
+    true,
+  );
+  assert.equal(
+    canCompleteGraphConnection(document, pending, {
+      nodeId: "answer_helper",
+      kind: "state-in",
+      stateKey: "question",
+    }),
+    false,
+  );
+});
+
 test("canCompleteGraphConnection allows state outputs to target virtual any inputs on empty non-input nodes", () => {
   const pending: PendingGraphConnection = {
     sourceNodeId: "input_question",

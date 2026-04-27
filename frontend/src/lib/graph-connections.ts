@@ -48,7 +48,7 @@ export function canConnectStateBinding(
     return false;
   }
 
-  if (!sourceStateKey || !targetStateKey || sourceStateKey === targetStateKey) {
+  if (!sourceStateKey || !targetStateKey) {
     return false;
   }
 
@@ -58,6 +58,13 @@ export function canConnectStateBinding(
 
   if (!canResolveStateConnectionWriter(document, sourceNodeId, sourceStateKey, targetNodeId)) {
     return false;
+  }
+
+  if (sourceStateKey === targetStateKey) {
+    return (
+      targetNode.reads.some((binding) => binding.state === sourceStateKey) &&
+      shouldAddImplicitFlowEdgeForStateConnection(document, sourceNodeId, targetNodeId)
+    );
   }
 
   if (isCreateAgentInputStateKey(targetStateKey)) {

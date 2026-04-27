@@ -553,8 +553,25 @@ test("EditorCanvas exposes transient new agent input anchors while state draggin
   assert.match(componentSource, /const projectedAnchors = computed\(\(\) => \[\.\.\.baseProjectedAnchorsWithoutVirtualCreatePorts\.value, \.\.\.transientAgentInputAnchors\.value, \.\.\.transientAgentOutputAnchors\.value\]\);/);
 });
 
+test("EditorCanvas measures only rendered anchor slots so hidden virtual input capsules cannot create stale offsets", () => {
+  assert.match(componentSource, /const slotRect = slotElement\.getBoundingClientRect\(\);/);
+  assert.match(componentSource, /if \(slotRect\.width <= 0 \|\| slotRect\.height <= 0\) \{[\s\S]*continue;[\s\S]*\}/);
+  assert.match(componentSource, /const measuredOffset = \{[\s\S]*slotRect\.left \+ slotRect\.width \/ 2[\s\S]*slotRect\.top \+ slotRect\.height \/ 2/);
+});
+
+test("EditorCanvas keeps transient input capsules aligned while dragging over node bodies on touch", () => {
+  assert.match(componentSource, /const activeConnectionHoverNodeId = ref<string \| null>\(null\);/);
+  assert.match(componentSource, /:hovered="hoveredNodeId === nodeId \|\| activeConnectionHoverNodeId === nodeId"/);
+  assert.match(componentSource, /function syncActiveConnectionHoverNode\(event: PointerEvent\)/);
+  assert.match(componentSource, /function resolveNodeIdAtPointer\(event: PointerEvent\)/);
+  assert.match(componentSource, /function setActiveConnectionHoverNode\(nodeId: string \| null\)/);
+  assert.match(componentSource, /void nextTick\(\)\.then\(\(\) => \{[\s\S]*scheduleAnchorMeasurement\(nodeId\);[\s\S]*\}\);/);
+  assert.match(componentSource, /if \(activeConnection\.value\) \{[\s\S]*syncActiveConnectionHoverNode\(event\);[\s\S]*autoSnappedTargetAnchor\.value = resolveAutoSnappedTargetAnchor\(event\);/);
+  assert.match(componentSource, /setActiveConnectionHoverNode\(null\);/);
+});
+
 test("EditorCanvas projects virtual agent output anchors only while the virtual output pill is visible or dragging", () => {
-  assert.match(componentSource, /:hovered="hoveredNodeId === nodeId"/);
+  assert.match(componentSource, /:hovered="hoveredNodeId === nodeId \|\| activeConnectionHoverNodeId === nodeId"/);
   assert.match(componentSource, /function isAgentCreateOutputAnchorVisible\(nodeId: string\)/);
   assert.match(componentSource, /selection\.selectedNodeId\.value === nodeId/);
   assert.match(componentSource, /hoveredNodeId\.value === nodeId/);
@@ -578,9 +595,11 @@ test("EditorCanvas snaps state drags to transient or matching state inputs from 
   assert.match(componentSource, /if \(activeConnection\.value\.sourceKind === "state-out"\) \{[\s\S]*return resolveAutoSnappedStateTargetAnchor\(event\);[\s\S]*\}/);
   assert.match(componentSource, /function resolveAutoSnappedStateTargetAnchor\(event: PointerEvent\)/);
   assert.match(componentSource, /function resolveEligibleStateTargetAnchorForNodeBody\(nodeId: string\)/);
+  assert.match(componentSource, /function resolveAgentCreateInputTargetAnchor\(nodeId: string\)/);
   assert.match(componentSource, /function isStateTargetAnchorAllowedForActiveConnection\(anchor: ProjectedCanvasAnchor\)/);
   assert.match(componentSource, /anchor\.stateKey === CREATE_AGENT_INPUT_STATE_KEY \|\| anchor\.stateKey === activeConnection\.value\?\.sourceStateKey/);
-  assert.match(componentSource, /for \(const \[nodeId, nodeElement\] of nodeElementMap\.entries\(\)\) \{[\s\S]*if \(isPointerWithinNodeElement\(nodeElement, event\)\) \{[\s\S]*const snappedAnchor = resolveEligibleStateTargetAnchorForNodeBody\(nodeId\);[\s\S]*return snappedAnchor;/);
+  assert.match(componentSource, /const createInputAnchor = resolveAgentCreateInputTargetAnchor\(nodeId\);[\s\S]*if \(createInputAnchor && canCompleteCanvasConnection\(createInputAnchor\)\) \{[\s\S]*return createInputAnchor;/);
+  assert.match(componentSource, /const fallbackInputAnchor = baseProjectedAnchors\.value[\s\S]*anchor\.stateKey === VIRTUAL_ANY_INPUT_STATE_KEY/);
   assert.match(componentSource, /function isPointerWithinNodeElement\(nodeElement: HTMLElement, event: PointerEvent\)/);
   assert.match(componentSource, /if \(activeConnection\.value\?\.sourceKind === "state-out"\) \{[\s\S]*return resolveEligibleStateTargetAnchorForNodeBody\(nodeId\);[\s\S]*\}/);
   assert.match(componentSource, /if \(activeConnection\.value\?\.sourceKind === "state-out" && !isStateTargetAnchorAllowedForActiveConnection\(anchor\)\) \{[\s\S]*return false;/);

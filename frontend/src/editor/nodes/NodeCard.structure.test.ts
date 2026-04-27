@@ -293,7 +293,7 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.ok(agentSectionMatch, "expected to find the agent node section");
   const agentSection = agentSectionMatch[0];
 
-  assert.match(componentSource, /import \{[\s\S]*CREATE_AGENT_INPUT_STATE_KEY,[\s\S]*VIRTUAL_ANY_OUTPUT_COLOR,[\s\S]*VIRTUAL_ANY_OUTPUT_STATE_KEY[\s\S]*\} from "@\/lib\/virtual-any-input";/);
+  assert.match(componentSource, /import \{[\s\S]*CREATE_AGENT_INPUT_STATE_KEY,[\s\S]*VIRTUAL_ANY_INPUT_STATE_KEY,[\s\S]*VIRTUAL_ANY_OUTPUT_COLOR,[\s\S]*VIRTUAL_ANY_OUTPUT_STATE_KEY[\s\S]*\} from "@\/lib\/virtual-any-input";/);
   assert.match(componentSource, /import \{ buildNodeCardViewModel, type NodePortViewModel \} from "\.\/nodeCardViewModel";/);
   assert.match(componentSource, /hovered\?:\s*boolean;/);
   assert.match(componentSource, /'node-card--hovered': hovered/);
@@ -311,7 +311,9 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.match(agentSection, /@click\.stop\s*\n/);
   assert.match(agentSection, /@dblclick\.stop="openPortStateCreate\('input'\)"/);
   assert.match(agentSection, /@dblclick\.stop="openPortStateCreate\('output'\)"/);
-  assert.match(agentSection, /:data-anchor-slot-id="\`\$\{nodeId\}:state-in:\$\{CREATE_AGENT_INPUT_STATE_KEY\}\`"/);
+  assert.match(componentSource, /const agentCreateInputAnchorStateKey = computed\(\(\) =>/);
+  assert.match(componentSource, /props\.pendingStateInputSource \? CREATE_AGENT_INPUT_STATE_KEY : VIRTUAL_ANY_INPUT_STATE_KEY/);
+  assert.match(agentSection, /:data-anchor-slot-id="\`\$\{nodeId\}:state-in:\$\{agentCreateInputAnchorStateKey\}\`"/);
   assert.match(agentSection, /:data-anchor-slot-id="\`\$\{nodeId\}:state-out:\$\{VIRTUAL_ANY_OUTPUT_STATE_KEY\}\`"/);
   assert.match(agentSection, /node-card__port-pill--create/);
   assert.match(agentSection, /\+ input/);

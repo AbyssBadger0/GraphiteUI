@@ -541,7 +541,7 @@
                 >
                   <span
                     class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"
-                    :data-anchor-slot-id="`${nodeId}:state-in:${CREATE_AGENT_INPUT_STATE_KEY}`"
+                    :data-anchor-slot-id="`${nodeId}:state-in:${agentCreateInputAnchorStateKey}`"
                     aria-hidden="true"
                   />
                   <span class="node-card__port-pill-label">
@@ -1272,7 +1272,7 @@ import StateEditorPopover from "./StateEditorPopover.vue";
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
 import type { AgentNode, ConditionNode, GraphNode, InputNode, OutputNode, StateDefinition } from "@/types/node-system";
 import type { SkillDefinition } from "@/types/skills";
-import { CREATE_AGENT_INPUT_STATE_KEY, VIRTUAL_ANY_OUTPUT_COLOR, VIRTUAL_ANY_OUTPUT_STATE_KEY } from "@/lib/virtual-any-input";
+import { CREATE_AGENT_INPUT_STATE_KEY, VIRTUAL_ANY_INPUT_STATE_KEY, VIRTUAL_ANY_OUTPUT_COLOR, VIRTUAL_ANY_OUTPUT_STATE_KEY } from "@/lib/virtual-any-input";
 
 import { DEFAULT_AGENT_TEMPERATURE, buildAgentModelSelectOptions, normalizeAgentTemperature, resolveAgentModelSelection } from "./agentConfigModel";
 import {
@@ -1432,6 +1432,9 @@ const agentInputPorts = computed<NodePortViewModel[]>(() =>
 );
 const agentOutputPorts = computed<NodePortViewModel[]>(() =>
   view.value.body.kind === "agent" ? view.value.outputs.filter((port) => !port.virtual) : [],
+);
+const agentCreateInputAnchorStateKey = computed(() =>
+  props.pendingStateInputSource ? CREATE_AGENT_INPUT_STATE_KEY : VIRTUAL_ANY_INPUT_STATE_KEY,
 );
 const outputPreviewContent = computed(() => {
   if (view.value.body.kind !== "output") {

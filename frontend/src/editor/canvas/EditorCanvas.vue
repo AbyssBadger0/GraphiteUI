@@ -250,7 +250,7 @@
           :pending-state-input-source="pendingAgentInputSourceByNodeId[nodeId] ?? null"
           :human-review-pending="isHumanReviewNode(nodeId)"
           :selected="isNodeVisuallySelected(nodeId)"
-          :hovered="hoveredNodeId === nodeId"
+          :hovered="hoveredNodeId === nodeId || activeConnectionHoverNodeId === nodeId"
           :interaction-locked="isGraphEditingLocked()"
           @update-node-metadata="emit('update-node-metadata', $event)"
           @update-input-config="emit('update-input-config', $event)"
@@ -566,6 +566,7 @@ const suppressedNodeClickTimeoutRef = ref<number | null>(null);
 const pendingConnection = ref<PendingGraphConnection | null>(null);
 const pendingConnectionPoint = ref<{ x: number; y: number } | null>(null);
 const autoSnappedTargetAnchor = ref<ProjectedCanvasAnchor | null>(null);
+const activeConnectionHoverNodeId = ref<string | null>(null);
 const selectedEdgeId = ref<string | null>(null);
 const edgeVisibilityMode = ref<EdgeVisibilityMode>("smart");
 const activeFlowEdgeDeleteConfirm = ref<{
@@ -1140,6 +1141,7 @@ function clearCanvasTransientState() {
   clearFlowEdgeDeleteConfirmState();
   clearDataEdgeStateInteraction();
   autoSnappedTargetAnchor.value = null;
+  setActiveConnectionHoverNode(null);
 }
 
 function startFlowEdgeDeleteConfirm(edge: ProjectedCanvasEdge, event: PointerEvent) {
@@ -1849,6 +1851,10 @@ function measureAnchorOffsets(nodeIds?: string[]) {
       }
 
       const slotRect = slotElement.getBoundingClientRect();
+      if (slotRect.width <= 0 || slotRect.height <= 0) {
+        continue;
+      }
+
       const measuredOffset = {
         offsetX: roundMeasuredOffset((slotRect.left + slotRect.width / 2 - nodeRect.left) / scale),
         offsetY: roundMeasuredOffset((slotRect.top + slotRect.height / 2 - nodeRect.top) / scale),
@@ -2025,6 +2031,7 @@ function handleCanvasPointerMove(event: PointerEvent) {
     }
   }
   if (activeConnection.value) {
+    syncActiveConnectionHoverNode(event);
     scheduleDragFrame(() => {
       autoSnappedTargetAnchor.value = resolveAutoSnappedTargetAnchor(event);
       pendingConnectionPoint.value = autoSnappedTargetAnchor.value
@@ -2117,6 +2124,7 @@ function handleCanvasPointerUp(event: PointerEvent) {
       pendingConnection.value = null;
       pendingConnectionPoint.value = null;
       autoSnappedTargetAnchor.value = null;
+      setActiveConnectionHoverNode(null);
       return;
     }
     if (autoSnappedTargetAnchor.value) {
@@ -2190,6 +2198,41 @@ function handleCanvasDoubleClick(event: MouseEvent) {
   });
 }
 
+function syncActiveConnectionHoverNode(event: PointerEvent) {
+  if (!activeConnection.value) {
+    setActiveConnectionHoverNode(null);
+    return;
+  }
+
+  setActiveConnectionHoverNode(resolveNodeIdAtPointer(event));
+}
+
+function setActiveConnectionHoverNode(nodeId: string | null) {
+  if (activeConnectionHoverNodeId.value === nodeId) {
+    return;
+  }
+
+  const previousNodeId = activeConnectionHoverNodeId.value;
+  activeConnectionHoverNodeId.value = nodeId;
+  if (previousNodeId) {
+    scheduleAnchorMeasurement(previousNodeId);
+  }
+  if (nodeId) {
+    void nextTick().then(() => {
+      scheduleAnchorMeasurement(nodeId);
+    });
+  }
+}
+
+function resolveNodeIdAtPointer(event: PointerEvent) {
+  for (const [nodeId, nodeElement] of Array.from(nodeElementMap.entries()).reverse()) {
+    if (isPointerWithinNodeElement(nodeElement, event)) {
+      return nodeId;
+    }
+  }
+  return null;
+}
+
 function resolveAutoSnappedTargetAnchor(event: PointerEvent) {
   if (!activeConnection.value) {
     return null;
@@ -2205,12 +2248,11 @@ function resolveAutoSnappedTargetAnchor(event: PointerEvent) {
     }
   }
 
-  for (const [nodeId, nodeElement] of nodeElementMap.entries()) {
-    if (isPointerWithinNodeElement(nodeElement, event)) {
-      const snappedAnchor = resolveEligibleTargetAnchorForNodeBody(nodeId);
-      if (snappedAnchor) {
-        return snappedAnchor;
-      }
+  const nodeId = resolveNodeIdAtPointer(event);
+  if (nodeId) {
+    const snappedAnchor = resolveEligibleTargetAnchorForNodeBody(nodeId);
+    if (snappedAnchor) {
+      return snappedAnchor;
     }
   }
 
@@ -2218,12 +2260,11 @@ function resolveAutoSnappedTargetAnchor(event: PointerEvent) {
 }
 
 function resolveAutoSnappedStateTargetAnchor(event: PointerEvent) {
-  for (const [nodeId, nodeElement] of nodeElementMap.entries()) {
-    if (isPointerWithinNodeElement(nodeElement, event)) {
-      const snappedAnchor = resolveEligibleStateTargetAnchorForNodeBody(nodeId);
-      if (snappedAnchor) {
-        return snappedAnchor;
-      }
+  const nodeId = resolveNodeIdAtPointer(event);
+  if (nodeId) {
+    const snappedAnchor = resolveEligibleStateTargetAnchorForNodeBody(nodeId);
+    if (snappedAnchor) {
+      return snappedAnchor;
     }
   }
 
@@ -2269,13 +2310,8 @@ function resolveEligibleTargetAnchorForNodeBody(nodeId: string) {
 }
 
 function resolveEligibleStateTargetAnchorForNodeBody(nodeId: string) {
-  const createInputAnchor = projectedAnchors.value.find(
-    (anchor) =>
-      anchor.nodeId === nodeId &&
-      anchor.kind === "state-in" &&
-      anchor.stateKey === CREATE_AGENT_INPUT_STATE_KEY,
-  );
-  if (createInputAnchor && eligibleTargetAnchorIds.value.has(createInputAnchor.id)) {
+  const createInputAnchor = resolveAgentCreateInputTargetAnchor(nodeId);
+  if (createInputAnchor && canCompleteCanvasConnection(createInputAnchor)) {
     return createInputAnchor;
   }
 
@@ -2289,6 +2325,54 @@ function resolveEligibleStateTargetAnchorForNodeBody(nodeId: string) {
     return null;
   }
   return candidateAnchor;
+}
+
+function resolveAgentCreateInputTargetAnchor(nodeId: string): ProjectedCanvasAnchor | null {
+  const existingCreateInputAnchor = projectedAnchors.value.find(
+    (anchor) =>
+      anchor.nodeId === nodeId &&
+      anchor.kind === "state-in" &&
+      anchor.stateKey === CREATE_AGENT_INPUT_STATE_KEY,
+  );
+  if (existingCreateInputAnchor) {
+    return existingCreateInputAnchor;
+  }
+
+  const pendingSource = pendingAgentInputSourceByNodeId.value[nodeId];
+  const node = props.document.nodes[nodeId];
+  if (!pendingSource || !node || node.kind !== "agent") {
+    return null;
+  }
+
+  const fallbackInputAnchor = baseProjectedAnchors.value.find(
+    (anchor) =>
+      anchor.nodeId === nodeId &&
+      anchor.kind === "state-in" &&
+      anchor.stateKey === VIRTUAL_ANY_INPUT_STATE_KEY,
+  );
+  const measuredCreateInputOffset = measuredAnchorOffsets.value[`${nodeId}:state-in:${CREATE_AGENT_INPUT_STATE_KEY}`];
+  const existingInputAnchors = baseProjectedAnchors.value.filter(
+    (anchor) =>
+      anchor.nodeId === nodeId &&
+      anchor.kind === "state-in" &&
+      anchor.stateKey !== VIRTUAL_ANY_INPUT_STATE_KEY,
+  );
+  const lastInputAnchor = existingInputAnchors.at(-1);
+
+  return {
+    id: `${nodeId}:state-in:${CREATE_AGENT_INPUT_STATE_KEY}`,
+    nodeId,
+    kind: "state-in" as const,
+    x: measuredCreateInputOffset
+      ? node.ui.position.x + measuredCreateInputOffset.offsetX
+      : (fallbackInputAnchor?.x ?? lastInputAnchor?.x ?? node.ui.position.x + 6),
+    y: measuredCreateInputOffset
+      ? node.ui.position.y + measuredCreateInputOffset.offsetY
+      : (fallbackInputAnchor?.y ?? (lastInputAnchor ? lastInputAnchor.y + 44 : node.ui.position.y + 145)),
+    side: "left" as const,
+    color: pendingSource.stateColor,
+    stateKey: CREATE_AGENT_INPUT_STATE_KEY,
+  };
 }
 
 function isStateTargetAnchorAllowedForActiveConnection(anchor: ProjectedCanvasAnchor) {
@@ -2444,11 +2528,13 @@ function isNodeResizeHotzoneEnabled() {
 
 function setHoveredNode(nodeId: string) {
   hoveredNodeId.value = nodeId;
+  scheduleAnchorMeasurement(nodeId);
 }
 
 function clearHoveredNode(nodeId: string) {
   if (hoveredNodeId.value === nodeId) {
     hoveredNodeId.value = null;
+    scheduleAnchorMeasurement(nodeId);
   }
 }
 
@@ -2619,6 +2705,7 @@ function openCreationMenuFromPendingConnection(event: PointerEvent) {
   pendingConnection.value = null;
   pendingConnectionPoint.value = null;
   autoSnappedTargetAnchor.value = null;
+  setActiveConnectionHoverNode(null);
   selectedEdgeId.value = null;
 }
 

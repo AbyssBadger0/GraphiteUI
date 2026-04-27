@@ -27,3 +27,10 @@ test("resolveOutputPreviewContent keeps ordinary previews as plain text", () => 
   assert.equal(preview.kind, "plain");
   assert.equal(preview.text, "Connected to answer. Run the graph to preview/export it.");
 });
+
+test("resolveOutputPreviewContent treats active waiting output as an empty preview state", () => {
+  const preview = resolveOutputPreviewContent("Waiting for output...", "auto");
+
+  assert.equal(preview.kind, "plain");
+  assert.equal(preview.isEmpty, true);
+});

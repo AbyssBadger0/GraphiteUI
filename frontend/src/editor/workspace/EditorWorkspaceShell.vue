@@ -290,7 +290,7 @@ import EditorStatePanel from "./EditorStatePanel.vue";
 import EditorTabBar from "./EditorTabBar.vue";
 import EditorWelcomeState from "./EditorWelcomeState.vue";
 import { formatRunFeedback, formatValidationFeedback, type RunFeedback, type WorkspaceFeedbackTone } from "./runFeedbackModel.ts";
-import { buildRunNodeArtifactsModel } from "./runNodeArtifactsModel.ts";
+import { buildRunNodeArtifactsModel, mergeRunOutputPreviewByNodeId } from "./runNodeArtifactsModel.ts";
 import { applyRunWrittenStateValuesToDocument } from "./runStatePersistence.ts";
 import { addStateBindingToDocument, removeStateBindingFromDocument } from "./statePanelBindings.ts";
 import {
@@ -447,10 +447,7 @@ function applyRunVisualStateToTab(
     ...currentRunNodeIdByTabId.value,
     [tabId]: visualRun.current_node_id ?? null,
   };
-  runOutputPreviewByTabId.value = {
-    ...runOutputPreviewByTabId.value,
-    [tabId]: runArtifactsModel.outputPreviewByNodeId,
-  };
+  applyRunOutputPreviewForTab(tabId, runArtifactsModel.outputPreviewByNodeId);
   runFailureMessageByTabId.value = {
     ...runFailureMessageByTabId.value,
     [tabId]: runArtifactsModel.failedMessageByNodeId,
@@ -569,6 +566,21 @@ function applyStreamingOutputPreviewToTab(tabId: string, payload: Record<string,
   };
 }
 
+function applyRunOutputPreviewForTab(
+  tabId: string,
+  nextPreviewByNodeId: Record<string, { text: string; displayMode: string | null }>,
+  options: { preserveMissing?: boolean } = {},
+) {
+  runOutputPreviewByTabId.value = {
+    ...runOutputPreviewByTabId.value,
+    [tabId]: mergeRunOutputPreviewByNodeId(runOutputPreviewByTabId.value[tabId] ?? {}, nextPreviewByNodeId, options),
+  };
+}
+
+function isActiveRunStatus(status: string | null | undefined) {
+  return status === "queued" || status === "running" || status === "resuming";
+}
+
 function startRunEventStreamForTab(tabId: string, runId: string) {
   cancelRunEventStreamForTab(tabId);
   if (!runId || typeof EventSource === "undefined") {
@@ -647,10 +659,7 @@ async function pollRunForTab(tabId: string, runId: string, generation = runPollG
       ...currentRunNodeIdByTabId.value,
       [tabId]: run.current_node_id ?? null,
     };
-    runOutputPreviewByTabId.value = {
-      ...runOutputPreviewByTabId.value,
-      [tabId]: runArtifactsModel.outputPreviewByNodeId,
-    };
+    applyRunOutputPreviewForTab(tabId, runArtifactsModel.outputPreviewByNodeId, { preserveMissing: isActiveRunStatus(run.status) });
     runFailureMessageByTabId.value = {
       ...runFailureMessageByTabId.value,
       [tabId]: runArtifactsModel.failedMessageByNodeId,

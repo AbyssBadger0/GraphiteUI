@@ -363,6 +363,35 @@ test("buildNodeCardViewModel prefers latest run output preview and display mode 
   assert.equal(model.body.displayModeLabel, "MD");
 });
 
+test("buildNodeCardViewModel keeps active output runs in a stable pending preview state", () => {
+  const node: GraphNode = {
+    kind: "output",
+    name: "output_answer",
+    description: "Preview the final answer.",
+    ui: { position: { x: 980, y: 220 } },
+    reads: [{ state: "answer", required: true }],
+    writes: [],
+    config: {
+      displayMode: "auto",
+      persistEnabled: false,
+      persistFormat: "auto",
+      fileNameTemplate: "",
+    },
+  };
+
+  const model = buildNodeCardViewModel("output_answer", node, stateSchema, {
+    runtime: {
+      latestRunStatus: "running",
+      outputPreviewText: null,
+      outputDisplayMode: null,
+      failedMessage: null,
+    },
+  });
+
+  assert.equal(model.body.kind, "output");
+  assert.equal(model.body.previewText, "Waiting for output...");
+});
+
 test("buildNodeCardViewModel reports missing output preview after a completed run", () => {
   const node: GraphNode = {
     kind: "output",

@@ -7,6 +7,8 @@ export type OutputPreviewContent = {
   isEmpty: boolean;
 };
 
+export const OUTPUT_WAITING_TEXT = "Waiting for output...";
+
 const CONNECTED_EMPTY_PREFIX = "Connected to ";
 const UNBOUND_EMPTY_TEXT = "Connect an upstream output to preview/export it.";
 
@@ -151,5 +153,10 @@ function escapeHtml(text: string) {
 
 function isOutputPreviewEmpty(text: string) {
   const trimmed = text.trim();
-  return trimmed.length === 0 || trimmed === UNBOUND_EMPTY_TEXT || trimmed.startsWith(CONNECTED_EMPTY_PREFIX);
+  return (
+    trimmed.length === 0 ||
+    trimmed === UNBOUND_EMPTY_TEXT ||
+    trimmed === OUTPUT_WAITING_TEXT ||
+    trimmed.startsWith(CONNECTED_EMPTY_PREFIX)
+  );
 }

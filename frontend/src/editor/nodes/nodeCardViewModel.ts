@@ -1,6 +1,7 @@
 import type { UploadedAssetType } from "./uploadedAssetModel.ts";
 import { isUploadedAssetStateType } from "./uploadedAssetModel.ts";
 import { normalizeConditionLoopLimit } from "./conditionLoopLimit.ts";
+import { OUTPUT_WAITING_TEXT } from "./outputPreviewContentModel.ts";
 import { buildVirtualAnyInputPort, shouldExposeVirtualAnyInput } from "../../lib/virtual-any-input.ts";
 import type { GraphNode, StateDefinition } from "../../types/node-system.ts";
 
@@ -256,6 +257,9 @@ function resolveOutputPreviewText(input: {
   if (input.runtimeStatus === "completed") {
     return "Latest run completed, but this output did not produce a value.";
   }
+  if (isActiveRunStatus(input.runtimeStatus)) {
+    return OUTPUT_WAITING_TEXT;
+  }
   if (input.connectedState) {
     const stateValueText = stringifyValue(input.stateSchema[input.connectedState]?.value ?? "");
     if (stateValueText.trim()) {
@@ -264,6 +268,10 @@ function resolveOutputPreviewText(input: {
     return `Connected to ${getStateLabel(input.connectedState, input.stateSchema)}. Run the graph to preview/export it.`;
   }
   return "Connect an upstream output to preview/export it.";
+}
+
+function isActiveRunStatus(status: string | null) {
+  return status === "queued" || status === "running" || status === "resuming";
 }
 
 function resolveInputEditorModel(node: Extract<GraphNode, { kind: "input" }>, stateSchema: Record<string, StateDefinition>) {

@@ -291,6 +291,7 @@ import EditorTabBar from "./EditorTabBar.vue";
 import EditorWelcomeState from "./EditorWelcomeState.vue";
 import { formatRunFeedback, formatValidationFeedback, type RunFeedback, type WorkspaceFeedbackTone } from "./runFeedbackModel.ts";
 import { buildRunNodeArtifactsModel } from "./runNodeArtifactsModel.ts";
+import { applyRunWrittenStateValuesToDocument } from "./runStatePersistence.ts";
 import { addStateBindingToDocument, removeStateBindingFromDocument } from "./statePanelBindings.ts";
 import {
   addStateFieldToDocument,
@@ -673,6 +674,7 @@ async function pollRunForTab(tabId: string, runId: string, generation = runPollG
       return;
     }
 
+    persistRunStateValuesForTab(tabId, run);
     runPollTimerByTabId.delete(tabId);
     cancelRunEventStreamForTab(tabId);
   } catch (error) {
@@ -1121,6 +1123,18 @@ function setDocumentForTab(tabId: string, nextDocument: GraphPayload | GraphDocu
     [tabId]: syncedDocument,
   };
   writePersistedEditorDocumentDraft(tabId, syncedDocument);
+}
+
+function persistRunStateValuesForTab(tabId: string, run: RunDetail) {
+  const document = documentsByTabId.value[tabId];
+  if (!document) {
+    return;
+  }
+
+  const nextDocument = applyRunWrittenStateValuesToDocument(document, run);
+  if (nextDocument !== document) {
+    setDocumentForTab(tabId, nextDocument);
+  }
 }
 
 function isStatePanelOpen(tabId: string) {

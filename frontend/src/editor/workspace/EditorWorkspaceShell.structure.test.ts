@@ -276,6 +276,14 @@ test("EditorWorkspaceShell persists graph document drafts across route changes a
   assert.match(componentSource, /prunePersistedEditorDocumentDrafts\(nextWorkspace\.tabs\.map\(\(tab\) => tab\.tabId\)\);/);
 });
 
+test("EditorWorkspaceShell persists terminal run state values into the graph draft", () => {
+  assert.match(componentSource, /import \{ applyRunWrittenStateValuesToDocument \} from "\.\/runStatePersistence\.ts";/);
+  assert.match(componentSource, /function persistRunStateValuesForTab\(tabId: string, run: RunDetail\)/);
+  assert.match(componentSource, /const nextDocument = applyRunWrittenStateValuesToDocument\(document, run\);/);
+  assert.match(componentSource, /if \(nextDocument !== document\) \{[\s\S]*setDocumentForTab\(tabId, nextDocument\);[\s\S]*\}/);
+  assert.match(componentSource, /persistRunStateValuesForTab\(tabId, run\);/);
+});
+
 test("EditorWorkspaceShell renders the graph action controls as a detached capsule instead of passing them through EditorTabBar", () => {
   const editorTabBarUsage = componentSource.match(/<EditorTabBar[\s\S]*?\/>/)?.[0] ?? "";
 

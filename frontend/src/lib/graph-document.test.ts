@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { reactive } from "vue";
 
 import * as graphDocument from "./graph-document.ts";
-import { VIRTUAL_ANY_INPUT_STATE_KEY } from "./virtual-any-input.ts";
+import { CREATE_AGENT_INPUT_STATE_KEY, VIRTUAL_ANY_INPUT_STATE_KEY } from "./virtual-any-input.ts";
 import type { GraphDocument, GraphPayload, TemplateRecord } from "../types/node-system.ts";
 
 const {
@@ -516,7 +516,6 @@ test("connectStateBindingInDocument binds a virtual any input to the source stat
 });
 
 test("connectStateBindingInDocument appends source state through a transient new agent input", () => {
-  const createAgentInputStateKey = "__graphiteui_create_agent_input__";
   const document: GraphPayload = {
     graph_id: null,
     name: "Agent state create graph",
@@ -582,20 +581,21 @@ test("connectStateBindingInDocument appends source state through a transient new
     "input_question",
     "question",
     "answer_helper",
-    createAgentInputStateKey,
+    CREATE_AGENT_INPUT_STATE_KEY,
   );
   const nextConditionDocument = graphDocument.connectStateBindingInDocument(
     document,
     "input_question",
     "question",
     "answer_gate",
-    createAgentInputStateKey,
+    CREATE_AGENT_INPUT_STATE_KEY,
   );
 
   assert.deepEqual(nextAgentDocument.nodes.answer_helper.reads, [
     { state: "draft_question", required: true },
     { state: "question", required: true },
   ]);
+  assert.deepEqual(nextAgentDocument.edges, [{ source: "input_question", target: "answer_helper" }]);
   assert.deepEqual(document.nodes.answer_helper.reads, [{ state: "draft_question", required: true }]);
   assert.equal(nextConditionDocument, document);
 });

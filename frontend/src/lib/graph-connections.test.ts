@@ -6,7 +6,7 @@ import {
   canStartGraphConnection,
   type PendingGraphConnection,
 } from "./graph-connections.ts";
-import { VIRTUAL_ANY_INPUT_STATE_KEY } from "./virtual-any-input.ts";
+import { CREATE_AGENT_INPUT_STATE_KEY, VIRTUAL_ANY_INPUT_STATE_KEY } from "./virtual-any-input.ts";
 import type { GraphPayload } from "../types/node-system.ts";
 
 const document: GraphPayload = {
@@ -310,7 +310,6 @@ test("canCompleteGraphConnection allows state outputs to target a transient new 
     sourceKind: "state-out",
     sourceStateKey: "question",
   };
-  const createAgentInputStateKey = "__graphiteui_create_agent_input__";
   const graphWithAgentMissingQuestion: GraphPayload = {
     ...document,
     nodes: {
@@ -326,7 +325,7 @@ test("canCompleteGraphConnection allows state outputs to target a transient new 
     canCompleteGraphConnection(graphWithAgentMissingQuestion, pending, {
       nodeId: "answer_helper",
       kind: "state-in",
-      stateKey: createAgentInputStateKey,
+      stateKey: CREATE_AGENT_INPUT_STATE_KEY,
     }),
     true,
   );
@@ -334,7 +333,7 @@ test("canCompleteGraphConnection allows state outputs to target a transient new 
     canCompleteGraphConnection(document, pending, {
       nodeId: "answer_helper",
       kind: "state-in",
-      stateKey: createAgentInputStateKey,
+      stateKey: CREATE_AGENT_INPUT_STATE_KEY,
     }),
     false,
   );
@@ -342,7 +341,7 @@ test("canCompleteGraphConnection allows state outputs to target a transient new 
     canCompleteGraphConnection(document, pending, {
       nodeId: "route_result",
       kind: "state-in",
-      stateKey: createAgentInputStateKey,
+      stateKey: CREATE_AGENT_INPUT_STATE_KEY,
     }),
     false,
   );
@@ -350,8 +349,118 @@ test("canCompleteGraphConnection allows state outputs to target a transient new 
     canCompleteGraphConnection(document, pending, {
       nodeId: "output_answer",
       kind: "state-in",
-      stateKey: createAgentInputStateKey,
+      stateKey: CREATE_AGENT_INPUT_STATE_KEY,
     }),
+    false,
+  );
+});
+
+test("canCompleteGraphConnection allows state connections that can create a safe ordering edge", () => {
+  const pending: PendingGraphConnection = {
+    sourceNodeId: "input_question",
+    sourceKind: "state-out",
+    sourceStateKey: "question",
+  };
+  const disconnectedGraph: GraphPayload = {
+    ...document,
+    edges: [],
+    nodes: {
+      ...document.nodes,
+      answer_helper: {
+        ...document.nodes.answer_helper,
+        reads: [{ state: "draft_question", required: true }],
+      },
+    },
+  };
+
+  assert.equal(
+    canCompleteGraphConnection(disconnectedGraph, pending, {
+      nodeId: "answer_helper",
+      kind: "state-in",
+      stateKey: CREATE_AGENT_INPUT_STATE_KEY,
+    }),
+    true,
+  );
+});
+
+test("canCompleteGraphConnection rejects state connections that would remain writer-ambiguous", () => {
+  const ambiguousGraph: GraphPayload = {
+    ...document,
+    state_schema: {
+      answer: { name: "answer", description: "", type: "text", value: "", color: "#d97706" },
+      draft_question: { name: "draft_question", description: "", type: "text", value: "", color: "#2563eb" },
+    },
+    nodes: {
+      writer_left: {
+        kind: "agent",
+        name: "writer_left",
+        description: "",
+        ui: { position: { x: 0, y: 0 } },
+        reads: [],
+        writes: [{ state: "answer", mode: "replace" }],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "off",
+          temperature: 0,
+        },
+      },
+      writer_right: {
+        kind: "agent",
+        name: "writer_right",
+        description: "",
+        ui: { position: { x: 200, y: 0 } },
+        reads: [],
+        writes: [{ state: "answer", mode: "replace" }],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "off",
+          temperature: 0,
+        },
+      },
+      sink: {
+        kind: "agent",
+        name: "sink",
+        description: "",
+        ui: { position: { x: 440, y: 0 } },
+        reads: [{ state: "draft_question", required: true }],
+        writes: [],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "off",
+          temperature: 0,
+        },
+      },
+    },
+    edges: [
+      { source: "writer_left", target: "sink" },
+      { source: "writer_right", target: "sink" },
+    ],
+    conditional_edges: [],
+  };
+
+  assert.equal(
+    canCompleteGraphConnection(
+      ambiguousGraph,
+      {
+        sourceNodeId: "writer_left",
+        sourceKind: "state-out",
+        sourceStateKey: "answer",
+      },
+      {
+        nodeId: "sink",
+        kind: "state-in",
+        stateKey: CREATE_AGENT_INPUT_STATE_KEY,
+      },
+    ),
     false,
   );
 });

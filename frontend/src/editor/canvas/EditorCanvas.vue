@@ -4804,15 +4804,15 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   --editor-canvas-node-halo-scale-peak: 1.075;
   --editor-canvas-node-halo-scale-flicker: 1.006;
   --editor-canvas-node-halo-scale-afterglow: 1.05;
-  --editor-canvas-node-halo-border-rest: rgba(16, 185, 129, 0.58);
-  --editor-canvas-node-halo-border-peak: rgba(16, 185, 129, 0.88);
-  --editor-canvas-node-halo-border-flicker: rgba(16, 185, 129, 0.68);
-  --editor-canvas-node-halo-ring-shadow: rgba(16, 185, 129, 0.08);
-  --editor-canvas-node-halo-ring-glow: rgba(16, 185, 129, 0.16);
-  --editor-canvas-node-halo-ring-opacity-rest: 0.72;
-  --editor-canvas-node-halo-ring-opacity-peak: 1;
-  --editor-canvas-node-halo-ring-opacity-flicker: 0.82;
-  --editor-canvas-node-halo-ring-opacity-afterglow: 0.94;
+  --editor-canvas-node-halo-border-rest: rgba(16, 185, 129, 0.42);
+  --editor-canvas-node-halo-border-peak: rgba(16, 185, 129, 0.62);
+  --editor-canvas-node-halo-border-flicker: rgba(16, 185, 129, 0.5);
+  --editor-canvas-node-halo-ring-shadow: rgba(16, 185, 129, 0.05);
+  --editor-canvas-node-halo-ring-glow: rgba(16, 185, 129, 0.1);
+  --editor-canvas-node-halo-ring-opacity-rest: 0.58;
+  --editor-canvas-node-halo-ring-opacity-peak: 0.82;
+  --editor-canvas-node-halo-ring-opacity-flicker: 0.64;
+  --editor-canvas-node-halo-ring-opacity-afterglow: 0.74;
   --editor-canvas-node-halo-ring-blur-rest: 0px;
   --editor-canvas-node-halo-ring-blur-peak: 0.8px;
   --editor-canvas-node-halo-ring-blur-flicker: 0.25px;
@@ -4822,57 +4822,57 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   --editor-canvas-node-halo-ring-scale-afterglow: 1.016;
   --editor-canvas-node-halo-pulse-inset: -7px;
   --editor-canvas-node-halo-pulse-width: 2.5px;
-  --editor-canvas-node-halo-pulse-opacity-rest: 0.48;
-  --editor-canvas-node-halo-pulse-opacity-peak: 1;
-  --editor-canvas-node-halo-pulse-opacity-flicker: 0.64;
-  --editor-canvas-node-halo-pulse-opacity-afterglow: 0.92;
+  --editor-canvas-node-halo-pulse-opacity-rest: 0.36;
+  --editor-canvas-node-halo-pulse-opacity-peak: 0.82;
+  --editor-canvas-node-halo-pulse-opacity-flicker: 0.48;
+  --editor-canvas-node-halo-pulse-opacity-afterglow: 0.72;
   --editor-canvas-node-halo-pulse-scale-rest: 0.98;
   --editor-canvas-node-halo-pulse-scale-peak: 1.095;
   --editor-canvas-node-halo-pulse-scale-flicker: 1.012;
   --editor-canvas-node-halo-pulse-scale-afterglow: 1.06;
-  --editor-canvas-node-halo-background-rest: rgba(16, 185, 129, 0.02);
-  --editor-canvas-node-halo-background-peak: rgba(16, 185, 129, 0.13);
-  --editor-canvas-node-halo-background-flicker: rgba(16, 185, 129, 0.05);
+  --editor-canvas-node-halo-background-rest: rgba(16, 185, 129, 0.012);
+  --editor-canvas-node-halo-background-peak: rgba(16, 185, 129, 0.08);
+  --editor-canvas-node-halo-background-flicker: rgba(16, 185, 129, 0.035);
   --editor-canvas-node-halo-ring-shadow-rest:
-    0 0 0 1px rgba(16, 185, 129, 0.1),
-    0 0 18px rgba(16, 185, 129, 0.22);
+    0 0 0 1px rgba(16, 185, 129, 0.06),
+    0 0 18px rgba(16, 185, 129, 0.12);
   --editor-canvas-node-halo-ring-shadow-peak:
-    0 0 0 4px rgba(16, 185, 129, 0.3),
-    0 0 46px rgba(16, 185, 129, 0.58),
-    0 0 78px rgba(16, 185, 129, 0.26);
+    0 0 0 4px rgba(16, 185, 129, 0.18),
+    0 0 46px rgba(16, 185, 129, 0.36),
+    0 0 78px rgba(16, 185, 129, 0.16);
   --editor-canvas-node-halo-ring-shadow-flicker:
-    0 0 0 2px rgba(16, 185, 129, 0.16),
-    0 0 28px rgba(16, 185, 129, 0.36);
+    0 0 0 2px rgba(16, 185, 129, 0.1),
+    0 0 28px rgba(16, 185, 129, 0.22);
   --editor-canvas-node-halo-shadow-rest:
-    0 0 0 2px rgba(16, 185, 129, 0.07),
-    0 0 16px rgba(16, 185, 129, 0.16);
+    0 0 0 2px rgba(16, 185, 129, 0.05),
+    0 0 16px rgba(16, 185, 129, 0.1);
   --editor-canvas-node-halo-shadow-peak:
-    0 0 0 12px rgba(16, 185, 129, 0.24),
-    0 0 64px rgba(16, 185, 129, 0.64),
-    0 0 110px rgba(16, 185, 129, 0.28);
+    0 0 0 12px rgba(16, 185, 129, 0.16),
+    0 0 64px rgba(16, 185, 129, 0.38),
+    0 0 110px rgba(16, 185, 129, 0.16);
   --editor-canvas-node-halo-shadow-flicker:
-    0 0 0 5px rgba(16, 185, 129, 0.14),
-    0 0 34px rgba(16, 185, 129, 0.34);
+    0 0 0 5px rgba(16, 185, 129, 0.08),
+    0 0 34px rgba(16, 185, 129, 0.2);
   --editor-canvas-node-halo-pulse-shadow-rest:
-    0 0 0 3px rgba(16, 185, 129, 0.1),
-    0 0 20px rgba(16, 185, 129, 0.26);
+    0 0 0 3px rgba(16, 185, 129, 0.07),
+    0 0 20px rgba(16, 185, 129, 0.16);
   --editor-canvas-node-halo-pulse-shadow-peak:
-    0 0 0 11px rgba(16, 185, 129, 0.28),
-    0 0 58px rgba(16, 185, 129, 0.68),
-    0 0 96px rgba(16, 185, 129, 0.3);
+    0 0 0 11px rgba(16, 185, 129, 0.18),
+    0 0 58px rgba(16, 185, 129, 0.42),
+    0 0 96px rgba(16, 185, 129, 0.18);
   --editor-canvas-node-halo-pulse-shadow-flicker:
-    0 0 0 5px rgba(16, 185, 129, 0.16),
-    0 0 34px rgba(16, 185, 129, 0.38);
+    0 0 0 5px rgba(16, 185, 129, 0.1),
+    0 0 34px rgba(16, 185, 129, 0.24);
   border: 1.5px solid var(--editor-canvas-node-halo-border-rest);
-  animation: editor-canvas-running-halo-ring-breathe 2.2s ease-in-out infinite;
+  animation: editor-canvas-running-halo-ring-breathe 1.65s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--running::before {
-  animation: editor-canvas-running-halo-breathe 2.2s ease-in-out infinite;
+  animation: editor-canvas-running-halo-breathe 1.65s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--running::after {
-  animation: editor-canvas-running-halo-pulse 2.2s ease-in-out infinite;
+  animation: editor-canvas-running-halo-pulse 1.65s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--running-current {
@@ -4884,15 +4884,15 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   --editor-canvas-node-halo-scale-peak: 1.09;
   --editor-canvas-node-halo-scale-flicker: 1.008;
   --editor-canvas-node-halo-scale-afterglow: 1.06;
-  --editor-canvas-node-halo-border-rest: rgba(16, 185, 129, 0.72);
-  --editor-canvas-node-halo-border-peak: rgba(16, 185, 129, 0.96);
-  --editor-canvas-node-halo-border-flicker: rgba(16, 185, 129, 0.82);
-  --editor-canvas-node-halo-ring-shadow: rgba(16, 185, 129, 0.12);
-  --editor-canvas-node-halo-ring-glow: rgba(16, 185, 129, 0.22);
-  --editor-canvas-node-halo-ring-opacity-rest: 0.76;
-  --editor-canvas-node-halo-ring-opacity-peak: 1;
-  --editor-canvas-node-halo-ring-opacity-flicker: 0.84;
-  --editor-canvas-node-halo-ring-opacity-afterglow: 0.96;
+  --editor-canvas-node-halo-border-rest: rgba(16, 185, 129, 0.56);
+  --editor-canvas-node-halo-border-peak: rgba(16, 185, 129, 0.76);
+  --editor-canvas-node-halo-border-flicker: rgba(16, 185, 129, 0.62);
+  --editor-canvas-node-halo-ring-shadow: rgba(16, 185, 129, 0.08);
+  --editor-canvas-node-halo-ring-glow: rgba(16, 185, 129, 0.14);
+  --editor-canvas-node-halo-ring-opacity-rest: 0.62;
+  --editor-canvas-node-halo-ring-opacity-peak: 0.86;
+  --editor-canvas-node-halo-ring-opacity-flicker: 0.68;
+  --editor-canvas-node-halo-ring-opacity-afterglow: 0.78;
   --editor-canvas-node-halo-ring-blur-rest: 0px;
   --editor-canvas-node-halo-ring-blur-peak: 1px;
   --editor-canvas-node-halo-ring-blur-flicker: 0.35px;
@@ -4902,57 +4902,57 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   --editor-canvas-node-halo-ring-scale-afterglow: 1.02;
   --editor-canvas-node-halo-pulse-inset: -8px;
   --editor-canvas-node-halo-pulse-width: 3px;
-  --editor-canvas-node-halo-pulse-opacity-rest: 0.56;
-  --editor-canvas-node-halo-pulse-opacity-peak: 1;
-  --editor-canvas-node-halo-pulse-opacity-flicker: 0.7;
-  --editor-canvas-node-halo-pulse-opacity-afterglow: 0.96;
+  --editor-canvas-node-halo-pulse-opacity-rest: 0.44;
+  --editor-canvas-node-halo-pulse-opacity-peak: 0.88;
+  --editor-canvas-node-halo-pulse-opacity-flicker: 0.54;
+  --editor-canvas-node-halo-pulse-opacity-afterglow: 0.78;
   --editor-canvas-node-halo-pulse-scale-rest: 0.98;
   --editor-canvas-node-halo-pulse-scale-peak: 1.115;
   --editor-canvas-node-halo-pulse-scale-flicker: 1.014;
   --editor-canvas-node-halo-pulse-scale-afterglow: 1.07;
-  --editor-canvas-node-halo-background-rest: rgba(16, 185, 129, 0.025);
-  --editor-canvas-node-halo-background-peak: rgba(16, 185, 129, 0.16);
-  --editor-canvas-node-halo-background-flicker: rgba(16, 185, 129, 0.065);
+  --editor-canvas-node-halo-background-rest: rgba(16, 185, 129, 0.016);
+  --editor-canvas-node-halo-background-peak: rgba(16, 185, 129, 0.1);
+  --editor-canvas-node-halo-background-flicker: rgba(16, 185, 129, 0.045);
   --editor-canvas-node-halo-ring-shadow-rest:
-    0 0 0 2px rgba(16, 185, 129, 0.16),
-    0 0 24px rgba(16, 185, 129, 0.32);
+    0 0 0 2px rgba(16, 185, 129, 0.1),
+    0 0 24px rgba(16, 185, 129, 0.2);
   --editor-canvas-node-halo-ring-shadow-peak:
-    0 0 0 5px rgba(16, 185, 129, 0.38),
-    0 0 58px rgba(16, 185, 129, 0.7),
-    0 0 96px rgba(16, 185, 129, 0.3);
+    0 0 0 5px rgba(16, 185, 129, 0.24),
+    0 0 58px rgba(16, 185, 129, 0.48),
+    0 0 96px rgba(16, 185, 129, 0.2);
   --editor-canvas-node-halo-ring-shadow-flicker:
-    0 0 0 3px rgba(16, 185, 129, 0.22),
-    0 0 36px rgba(16, 185, 129, 0.44);
+    0 0 0 3px rgba(16, 185, 129, 0.14),
+    0 0 36px rgba(16, 185, 129, 0.28);
   --editor-canvas-node-halo-shadow-rest:
-    0 0 0 3px rgba(16, 185, 129, 0.1),
-    0 0 22px rgba(16, 185, 129, 0.22);
+    0 0 0 3px rgba(16, 185, 129, 0.07),
+    0 0 22px rgba(16, 185, 129, 0.14);
   --editor-canvas-node-halo-shadow-peak:
-    0 0 0 15px rgba(16, 185, 129, 0.3),
-    0 0 78px rgba(16, 185, 129, 0.72),
-    0 0 128px rgba(16, 185, 129, 0.32);
+    0 0 0 15px rgba(16, 185, 129, 0.2),
+    0 0 78px rgba(16, 185, 129, 0.48),
+    0 0 128px rgba(16, 185, 129, 0.2);
   --editor-canvas-node-halo-shadow-flicker:
-    0 0 0 6px rgba(16, 185, 129, 0.16),
-    0 0 42px rgba(16, 185, 129, 0.42);
+    0 0 0 6px rgba(16, 185, 129, 0.1),
+    0 0 42px rgba(16, 185, 129, 0.26);
   --editor-canvas-node-halo-pulse-shadow-rest:
-    0 0 0 4px rgba(16, 185, 129, 0.14),
-    0 0 26px rgba(16, 185, 129, 0.34);
+    0 0 0 4px rgba(16, 185, 129, 0.1),
+    0 0 26px rgba(16, 185, 129, 0.22);
   --editor-canvas-node-halo-pulse-shadow-peak:
-    0 0 0 14px rgba(16, 185, 129, 0.34),
-    0 0 70px rgba(16, 185, 129, 0.78),
-    0 0 118px rgba(16, 185, 129, 0.34);
+    0 0 0 14px rgba(16, 185, 129, 0.24),
+    0 0 70px rgba(16, 185, 129, 0.54),
+    0 0 118px rgba(16, 185, 129, 0.22);
   --editor-canvas-node-halo-pulse-shadow-flicker:
-    0 0 0 6px rgba(16, 185, 129, 0.2),
-    0 0 42px rgba(16, 185, 129, 0.46);
+    0 0 0 6px rgba(16, 185, 129, 0.14),
+    0 0 42px rgba(16, 185, 129, 0.3);
   border: 1.5px solid var(--editor-canvas-node-halo-border-rest);
-  animation: editor-canvas-running-halo-ring-breathe 1.85s ease-in-out infinite;
+  animation: editor-canvas-running-halo-ring-breathe 1.35s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--running-current::before {
-  animation: editor-canvas-running-halo-breathe 1.85s ease-in-out infinite;
+  animation: editor-canvas-running-halo-breathe 1.35s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--running-current::after {
-  animation: editor-canvas-running-halo-pulse 1.85s ease-in-out infinite;
+  animation: editor-canvas-running-halo-pulse 1.35s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--paused {
@@ -4964,15 +4964,15 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   --editor-canvas-node-halo-scale-peak: 1.075;
   --editor-canvas-node-halo-scale-flicker: 1.006;
   --editor-canvas-node-halo-scale-afterglow: 1.05;
-  --editor-canvas-node-halo-border-rest: rgba(245, 158, 11, 0.58);
-  --editor-canvas-node-halo-border-peak: rgba(245, 158, 11, 0.88);
-  --editor-canvas-node-halo-border-flicker: rgba(245, 158, 11, 0.68);
-  --editor-canvas-node-halo-ring-shadow: rgba(245, 158, 11, 0.08);
-  --editor-canvas-node-halo-ring-glow: rgba(245, 158, 11, 0.16);
-  --editor-canvas-node-halo-ring-opacity-rest: 0.7;
-  --editor-canvas-node-halo-ring-opacity-peak: 1;
-  --editor-canvas-node-halo-ring-opacity-flicker: 0.8;
-  --editor-canvas-node-halo-ring-opacity-afterglow: 0.94;
+  --editor-canvas-node-halo-border-rest: rgba(245, 158, 11, 0.42);
+  --editor-canvas-node-halo-border-peak: rgba(245, 158, 11, 0.62);
+  --editor-canvas-node-halo-border-flicker: rgba(245, 158, 11, 0.5);
+  --editor-canvas-node-halo-ring-shadow: rgba(245, 158, 11, 0.05);
+  --editor-canvas-node-halo-ring-glow: rgba(245, 158, 11, 0.1);
+  --editor-canvas-node-halo-ring-opacity-rest: 0.56;
+  --editor-canvas-node-halo-ring-opacity-peak: 0.82;
+  --editor-canvas-node-halo-ring-opacity-flicker: 0.64;
+  --editor-canvas-node-halo-ring-opacity-afterglow: 0.74;
   --editor-canvas-node-halo-ring-blur-rest: 0px;
   --editor-canvas-node-halo-ring-blur-peak: 0.9px;
   --editor-canvas-node-halo-ring-blur-flicker: 0.3px;
@@ -4982,57 +4982,57 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   --editor-canvas-node-halo-ring-scale-afterglow: 1.016;
   --editor-canvas-node-halo-pulse-inset: -7px;
   --editor-canvas-node-halo-pulse-width: 2.5px;
-  --editor-canvas-node-halo-pulse-opacity-rest: 0.46;
-  --editor-canvas-node-halo-pulse-opacity-peak: 1;
-  --editor-canvas-node-halo-pulse-opacity-flicker: 0.64;
-  --editor-canvas-node-halo-pulse-opacity-afterglow: 0.9;
+  --editor-canvas-node-halo-pulse-opacity-rest: 0.34;
+  --editor-canvas-node-halo-pulse-opacity-peak: 0.82;
+  --editor-canvas-node-halo-pulse-opacity-flicker: 0.48;
+  --editor-canvas-node-halo-pulse-opacity-afterglow: 0.72;
   --editor-canvas-node-halo-pulse-scale-rest: 0.98;
   --editor-canvas-node-halo-pulse-scale-peak: 1.095;
   --editor-canvas-node-halo-pulse-scale-flicker: 1.012;
   --editor-canvas-node-halo-pulse-scale-afterglow: 1.06;
-  --editor-canvas-node-halo-background-rest: rgba(245, 158, 11, 0.02);
-  --editor-canvas-node-halo-background-peak: rgba(245, 158, 11, 0.13);
-  --editor-canvas-node-halo-background-flicker: rgba(245, 158, 11, 0.05);
+  --editor-canvas-node-halo-background-rest: rgba(245, 158, 11, 0.012);
+  --editor-canvas-node-halo-background-peak: rgba(245, 158, 11, 0.08);
+  --editor-canvas-node-halo-background-flicker: rgba(245, 158, 11, 0.035);
   --editor-canvas-node-halo-ring-shadow-rest:
-    0 0 0 1px rgba(245, 158, 11, 0.1),
-    0 0 18px rgba(245, 158, 11, 0.22);
+    0 0 0 1px rgba(245, 158, 11, 0.06),
+    0 0 18px rgba(245, 158, 11, 0.12);
   --editor-canvas-node-halo-ring-shadow-peak:
-    0 0 0 4px rgba(245, 158, 11, 0.3),
-    0 0 46px rgba(245, 158, 11, 0.56),
-    0 0 78px rgba(245, 158, 11, 0.24);
+    0 0 0 4px rgba(245, 158, 11, 0.18),
+    0 0 46px rgba(245, 158, 11, 0.34),
+    0 0 78px rgba(245, 158, 11, 0.14);
   --editor-canvas-node-halo-ring-shadow-flicker:
-    0 0 0 2px rgba(245, 158, 11, 0.16),
-    0 0 28px rgba(245, 158, 11, 0.34);
+    0 0 0 2px rgba(245, 158, 11, 0.1),
+    0 0 28px rgba(245, 158, 11, 0.2);
   --editor-canvas-node-halo-shadow-rest:
-    0 0 0 2px rgba(245, 158, 11, 0.07),
-    0 0 16px rgba(245, 158, 11, 0.16);
+    0 0 0 2px rgba(245, 158, 11, 0.05),
+    0 0 16px rgba(245, 158, 11, 0.1);
   --editor-canvas-node-halo-shadow-peak:
-    0 0 0 12px rgba(245, 158, 11, 0.24),
-    0 0 64px rgba(245, 158, 11, 0.62),
-    0 0 110px rgba(245, 158, 11, 0.26);
+    0 0 0 12px rgba(245, 158, 11, 0.16),
+    0 0 64px rgba(245, 158, 11, 0.36),
+    0 0 110px rgba(245, 158, 11, 0.14);
   --editor-canvas-node-halo-shadow-flicker:
-    0 0 0 5px rgba(245, 158, 11, 0.14),
-    0 0 34px rgba(245, 158, 11, 0.32);
+    0 0 0 5px rgba(245, 158, 11, 0.08),
+    0 0 34px rgba(245, 158, 11, 0.19);
   --editor-canvas-node-halo-pulse-shadow-rest:
-    0 0 0 3px rgba(245, 158, 11, 0.1),
-    0 0 20px rgba(245, 158, 11, 0.24);
+    0 0 0 3px rgba(245, 158, 11, 0.07),
+    0 0 20px rgba(245, 158, 11, 0.15);
   --editor-canvas-node-halo-pulse-shadow-peak:
-    0 0 0 11px rgba(245, 158, 11, 0.28),
-    0 0 58px rgba(245, 158, 11, 0.64),
-    0 0 96px rgba(245, 158, 11, 0.28);
+    0 0 0 11px rgba(245, 158, 11, 0.18),
+    0 0 58px rgba(245, 158, 11, 0.4),
+    0 0 96px rgba(245, 158, 11, 0.16);
   --editor-canvas-node-halo-pulse-shadow-flicker:
-    0 0 0 5px rgba(245, 158, 11, 0.16),
-    0 0 34px rgba(245, 158, 11, 0.36);
+    0 0 0 5px rgba(245, 158, 11, 0.1),
+    0 0 34px rgba(245, 158, 11, 0.22);
   border: 1.5px solid var(--editor-canvas-node-halo-border-rest);
-  animation: editor-canvas-paused-halo-ring-breathe 2.45s ease-in-out infinite;
+  animation: editor-canvas-paused-halo-ring-breathe 1.85s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--paused::before {
-  animation: editor-canvas-paused-halo-breathe 2.45s ease-in-out infinite;
+  animation: editor-canvas-paused-halo-breathe 1.85s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--paused::after {
-  animation: editor-canvas-paused-halo-pulse 2.45s ease-in-out infinite;
+  animation: editor-canvas-paused-halo-pulse 1.85s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--paused-current {
@@ -5044,15 +5044,15 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   --editor-canvas-node-halo-scale-peak: 1.09;
   --editor-canvas-node-halo-scale-flicker: 1.008;
   --editor-canvas-node-halo-scale-afterglow: 1.06;
-  --editor-canvas-node-halo-border-rest: rgba(245, 158, 11, 0.72);
-  --editor-canvas-node-halo-border-peak: rgba(245, 158, 11, 0.96);
-  --editor-canvas-node-halo-border-flicker: rgba(245, 158, 11, 0.82);
-  --editor-canvas-node-halo-ring-shadow: rgba(245, 158, 11, 0.12);
-  --editor-canvas-node-halo-ring-glow: rgba(245, 158, 11, 0.22);
-  --editor-canvas-node-halo-ring-opacity-rest: 0.74;
-  --editor-canvas-node-halo-ring-opacity-peak: 1;
-  --editor-canvas-node-halo-ring-opacity-flicker: 0.84;
-  --editor-canvas-node-halo-ring-opacity-afterglow: 0.96;
+  --editor-canvas-node-halo-border-rest: rgba(245, 158, 11, 0.56);
+  --editor-canvas-node-halo-border-peak: rgba(245, 158, 11, 0.76);
+  --editor-canvas-node-halo-border-flicker: rgba(245, 158, 11, 0.62);
+  --editor-canvas-node-halo-ring-shadow: rgba(245, 158, 11, 0.08);
+  --editor-canvas-node-halo-ring-glow: rgba(245, 158, 11, 0.14);
+  --editor-canvas-node-halo-ring-opacity-rest: 0.6;
+  --editor-canvas-node-halo-ring-opacity-peak: 0.86;
+  --editor-canvas-node-halo-ring-opacity-flicker: 0.68;
+  --editor-canvas-node-halo-ring-opacity-afterglow: 0.78;
   --editor-canvas-node-halo-ring-blur-rest: 0px;
   --editor-canvas-node-halo-ring-blur-peak: 1px;
   --editor-canvas-node-halo-ring-blur-flicker: 0.35px;
@@ -5062,125 +5062,125 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   --editor-canvas-node-halo-ring-scale-afterglow: 1.02;
   --editor-canvas-node-halo-pulse-inset: -8px;
   --editor-canvas-node-halo-pulse-width: 3px;
-  --editor-canvas-node-halo-pulse-opacity-rest: 0.54;
-  --editor-canvas-node-halo-pulse-opacity-peak: 1;
-  --editor-canvas-node-halo-pulse-opacity-flicker: 0.7;
-  --editor-canvas-node-halo-pulse-opacity-afterglow: 0.96;
+  --editor-canvas-node-halo-pulse-opacity-rest: 0.42;
+  --editor-canvas-node-halo-pulse-opacity-peak: 0.88;
+  --editor-canvas-node-halo-pulse-opacity-flicker: 0.54;
+  --editor-canvas-node-halo-pulse-opacity-afterglow: 0.78;
   --editor-canvas-node-halo-pulse-scale-rest: 0.98;
   --editor-canvas-node-halo-pulse-scale-peak: 1.115;
   --editor-canvas-node-halo-pulse-scale-flicker: 1.014;
   --editor-canvas-node-halo-pulse-scale-afterglow: 1.07;
-  --editor-canvas-node-halo-background-rest: rgba(245, 158, 11, 0.025);
-  --editor-canvas-node-halo-background-peak: rgba(245, 158, 11, 0.16);
-  --editor-canvas-node-halo-background-flicker: rgba(245, 158, 11, 0.065);
+  --editor-canvas-node-halo-background-rest: rgba(245, 158, 11, 0.016);
+  --editor-canvas-node-halo-background-peak: rgba(245, 158, 11, 0.1);
+  --editor-canvas-node-halo-background-flicker: rgba(245, 158, 11, 0.045);
   --editor-canvas-node-halo-ring-shadow-rest:
-    0 0 0 2px rgba(245, 158, 11, 0.16),
-    0 0 24px rgba(245, 158, 11, 0.3);
+    0 0 0 2px rgba(245, 158, 11, 0.1),
+    0 0 24px rgba(245, 158, 11, 0.18);
   --editor-canvas-node-halo-ring-shadow-peak:
-    0 0 0 5px rgba(245, 158, 11, 0.38),
-    0 0 58px rgba(245, 158, 11, 0.68),
-    0 0 96px rgba(245, 158, 11, 0.28);
+    0 0 0 5px rgba(245, 158, 11, 0.24),
+    0 0 58px rgba(245, 158, 11, 0.46),
+    0 0 96px rgba(245, 158, 11, 0.18);
   --editor-canvas-node-halo-ring-shadow-flicker:
-    0 0 0 3px rgba(245, 158, 11, 0.22),
-    0 0 36px rgba(245, 158, 11, 0.42);
+    0 0 0 3px rgba(245, 158, 11, 0.14),
+    0 0 36px rgba(245, 158, 11, 0.26);
   --editor-canvas-node-halo-shadow-rest:
-    0 0 0 3px rgba(245, 158, 11, 0.1),
-    0 0 22px rgba(245, 158, 11, 0.2);
+    0 0 0 3px rgba(245, 158, 11, 0.07),
+    0 0 22px rgba(245, 158, 11, 0.13);
   --editor-canvas-node-halo-shadow-peak:
-    0 0 0 15px rgba(245, 158, 11, 0.3),
-    0 0 78px rgba(245, 158, 11, 0.68),
-    0 0 128px rgba(245, 158, 11, 0.3);
+    0 0 0 15px rgba(245, 158, 11, 0.2),
+    0 0 78px rgba(245, 158, 11, 0.46),
+    0 0 128px rgba(245, 158, 11, 0.18);
   --editor-canvas-node-halo-shadow-flicker:
-    0 0 0 6px rgba(245, 158, 11, 0.16),
-    0 0 42px rgba(245, 158, 11, 0.4);
+    0 0 0 6px rgba(245, 158, 11, 0.1),
+    0 0 42px rgba(245, 158, 11, 0.24);
   --editor-canvas-node-halo-pulse-shadow-rest:
-    0 0 0 4px rgba(245, 158, 11, 0.14),
-    0 0 26px rgba(245, 158, 11, 0.32);
+    0 0 0 4px rgba(245, 158, 11, 0.1),
+    0 0 26px rgba(245, 158, 11, 0.2);
   --editor-canvas-node-halo-pulse-shadow-peak:
-    0 0 0 14px rgba(245, 158, 11, 0.34),
-    0 0 70px rgba(245, 158, 11, 0.74),
-    0 0 118px rgba(245, 158, 11, 0.32);
+    0 0 0 14px rgba(245, 158, 11, 0.24),
+    0 0 70px rgba(245, 158, 11, 0.52),
+    0 0 118px rgba(245, 158, 11, 0.2);
   --editor-canvas-node-halo-pulse-shadow-flicker:
-    0 0 0 6px rgba(245, 158, 11, 0.2),
-    0 0 42px rgba(245, 158, 11, 0.44);
+    0 0 0 6px rgba(245, 158, 11, 0.14),
+    0 0 42px rgba(245, 158, 11, 0.28);
   border: 1.5px solid var(--editor-canvas-node-halo-border-rest);
-  animation: editor-canvas-paused-halo-ring-breathe 2.05s ease-in-out infinite;
+  animation: editor-canvas-paused-halo-ring-breathe 1.55s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--paused-current::before {
-  animation: editor-canvas-paused-halo-breathe 2.05s ease-in-out infinite;
+  animation: editor-canvas-paused-halo-breathe 1.55s ease-in-out infinite;
 }
 
 .editor-canvas__node-halo--paused-current::after {
-  animation: editor-canvas-paused-halo-pulse 2.05s ease-in-out infinite;
+  animation: editor-canvas-paused-halo-pulse 1.55s ease-in-out infinite;
 }
 
 :global(.node-card.editor-canvas__node--running) {
   --editor-canvas-node-card-shadow-rest:
     0 18px 36px rgba(60, 41, 20, 0.1),
-    0 0 0 1.5px rgba(16, 185, 129, 0.62),
-    0 0 14px rgba(16, 185, 129, 0.22);
+    0 0 0 1.5px rgba(16, 185, 129, 0.46),
+    0 0 14px rgba(16, 185, 129, 0.14);
   --editor-canvas-node-card-shadow-peak:
     0 22px 44px rgba(60, 41, 20, 0.12),
-    0 0 0 1.5px rgba(16, 185, 129, 0.78),
-    0 0 24px rgba(16, 185, 129, 0.36);
+    0 0 0 1.5px rgba(16, 185, 129, 0.58),
+    0 0 24px rgba(16, 185, 129, 0.22);
   --editor-canvas-node-card-shadow-flicker:
     0 18px 36px rgba(60, 41, 20, 0.1),
-    0 0 0 1.5px rgba(16, 185, 129, 0.66),
-    0 0 16px rgba(16, 185, 129, 0.26);
+    0 0 0 1.5px rgba(16, 185, 129, 0.5),
+    0 0 16px rgba(16, 185, 129, 0.16);
   box-shadow: var(--editor-canvas-node-card-shadow-rest);
-  animation: editor-canvas-running-card-breathe 2.2s ease-in-out infinite;
+  animation: editor-canvas-running-card-breathe 1.65s ease-in-out infinite;
 }
 
 :global(.node-card.editor-canvas__node--running-current) {
   --editor-canvas-node-card-shadow-rest:
     0 20px 40px rgba(60, 41, 20, 0.12),
-    0 0 0 1.5px rgba(16, 185, 129, 0.86),
-    0 0 18px rgba(16, 185, 129, 0.32);
+    0 0 0 1.5px rgba(16, 185, 129, 0.62),
+    0 0 18px rgba(16, 185, 129, 0.22);
   --editor-canvas-node-card-shadow-peak:
     0 24px 48px rgba(60, 41, 20, 0.14),
-    0 0 0 1.5px rgba(16, 185, 129, 0.94),
-    0 0 30px rgba(16, 185, 129, 0.48);
+    0 0 0 1.5px rgba(16, 185, 129, 0.72),
+    0 0 30px rgba(16, 185, 129, 0.3);
   --editor-canvas-node-card-shadow-flicker:
     0 20px 40px rgba(60, 41, 20, 0.12),
-    0 0 0 1.5px rgba(16, 185, 129, 0.82),
-    0 0 20px rgba(16, 185, 129, 0.36);
+    0 0 0 1.5px rgba(16, 185, 129, 0.58),
+    0 0 20px rgba(16, 185, 129, 0.24);
   box-shadow: var(--editor-canvas-node-card-shadow-rest);
-  animation: editor-canvas-running-card-breathe 1.85s ease-in-out infinite;
+  animation: editor-canvas-running-card-breathe 1.35s ease-in-out infinite;
 }
 
 :global(.node-card.editor-canvas__node--paused) {
   --editor-canvas-node-card-shadow-rest:
     0 18px 36px rgba(60, 41, 20, 0.1),
-    0 0 0 1.5px rgba(245, 158, 11, 0.62),
-    0 0 14px rgba(245, 158, 11, 0.2);
+    0 0 0 1.5px rgba(245, 158, 11, 0.46),
+    0 0 14px rgba(245, 158, 11, 0.13);
   --editor-canvas-node-card-shadow-peak:
     0 22px 44px rgba(60, 41, 20, 0.12),
-    0 0 0 1.5px rgba(245, 158, 11, 0.78),
-    0 0 24px rgba(245, 158, 11, 0.34);
+    0 0 0 1.5px rgba(245, 158, 11, 0.58),
+    0 0 24px rgba(245, 158, 11, 0.21);
   --editor-canvas-node-card-shadow-flicker:
     0 18px 36px rgba(60, 41, 20, 0.1),
-    0 0 0 1.5px rgba(245, 158, 11, 0.66),
-    0 0 16px rgba(245, 158, 11, 0.24);
+    0 0 0 1.5px rgba(245, 158, 11, 0.5),
+    0 0 16px rgba(245, 158, 11, 0.15);
   box-shadow: var(--editor-canvas-node-card-shadow-rest);
-  animation: editor-canvas-paused-card-breathe 2.45s ease-in-out infinite;
+  animation: editor-canvas-paused-card-breathe 1.85s ease-in-out infinite;
 }
 
 :global(.node-card.editor-canvas__node--paused-current) {
   --editor-canvas-node-card-shadow-rest:
     0 20px 40px rgba(60, 41, 20, 0.12),
-    0 0 0 1.5px rgba(245, 158, 11, 0.86),
-    0 0 18px rgba(245, 158, 11, 0.3);
+    0 0 0 1.5px rgba(245, 158, 11, 0.62),
+    0 0 18px rgba(245, 158, 11, 0.2);
   --editor-canvas-node-card-shadow-peak:
     0 24px 48px rgba(60, 41, 20, 0.14),
-    0 0 0 1.5px rgba(245, 158, 11, 0.94),
-    0 0 30px rgba(245, 158, 11, 0.46);
+    0 0 0 1.5px rgba(245, 158, 11, 0.72),
+    0 0 30px rgba(245, 158, 11, 0.28);
   --editor-canvas-node-card-shadow-flicker:
     0 20px 40px rgba(60, 41, 20, 0.12),
-    0 0 0 1.5px rgba(245, 158, 11, 0.82),
-    0 0 20px rgba(245, 158, 11, 0.34);
+    0 0 0 1.5px rgba(245, 158, 11, 0.58),
+    0 0 20px rgba(245, 158, 11, 0.22);
   box-shadow: var(--editor-canvas-node-card-shadow-rest);
-  animation: editor-canvas-paused-card-breathe 2.05s ease-in-out infinite;
+  animation: editor-canvas-paused-card-breathe 1.55s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5206,12 +5206,12 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 
   .editor-canvas__node-halo--running::after,
   .editor-canvas__node-halo--running-current::after {
-    animation: editor-canvas-running-halo-pulse-reduced 3.4s ease-in-out infinite;
+    animation: editor-canvas-running-halo-pulse-reduced 2.4s ease-in-out infinite;
   }
 
   .editor-canvas__node-halo--paused::after,
   .editor-canvas__node-halo--paused-current::after {
-    animation: editor-canvas-paused-halo-pulse-reduced 3.6s ease-in-out infinite;
+    animation: editor-canvas-paused-halo-pulse-reduced 2.6s ease-in-out infinite;
   }
 }
 

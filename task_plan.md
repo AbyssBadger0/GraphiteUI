@@ -1,58 +1,60 @@
-# Task Plan: Repository Cleanup Execution Round 3
+# Task Plan: Repository Cleanup Execution Round 4
 
 ## Goal
-Continue conservative GraphiteUI cleanup by extracting another small, tested NodeCard responsibility while preserving editor behavior.
+Continue conservative GraphiteUI cleanup by extracting the state editor draft/update model from `NodeCard.vue` while preserving editor behavior.
 
 ## Current Phase
-Complete
+Phase 5 in progress
 
 ## Phases
 
 ### Phase 1: Re-orientation
 - [x] Recover previous cleanup context.
 - [x] Confirm current git status.
-- [x] Inspect next NodeCard model-adjacent cleanup target.
+- [x] Inspect state editor logic in `NodeCard.vue` and adjacent popover/model files.
 - **Status:** completed
 
 ### Phase 2: Select Safe Refactor Slice
-- [x] Select state port create draft update helpers.
-- [x] Confirm existing model/test files can own the behavior.
-- [x] Keep UI template and emitted events stable.
+- [x] Select state editor draft construction and update patch helpers.
+- [x] Keep confirmation, locking, focus, and event dispatch flow inside `NodeCard.vue`.
+- [x] Preserve `StateEditorPopover.vue` props/events.
 - **Status:** completed
 
 ### Phase 3: Implement Cleanup
-- [x] Add failing tests for the new state port draft helpers.
-- [x] Move draft patch logic into `statePortCreateModel.ts`.
+- [x] Add failing tests for the extracted state editor model.
+- [x] Move pure state editor draft helpers into `stateEditorModel.ts`.
 - [x] Update `NodeCard.vue` to call the model helpers.
 - **Status:** completed
 
 ### Phase 4: Verification
 - [x] Run focused model and NodeCard structure tests.
 - [x] Run TypeScript and meaningful frontend checks.
+- [x] Run the frontend production build.
 - [x] Restart the dev environment with `npm run dev`.
 - **Status:** completed
 
 ### Phase 5: Commit and Push
 - [x] Review diff for unrelated/runtime artifacts.
-- [x] Commit with a Chinese commit message.
-- [x] Push the branch.
-- **Status:** completed
+- [ ] Commit with a Chinese commit message.
+- [ ] Push the branch.
+- **Status:** in_progress
 
 ## Progress Estimate
 | Scope | Estimate |
 |-------|----------|
-| Overall roadmap cleanup | About 12% complete before this round. |
-| P1 `NodeCard.vue` cleanup | About 30% complete before this round. |
-| Low-risk model extraction subset | About 55% complete before this round. |
-| Overall roadmap cleanup after this round | About 14% complete. |
-| P1 `NodeCard.vue` cleanup after this round | About 35% complete. |
-| Low-risk model extraction subset after this round | About 65% complete. |
+| Overall roadmap cleanup before this round | About 14% complete. |
+| P1 `NodeCard.vue` cleanup before this round | About 35% complete. |
+| Low-risk model extraction subset before this round | About 65% complete. |
+| Overall roadmap cleanup after this round | About 15% complete. |
+| P1 `NodeCard.vue` cleanup after this round | About 39% complete. |
+| Low-risk model extraction subset after this round | About 75% complete. |
 
 ## Decisions Made
 | Decision | Rationale |
 |----------|-----------|
-| Continue with `NodeCard.vue` model extraction | It remains the P1 target and still contains pure draft update logic. |
-| Use `statePortCreateModel.ts` for draft helper ownership | The file already owns create-port draft/search behavior. |
+| Continue with `NodeCard.vue` model extraction | It remains the P1 target and still contains pure state editor draft/update logic. |
+| Create a dedicated `stateEditorModel.ts` | Editing existing state is a separate responsibility from creating a port-bound state. |
+| Keep runtime guards in `NodeCard.vue` | Locking, active popover state, translations, and emits are component concerns. |
 | Defer route chunk splitting | Build chunk warning is not blocking the current structural cleanup round. |
 
 ## Notes
@@ -62,4 +64,3 @@ Complete
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
-| `NodeCard.vue` missing `StateFieldType` after import cleanup | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | Restored the type-only import because later NodeCard state/input logic still uses it. |

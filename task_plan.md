@@ -155,8 +155,8 @@ Phase 19 in progress
 - [x] Run TypeScript unused-symbol verification.
 - [x] Run the full frontend test suite and production build.
 - [x] Restart the dev environment with `npm run dev` and verify frontend/backend health.
-- [ ] Commit and push the cleanup.
-- **Status:** in_progress
+- [x] Commit and push the cleanup.
+- **Status:** completed
 
 ## Progress Estimate
 | Scope | Estimate |
@@ -177,8 +177,8 @@ Phase 19 in progress
 | P1 `NodeCard.vue` cleanup after Phase 17 | About 57% complete after moving top-action and global outside-close floating-panel state into a tested composable. |
 | Overall roadmap cleanup after Phase 18 | About 43% complete after moving state edit/remove confirm refs and timers into `useNodeFloatingPanels`. |
 | P1 `NodeCard.vue` cleanup after Phase 18 | About 59% complete after moving state edit/remove confirm refs and timers into `useNodeFloatingPanels`. |
-| Overall roadmap cleanup after Phase 19 | Targeting about 44% complete once commit and push pass. |
-| P1 `NodeCard.vue` cleanup after Phase 19 | Targeting about 62% complete after moving port reorder interaction state into a tested composable. |
+| Overall roadmap cleanup after Phase 19 | About 44% complete after moving port reorder interaction state into a tested composable. |
+| P1 `NodeCard.vue` cleanup after Phase 19 | About 62% complete after moving port reorder interaction state into a tested composable. |
 
 ## Decisions Made
 | Decision | Rationale |

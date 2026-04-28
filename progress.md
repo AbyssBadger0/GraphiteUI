@@ -1,5 +1,78 @@
 # Progress Log
 
+## Session: 2026-04-28 Round 15
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Ran planning session catchup and recovered the previous round's final verification context.
+  - Confirmed the worktree starts clean on `main...origin/main`.
+  - Inspected `EditorCanvas.vue` node presentation helpers, minimap node mapping, node resize usage, and existing structure tests.
+
+### Phase 2: Select Safe Refactor Slice
+- **Status:** completed
+- Actions taken:
+  - Selected node transform style, node card size style, fallback rendered size, minimap node model, and minimap run-state helpers.
+  - Decided to keep drag state, resize events, viewport state, DOM measurement, and graph emits inside `EditorCanvas.vue`.
+
+### Phase 3: Implement Cleanup
+- **Status:** completed
+- Actions taken:
+  - Updated `task_plan.md` for the fifteenth cleanup round.
+  - Added `canvasNodePresentationModel.test.ts` before production code.
+  - Updated `EditorCanvas.structure.test.ts` to assert the new canvas node presentation model boundary.
+  - Ran the focused red tests and verified they fail because `canvasNodePresentationModel.ts` is missing.
+  - Added `canvasNodePresentationModel.ts` with node transform, card size, rendered-size, minimap node, and minimap run-state helpers.
+  - Updated `EditorCanvas.vue` to call the canvas node presentation model while keeping measurement, drag, resize, viewport, and emits local.
+  - Updated `EditorCanvas.structure.test.ts` to assert the extracted node presentation boundary.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran the focused canvas node presentation model test after implementation.
+  - Ran the focused EditorCanvas structure test after implementation.
+  - Ran `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters`; removed one stale `GraphNode` type import and reran successfully.
+  - Ran the full frontend node test suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend returned HTTP 200 at `http://127.0.0.1:3477`.
+  - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
+  - Confirmed the restarted `node scripts/start.mjs`, uvicorn, and Vite processes remained alive after a delayed check.
+
+### Phase 5: Commit and Push
+- **Status:** completed
+- Actions taken:
+  - Checked git status after restart; only source/test/planning files are modified.
+  - Confirmed no untracked runtime or build artifacts are present.
+  - Ran `git diff --check` with no whitespace errors.
+  - Committed the cleanup as `db4eef7` with Chinese message `抽取画布节点展示逻辑`.
+  - Prepared the planning and findings updates for a Chinese progress commit and push.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red test | `node --test frontend/src/editor/canvas/canvasNodePresentationModel.test.ts` before implementation | Fails because the canvas node presentation model does not exist | Failed with `ERR_MODULE_NOT_FOUND` for `canvasNodePresentationModel.ts` | Passed |
+| Red structure test | `node --test frontend/src/editor/canvas/EditorCanvas.structure.test.ts` before implementation | Fails because `EditorCanvas.vue` still owns node presentation helpers | Failed on missing `canvasNodePresentationModel.ts` | Passed |
+| Canvas node presentation model | `node --test frontend/src/editor/canvas/canvasNodePresentationModel.test.ts` | Model tests pass | 6 passed | Passed |
+| EditorCanvas structure | `node --test frontend/src/editor/canvas/EditorCanvas.structure.test.ts` | Structure constraints pass | 59 passed | Passed |
+| Unused symbol check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No unused-symbol diagnostics | Exit 0, no diagnostics after removing stale `GraphNode` import | Passed |
+| Full frontend tests | `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts` | All frontend tests pass | 710 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without chunk warning regressions | Exit 0, no large chunk warning | Passed |
+| Dev restart | `npm run dev` | Services start and respond | Frontend 200, backend `/health` 200, delayed process check alive | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Fifteenth cleanup implementation, verification, dev restart, commit, and push are complete. |
+| Where am I going? | Ready for final handoff or the next cleanup slice. |
+| What's the goal? | Continue reducing high-concentration editor components without changing graph editing behavior. |
+| What have I learned? | Node transform, card sizing, rendered-size fallback, and minimap node projection are pure presentation concerns and fit a canvas node presentation model. |
+| What have I done? | Extracted canvas node presentation helpers, added focused tests, ran full frontend checks, built without chunk warnings, and restarted the app. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+
 ## Session: 2026-04-28 Round 14
 
 ### Phase 1: Re-orientation
@@ -27,7 +100,7 @@
   - Updated `EditorCanvas.structure.test.ts` to assert the extracted edge and hotspot style boundary.
 
 ### Phase 4: Verification
-- **Status:** in_progress
+- **Status:** completed
 - Actions taken:
   - Ran the focused canvas interaction style model test after implementation.
   - Ran the focused EditorCanvas structure test after implementation.

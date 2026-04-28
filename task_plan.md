@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 14 complete
+Phase 15 complete
 
 ## Phases
 
@@ -93,6 +93,20 @@ Phase 14 complete
 - [x] Commit and push the consolidated interaction cleanup.
 - **Status:** completed
 
+### Phase 15: Edge Interaction and Node Measurement Composables
+- [x] Add failing controller tests for canvas edge interactions.
+- [x] Extract flow-edge delete confirmation and data-edge state editing into `useCanvasEdgeInteractions.ts`.
+- [x] Add failing measurement-controller tests.
+- [x] Extract node element registration, anchor-slot measurement, observer teardown, and measured node sizes into `useCanvasNodeMeasurements.ts`.
+- [x] Update `EditorCanvas.vue` to consume both composables while keeping pointer event wrappers in the component.
+- [x] Update structure tests to lock the new composable boundaries.
+- [x] Run focused canvas interaction/measurement/structure tests.
+- [x] Run TypeScript unused-symbol verification.
+- [x] Run the full frontend test suite and production build.
+- [x] Restart the dev environment with `npm run dev` and verify frontend/backend health.
+- [x] Commit and push the cleanup.
+- **Status:** completed
+
 ## Progress Estimate
 | Scope | Estimate |
 |-------|----------|
@@ -104,6 +118,8 @@ Phase 14 complete
 | P1 `NodeCard.vue` cleanup target after this batch | About 49% complete. |
 | P2 `EditorCanvas.vue` cleanup after this batch | About 28% complete after extracting the connection interaction model. |
 | Build/chunk warning remediation after this batch | Warning elimination confirmed; no Vite large chunk warning in production build. |
+| Overall roadmap cleanup after Phase 15 | About 39% complete. |
+| P2 `EditorCanvas.vue` cleanup after Phase 15 | About 41% complete after edge interaction and node measurement extraction. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -119,6 +135,7 @@ Phase 14 complete
 - The previous production build completed without a large chunk warning.
 - This batch leaves `EditorCanvas.vue` at 4,039 lines, down from 4,226 at the batch start.
 - The baseline interaction repair pass leaves `EditorCanvas.vue` at 3,848 lines by moving connection auto-snap and creation payload decisions into a tested model.
+- Phase 15 leaves `EditorCanvas.vue` at 3,363 lines by moving edge popover interaction state and node measurement state into composables.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

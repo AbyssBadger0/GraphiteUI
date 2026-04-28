@@ -117,6 +117,64 @@
 | Full frontend tests | `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts` | All frontend tests pass | 750 passed | Passed |
 | Frontend production build | `npm run build` in `frontend` | Build succeeds without large chunk warning | Exit 0, no large chunk warning | Passed |
 | Dev restart | `npm run dev` | Services start and respond | Frontend 200, backend `/health` ok | Passed |
+
+## Session: 2026-04-28 High-Safety EditorCanvas Cleanup
+
+### Phase 1: Select High-Progress Safe Boundaries
+- **Status:** completed
+- Actions taken:
+  - Re-read the active cleanup plan and current large-file inventory.
+  - Kept the next work inside `EditorCanvas.vue`, matching the approved direction to raise progress while preserving canvas interactions.
+  - Selected edge popover interaction state and node measurement state because both have narrow external contracts and existing structure coverage.
+
+### Phase 2: Edge Interaction Composable
+- **Status:** completed
+- Actions taken:
+  - Added `useCanvasEdgeInteractions.test.ts` before implementation and verified it failed because the composable did not exist.
+  - Added `useCanvasEdgeInteractions.ts` for flow/route delete confirmation, data-edge state editing, state-editor request handling, update-state emits, disconnect emits, timeout cleanup, and missing-edge cleanup.
+  - Updated `EditorCanvas.vue` to keep pointer event wrappers while delegating edge interaction state and actions to the composable.
+  - Updated `EditorCanvas.structure.test.ts` to verify the new composable boundary.
+
+### Phase 3: Node Measurement Composable
+- **Status:** completed
+- Actions taken:
+  - Added `useCanvasNodeMeasurements.test.ts` before implementation and verified it failed because the composable did not exist.
+  - Added `useCanvasNodeMeasurements.ts` for node ref registration, ResizeObserver/MutationObserver lifecycle, measured anchor offsets, measured node sizes, and teardown.
+  - Updated `EditorCanvas.vue` to consume measured refs and `registerNodeRef` from the composable.
+  - Updated structure tests to check measurement logic in the composable rather than inline in the component.
+  - Reduced `EditorCanvas.vue` from 3,848 lines to 3,363 lines in this phase.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused canvas interaction, measurement, and structure tests.
+  - Ran frontend unused-symbol TypeScript verification.
+  - Ran the full frontend test suite.
+  - Ran the frontend production build and confirmed the large chunk warning did not return.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend returned HTTP 200 at `http://127.0.0.1:3477`.
+  - Confirmed the backend health route returned `{"status":"ok"}` at `http://127.0.0.1:8765/health`.
+
+### Phase 5: Commit and Push
+- **Status:** completed
+- Actions taken:
+  - Ran `git diff --check` and `git diff --cached --check` with no whitespace errors.
+  - Staged only source, tests, and planning files for this cleanup.
+  - Committed the cleanup with Chinese message `抽取画布边交互和测量控制器`.
+  - Pushed `main` to `origin/main`.
+
+## Test Results: High-Safety EditorCanvas Cleanup
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red edge interaction test | `node --test frontend/src/editor/canvas/useCanvasEdgeInteractions.test.ts` before implementation | Fails because the composable does not exist | Failed with `ERR_MODULE_NOT_FOUND` | Passed |
+| Edge interaction focused test | `node --test frontend/src/editor/canvas/useCanvasEdgeInteractions.test.ts` | Edge delete and data-edge edit behavior pass | 2 passed | Passed |
+| Red measurement test | `node --test frontend/src/editor/canvas/useCanvasNodeMeasurements.test.ts` before implementation | Fails because the composable does not exist | Failed with `ERR_MODULE_NOT_FOUND` | Passed |
+| Measurement focused test | `node --test frontend/src/editor/canvas/useCanvasNodeMeasurements.test.ts` | Measurement cache cleanup passes | 1 passed | Passed |
+| Focused canvas suite | `node --test frontend/src/editor/canvas/useCanvasEdgeInteractions.test.ts frontend/src/editor/canvas/useCanvasNodeMeasurements.test.ts frontend/src/editor/canvas/canvasDataEdgeStateModel.test.ts frontend/src/editor/canvas/flowEdgeDeleteModel.test.ts frontend/src/editor/canvas/EditorCanvas.structure.test.ts frontend/src/editor/canvas/canvasConnectionInteractionModel.test.ts frontend/src/editor/canvas/canvasPendingStatePortModel.test.ts frontend/src/editor/canvas/canvasVirtualCreatePortModel.test.ts` | Canvas interaction and structure tests pass | 83 passed | Passed |
+| Unused symbol check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No unused-symbol diagnostics | Exit 0, no diagnostics | Passed |
+| Full frontend tests | `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts` | All frontend tests pass | 753 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without large chunk warning | Exit 0, no large chunk warning | Passed |
+| Dev restart | `npm run dev` | Services start and respond | Frontend 200, backend `/health` ok | Passed |
 | 2026-04-28 | One structure test still searched for the old inline forced-visible-edge-id block. | Focused post-implementation suite. | Replaced it with an assertion that the flow delete confirm id is passed into `buildForceVisibleProjectedEdgeIds`. |
 
 ## Session: 2026-04-28 Rounds 18-20

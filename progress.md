@@ -162,9 +162,12 @@
   - Confirmed the restarted backend and frontend dev processes remained alive after a delayed check.
 
 ### Phase 6: Commit and Push
-- **Status:** in_progress
+- **Status:** completed
 - Actions taken:
-  - Preparing final diff and whitespace checks before commit.
+  - Checked git status after restart; only source, test, roadmap, and planning files were staged.
+  - Ran `git diff --check` and `git diff --cached --check` with no whitespace errors.
+  - Committed the cleanup as `dcd5e13` with Chinese message `抽取节点浮层交互基础`.
+  - Pushed `main` to `origin/main`.
 
 ## Session: 2026-04-28 Baseline Interaction Repair and Large Connection Cleanup
 

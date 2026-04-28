@@ -42,3 +42,27 @@ export function buildConditionRuleEditorModel(
     isValueDisabled: rule.operator === "exists",
   };
 }
+
+export function isConditionRuleValueInputDisabled(operator: string | null | undefined) {
+  return operator === "exists";
+}
+
+export function resolveConditionRuleValueDraft(value: ConditionNode["config"]["rule"]["value"] | undefined) {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+export function resolveConditionRuleOperatorPatch(
+  value: string | number | boolean | undefined,
+): Pick<ConditionNode["config"]["rule"], "operator"> {
+  return { operator: String(value ?? "exists") };
+}
+
+export function resolveConditionRuleValuePatch(
+  nextDraftValue: string,
+  currentValue: ConditionNode["config"]["rule"]["value"] | undefined,
+): Pick<ConditionNode["config"]["rule"], "value"> | null {
+  if (nextDraftValue === resolveConditionRuleValueDraft(currentValue)) {
+    return null;
+  }
+  return { value: nextDraftValue };
+}

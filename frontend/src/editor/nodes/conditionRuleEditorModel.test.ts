@@ -3,7 +3,14 @@ import assert from "node:assert/strict";
 
 import type { StateDefinition } from "@/types/node-system";
 
-import { buildConditionRuleEditorModel, CONDITION_RULE_OPERATOR_OPTIONS } from "./conditionRuleEditorModel.ts";
+import {
+  buildConditionRuleEditorModel,
+  CONDITION_RULE_OPERATOR_OPTIONS,
+  isConditionRuleValueInputDisabled,
+  resolveConditionRuleOperatorPatch,
+  resolveConditionRuleValueDraft,
+  resolveConditionRuleValuePatch,
+} from "./conditionRuleEditorModel.ts";
 
 const stateSchema: Record<string, StateDefinition> = {
   question: {
@@ -73,4 +80,27 @@ test("buildConditionRuleEditorModel keeps value input enabled for contains opera
 
   assert.equal(model.resolvedSource, "answer");
   assert.equal(model.isValueDisabled, false);
+});
+
+test("condition rule draft helpers preserve NodeCard draft normalization", () => {
+  assert.equal(resolveConditionRuleValueDraft(null), "");
+  assert.equal(resolveConditionRuleValueDraft(undefined), "");
+  assert.equal(resolveConditionRuleValueDraft(false), "false");
+  assert.equal(resolveConditionRuleValueDraft(42), "42");
+  assert.equal(resolveConditionRuleValueDraft("ready"), "ready");
+});
+
+test("condition rule patch helpers preserve NodeCard commit behavior", () => {
+  assert.deepEqual(resolveConditionRuleOperatorPatch(undefined), { operator: "exists" });
+  assert.deepEqual(resolveConditionRuleOperatorPatch("contains"), { operator: "contains" });
+  assert.equal(resolveConditionRuleValuePatch("same", "same"), null);
+  assert.equal(resolveConditionRuleValuePatch("", null), null);
+  assert.deepEqual(resolveConditionRuleValuePatch("next", "previous"), { value: "next" });
+  assert.deepEqual(resolveConditionRuleValuePatch("7", 7), null);
+});
+
+test("condition rule disabled helper matches exists-only value disabling", () => {
+  assert.equal(isConditionRuleValueInputDisabled("exists"), true);
+  assert.equal(isConditionRuleValueInputDisabled("contains"), false);
+  assert.equal(isConditionRuleValueInputDisabled(null), false);
 });

@@ -733,10 +733,15 @@ test("NodeCard renders condition nodes as clean control-flow proxies", () => {
   assert.match(conditionSection, /@blur="commitConditionRuleValue"/);
   assert.match(conditionSection, /@keydown\.enter\.prevent="handleConditionRuleValueEnter"/);
   assert.match(conditionSection, /conditionLoopLimitDraft/);
+  assert.match(componentSource, /from "\.\/conditionRuleEditorModel";/);
   assert.match(componentSource, /const conditionRuleValueDraft = ref\(\"\"\);/);
-  assert.match(componentSource, /watch\(\s*\(\) => \(props\.node\.kind === "condition" \? props\.node\.config\.rule\.value : null\),[\s\S]*conditionRuleValueDraft\.value = ruleValue === null \|\| ruleValue === undefined \? "" : String\(ruleValue\);/);
+  assert.match(componentSource, /conditionRuleValueDraft\.value = resolveConditionRuleValueDraft\(ruleValue\);/);
+  assert.match(componentSource, /isConditionRuleValueInputDisabled\(props\.node\.config\.rule\.operator\)/);
+  assert.match(componentSource, /updateConditionRule\(resolveConditionRuleOperatorPatch\(value\)\);/);
+  assert.match(componentSource, /const patch = resolveConditionRuleValuePatch\(conditionRuleValueDraft\.value, props\.node\.config\.rule\.value\);/);
+  assert.match(componentSource, /if \(!patch\) \{[\s\S]*return;[\s\S]*\}[\s\S]*updateConditionRule\(patch\);/);
   assert.match(componentSource, /function handleConditionRuleValueInput\(event: Event\) \{[\s\S]*conditionRuleValueDraft\.value = target\.value;/);
-  assert.match(componentSource, /function commitConditionRuleValue\(\) \{[\s\S]*updateConditionRule\(\{ value: conditionRuleValueDraft\.value \}\);/);
+  assert.doesNotMatch(componentSource, /props\.node\.config\.rule\.value === null \|\| props\.node\.config\.rule\.value === undefined \? "" : String\(props\.node\.config\.rule\.value\)/);
   assert.match(componentSource, /function handleConditionRuleValueEnter\(event: KeyboardEvent\) \{[\s\S]*target\.blur\(\);/);
   assert.match(conditionSection, /type="number"/);
   assert.match(conditionSection, /:min="CONDITION_LOOP_LIMIT_MIN"/);

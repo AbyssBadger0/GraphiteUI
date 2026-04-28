@@ -603,7 +603,9 @@ const activeDataEdgeStateEditor = ref<{
 const lastOpenedStateEditorRequestId = ref<string | null>(null);
 const dataEdgeStateDraft = ref<StateFieldDraft | null>(null);
 const dataEdgeStateError = ref<string | null>(null);
+const NODE_HOVER_RELEASE_DELAY_MS = 2000;
 const hoveredNodeId = ref<string | null>(null);
+const hoveredNodeReleaseTimeoutRef = ref<number | null>(null);
 const hoveredPointAnchorNodeId = ref<string | null>(null);
 const hoveredFlowHandleNodeId = ref<string | null>(null);
 const pendingAnchorMeasurementNodeIds = new Set<string>();
@@ -1119,6 +1121,7 @@ onBeforeUnmount(() => {
 
   clearFlowEdgeDeleteConfirmState();
   clearDataEdgeStateInteraction();
+  clearScheduledHoveredNodeRelease();
 });
 
 function updateCanvasSize() {
@@ -2585,16 +2588,38 @@ function isNodeResizeHotzoneEnabled() {
   return !isGraphEditingLocked() && !activeConnection.value;
 }
 
+function clearScheduledHoveredNodeRelease() {
+  if (hoveredNodeReleaseTimeoutRef.value !== null && typeof window !== "undefined") {
+    window.clearTimeout(hoveredNodeReleaseTimeoutRef.value);
+  }
+  hoveredNodeReleaseTimeoutRef.value = null;
+}
+
 function setHoveredNode(nodeId: string) {
+  clearScheduledHoveredNodeRelease();
   hoveredNodeId.value = nodeId;
   scheduleAnchorMeasurement(nodeId);
 }
 
 function clearHoveredNode(nodeId: string) {
-  if (hoveredNodeId.value === nodeId) {
+  if (hoveredNodeId.value !== nodeId) {
+    return;
+  }
+
+  clearScheduledHoveredNodeRelease();
+  if (typeof window === "undefined") {
     hoveredNodeId.value = null;
     scheduleAnchorMeasurement(nodeId);
+    return;
   }
+
+  hoveredNodeReleaseTimeoutRef.value = window.setTimeout(() => {
+    hoveredNodeReleaseTimeoutRef.value = null;
+    if (hoveredNodeId.value === nodeId) {
+      hoveredNodeId.value = null;
+      scheduleAnchorMeasurement(nodeId);
+    }
+  }, NODE_HOVER_RELEASE_DELAY_MS);
 }
 
 function setHoveredPointAnchorNode(nodeId: string) {

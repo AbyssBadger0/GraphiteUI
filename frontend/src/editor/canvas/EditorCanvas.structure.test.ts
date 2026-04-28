@@ -270,6 +270,15 @@ test("EditorCanvas resolves rendered anchor geometry from measured node slot off
   assert.match(componentSource, /querySelectorAll\("\[data-anchor-slot-id\]"\)/);
 });
 
+test("EditorCanvas delays clearing node hover state so hover-dependent node chrome does not disappear immediately", () => {
+  assert.match(componentSource, /const NODE_HOVER_RELEASE_DELAY_MS = 2000;/);
+  assert.match(componentSource, /const hoveredNodeReleaseTimeoutRef = ref<number \| null>\(null\);/);
+  assert.match(componentSource, /function clearScheduledHoveredNodeRelease\(\)/);
+  assert.match(componentSource, /function setHoveredNode\(nodeId: string\) \{[\s\S]*clearScheduledHoveredNodeRelease\(\);[\s\S]*hoveredNodeId\.value = nodeId;/);
+  assert.match(componentSource, /function clearHoveredNode\(nodeId: string\) \{[\s\S]*hoveredNodeReleaseTimeoutRef\.value = window\.setTimeout\(\(\) => \{[\s\S]*hoveredNodeId\.value = null;[\s\S]*\}, NODE_HOVER_RELEASE_DELAY_MS\);/);
+  assert.match(componentSource, /onBeforeUnmount\(\(\) => \{[\s\S]*clearScheduledHoveredNodeRelease\(\);/);
+});
+
 test("EditorCanvas renders output flow hotspots only for allowed modes and interacted nodes", () => {
   assert.match(componentSource, /v-for="anchor in flowAnchors"/);
   assert.match(componentSource, /class="editor-canvas__flow-hotspot"/);

@@ -488,6 +488,17 @@
             :is-state-editor-pill-revealed="isStateEditorPillRevealed"
             :is-port-reordering="isPortReordering"
             :is-port-reorder-placeholder="isPortReorderPlaceholder"
+            :create-visible="shouldRevealAgentCreateInputPort"
+            :create-open="isPortCreateOpen('input')"
+            :create-accent-color="pendingStateInputTarget?.stateColor ?? pendingStateInputSource?.stateColor ?? '#16a34a'"
+            :create-label="pendingStateInputTarget?.label ?? pendingStateInputSource?.label ?? '+ input'"
+            :create-anchor-state-key="agentCreateInputAnchorStateKey"
+            :create-draft="portStateDraft"
+            :create-title="portPickerTitle"
+            :create-error="portStateError"
+            :create-hint="t('nodeCard.createStateBindHint')"
+            :create-type-options="stateTypeOptions"
+            :create-popover-style="agentAddPopoverStyle"
             @pointer-enter="handleStateEditorPillPointerEnter"
             @pointer-leave="handleStateEditorPillPointerLeave"
             @reorder-pointer-down="handlePortReorderPointerDown"
@@ -497,55 +508,15 @@
             @update:type="handleStateEditorTypeValue"
             @update:color="handleStateEditorColorInput"
             @update:description="handleStateEditorDescriptionInput"
+            @open-create="openPortStateCreate"
+            @update:create-name="handlePortDraftNameValue"
+            @update:create-type="handlePortDraftTypeSelect"
+            @update:create-color="handlePortDraftColorSelect"
+            @update:create-description="handlePortDraftDescriptionValue"
+            @update:create-value="updatePortDraftValue"
+            @cancel-create="closePortPicker"
+            @commit-create="commitPortStateCreate"
           />
-          <ElPopover
-            :visible="isPortCreateOpen('input')"
-            placement="bottom-start"
-            :width="376"
-            :show-arrow="false"
-            :popper-style="agentAddPopoverStyle"
-            popper-class="node-card__agent-add-popover-popper"
-          >
-            <template #reference>
-              <div
-                class="node-card__port-pill-row node-card__port-pill-row--create"
-                :class="{ 'node-card__port-pill-row--create-visible': shouldShowAgentCreateInputPort }"
-              >
-                <span
-                  class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start node-card__port-pill--create"
-                  :style="{ '--node-card-port-accent': pendingStateInputTarget?.stateColor ?? pendingStateInputSource?.stateColor ?? '#16a34a' }"
-                  data-agent-create-port="input"
-                  data-anchor-hitarea="true"
-                  @pointerdown.stop
-                  @click.stop="openPortStateCreate('input')"
-                >
-                  <span
-                    class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"
-                    :data-anchor-slot-id="`${nodeId}:state-in:${agentCreateInputAnchorStateKey}`"
-                    aria-hidden="true"
-                  />
-                  <span class="node-card__port-pill-label">
-                    <span class="node-card__port-pill-label-text">{{ pendingStateInputTarget?.label ?? pendingStateInputSource?.label ?? '+ input' }}</span>
-                  </span>
-                </span>
-              </div>
-            </template>
-            <StatePortCreatePopover
-              v-if="isPortCreateOpen('input') && portStateDraft"
-              :draft="portStateDraft"
-              :title="portPickerTitle"
-              :error="portStateError"
-              :hint="t('nodeCard.createStateBindHint')"
-              :type-options="stateTypeOptions"
-              @update:name="handlePortDraftNameValue"
-              @update:type="handlePortDraftTypeSelect"
-              @update:color="handlePortDraftColorSelect"
-              @update:description="handlePortDraftDescriptionValue"
-              @update:value="updatePortDraftValue"
-              @cancel="closePortPicker"
-              @create="commitPortStateCreate"
-            />
-          </ElPopover>
         </div>
         <div class="node-card__port-column node-card__port-column--right">
           <StatePortList
@@ -563,6 +534,17 @@
             :is-state-editor-pill-revealed="isStateEditorPillRevealed"
             :is-port-reordering="isPortReordering"
             :is-port-reorder-placeholder="isPortReorderPlaceholder"
+            :create-visible="shouldRevealAgentCreateOutputPort"
+            :create-open="isPortCreateOpen('output')"
+            :create-accent-color="pendingStateOutputTarget?.stateColor ?? VIRTUAL_ANY_OUTPUT_COLOR"
+            :create-label="pendingStateOutputTarget?.label ?? '+ output'"
+            :create-anchor-state-key="VIRTUAL_ANY_OUTPUT_STATE_KEY"
+            :create-draft="portStateDraft"
+            :create-title="portPickerTitle"
+            :create-error="portStateError"
+            :create-hint="t('nodeCard.createStateBindHint')"
+            :create-type-options="stateTypeOptions"
+            :create-popover-style="agentAddPopoverStyle"
             @pointer-enter="handleStateEditorPillPointerEnter"
             @pointer-leave="handleStateEditorPillPointerLeave"
             @reorder-pointer-down="handlePortReorderPointerDown"
@@ -572,55 +554,15 @@
             @update:type="handleStateEditorTypeValue"
             @update:color="handleStateEditorColorInput"
             @update:description="handleStateEditorDescriptionInput"
+            @open-create="openPortStateCreate"
+            @update:create-name="handlePortDraftNameValue"
+            @update:create-type="handlePortDraftTypeSelect"
+            @update:create-color="handlePortDraftColorSelect"
+            @update:create-description="handlePortDraftDescriptionValue"
+            @update:create-value="updatePortDraftValue"
+            @cancel-create="closePortPicker"
+            @commit-create="commitPortStateCreate"
           />
-          <ElPopover
-            :visible="isPortCreateOpen('output')"
-            placement="bottom-end"
-            :width="376"
-            :show-arrow="false"
-            :popper-style="agentAddPopoverStyle"
-            popper-class="node-card__agent-add-popover-popper"
-          >
-            <template #reference>
-              <div
-                class="node-card__port-pill-row node-card__port-pill-row--right node-card__port-pill-row--create"
-                :class="{ 'node-card__port-pill-row--create-visible': shouldShowAgentCreateOutputPort }"
-              >
-                <span
-                  class="node-card__port-pill node-card__port-pill--output node-card__port-pill--dock-end node-card__port-pill--create"
-                  :style="{ '--node-card-port-accent': pendingStateOutputTarget?.stateColor ?? VIRTUAL_ANY_OUTPUT_COLOR }"
-                  data-agent-create-port="output"
-                  data-anchor-hitarea="true"
-                  @pointerdown.stop
-                  @click.stop="openPortStateCreate('output')"
-                >
-                  <span class="node-card__port-pill-label">
-                    <span class="node-card__port-pill-label-text">{{ pendingStateOutputTarget?.label ?? '+ output' }}</span>
-                  </span>
-                  <span
-                    class="node-card__port-pill-anchor-slot"
-                    :data-anchor-slot-id="`${nodeId}:state-out:${VIRTUAL_ANY_OUTPUT_STATE_KEY}`"
-                    aria-hidden="true"
-                  />
-                </span>
-              </div>
-            </template>
-            <StatePortCreatePopover
-              v-if="isPortCreateOpen('output') && portStateDraft"
-              :draft="portStateDraft"
-              :title="portPickerTitle"
-              :error="portStateError"
-              :hint="t('nodeCard.createStateBindHint')"
-              :type-options="stateTypeOptions"
-              @update:name="handlePortDraftNameValue"
-              @update:type="handlePortDraftTypeSelect"
-              @update:color="handlePortDraftColorSelect"
-              @update:description="handlePortDraftDescriptionValue"
-              @update:value="updatePortDraftValue"
-              @cancel="closePortPicker"
-              @create="commitPortStateCreate"
-            />
-          </ElPopover>
         </div>
       </div>
       <div class="node-card__agent-runtime-row">
@@ -1540,6 +1482,8 @@ const hasFloatingPanelOpen = computed(
     activePortPickerSide.value !== null ||
     isSkillPickerOpen.value,
 );
+const shouldRevealAgentCreateInputPort = computed(() => shouldShowAgentCreateInputPort.value || props.selected || Boolean(props.hovered) || hasFloatingPanelOpen.value);
+const shouldRevealAgentCreateOutputPort = computed(() => shouldShowAgentCreateOutputPort.value || props.selected || Boolean(props.hovered) || hasFloatingPanelOpen.value);
 
 function isPortCreateOpen(side: "input" | "output") {
   return activePortPickerSide.value === side && Boolean(portStateDraft.value);
@@ -2868,22 +2812,6 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
 
 .node-card__port-pill-row--right {
   justify-content: flex-end;
-}
-
-.node-card__port-pill-row--create {
-  display: none;
-  min-height: 0;
-  pointer-events: none;
-}
-
-.node-card__port-pill-row--create-visible,
-.node-card:hover .node-card__port-pill-row--create,
-.node-card--hovered .node-card__port-pill-row--create,
-.node-card--selected .node-card__port-pill-row--create,
-.node-card--floating-panel-open .node-card__port-pill-row--create {
-  display: flex;
-  min-height: 34px;
-  pointer-events: auto;
 }
 
 .node-card__port-stack {

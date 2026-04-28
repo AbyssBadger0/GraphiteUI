@@ -121,6 +121,69 @@
       </ElPopover>
     </div>
   </TransitionGroup>
+  <ElPopover
+    :visible="createOpen"
+    :placement="createPlacement"
+    :width="376"
+    :show-arrow="false"
+    :popper-style="createPopoverStyle"
+    popper-class="node-card__agent-add-popover-popper"
+  >
+    <template #reference>
+      <div
+        class="node-card__port-pill-row node-card__port-pill-row--create"
+        :class="{
+          'node-card__port-pill-row--right': side === 'output',
+          'node-card__port-pill-row--create-visible': createVisible,
+        }"
+      >
+        <span
+          class="node-card__port-pill node-card__port-pill--create"
+          :class="
+            side === 'input'
+              ? 'node-card__port-pill--input node-card__port-pill--dock-start'
+              : 'node-card__port-pill--output node-card__port-pill--dock-end'
+          "
+          :style="{ '--node-card-port-accent': createAccentColor }"
+          :data-agent-create-port="side"
+          data-anchor-hitarea="true"
+          @pointerdown.stop
+          @click.stop="emit('open-create', side)"
+        >
+          <span
+            v-if="side === 'input'"
+            class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"
+            :data-anchor-slot-id="`${nodeId}:state-in:${createAnchorStateKey}`"
+            aria-hidden="true"
+          />
+          <span class="node-card__port-pill-label">
+            <span class="node-card__port-pill-label-text">{{ createLabel }}</span>
+          </span>
+          <span
+            v-if="side === 'output'"
+            class="node-card__port-pill-anchor-slot"
+            :data-anchor-slot-id="`${nodeId}:state-out:${createAnchorStateKey}`"
+            aria-hidden="true"
+          />
+        </span>
+      </div>
+    </template>
+    <StatePortCreatePopover
+      v-if="createOpen && createDraft"
+      :draft="createDraft"
+      :title="createTitle"
+      :error="createError"
+      :hint="createHint"
+      :type-options="createTypeOptions"
+      @update:name="emit('update:create-name', $event)"
+      @update:type="emit('update:create-type', $event)"
+      @update:color="emit('update:create-color', $event)"
+      @update:description="emit('update:create-description', $event)"
+      @update:value="emit('update:create-value', $event)"
+      @cancel="emit('cancel-create')"
+      @create="emit('commit-create')"
+    />
+  </ElPopover>
 </template>
 
 <script setup lang="ts">
@@ -130,6 +193,7 @@ import { Check, Delete } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 
 import StateEditorPopover from "./StateEditorPopover.vue";
+import StatePortCreatePopover from "./StatePortCreatePopover.vue";
 import type { NodePortViewModel } from "./nodeCardViewModel";
 import type { StateColorOption, StateFieldDraft, StateFieldType } from "@/editor/workspace/statePanelFields";
 
@@ -138,6 +202,17 @@ const props = defineProps<{
   ports: NodePortViewModel[];
   nodeId: string;
   popoverStyle: CSSProperties;
+  createVisible: boolean;
+  createOpen: boolean;
+  createAccentColor: string;
+  createLabel: string;
+  createAnchorStateKey: string;
+  createDraft: StateFieldDraft | null;
+  createTitle: string;
+  createError: string | null;
+  createHint: string;
+  createTypeOptions: string[];
+  createPopoverStyle: CSSProperties;
   stateEditorDraft: StateFieldDraft | null;
   stateEditorError: string | null;
   typeOptions: StateFieldType[];
@@ -160,6 +235,14 @@ const emit = defineEmits<{
   (event: "update:type", value: string): void;
   (event: "update:color", value: string): void;
   (event: "update:description", value: string): void;
+  (event: "open-create", side: "input" | "output"): void;
+  (event: "update:create-name", value: string | number): void;
+  (event: "update:create-type", value: string | number | boolean | undefined): void;
+  (event: "update:create-color", value: string | number | boolean | undefined): void;
+  (event: "update:create-description", value: string | number): void;
+  (event: "update:create-value", value: unknown): void;
+  (event: "cancel-create"): void;
+  (event: "commit-create"): void;
 }>();
 
 const { t } = useI18n();
@@ -168,6 +251,7 @@ const anchorPrefix = computed(() => (props.side === "input" ? "agent-input" : "a
 const anchorSlotKind = computed(() => (props.side === "input" ? "state-in" : "state-out"));
 const editorPlacement = computed(() => (props.side === "input" ? "bottom-start" : "bottom-end"));
 const confirmPlacement = computed(() => (props.side === "input" ? "top-start" : "top-end"));
+const createPlacement = computed(() => (props.side === "input" ? "bottom-start" : "bottom-end"));
 
 function anchorId(stateKey: string) {
   return `${anchorPrefix.value}:${stateKey}`;
@@ -200,6 +284,18 @@ function anchorSlotId(stateKey: string) {
 
 .node-card__port-pill-row--right {
   justify-content: flex-end;
+}
+
+.node-card__port-pill-row--create {
+  display: none;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.node-card__port-pill-row--create-visible {
+  display: flex;
+  min-height: 34px;
+  pointer-events: auto;
 }
 
 .node-card__port-pill {
@@ -249,6 +345,19 @@ function anchorSlotId(stateKey: string) {
 
 .node-card__port-pill--reorder-placeholder > * {
   opacity: 0;
+}
+
+.node-card__port-pill--create {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--node-card-port-accent) 38%, transparent);
+  background: color-mix(in srgb, var(--node-card-port-accent) 10%, transparent);
+  color: var(--node-card-port-accent);
+  box-shadow: none;
+}
+
+.node-card__port-pill--create:focus-visible {
+  border-color: color-mix(in srgb, var(--node-card-port-accent) 48%, transparent);
+  background: color-mix(in srgb, var(--node-card-port-accent) 14%, transparent);
 }
 
 .node-card__port-pill--output {

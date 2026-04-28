@@ -11,6 +11,12 @@ test("StatePortList owns agent real state port rows and emits parent side effect
   const componentSource = readFileSync(resolve(currentDirectory, "StatePortList.vue"), "utf8").replace(/\r\n/g, "\n");
 
   assert.match(componentSource, /defineProps<\{[\s\S]*side: "input" \| "output";[\s\S]*ports: NodePortViewModel\[\];[\s\S]*nodeId: string;[\s\S]*stateEditorDraft: StateFieldDraft \| null;[\s\S]*\}>/);
+  assert.match(componentSource, /createVisible: boolean;/);
+  assert.match(componentSource, /createOpen: boolean;/);
+  assert.match(componentSource, /createAccentColor: string;/);
+  assert.match(componentSource, /createLabel: string;/);
+  assert.match(componentSource, /createAnchorStateKey: string;/);
+  assert.match(componentSource, /createDraft: StateFieldDraft \| null;/);
   assert.match(componentSource, /<TransitionGroup[\s\S]*name="node-card-port-reorder"/);
   assert.match(componentSource, /v-for="port in ports"/);
   assert.match(componentSource, /data-port-reorder-node-id/);
@@ -18,6 +24,22 @@ test("StatePortList owns agent real state port rows and emits parent side effect
   assert.match(componentSource, /@click\.stop="emit\('port-click', anchorId\(port\.key\), port\.key\)"/);
   assert.match(componentSource, /@click\.stop="emit\('remove-click', anchorId\(port\.key\), side, port\.key\)"/);
   assert.match(componentSource, /<StateEditorPopover/);
+  assert.match(componentSource, /import StatePortCreatePopover from "\.\/StatePortCreatePopover\.vue";/);
+  assert.match(componentSource, /<ElPopover[\s\S]*:visible="createOpen"[\s\S]*:placement="createPlacement"/);
+  assert.match(componentSource, /data-agent-create-port/);
+  assert.match(componentSource, /@click\.stop="emit\('open-create', side\)"/);
+  assert.match(componentSource, /<StatePortCreatePopover[\s\S]*v-if="createOpen && createDraft"[\s\S]*:draft="createDraft"/);
+  assert.match(componentSource, /@update:name="emit\('update:create-name', \$event\)"/);
+  assert.match(componentSource, /@update:type="emit\('update:create-type', \$event\)"/);
+  assert.match(componentSource, /@update:color="emit\('update:create-color', \$event\)"/);
+  assert.match(componentSource, /@update:description="emit\('update:create-description', \$event\)"/);
+  assert.match(componentSource, /@update:value="emit\('update:create-value', \$event\)"/);
+  assert.match(componentSource, /@cancel="emit\('cancel-create'\)"/);
+  assert.match(componentSource, /@create="emit\('commit-create'\)"/);
+  assert.match(componentSource, /\(event: "open-create", side: "input" \| "output"\): void;/);
+  assert.match(componentSource, /\(event: "commit-create"\): void;/);
   assert.match(componentSource, /\.node-card__port-pill \{/);
   assert.match(componentSource, /\.node-card__port-pill-remove \{/);
+  assert.match(componentSource, /\.node-card__port-pill-row--create \{/);
+  assert.match(componentSource, /\.node-card__port-pill--create \{/);
 });

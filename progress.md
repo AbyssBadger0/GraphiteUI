@@ -40,9 +40,12 @@
   - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
 
 ### Phase 5: Commit and Push
-- **Status:** in_progress
+- **Status:** completed
 - Actions taken:
   - Checked git status after restart; only source/planning changes are visible, no runtime logs or build output are staged.
+  - Ran `git diff --check` with no whitespace errors.
+  - Committed the cleanup as `42e8ee3` with Chinese message `重构节点端口排序逻辑`.
+  - Pushed `main` to `origin/main`.
 
 ## Test Results
 | Test | Input | Expected | Actual | Status |
@@ -63,8 +66,8 @@
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Commit and push phase. |
-| Where am I going? | Review diff/status, commit with a Chinese message, and push. |
+| Where am I? | Cleanup implementation, verification, dev restart, commit, and push are complete. |
+| Where am I going? | Ready for final handoff. |
 | What's the goal? | Reduce redundant or over-concentrated code while preserving GraphiteUI behavior. |
 | What have I learned? | Existing reports recommend starting with `NodeCard.vue`; port reorder helpers and duplicate popover styles are safe local cleanup targets. |
 | What have I done? | Extracted NodeCard port reorder logic into a tested model, deduplicated popover style constants, and verified frontend tests/build. |

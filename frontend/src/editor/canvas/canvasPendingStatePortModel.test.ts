@@ -71,9 +71,30 @@ test("pending state port model builds pending agent input sources", () => {
     buildPendingAgentInputSourceByNodeId({
       document,
       connection: { ...connection, sourceStateKey: CREATE_AGENT_INPUT_STATE_KEY },
-      canCompleteAgentInput: () => true,
+      canCompleteAgentInput: () => false,
     }),
     {},
+  );
+});
+
+test("pending state port model preserves virtual output sources for create-input snapping", () => {
+  assert.deepEqual(
+    buildPendingAgentInputSourceByNodeId({
+      document,
+      connection: {
+        sourceNodeId: "writer",
+        sourceKind: "state-out",
+        sourceStateKey: VIRTUAL_ANY_OUTPUT_STATE_KEY,
+      },
+      canCompleteAgentInput: (nodeId) => nodeId === "target",
+    }),
+    {
+      target: {
+        stateKey: VIRTUAL_ANY_OUTPUT_STATE_KEY,
+        label: VIRTUAL_ANY_OUTPUT_STATE_KEY,
+        stateColor: "#d97706",
+      },
+    },
   );
 });
 

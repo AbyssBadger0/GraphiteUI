@@ -42,14 +42,17 @@ export function buildPendingAgentInputSourceByNodeId(input: {
   canCompleteAgentInput: (nodeId: string) => boolean;
 }): Record<string, PendingStateInputSource> {
   const connection = input.connection;
-  if (connection?.sourceKind !== "state-out" || !isConcreteStateConnectionKey(connection.sourceStateKey)) {
+  if (connection?.sourceKind !== "state-out" || !connection.sourceStateKey) {
     return {};
   }
 
-  const pendingSource = resolveStatePortPreview(input.document.state_schema, connection.sourceStateKey);
-  if (!pendingSource) {
-    return {};
-  }
+  const sourceStateKey = connection.sourceStateKey;
+  const sourceState = input.document.state_schema[sourceStateKey];
+  const pendingSource = {
+    stateKey: sourceStateKey,
+    label: sourceState?.name?.trim() || sourceStateKey,
+    stateColor: sourceState?.color?.trim() || "#d97706",
+  };
 
   return Object.fromEntries(
     Object.entries(input.document.nodes)

@@ -80,10 +80,11 @@ test("NodeCard keeps state pill geometry but hides the pill chrome visually", ()
   assert.match(componentSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*height:\s*14px;/);
 });
 
-test("NodeCard renders full state port labels without ellipsis clipping", () => {
-  assert.match(componentSource, /\.node-card__port-pill-label \{[\s\S]*overflow:\s*visible;/);
-  assert.match(componentSource, /\.node-card__port-pill-label \{[\s\S]*text-overflow:\s*clip;/);
-  assert.doesNotMatch(componentSource, /\.node-card__port-pill-label \{[\s\S]*text-overflow:\s*ellipsis;/);
+test("NodeCard clips long state port labels inside the pill", () => {
+  assert.match(componentSource, /\.node-card__port-pill-label \{[\s\S]*overflow:\s*hidden;/);
+  assert.match(componentSource, /\.node-card__port-pill-label \{[\s\S]*text-overflow:\s*ellipsis;/);
+  assert.match(componentSource, /\.node-card__port-pill-label-text \{[\s\S]*text-overflow:\s*ellipsis;/);
+  assert.doesNotMatch(componentSource, /\.node-card__port-pill-label \{[\s\S]*overflow:\s*visible;/);
 });
 
 test("NodeCard uses Element Plus segmented control on the same row as the input output pill", () => {
@@ -346,6 +347,15 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   );
   assert.ok(visibleCreateRowStyle, "expected visible create port row style");
   assert.match(visibleCreateRowStyle[0], /display:\s*flex;/);
+});
+
+test("NodeCard constrains long state port labels without pushing anchor slots outside cards", () => {
+  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*box-sizing:\s*border-box;/);
+  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*max-width:\s*min\(100%,\s*var\(--node-card-port-pill-max-width,\s*188px\)\);/);
+  assert.match(componentSource, /\.node-card__port-pill-label \{[\s\S]*min-width:\s*0;/);
+  assert.match(componentSource, /\.node-card__port-pill-label \{[\s\S]*overflow:\s*hidden;/);
+  assert.match(componentSource, /\.node-card__port-pill-label-text \{[\s\S]*overflow:\s*hidden;[\s\S]*text-overflow:\s*ellipsis;[\s\S]*white-space:\s*nowrap;/);
+  assert.match(componentSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*flex:\s*none;/);
 });
 
 test("NodeCard hides virtual agent output any behind the plus output row", () => {

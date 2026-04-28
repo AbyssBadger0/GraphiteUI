@@ -3670,13 +3670,14 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
 .node-card__port-pill {
   --node-card-port-accent: rgba(217, 119, 6, 0.92);
   position: relative;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   gap: 9px;
   min-height: 34px;
   min-width: 132px;
-  max-width: 100%;
+  max-width: min(100%, var(--node-card-port-pill-max-width, 188px));
   border-radius: 999px;
   border: 1px solid transparent;
   background: transparent;
@@ -3690,6 +3691,7 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
 }
 
 .node-card__port-pill--condition-source {
+  --node-card-port-pill-max-width: 212px;
   min-width: 212px;
 }
 
@@ -3811,9 +3813,10 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
 .node-card__port-pill-label {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
   padding-inline: 0;
-  overflow: visible;
-  text-overflow: clip;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 1.02rem;
   font-weight: 600;
@@ -3822,6 +3825,12 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
 }
 
 .node-card__port-pill-label-text {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: opacity 140ms ease;
 }
 

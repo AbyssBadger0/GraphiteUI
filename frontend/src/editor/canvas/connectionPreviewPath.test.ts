@@ -64,3 +64,23 @@ test("buildPendingConnectionPreviewPath keeps data previews as state curves", ()
     }),
   );
 });
+
+test("buildPendingConnectionPreviewPath draws state input creation previews from the pointer into the input anchor", () => {
+  assert.equal(
+    buildPendingConnectionPreviewPath({
+      kind: "state-in",
+      sourceX: 500,
+      sourceY: 220,
+      targetX: 200,
+      targetY: 180,
+    }),
+    buildConnectorCurvePath({
+      sourceX: 200,
+      sourceY: 180,
+      targetX: 500,
+      targetY: 220,
+      sourceSide: "right",
+      targetSide: "left",
+    }),
+  );
+});

@@ -6,8 +6,9 @@ import {
   buildGenericInputNode,
   buildGenericOutputNode,
   buildNodeFromPreset,
+  connectStateInputSourceToTarget,
 } from "./graph-node-creation.ts";
-import { VIRTUAL_ANY_OUTPUT_STATE_KEY } from "./virtual-any-input.ts";
+import { VIRTUAL_ANY_INPUT_STATE_KEY, VIRTUAL_ANY_OUTPUT_STATE_KEY } from "./virtual-any-input.ts";
 import type { GraphPayload, PresetDocument } from "../types/node-system.ts";
 
 test("buildGenericInputNode creates an expanded input node with an empty virtual output slot", () => {
@@ -266,9 +267,9 @@ test("applyNodeCreationResult materializes a virtual agent any output when it sp
   assert.equal(result.createdStateKey, "state_3");
   assert.deepEqual(result.document.nodes.empty_agent.writes, [{ state: "state_3", mode: "replace" }]);
   assert.deepEqual(result.document.nodes.output_created.reads, [{ state: "state_3", required: true }]);
-  assert.equal(result.document.nodes.output_created.name, "Empty Agent output");
+  assert.equal(result.document.nodes.output_created.name, "state_3");
   assert.deepEqual(result.document.state_schema.state_3, {
-    name: "Empty Agent output",
+    name: "state_3",
     description: "",
     type: "markdown",
     value: "",
@@ -323,8 +324,265 @@ test("applyNodeCreationResult materializes a virtual input output when it spawns
   assert.equal(result.createdStateKey, "state_5");
   assert.deepEqual(result.document.nodes.empty_input.writes, [{ state: "state_5", mode: "replace" }]);
   assert.deepEqual(result.document.nodes.output_created.reads, [{ state: "state_5", required: true }]);
-  assert.equal(result.document.nodes.output_created.name, "Empty Input output");
-  assert.equal(result.document.state_schema.state_5?.name, "Empty Input output");
+  assert.equal(result.document.nodes.output_created.name, "state_5");
+  assert.equal(result.document.state_schema.state_5?.name, "state_5");
   assert.equal(result.document.metadata.graphiteui_state_key_counter, 5);
   assert.deepEqual(result.document.edges, [{ source: "empty_input", target: "output_created" }]);
+});
+
+test("applyNodeCreationResult wires a created input node upstream of an existing concrete state input", () => {
+  const document: GraphPayload = {
+    graph_id: null,
+    name: "Creation Graph",
+    state_schema: {
+      question: {
+        name: "question",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#d97706",
+      },
+    },
+    nodes: {
+      answer_helper: {
+        kind: "agent",
+        name: "answer_helper",
+        description: "",
+        ui: { position: { x: 240, y: 0 }, collapsed: false },
+        reads: [{ state: "question", required: true }],
+        writes: [],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const createdInput = buildGenericInputNode({
+    id: "input_created",
+    position: { x: 0, y: 0 },
+  });
+  const result = applyNodeCreationResult(document, {
+    createdNodeId: createdInput.id,
+    createdNode: createdInput.node,
+    mergedStateSchema: createdInput.state_schema,
+    context: {
+      position: { x: 0, y: 0 },
+      targetNodeId: "answer_helper",
+      targetAnchorKind: "state-in",
+      targetStateKey: "question",
+      targetValueType: "text",
+    },
+  });
+
+  assert.equal(result.createdStateKey, null);
+  assert.deepEqual(result.document.nodes.input_created.writes, [{ state: "question", mode: "replace" }]);
+  assert.deepEqual(result.document.nodes.answer_helper.reads, [{ state: "question", required: true }]);
+  assert.deepEqual(result.document.edges, [{ source: "input_created", target: "answer_helper" }]);
+});
+
+test("applyNodeCreationResult materializes a virtual target input when creating an upstream node", () => {
+  const document: GraphPayload = {
+    graph_id: null,
+    name: "Creation Graph",
+    state_schema: {},
+    nodes: {
+      empty_agent: {
+        kind: "agent",
+        name: "Empty Agent",
+        description: "",
+        ui: { position: { x: 240, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {
+      graphiteui_state_key_counter: 2,
+    },
+  };
+
+  const createdInput = buildGenericInputNode({
+    id: "input_created",
+    position: { x: 0, y: 0 },
+  });
+  const result = applyNodeCreationResult(document, {
+    createdNodeId: createdInput.id,
+    createdNode: createdInput.node,
+    mergedStateSchema: createdInput.state_schema,
+    context: {
+      position: { x: 0, y: 0 },
+      targetNodeId: "empty_agent",
+      targetAnchorKind: "state-in",
+      targetStateKey: VIRTUAL_ANY_INPUT_STATE_KEY,
+      targetValueType: "markdown",
+    },
+  });
+
+  assert.equal(result.createdStateKey, "state_3");
+  assert.deepEqual(result.document.nodes.input_created.writes, [{ state: "state_3", mode: "replace" }]);
+  assert.deepEqual(result.document.nodes.empty_agent.reads, [{ state: "state_3", required: true }]);
+  assert.deepEqual(result.document.state_schema.state_3, {
+    name: "state_3",
+    description: "",
+    type: "markdown",
+    value: "",
+    color: "#7c3aed",
+  });
+  assert.equal(result.document.metadata.graphiteui_state_key_counter, 3);
+  assert.deepEqual(result.document.edges, [{ source: "input_created", target: "empty_agent" }]);
+});
+
+test("connectStateInputSourceToTarget wires an empty input node upstream of a concrete state input", () => {
+  const document: GraphPayload = {
+    graph_id: null,
+    name: "Creation Graph",
+    state_schema: {
+      question: {
+        name: "question",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#d97706",
+      },
+    },
+    nodes: {
+      empty_input: {
+        kind: "input",
+        name: "Empty Input",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          value: "",
+        },
+      },
+      answer_helper: {
+        kind: "agent",
+        name: "answer_helper",
+        description: "",
+        ui: { position: { x: 240, y: 0 }, collapsed: false },
+        reads: [{ state: "question", required: true }],
+        writes: [],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  };
+
+  const result = connectStateInputSourceToTarget(document, {
+    sourceNodeId: "empty_input",
+    targetNodeId: "answer_helper",
+    targetStateKey: "question",
+    targetValueType: "text",
+  });
+
+  assert.equal(result.createdStateKey, null);
+  assert.deepEqual(result.document.nodes.empty_input.writes, [{ state: "question", mode: "replace" }]);
+  assert.deepEqual(result.document.nodes.answer_helper.reads, [{ state: "question", required: true }]);
+  assert.deepEqual(result.document.edges, [{ source: "empty_input", target: "answer_helper" }]);
+});
+
+test("connectStateInputSourceToTarget materializes a virtual input through an existing agent writer", () => {
+  const document: GraphPayload = {
+    graph_id: null,
+    name: "Creation Graph",
+    state_schema: {
+      draft: {
+        name: "draft",
+        description: "",
+        type: "text",
+        value: "",
+        color: "#2563eb",
+      },
+    },
+    nodes: {
+      writer_agent: {
+        kind: "agent",
+        name: "Writer Agent",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [{ state: "draft", mode: "replace" }],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+      empty_agent: {
+        kind: "agent",
+        name: "Empty Agent",
+        description: "",
+        ui: { position: { x: 240, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "on",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {
+      graphiteui_state_key_counter: 2,
+    },
+  };
+
+  const result = connectStateInputSourceToTarget(document, {
+    sourceNodeId: "writer_agent",
+    targetNodeId: "empty_agent",
+    targetStateKey: VIRTUAL_ANY_INPUT_STATE_KEY,
+    targetValueType: "markdown",
+  });
+
+  assert.equal(result.createdStateKey, "state_3");
+  assert.deepEqual(result.document.nodes.writer_agent.writes, [
+    { state: "draft", mode: "replace" },
+    { state: "state_3", mode: "replace" },
+  ]);
+  assert.deepEqual(result.document.nodes.empty_agent.reads, [{ state: "state_3", required: true }]);
+  assert.deepEqual(result.document.state_schema.state_3, {
+    name: "state_3",
+    description: "",
+    type: "markdown",
+    value: "",
+    color: "#7c3aed",
+  });
+  assert.deepEqual(result.document.edges, [{ source: "writer_agent", target: "empty_agent" }]);
 });

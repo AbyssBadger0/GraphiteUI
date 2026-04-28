@@ -5,7 +5,7 @@ export type GraphConnectionAnchorKind = "flow-in" | "flow-out" | "state-in" | "s
 
 export type PendingGraphConnection = {
   sourceNodeId: string;
-  sourceKind: Extract<GraphConnectionAnchorKind, "flow-out" | "route-out" | "state-out">;
+  sourceKind: Extract<GraphConnectionAnchorKind, "flow-out" | "route-out" | "state-out" | "state-in">;
   sourceStateKey?: string;
   branchKey?: string;
   mode?: "create" | "reconnect";
@@ -32,7 +32,7 @@ function canNodeAcceptFlowTarget(
 }
 
 export function canStartGraphConnection(anchorKind: GraphConnectionAnchorKind) {
-  return anchorKind === "flow-out" || anchorKind === "route-out" || anchorKind === "state-out";
+  return anchorKind === "flow-out" || anchorKind === "route-out" || anchorKind === "state-out" || anchorKind === "state-in";
 }
 
 export function canDisconnectSequenceEdgeForDataConnection(
@@ -195,6 +195,47 @@ export function canConnectFlowNodes(
   return !document.edges.some((edge) => edge.source === sourceNodeId && edge.target === targetNodeId);
 }
 
+export function canConnectStateInputSource(
+  document: GraphPayload | GraphDocument,
+  sourceNodeId: string,
+  targetNodeId: string,
+  targetStateKey: string | null | undefined,
+) {
+  const sourceNode = document.nodes[sourceNodeId];
+  const targetNode = document.nodes[targetNodeId];
+  if (!sourceNode || !targetNode || sourceNodeId === targetNodeId || !targetStateKey) {
+    return false;
+  }
+
+  if (targetNode.kind === "input") {
+    return false;
+  }
+
+  if (sourceNode.kind === "input") {
+    if (sourceNode.writes.length > 0) {
+      return false;
+    }
+  } else if (sourceNode.kind !== "agent") {
+    return false;
+  }
+
+  if (isCreateAgentInputStateKey(targetStateKey)) {
+    if (targetNode.kind !== "agent") {
+      return false;
+    }
+  } else if (isVirtualAnyInputStateKey(targetStateKey)) {
+    if (targetNode.kind !== "agent" && targetNode.reads.length > 0) {
+      return false;
+    }
+  } else if (!targetNode.reads.some((binding) => binding.state === targetStateKey)) {
+    return false;
+  }
+
+  const alreadyWritesState = sourceNode.writes.some((binding) => binding.state === targetStateKey);
+  const alreadyHasFlowEdge = document.edges.some((edge) => edge.source === sourceNodeId && edge.target === targetNodeId);
+  return !alreadyWritesState || !alreadyHasFlowEdge;
+}
+
 export function canConnectConditionRoute(
   document: GraphPayload | GraphDocument,
   sourceNodeId: string,
@@ -261,6 +302,10 @@ export function canCompleteGraphConnection(
       typeof target.stateKey === "string"
       ? canConnectStateBinding(document, pending.sourceNodeId, pending.sourceStateKey, target.nodeId, target.stateKey)
       : false;
+  }
+
+  if (pending.sourceKind === "state-in") {
+    return false;
   }
 
   if (target.kind !== "flow-in") {

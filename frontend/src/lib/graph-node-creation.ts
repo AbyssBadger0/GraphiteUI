@@ -1,6 +1,7 @@
 import { cloneGraphDocument } from "./graph-document.ts";
 import { buildNextDefaultStateField, rememberDefaultStateKeyIndex, resolveDefaultStateColor } from "../editor/workspace/statePanelFields.ts";
-import { isVirtualAnyOutputStateKey } from "./virtual-any-input.ts";
+import { isCreateAgentInputStateKey, isVirtualAnyInputStateKey, isVirtualAnyOutputStateKey } from "./virtual-any-input.ts";
+import { canConnectStateInputSource } from "./graph-connections.ts";
 
 import type {
   AgentNode,
@@ -29,9 +30,23 @@ type ApplyNodeCreationResultInput = {
   context?: NodeCreationContext | null;
 };
 
+type ConnectStateInputSourceToTargetInput = {
+  sourceNodeId: string;
+  targetNodeId: string;
+  targetStateKey: string;
+  targetValueType?: string | null;
+};
+
 type ApplyNodeCreationResultOutput<T extends GraphPayload | GraphDocument> = {
   document: T;
   createdNodeId: string;
+  createdStateKey: string | null;
+};
+
+type ConnectStateInputSourceToTargetOutput<T extends GraphPayload | GraphDocument> = {
+  document: T;
+  sourceNodeId: string;
+  targetNodeId: string;
   createdStateKey: string | null;
 };
 
@@ -254,10 +269,65 @@ function buildCreationFlowEdge<T extends GraphPayload | GraphDocument>(
   }
 }
 
-function resolveVirtualAnyOutputStateName(document: GraphPayload | GraphDocument, sourceNodeId: string | undefined) {
-  const sourceNode = sourceNodeId ? document.nodes[sourceNodeId] : null;
-  const sourceName = sourceNode?.name.trim();
-  return sourceName ? `${sourceName} output` : "Agent output";
+function buildNextVirtualStateField(document: GraphPayload | GraphDocument, stateType: string) {
+  const stateField = buildNextDefaultStateField(document, {
+    type: stateType,
+  });
+  return {
+    ...stateField,
+    definition: {
+      ...stateField.definition,
+      name: stateField.key,
+    },
+  };
+}
+
+function applyStateInputSourceConnection<T extends GraphPayload | GraphDocument>(
+  document: T,
+  input: ConnectStateInputSourceToTargetInput,
+) {
+  const rawTargetStateKey = input.targetStateKey.trim();
+  const targetValueType = input.targetValueType?.trim() || "text";
+  let targetStateKey = rawTargetStateKey;
+  let createdStateKey: string | null = null;
+
+  if (isVirtualAnyInputStateKey(rawTargetStateKey) || isCreateAgentInputStateKey(rawTargetStateKey)) {
+    const targetStateField = buildNextVirtualStateField(document, targetValueType);
+    document.state_schema[targetStateField.key] = targetStateField.definition;
+    rememberDefaultStateKeyIndex(document, targetStateField.key);
+    targetStateKey = targetStateField.key;
+    createdStateKey = targetStateField.key;
+  } else {
+    ensureStateDefinitionForCreation(document, targetStateKey, targetValueType);
+  }
+
+  bindCreatedStateToSourceNode(document.nodes[input.sourceNodeId], targetStateKey);
+  bindCreatedStateToNode(document.nodes[input.targetNodeId], targetStateKey);
+  buildCreationFlowEdge(document, input.sourceNodeId, input.targetNodeId, null);
+  return createdStateKey;
+}
+
+export function connectStateInputSourceToTarget<T extends GraphPayload | GraphDocument>(
+  document: T,
+  input: ConnectStateInputSourceToTargetInput,
+): ConnectStateInputSourceToTargetOutput<T> {
+  if (!canConnectStateInputSource(document, input.sourceNodeId, input.targetNodeId, input.targetStateKey)) {
+    return {
+      document,
+      sourceNodeId: input.sourceNodeId,
+      targetNodeId: input.targetNodeId,
+      createdStateKey: null,
+    };
+  }
+
+  const nextDocument = cloneGraphDocument(document);
+  const createdStateKey = applyStateInputSourceConnection(nextDocument, input);
+  return {
+    document: nextDocument,
+    sourceNodeId: input.sourceNodeId,
+    targetNodeId: input.targetNodeId,
+    createdStateKey,
+  };
 }
 
 export function applyNodeCreationResult<T extends GraphPayload | GraphDocument>(
@@ -275,14 +345,28 @@ export function applyNodeCreationResult<T extends GraphPayload | GraphDocument>(
 
   const rawSourceStateKey = input.context?.sourceStateKey?.trim();
   const sourceValueType = input.context?.sourceValueType?.trim() || "text";
+  const rawTargetStateKey = input.context?.targetStateKey?.trim();
+  const targetValueType = input.context?.targetValueType?.trim() || "text";
   let sourceStateKey = rawSourceStateKey;
   let createdStateKey: string | null = null;
 
-  if (isVirtualAnyOutputStateKey(rawSourceStateKey)) {
-    const sourceStateField = buildNextDefaultStateField(nextDocument, {
-      name: resolveVirtualAnyOutputStateName(nextDocument, input.context?.sourceNodeId),
-      type: sourceValueType,
+  if (input.context?.targetNodeId && input.context.targetAnchorKind === "state-in" && rawTargetStateKey) {
+    createdStateKey = applyStateInputSourceConnection(nextDocument, {
+      sourceNodeId: input.createdNodeId,
+      targetNodeId: input.context.targetNodeId,
+      targetStateKey: rawTargetStateKey,
+      targetValueType,
     });
+
+    return {
+      document: nextDocument,
+      createdNodeId: input.createdNodeId,
+      createdStateKey,
+    };
+  }
+
+  if (isVirtualAnyOutputStateKey(rawSourceStateKey)) {
+    const sourceStateField = buildNextVirtualStateField(nextDocument, sourceValueType);
     nextDocument.state_schema[sourceStateField.key] = sourceStateField.definition;
     rememberDefaultStateKeyIndex(nextDocument, sourceStateField.key);
     bindCreatedStateToSourceNode(

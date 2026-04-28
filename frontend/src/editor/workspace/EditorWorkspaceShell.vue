@@ -117,6 +117,7 @@
                 @delete-node="deleteNodeForTab(tab.tabId, $event.nodeId)"
                 @save-node-preset="saveNodePresetForTab(tab.tabId, $event.nodeId)"
                 @connect-state="connectStateBindingForTab(tab.tabId, $event.sourceNodeId, $event.sourceStateKey, $event.targetNodeId, $event.targetStateKey)"
+                @connect-state-input-source="connectStateInputSourceForTab(tab.tabId, $event)"
                 @connect-flow="connectFlowNodesForTab(tab.tabId, $event.sourceNodeId, $event.targetNodeId)"
                 @connect-route="connectConditionRouteForTab(tab.tabId, $event.sourceNodeId, $event.branchKey, $event.targetNodeId)"
                 @reconnect-flow="reconnectFlowEdgeForTab(tab.tabId, $event.sourceNodeId, $event.currentTargetNodeId, $event.nextTargetNodeId)"
@@ -212,6 +213,7 @@ import type { NodeFocusRequest } from "@/editor/canvas/useNodeSelectionFocus";
 import { buildBuiltinNodeCreationEntries } from "@/editor/workspace/nodeCreationBuiltins";
 import { buildNodeCreationEntries } from "@/editor/workspace/nodeCreationMenuModel";
 import { createNodeFromCreationEntry, createNodeFromDroppedFile } from "./nodeCreationExecution.ts";
+import { connectStateInputSourceToTarget } from "@/lib/graph-node-creation";
 import { resolveEditorRouteInstruction } from "@/lib/editor-route-sync";
 import {
   addConditionBranchToDocument,
@@ -1310,12 +1312,13 @@ function nodeCreationMenuState(tabId: string) {
 
 function nodeCreationEntriesForTab(tabId: string): NodeCreationEntry[] {
   const menuState = nodeCreationMenuState(tabId);
+  const context = menuState?.context ?? null;
   return buildNodeCreationEntries({
     builtins: buildBuiltinNodeCreationEntries(),
     presets: persistedPresets.value,
     query: menuState?.query ?? "",
-    sourceValueType: menuState?.context?.sourceValueType ?? null,
-    sourceAnchorKind: menuState?.context?.sourceAnchorKind ?? null,
+    sourceValueType: context?.sourceValueType ?? context?.targetValueType ?? null,
+    sourceAnchorKind: context?.sourceAnchorKind ?? context?.targetAnchorKind ?? null,
   });
 }
 
@@ -1400,16 +1403,22 @@ function openCreatedStateEdgeEditorForTab(
   context: NodeCreationContext,
   result: { createdNodeId: string; createdStateKey: string | null },
 ) {
-  if (!context.sourceNodeId || !result.createdStateKey) {
+  if (!result.createdStateKey) {
+    return;
+  }
+
+  const sourceNodeId = context.targetNodeId ? result.createdNodeId : context.sourceNodeId;
+  const targetNodeId = context.targetNodeId ?? result.createdNodeId;
+  if (!sourceNodeId || !targetNodeId) {
     return;
   }
 
   dataEdgeStateEditorRequestByTabId.value = {
     ...dataEdgeStateEditorRequestByTabId.value,
     [tabId]: {
-      requestId: `${result.createdNodeId}:${result.createdStateKey}:${Date.now()}`,
-      sourceNodeId: context.sourceNodeId,
-      targetNodeId: result.createdNodeId,
+      requestId: `${sourceNodeId}:${result.createdStateKey}:${targetNodeId}:${Date.now()}`,
+      sourceNodeId,
+      targetNodeId,
       stateKey: result.createdStateKey,
       position: context.position,
     },
@@ -1767,6 +1776,38 @@ function connectStateBindingForTab(
 
   markDocumentDirty(tabId, nextDocument);
   focusNodeForTab(tabId, targetNodeId);
+}
+
+function connectStateInputSourceForTab(
+  tabId: string,
+  payload: { sourceNodeId: string; targetNodeId: string; targetStateKey: string; targetValueType?: string | null },
+) {
+  const document = documentsByTabId.value[tabId];
+  if (!document) {
+    return;
+  }
+
+  const result = connectStateInputSourceToTarget(document, payload);
+  if (result.document === document) {
+    return;
+  }
+
+  markDocumentDirty(tabId, result.document);
+  openCreatedStateEdgeEditorForTab(
+    tabId,
+    {
+      position: result.document.nodes[payload.sourceNodeId]?.ui.position ?? { x: 0, y: 0 },
+      targetNodeId: payload.targetNodeId,
+      targetAnchorKind: "state-in",
+      targetStateKey: payload.targetStateKey,
+      targetValueType: payload.targetValueType ?? null,
+    },
+    {
+      createdNodeId: payload.sourceNodeId,
+      createdStateKey: result.createdStateKey,
+    },
+  );
+  focusNodeForTab(tabId, payload.targetNodeId);
 }
 
 function connectConditionRouteForTab(tabId: string, sourceNodeId: string, branchKey: string, targetNodeId: string) {

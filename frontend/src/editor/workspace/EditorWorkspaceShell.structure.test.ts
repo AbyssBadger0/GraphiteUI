@@ -142,14 +142,20 @@ test("EditorWorkspaceShell keeps top chrome and editor body from overflowing the
 
 test("EditorWorkspaceShell routes menu selections and dropped files through the node-creation execution helpers", () => {
   assert.match(componentSource, /import \{ createNodeFromCreationEntry, createNodeFromDroppedFile \} from "\.\/nodeCreationExecution\.ts";/);
+  assert.match(componentSource, /import \{ connectStateInputSourceToTarget \} from "@\/lib\/graph-node-creation";/);
   assert.match(componentSource, /const dataEdgeStateEditorRequestByTabId = ref<Record<string, DataEdgeStateEditorRequest \| null>>\(\{\}\);/);
   assert.match(componentSource, /:state-editor-request="dataEdgeStateEditorRequestByTabId\[tab\.tabId\] \?\? null"/);
+  assert.match(componentSource, /@connect-state-input-source="connectStateInputSourceForTab\(tab\.tabId, \$event\)"/);
   assert.match(componentSource, /const result = createNodeFromCreationEntry\(document, \{/);
   assert.match(componentSource, /const result = await createNodeFromDroppedFile\(document, \{/);
+  assert.match(componentSource, /function connectStateInputSourceForTab/);
+  assert.match(componentSource, /connectStateInputSourceToTarget\(document, payload\)/);
   assert.match(componentSource, /markDocumentDirty\(tabId, result\.document\)/);
   assert.match(componentSource, /openCreatedStateEdgeEditorForTab\(tabId, menuState\.context, result\)/);
   assert.match(componentSource, /function openCreatedStateEdgeEditorForTab/);
   assert.match(componentSource, /createdStateKey: string \| null/);
+  assert.match(componentSource, /const sourceNodeId = context\.targetNodeId \? result\.createdNodeId : context\.sourceNodeId;/);
+  assert.match(componentSource, /const targetNodeId = context\.targetNodeId \?\? result\.createdNodeId;/);
   assert.doesNotMatch(componentSource, /focusNodeForTab\(tabId, result\.createdNodeId\)/);
   assert.doesNotMatch(componentSource, /requestNodeFocusForTab\(tabId, result\.createdNodeId\)/);
   assert.match(componentSource, /closeNodeCreationMenu\(tabId\)/);

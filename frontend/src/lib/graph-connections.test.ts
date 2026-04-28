@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   canCompleteGraphConnection,
+  canConnectStateInputSource,
   canDisconnectSequenceEdgeForDataConnection,
   canStartGraphConnection,
   type PendingGraphConnection,
@@ -87,12 +88,12 @@ const document: GraphPayload = {
   metadata: {},
 };
 
-test("canStartGraphConnection starts from flow, route, and state output anchors", () => {
+test("canStartGraphConnection starts from flow, route, state output, and state input anchors", () => {
   assert.equal(canStartGraphConnection("flow-out"), true);
   assert.equal(canStartGraphConnection("route-out"), true);
   assert.equal(canStartGraphConnection("state-out"), true);
+  assert.equal(canStartGraphConnection("state-in"), true);
   assert.equal(canStartGraphConnection("flow-in"), false);
-  assert.equal(canStartGraphConnection("state-in"), false);
 });
 
 test("canDisconnectSequenceEdgeForDataConnection follows existing sequence edges without requiring agent endpoints", () => {
@@ -499,4 +500,42 @@ test("canCompleteGraphConnection rejects state connections that would remain wri
     ),
     false,
   );
+});
+
+test("canConnectStateInputSource allows reverse drags from inputs to existing writer nodes", () => {
+  const graphWithEmptyInput: GraphPayload = {
+    ...document,
+    nodes: {
+      ...document.nodes,
+      empty_input: {
+        kind: "input",
+        name: "empty_input",
+        description: "",
+        ui: { position: { x: -120, y: 0 } },
+        reads: [],
+        writes: [],
+        config: {
+          value: "",
+        },
+      },
+      filled_input: {
+        kind: "input",
+        name: "filled_input",
+        description: "",
+        ui: { position: { x: -120, y: 80 } },
+        reads: [],
+        writes: [{ state: "question", mode: "replace" }],
+        config: {
+          value: "",
+        },
+      },
+    },
+    edges: [],
+  };
+
+  assert.equal(canConnectStateInputSource(graphWithEmptyInput, "empty_input", "answer_helper", "question"), true);
+  assert.equal(canConnectStateInputSource(graphWithEmptyInput, "answer_helper", "output_answer", VIRTUAL_ANY_INPUT_STATE_KEY), true);
+  assert.equal(canConnectStateInputSource(graphWithEmptyInput, "filled_input", "answer_helper", "question"), false);
+  assert.equal(canConnectStateInputSource(graphWithEmptyInput, "route_result", "answer_helper", "question"), false);
+  assert.equal(canConnectStateInputSource(graphWithEmptyInput, "answer_helper", "input_question", "question"), false);
 });

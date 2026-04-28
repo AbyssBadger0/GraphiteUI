@@ -2,12 +2,14 @@ import { NODE_CREATION_FAMILY_PRIORITY } from "./nodeCreationBuiltins.ts";
 
 import type { NodeCreationEntry, PresetDocument } from "@/types/node-system";
 
+type NodeCreationAnchorKind = "flow-out" | "route-out" | "state-out" | "state-in";
+
 type BuildNodeCreationEntriesInput = {
   builtins: NodeCreationEntry[];
   presets: PresetDocument[];
   query: string;
   sourceValueType: string | null;
-  sourceAnchorKind?: "flow-out" | "route-out" | "state-out" | null;
+  sourceAnchorKind?: NodeCreationAnchorKind | null;
 };
 
 function normalizeSearchValue(value: string | undefined) {
@@ -58,8 +60,12 @@ function matchesNodeCreationQuery(entry: NodeCreationEntry, query: string) {
 export function supportsCreationSourceType(
   entry: NodeCreationEntry,
   sourceValueType: string | null,
-  sourceAnchorKind: "flow-out" | "route-out" | "state-out" | null = null,
+  sourceAnchorKind: NodeCreationAnchorKind | null = null,
 ) {
+  if (sourceAnchorKind === "state-in") {
+    return entry.family === "input" || entry.family === "agent";
+  }
+
   if (entry.family === "input") {
     return !sourceValueType && !sourceAnchorKind;
   }
@@ -83,7 +89,7 @@ export function filterNodeCreationEntries(
   entries: NodeCreationEntry[],
   query: string,
   sourceValueType: string | null,
-  sourceAnchorKind: "flow-out" | "route-out" | "state-out" | null = null,
+  sourceAnchorKind: NodeCreationAnchorKind | null = null,
 ) {
   const normalizedQuery = normalizeSearchValue(query);
   return entries.filter(

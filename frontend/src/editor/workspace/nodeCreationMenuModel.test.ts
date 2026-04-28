@@ -172,6 +172,21 @@ test("buildNodeCreationEntries excludes input nodes when creation starts from a 
   assert.ok(entries.every((entry) => entry.family !== "input"));
 });
 
+test("buildNodeCreationEntries limits reverse input drags to upstream writer nodes", () => {
+  const entries = buildNodeCreationEntries({
+    builtins: [...builtins],
+    presets: [...presets],
+    query: "",
+    sourceValueType: "text",
+    sourceAnchorKind: "state-in",
+  });
+
+  assert.deepEqual(
+    entries.map((entry) => entry.id),
+    ["node-input", "preset-agent-empty", "preset-preset.agent.answer_text", "preset-preset.agent.lookup_kb"],
+  );
+});
+
 test("supportsCreationSourceType rejects text-only agent presets for knowledge base outputs", () => {
   const textPresetEntry: NodeCreationEntry = {
     id: "preset-preset.agent.answer_text",
@@ -187,4 +202,6 @@ test("supportsCreationSourceType rejects text-only agent presets for knowledge b
   assert.equal(supportsCreationSourceType(textPresetEntry, "knowledge_base"), false);
   assert.equal(supportsCreationSourceType(textPresetEntry, "text"), true);
   assert.equal(supportsCreationSourceType(builtins[0], null, "flow-out"), false);
+  assert.equal(supportsCreationSourceType(builtins[0], "text", "state-in"), true);
+  assert.equal(supportsCreationSourceType(builtins[1], "text", "state-in"), false);
 });

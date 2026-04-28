@@ -2,7 +2,7 @@ import { buildConnectorCurvePath } from "./connectionCurvePath.ts";
 import { buildSequenceFlowPath } from "./flowEdgePath.ts";
 
 export function buildPendingConnectionPreviewPath(input: {
-  kind: "flow-out" | "route-out" | "state-out";
+  kind: "flow-out" | "route-out" | "state-out" | "state-in";
   sourceX: number;
   sourceY: number;
   targetX: number;
@@ -10,6 +10,17 @@ export function buildPendingConnectionPreviewPath(input: {
 }) {
   if (input.kind === "flow-out" || input.kind === "route-out") {
     return buildSequenceFlowPath(input);
+  }
+
+  if (input.kind === "state-in") {
+    return buildConnectorCurvePath({
+      sourceX: input.targetX,
+      sourceY: input.targetY,
+      targetX: input.sourceX,
+      targetY: input.sourceY,
+      sourceSide: "right",
+      targetSide: "left",
+    });
   }
 
   return buildConnectorCurvePath({

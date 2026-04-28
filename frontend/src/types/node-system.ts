@@ -193,6 +193,10 @@ export type NodeCreationContext = {
   sourceBranchKey?: string;
   sourceStateKey?: string;
   sourceValueType?: string | null;
+  targetNodeId?: string;
+  targetAnchorKind?: "state-in";
+  targetStateKey?: string;
+  targetValueType?: string | null;
   clientX?: number;
   clientY?: number;
 };

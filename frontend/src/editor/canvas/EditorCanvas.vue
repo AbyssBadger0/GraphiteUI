@@ -421,8 +421,10 @@ import {
 } from "@/editor/workspace/statePanelFields";
 import {
   canCompleteGraphConnection,
+  canConnectStateInputSource,
   canDisconnectSequenceEdgeForDataConnection,
   canStartGraphConnection,
+  type GraphConnectionAnchorKind,
   type PendingGraphConnection,
 } from "@/lib/graph-connections";
 import {
@@ -440,6 +442,21 @@ import { isAgentBreakpointEnabledInDocument, resolveAgentBreakpointTimingInDocum
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
 import type { SkillDefinition } from "@/types/skills";
 import type { AgentNode, ConditionNode, GraphDocument, GraphNode, GraphNodeSize, GraphPayload, GraphPosition, InputNode, OutputNode, StateDefinition } from "@/types/node-system";
+
+type NodeCreationMenuPayload = {
+  position: GraphPosition;
+  sourceNodeId?: string;
+  sourceAnchorKind?: Extract<GraphConnectionAnchorKind, "flow-out" | "route-out" | "state-out">;
+  sourceBranchKey?: string;
+  sourceStateKey?: string;
+  sourceValueType?: string | null;
+  targetNodeId?: string;
+  targetAnchorKind?: Extract<GraphConnectionAnchorKind, "state-in">;
+  targetStateKey?: string;
+  targetValueType?: string | null;
+  clientX: number;
+  clientY: number;
+};
 
 const props = defineProps<{
   document: GraphPayload | GraphDocument;
@@ -495,13 +512,14 @@ const emit = defineEmits<{
   (event: "refresh-agent-models"): void;
   (event: "connect-flow", payload: { sourceNodeId: string; targetNodeId: string }): void;
   (event: "connect-state", payload: { sourceNodeId: string; sourceStateKey: string; targetNodeId: string; targetStateKey: string }): void;
+  (event: "connect-state-input-source", payload: { sourceNodeId: string; targetNodeId: string; targetStateKey: string; targetValueType?: string | null }): void;
   (event: "connect-route", payload: { sourceNodeId: string; branchKey: string; targetNodeId: string }): void;
   (event: "reconnect-flow", payload: { sourceNodeId: string; currentTargetNodeId: string; nextTargetNodeId: string }): void;
   (event: "reconnect-route", payload: { sourceNodeId: string; branchKey: string; nextTargetNodeId: string }): void;
   (event: "remove-flow", payload: { sourceNodeId: string; targetNodeId: string }): void;
   (event: "disconnect-data-edge", payload: { sourceNodeId: string; targetNodeId: string; stateKey: string; mode: "state" | "flow" }): void;
   (event: "remove-route", payload: { sourceNodeId: string; branchKey: string }): void;
-  (event: "open-node-creation-menu", payload: { position: GraphPosition; sourceNodeId?: string; sourceAnchorKind?: "flow-out" | "route-out" | "state-out"; sourceBranchKey?: string; sourceStateKey?: string; sourceValueType?: string | null; clientX: number; clientY: number }): void;
+  (event: "open-node-creation-menu", payload: NodeCreationMenuPayload): void;
   (event: "create-node-from-file", payload: { file: File; position: GraphPosition; clientX: number; clientY: number }): void;
   (event: "update:viewport", payload: CanvasViewport): void;
 }>();
@@ -878,7 +896,8 @@ const activeConnectionSourceAnchorId = computed(() => {
       anchor.nodeId === activeConnection.value?.sourceNodeId &&
       anchor.kind === activeConnection.value.sourceKind &&
       (anchor.kind !== "route-out" || anchor.branch === activeConnection.value.branchKey) &&
-      (anchor.kind !== "state-out" || anchor.stateKey === activeConnection.value.sourceStateKey),
+      ((anchor.kind !== "state-out" && anchor.kind !== "state-in") ||
+        anchor.stateKey === activeConnection.value.sourceStateKey),
   );
   return sourceAnchor?.id ?? null;
 });
@@ -890,7 +909,16 @@ const eligibleTargetAnchorIds = computed(() =>
   ),
 );
 const activeConnectionAccentColor = computed(() => {
-  if (activeConnection.value?.sourceKind === "state-out" && activeConnection.value.sourceStateKey) {
+  if (
+    (activeConnection.value?.sourceKind === "state-out" || activeConnection.value?.sourceKind === "state-in") &&
+    activeConnection.value.sourceStateKey
+  ) {
+    if (activeConnection.value.sourceStateKey === VIRTUAL_ANY_INPUT_STATE_KEY) {
+      return VIRTUAL_ANY_INPUT_COLOR;
+    }
+    if (activeConnection.value.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY) {
+      return VIRTUAL_ANY_OUTPUT_COLOR;
+    }
     return props.document.state_schema[activeConnection.value.sourceStateKey]?.color?.trim() || "#2563eb";
   }
   if (activeConnection.value?.sourceKind === "route-out" && activeConnection.value.branchKey) {
@@ -912,7 +940,7 @@ const connectionPreview = computed(() => {
     kind:
       activeConnection.value.sourceKind === "route-out"
         ? "route" as const
-        : activeConnection.value.sourceKind === "state-out"
+        : activeConnection.value.sourceKind === "state-out" || activeConnection.value.sourceKind === "state-in"
           ? "data" as const
           : "flow" as const,
     path: buildPendingConnectionPreviewPath({
@@ -2300,6 +2328,10 @@ function resolveAutoSnappedTargetAnchor(event: PointerEvent) {
     return null;
   }
 
+  if (activeConnection.value.sourceKind === "state-in") {
+    return resolveAutoSnappedStateInputSourceAnchor(event);
+  }
+
   if (activeConnection.value.sourceKind === "state-out") {
     return resolveAutoSnappedStateTargetAnchor(event);
   }
@@ -2321,6 +2353,15 @@ function resolveAutoSnappedTargetAnchor(event: PointerEvent) {
   return null;
 }
 
+function resolveAutoSnappedStateInputSourceAnchor(event: PointerEvent) {
+  const nodeId = resolveNodeIdAtPointer(event);
+  if (!nodeId) {
+    return null;
+  }
+
+  return resolveEligibleStateInputSourceAnchorForNodeBody(nodeId);
+}
+
 function resolveAutoSnappedStateTargetAnchor(event: PointerEvent) {
   const nodeId = resolveNodeIdAtPointer(event);
   if (nodeId) {
@@ -2331,6 +2372,58 @@ function resolveAutoSnappedStateTargetAnchor(event: PointerEvent) {
   }
 
   return null;
+}
+
+function resolveEligibleStateInputSourceAnchorForNodeBody(nodeId: string) {
+  if (activeConnection.value?.sourceKind !== "state-in" || !activeConnection.value.sourceStateKey) {
+    return null;
+  }
+  if (
+    !canConnectStateInputSource(
+      props.document,
+      nodeId,
+      activeConnection.value.sourceNodeId,
+      activeConnection.value.sourceStateKey,
+    )
+  ) {
+    return null;
+  }
+
+  const matchingOutputAnchor = projectedAnchors.value.find(
+    (anchor) =>
+      anchor.nodeId === nodeId &&
+      anchor.kind === "state-out" &&
+      anchor.stateKey === activeConnection.value?.sourceStateKey,
+  );
+  if (matchingOutputAnchor) {
+    return matchingOutputAnchor;
+  }
+
+  const createOutputAnchor = projectedAnchors.value.find(
+    (anchor) =>
+      anchor.nodeId === nodeId &&
+      anchor.kind === "state-out" &&
+      anchor.stateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY,
+  );
+  if (createOutputAnchor) {
+    return createOutputAnchor;
+  }
+
+  const node = props.document.nodes[nodeId];
+  if (!node) {
+    return null;
+  }
+
+  return {
+    id: `${nodeId}:state-out:${VIRTUAL_ANY_OUTPUT_STATE_KEY}:reverse`,
+    nodeId,
+    kind: "state-out" as const,
+    x: node.ui.position.x + (measuredNodeSizes.value[nodeId]?.width ?? resolveFallbackNodeSize(node).width),
+    y: node.ui.position.y + 88,
+    side: "right" as const,
+    color: VIRTUAL_ANY_OUTPUT_COLOR,
+    stateKey: VIRTUAL_ANY_OUTPUT_STATE_KEY,
+  };
 }
 
 function isPointerWithinNodeElement(nodeElement: HTMLElement, event: PointerEvent) {
@@ -2360,6 +2453,10 @@ function isPointerWithinFlowHotspot(anchor: ProjectedCanvasAnchor, event: Pointe
 }
 
 function resolveEligibleTargetAnchorForNodeBody(nodeId: string) {
+  if (activeConnection.value?.sourceKind === "state-in") {
+    return resolveEligibleStateInputSourceAnchorForNodeBody(nodeId);
+  }
+
   if (activeConnection.value?.sourceKind === "state-out") {
     return resolveEligibleStateTargetAnchorForNodeBody(nodeId);
   }
@@ -2772,32 +2869,57 @@ function handleAnchorPointerDown(anchor: ProjectedCanvasAnchor) {
   pendingConnectionPoint.value = { x: anchor.x, y: anchor.y };
 }
 
+function resolveConnectionStateValueType(stateKey: string | undefined) {
+  if (!stateKey || stateKey === VIRTUAL_ANY_INPUT_STATE_KEY || stateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY || stateKey === CREATE_AGENT_INPUT_STATE_KEY) {
+    return null;
+  }
+  return props.document.state_schema[stateKey]?.type ?? null;
+}
+
 function openCreationMenuFromPendingConnection(event: PointerEvent) {
   if (isGraphEditingLocked()) {
     return;
   }
-  if (!activeConnection.value) {
+  const connection = activeConnection.value;
+  if (!connection) {
     return;
   }
   clearCanvasTransientState();
-  const isStateCreationSource = activeConnection.value.sourceKind === "state-out";
-  const isFlowCreationSource = activeConnection.value.sourceKind === "flow-out";
-  const isRouteCreationSource = activeConnection.value.sourceKind === "route-out";
-  if (!isStateCreationSource && !isFlowCreationSource && !isRouteCreationSource) {
+  const isStateCreationSource = connection.sourceKind === "state-out";
+  const isStateInputCreationTarget = connection.sourceKind === "state-in";
+  const isFlowCreationSource = connection.sourceKind === "flow-out";
+  const isRouteCreationSource = connection.sourceKind === "route-out";
+  if (!isStateCreationSource && !isStateInputCreationTarget && !isFlowCreationSource && !isRouteCreationSource) {
     return;
   }
 
+  if (connection.sourceKind === "state-in") {
+    emit("open-node-creation-menu", {
+      position: resolveCanvasPoint(event),
+      targetNodeId: connection.sourceNodeId,
+      targetAnchorKind: connection.sourceKind,
+      ...(connection.sourceStateKey ? { targetStateKey: connection.sourceStateKey } : {}),
+      targetValueType: resolveConnectionStateValueType(connection.sourceStateKey),
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+
+    pendingConnection.value = null;
+    pendingConnectionPoint.value = null;
+    autoSnappedTargetAnchor.value = null;
+    setActiveConnectionHoverNode(null);
+    selectedEdgeId.value = null;
+    return;
+  }
+
+  const sourceAnchorKind = connection.sourceKind as Extract<GraphConnectionAnchorKind, "flow-out" | "route-out" | "state-out">;
   emit("open-node-creation-menu", {
     position: resolveCanvasPoint(event),
-    sourceNodeId: activeConnection.value.sourceNodeId,
-    sourceAnchorKind: activeConnection.value.sourceKind,
-    sourceBranchKey: activeConnection.value.branchKey,
-    sourceStateKey: activeConnection.value.sourceStateKey,
-    sourceValueType: activeConnection.value.sourceStateKey
-      ? activeConnection.value.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY
-        ? null
-        : props.document.state_schema[activeConnection.value.sourceStateKey]?.type ?? null
-      : null,
+    sourceNodeId: connection.sourceNodeId,
+    sourceAnchorKind,
+    ...(connection.branchKey ? { sourceBranchKey: connection.branchKey } : {}),
+    ...(connection.sourceStateKey ? { sourceStateKey: connection.sourceStateKey } : {}),
+    sourceValueType: resolveConnectionStateValueType(connection.sourceStateKey),
     clientX: event.clientX,
     clientY: event.clientY,
   });
@@ -2872,6 +2994,14 @@ function createPendingConnection(anchor: ProjectedCanvasAnchor): PendingGraphCon
     };
   }
 
+  if (anchor.kind === "state-in" && anchor.stateKey) {
+    return {
+      sourceNodeId: anchor.nodeId,
+      sourceKind: "state-in",
+      sourceStateKey: anchor.stateKey,
+    };
+  }
+
   return null;
 }
 
@@ -2919,6 +3049,13 @@ function completePendingConnection(targetAnchor: ProjectedCanvasAnchor) {
       sourceStateKey: connection.sourceStateKey,
       targetNodeId: targetAnchor.nodeId,
       targetStateKey: targetAnchor.stateKey,
+    });
+  } else if (connection.sourceKind === "state-in" && connection.sourceStateKey) {
+    emit("connect-state-input-source", {
+      sourceNodeId: targetAnchor.nodeId,
+      targetNodeId: connection.sourceNodeId,
+      targetStateKey: connection.sourceStateKey,
+      targetValueType: resolveConnectionStateValueType(connection.sourceStateKey),
     });
   } else {
     emit("connect-flow", {

@@ -425,6 +425,7 @@ import {
 } from "@/lib/graph-connections";
 import {
   CREATE_AGENT_INPUT_STATE_KEY,
+  VIRTUAL_ANY_INPUT_COLOR,
   VIRTUAL_ANY_INPUT_STATE_KEY,
   VIRTUAL_ANY_OUTPUT_COLOR,
   VIRTUAL_ANY_OUTPUT_STATE_KEY,
@@ -696,10 +697,31 @@ const pendingAgentInputSourceByNodeId = computed<Record<string, PendingStateInpu
   );
 });
 const baseProjectedAnchors = computed(() => resolvedCanvasLayout.value.anchors);
-function isAgentCreateOutputAnchorVisible(nodeId: string) {
+function shouldShowAgentCreateInputPortByDefault(nodeId: string) {
+  const node = props.document.nodes[nodeId];
+  return node?.kind === "agent" && node.reads.length === 0;
+}
+
+function shouldShowAgentCreateOutputPortByDefault(nodeId: string) {
+  const node = props.document.nodes[nodeId];
+  return node?.kind === "agent" && node.writes.length === 0;
+}
+
+function isAgentCreateInputAnchorVisible(nodeId: string) {
   return (
+    shouldShowAgentCreateInputPortByDefault(nodeId) ||
     selection.selectedNodeId.value === nodeId ||
     hoveredNodeId.value === nodeId ||
+    activeConnectionHoverNodeId.value === nodeId
+  );
+}
+
+function isAgentCreateOutputAnchorVisible(nodeId: string) {
+  return (
+    shouldShowAgentCreateOutputPortByDefault(nodeId) ||
+    selection.selectedNodeId.value === nodeId ||
+    hoveredNodeId.value === nodeId ||
+    activeConnectionHoverNodeId.value === nodeId ||
     (
       pendingConnection.value?.sourceNodeId === nodeId &&
       pendingConnection.value?.sourceKind === "state-out" &&
@@ -722,6 +744,37 @@ const baseProjectedAnchorsWithoutVirtualCreatePorts = computed(() =>
         !isAgentCreateOutputAnchorVisible(anchor.nodeId)
       ),
   ),
+);
+const transientAgentCreateInputAnchors = computed<ProjectedCanvasAnchor[]>(() =>
+  Object.entries(props.document.nodes).flatMap(([nodeId, node]) => {
+    if (
+      node.kind !== "agent" ||
+      node.reads.length === 0 ||
+      pendingAgentInputSourceByNodeId.value[nodeId] ||
+      !isAgentCreateInputAnchorVisible(nodeId)
+    ) {
+      return [];
+    }
+
+    const anchorId = `${nodeId}:state-in:${VIRTUAL_ANY_INPUT_STATE_KEY}`;
+    const measuredOffset = measuredAnchorOffsets.value[anchorId];
+    if (!measuredOffset) {
+      return [];
+    }
+
+    return [
+      {
+        id: anchorId,
+        nodeId,
+        kind: "state-in" as const,
+        x: node.ui.position.x + measuredOffset.offsetX,
+        y: node.ui.position.y + measuredOffset.offsetY,
+        side: "left" as const,
+        color: VIRTUAL_ANY_INPUT_COLOR,
+        stateKey: VIRTUAL_ANY_INPUT_STATE_KEY,
+      },
+    ];
+  }),
 );
 const transientAgentInputAnchors = computed<ProjectedCanvasAnchor[]>(() =>
   Object.entries(pendingAgentInputSourceByNodeId.value).flatMap(([nodeId, source]) => {
@@ -772,7 +825,7 @@ const transientAgentOutputAnchors = computed<ProjectedCanvasAnchor[]>(() =>
     ];
   }),
 );
-const projectedAnchors = computed(() => [...baseProjectedAnchorsWithoutVirtualCreatePorts.value, ...transientAgentInputAnchors.value, ...transientAgentOutputAnchors.value]);
+const projectedAnchors = computed(() => [...baseProjectedAnchorsWithoutVirtualCreatePorts.value, ...transientAgentCreateInputAnchors.value, ...transientAgentInputAnchors.value, ...transientAgentOutputAnchors.value]);
 const flowAnchors = computed(() =>
   projectedAnchors.value.filter((anchor) => anchor.kind === "flow-in" || anchor.kind === "flow-out"),
 );

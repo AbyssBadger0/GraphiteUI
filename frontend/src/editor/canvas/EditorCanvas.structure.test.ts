@@ -575,7 +575,7 @@ test("EditorCanvas measures only rendered anchor slots so hidden virtual input c
 
 test("EditorCanvas keeps transient input capsules aligned while dragging over node bodies on touch", () => {
   assert.match(componentSource, /const activeConnectionHoverNodeId = ref<string \| null>\(null\);/);
-  assert.match(componentSource, /:hovered="hoveredNodeId === nodeId \|\| activeConnectionHoverNodeId === nodeId"/);
+  assert.match(componentSource, /:hovered="hoveredNodeId === nodeId \|\| activeConnectionHoverNodeId === nodeId \|\| hoveredPointAnchorNodeId === nodeId"/);
   assert.match(componentSource, /function syncActiveConnectionHoverNode\(event: PointerEvent\)/);
   assert.match(componentSource, /function resolveNodeIdAtPointer\(event: PointerEvent\)/);
   assert.match(componentSource, /function setActiveConnectionHoverNode\(nodeId: string \| null\)/);
@@ -584,12 +584,26 @@ test("EditorCanvas keeps transient input capsules aligned while dragging over no
   assert.match(componentSource, /setActiveConnectionHoverNode\(null\);/);
 });
 
+test("EditorCanvas keeps node port capsules visible while their state anchor dots are hovered", () => {
+  assert.match(componentSource, /const hoveredPointAnchorNodeId = ref<string \| null>\(null\);/);
+  assert.match(componentSource, /:hovered="hoveredNodeId === nodeId \|\| activeConnectionHoverNodeId === nodeId \|\| hoveredPointAnchorNodeId === nodeId"/);
+  assert.match(componentSource, /@pointerenter="setHoveredPointAnchorNode\(anchor\.nodeId\)"/);
+  assert.match(componentSource, /@pointerleave="clearHoveredPointAnchorNode\(anchor\.nodeId\)"/);
+  assert.match(componentSource, /function setHoveredPointAnchorNode\(nodeId: string\)/);
+  assert.match(componentSource, /function clearHoveredPointAnchorNode\(nodeId: string\)/);
+  assert.match(componentSource, /function setHoveredPointAnchorNode\(nodeId: string\) \{[\s\S]*scheduleAnchorMeasurement\(nodeId\);/);
+  assert.match(componentSource, /hoveredPointAnchorNodeId\.value === nodeId/);
+  assert.match(componentSource, /if \(hoveredPointAnchorNodeId\.value === nodeId\) \{[\s\S]*hoveredPointAnchorNodeId\.value = null;[\s\S]*scheduleAnchorMeasurement\(nodeId\);/);
+  assert.match(componentSource, /function clearCanvasTransientState\(\) \{[\s\S]*hoveredPointAnchorNodeId\.value = null;/);
+});
+
 test("EditorCanvas projects virtual agent output anchors only while the virtual output pill is visible or dragging", () => {
-  assert.match(componentSource, /:hovered="hoveredNodeId === nodeId \|\| activeConnectionHoverNodeId === nodeId"/);
+  assert.match(componentSource, /:hovered="hoveredNodeId === nodeId \|\| activeConnectionHoverNodeId === nodeId \|\| hoveredPointAnchorNodeId === nodeId"/);
   assert.match(componentSource, /function isAgentCreateOutputAnchorVisible\(nodeId: string\)/);
   assert.match(componentSource, /const node = props\.document\.nodes\[nodeId\];[\s\S]*node\?\.kind === "agent" && node\.writes\.length === 0/);
   assert.match(componentSource, /selection\.selectedNodeId\.value === nodeId/);
   assert.match(componentSource, /hoveredNodeId\.value === nodeId/);
+  assert.match(componentSource, /hoveredPointAnchorNodeId\.value === nodeId/);
   assert.match(componentSource, /activeConnectionHoverNodeId\.value === nodeId/);
   assert.match(componentSource, /pendingConnection\.value\?\.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY/);
   assert.match(componentSource, /const transientAgentOutputAnchors = computed<ProjectedCanvasAnchor\[\]>\(\(\) =>/);

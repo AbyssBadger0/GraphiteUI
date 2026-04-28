@@ -250,7 +250,7 @@
           :pending-state-input-source="pendingAgentInputSourceByNodeId[nodeId] ?? null"
           :human-review-pending="isHumanReviewNode(nodeId)"
           :selected="isNodeVisuallySelected(nodeId)"
-          :hovered="hoveredNodeId === nodeId || activeConnectionHoverNodeId === nodeId"
+          :hovered="hoveredNodeId === nodeId || activeConnectionHoverNodeId === nodeId || hoveredPointAnchorNodeId === nodeId"
           :interaction-locked="isGraphEditingLocked()"
           @update-node-metadata="emit('update-node-metadata', $event)"
           @update-input-config="emit('update-input-config', $event)"
@@ -341,6 +341,8 @@
             'editor-canvas__anchor--connect-target': eligibleTargetAnchorIds.has(anchor.id),
           }"
           r="5.5"
+          @pointerenter="setHoveredPointAnchorNode(anchor.nodeId)"
+          @pointerleave="clearHoveredPointAnchorNode(anchor.nodeId)"
           @pointerdown.prevent.stop="handleAnchorPointerDown(anchor)"
         />
       </svg>
@@ -602,6 +604,7 @@ const lastOpenedStateEditorRequestId = ref<string | null>(null);
 const dataEdgeStateDraft = ref<StateFieldDraft | null>(null);
 const dataEdgeStateError = ref<string | null>(null);
 const hoveredNodeId = ref<string | null>(null);
+const hoveredPointAnchorNodeId = ref<string | null>(null);
 const hoveredFlowHandleNodeId = ref<string | null>(null);
 const pendingAnchorMeasurementNodeIds = new Set<string>();
 let scheduledAnchorMeasurementFrame: number | null = null;
@@ -712,6 +715,7 @@ function isAgentCreateInputAnchorVisible(nodeId: string) {
     shouldShowAgentCreateInputPortByDefault(nodeId) ||
     selection.selectedNodeId.value === nodeId ||
     hoveredNodeId.value === nodeId ||
+    hoveredPointAnchorNodeId.value === nodeId ||
     activeConnectionHoverNodeId.value === nodeId
   );
 }
@@ -721,6 +725,7 @@ function isAgentCreateOutputAnchorVisible(nodeId: string) {
     shouldShowAgentCreateOutputPortByDefault(nodeId) ||
     selection.selectedNodeId.value === nodeId ||
     hoveredNodeId.value === nodeId ||
+    hoveredPointAnchorNodeId.value === nodeId ||
     activeConnectionHoverNodeId.value === nodeId ||
     (
       pendingConnection.value?.sourceNodeId === nodeId &&
@@ -1195,6 +1200,7 @@ function clearCanvasTransientState() {
   clearDataEdgeStateInteraction();
   autoSnappedTargetAnchor.value = null;
   setActiveConnectionHoverNode(null);
+  hoveredPointAnchorNodeId.value = null;
 }
 
 function startFlowEdgeDeleteConfirm(edge: ProjectedCanvasEdge, event: PointerEvent) {
@@ -2587,6 +2593,18 @@ function setHoveredNode(nodeId: string) {
 function clearHoveredNode(nodeId: string) {
   if (hoveredNodeId.value === nodeId) {
     hoveredNodeId.value = null;
+    scheduleAnchorMeasurement(nodeId);
+  }
+}
+
+function setHoveredPointAnchorNode(nodeId: string) {
+  hoveredPointAnchorNodeId.value = nodeId;
+  scheduleAnchorMeasurement(nodeId);
+}
+
+function clearHoveredPointAnchorNode(nodeId: string) {
+  if (hoveredPointAnchorNodeId.value === nodeId) {
+    hoveredPointAnchorNodeId.value = null;
     scheduleAnchorMeasurement(nodeId);
   }
 }

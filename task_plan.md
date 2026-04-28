@@ -4,7 +4,7 @@
 Continue conservative GraphiteUI cleanup by extracting another small, tested NodeCard responsibility while preserving editor behavior.
 
 ## Current Phase
-Phase 5: Commit and Push
+Complete
 
 ## Phases
 
@@ -33,10 +33,10 @@ Phase 5: Commit and Push
 - **Status:** completed
 
 ### Phase 5: Commit and Push
-- [ ] Review diff for unrelated/runtime artifacts.
-- [ ] Commit with a Chinese commit message.
-- [ ] Push the branch.
-- **Status:** pending
+- [x] Review diff for unrelated/runtime artifacts.
+- [x] Commit with a Chinese commit message.
+- [x] Push the branch.
+- **Status:** completed
 
 ## Progress Estimate
 | Scope | Estimate |

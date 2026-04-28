@@ -36,9 +36,12 @@
   - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
 
 ### Phase 5: Commit and Push
-- **Status:** in_progress
+- **Status:** completed
 - Actions taken:
   - Checked git status after restart; only source/planning changes are visible, no runtime logs or build output are staged.
+  - Ran `git diff --check` with no whitespace errors.
+  - Committed the cleanup as `c6e6c69` with Chinese message `抽取状态端口草稿更新逻辑`.
+  - Pushed `main` to `origin/main`.
 
 ## Test Results
 | Test | Input | Expected | Actual | Status |
@@ -60,8 +63,8 @@
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Commit and push phase. |
-| Where am I going? | Review diff/status, commit with a Chinese message, and push. |
+| Where am I? | Third cleanup implementation, verification, dev restart, commit, and push are complete. |
+| Where am I going? | Ready for final handoff. |
 | What's the goal? | Continue reducing NodeCard concentration without changing editor behavior. |
 | What have I learned? | `statePortCreateModel.ts` already owns create-port draft behavior and is the right place for draft patch helpers. |
 | What have I done? | Extracted state port draft helpers, fixed one type import issue, and ran focused checks. |

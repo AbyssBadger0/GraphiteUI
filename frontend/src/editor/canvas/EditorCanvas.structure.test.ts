@@ -167,6 +167,22 @@ test("EditorCanvas restores legacy runtime feedback styling on node cards and ac
   );
 });
 
+test("EditorCanvas aligns runtime node halos to the actual node card corner radius", () => {
+  assert.match(componentSource, /\.editor-canvas__node \{[\s\S]*--node-card-radius:\s*28px;/);
+  assert.match(componentSource, /\.editor-canvas__node-halo \{[\s\S]*--editor-canvas-node-halo-outset:\s*6px;/);
+  assert.match(componentSource, /\.editor-canvas__node-halo \{[\s\S]*inset:\s*calc\(-1 \* var\(--editor-canvas-node-halo-outset, 6px\)\);/);
+  assert.match(
+    componentSource,
+    /\.editor-canvas__node-halo \{[\s\S]*border-radius:\s*calc\(var\(--node-card-radius, 28px\) \+ var\(--editor-canvas-node-halo-outset, 6px\)\);/,
+  );
+});
+
+test("EditorCanvas keeps runtime node halo geometry fixed while breathing", () => {
+  assert.doesNotMatch(componentSource, /@keyframes editor-canvas-running-halo-breathe \{[\s\S]*transform:\s*scale/);
+  assert.doesNotMatch(componentSource, /@keyframes editor-canvas-paused-halo-breathe \{[\s\S]*transform:\s*scale/);
+  assert.match(componentSource, /\.editor-canvas__node-halo--running,[\s\S]*will-change:\s*opacity, filter;/);
+});
+
 test("EditorCanvas treats awaiting-human current node as a persistent review node", () => {
   assert.match(componentSource, /'editor-canvas__node--selected': isNodeVisuallySelected\(nodeId\)/);
   assert.match(componentSource, /:human-review-pending="isHumanReviewNode\(nodeId\)"/);

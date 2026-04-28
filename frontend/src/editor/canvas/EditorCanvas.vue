@@ -4300,6 +4300,7 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 }
 
 .editor-canvas__node {
+  --node-card-radius: 28px;
   position: absolute;
   top: 0;
   left: 0;
@@ -4422,25 +4423,21 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   0%,
   100% {
     opacity: 0.64;
-    transform: scale(0.986);
     filter: blur(8px);
   }
 
   44% {
     opacity: 1;
-    transform: scale(1.012);
     filter: blur(12px);
   }
 
   55% {
     opacity: 0.78;
-    transform: scale(1.002);
     filter: blur(10px);
   }
 
   66% {
     opacity: 0.96;
-    transform: scale(1.008);
     filter: blur(11px);
   }
 }
@@ -4449,25 +4446,21 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   0%,
   100% {
     opacity: 0.62;
-    transform: scale(0.988);
     filter: blur(8px);
   }
 
   46% {
     opacity: 1;
-    transform: scale(1.014);
     filter: blur(13px);
   }
 
   58% {
     opacity: 0.8;
-    transform: scale(1.002);
     filter: blur(10px);
   }
 
   70% {
     opacity: 0.95;
-    transform: scale(1.008);
     filter: blur(12px);
   }
 }
@@ -4511,10 +4504,11 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 }
 
 .editor-canvas__node-halo {
+  --editor-canvas-node-halo-outset: 6px;
   position: absolute;
-  inset: -6px;
+  inset: calc(-1 * var(--editor-canvas-node-halo-outset, 6px));
   z-index: -1;
-  border-radius: 24px;
+  border-radius: calc(var(--node-card-radius, 28px) + var(--editor-canvas-node-halo-outset, 6px));
   pointer-events: none;
 }
 
@@ -4524,8 +4518,8 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 .editor-canvas__node-halo--paused-current {
   opacity: 1;
   filter: blur(10px);
-  transition: opacity 180ms ease, transform 180ms ease;
-  will-change: opacity, transform, filter;
+  transition: opacity 180ms ease, filter 180ms ease;
+  will-change: opacity, filter;
 }
 
 .editor-canvas__node-halo--running {

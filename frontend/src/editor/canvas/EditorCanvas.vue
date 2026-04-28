@@ -394,7 +394,6 @@ import EditorMinimap from "./EditorMinimap.vue";
 import NodeCard from "@/editor/nodes/NodeCard.vue";
 import StateEditorPopover from "@/editor/nodes/StateEditorPopover.vue";
 import { type ProjectedCanvasAnchor, type ProjectedCanvasEdge } from "@/editor/canvas/edgeProjection";
-import { buildPendingConnectionPreviewPath } from "@/editor/canvas/connectionPreviewPath";
 import { resolveFlowAnchorOffset } from "@/editor/canvas/flowAnchorLayout";
 import { resolveEdgeRunPresentation } from "@/editor/canvas/runEdgePresentation";
 import { resolveNodeRunPresentation } from "@/editor/canvas/runNodePresentation";
@@ -426,6 +425,15 @@ import {
   buildPointAnchorConnectStyle,
   buildProjectedEdgeStyle,
 } from "./canvasInteractionStyleModel";
+import {
+  buildConnectionPreviewModel,
+  buildPendingConnectionFromAnchor,
+  isConcreteStateConnectionKey,
+  isSamePendingConnection,
+  resolveConnectionAccentColor,
+  resolveConnectionPreviewStateKey,
+  resolveConnectionSourceAnchorId,
+} from "./canvasConnectionModel";
 import {
   buildMinimapNodeModel,
   buildNodeCardSizeStyle,
@@ -713,16 +721,6 @@ const visibleProjectedEdgeIds = computed(
       }).map((edge) => edge.id),
     ),
 );
-function isConcreteStateConnectionKey(stateKey: string | null | undefined): stateKey is string {
-  return (
-    typeof stateKey === "string" &&
-    stateKey.length > 0 &&
-    stateKey !== CREATE_AGENT_INPUT_STATE_KEY &&
-    stateKey !== VIRTUAL_ANY_INPUT_STATE_KEY &&
-    stateKey !== VIRTUAL_ANY_OUTPUT_STATE_KEY
-  );
-}
-
 function resolveStatePortPreview(stateKey: string | null | undefined): PendingStatePortPreview | null {
   if (!isConcreteStateConnectionKey(stateKey)) {
     return null;
@@ -963,21 +961,9 @@ const selectedReconnectConnection = computed<PendingGraphConnection | null>(() =
   };
 });
 const activeConnection = computed(() => pendingConnection.value ?? selectedReconnectConnection.value);
-const activeConnectionSourceAnchorId = computed(() => {
-  if (!activeConnection.value) {
-    return null;
-  }
-
-  const sourceAnchor = projectedAnchors.value.find(
-    (anchor) =>
-      anchor.nodeId === activeConnection.value?.sourceNodeId &&
-      anchor.kind === activeConnection.value.sourceKind &&
-      (anchor.kind !== "route-out" || anchor.branch === activeConnection.value.branchKey) &&
-      ((anchor.kind !== "state-out" && anchor.kind !== "state-in") ||
-        anchor.stateKey === activeConnection.value.sourceStateKey),
-  );
-  return sourceAnchor?.id ?? null;
-});
+const activeConnectionSourceAnchorId = computed(() =>
+  resolveConnectionSourceAnchorId(activeConnection.value, projectedAnchors.value),
+);
 const eligibleTargetAnchorIds = computed(() =>
   new Set(
     projectedAnchors.value
@@ -985,72 +971,26 @@ const eligibleTargetAnchorIds = computed(() =>
       .map((anchor) => anchor.id),
   ),
 );
-function resolveConnectionPreviewStateKey() {
-  if (
-    activeConnection.value?.sourceKind === "state-out" &&
-    activeConnection.value.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY &&
-    isConcreteStateConnectionKey(autoSnappedTargetAnchor.value?.stateKey)
-  ) {
-    return autoSnappedTargetAnchor.value?.stateKey ?? null;
-  }
-  if (
-    activeConnection.value?.sourceKind === "state-in" &&
-    activeConnection.value.sourceStateKey === VIRTUAL_ANY_INPUT_STATE_KEY &&
-    isConcreteStateConnectionKey(autoSnappedTargetAnchor.value?.stateKey)
-  ) {
-    return autoSnappedTargetAnchor.value?.stateKey ?? null;
-  }
-  if (
-    (activeConnection.value?.sourceKind === "state-out" || activeConnection.value?.sourceKind === "state-in") &&
-    activeConnection.value.sourceStateKey
-  ) {
-    return activeConnection.value.sourceStateKey;
-  }
-  return null;
-}
-
-const activeConnectionAccentColor = computed(() => {
-  const previewStateKey = resolveConnectionPreviewStateKey();
-  if (previewStateKey) {
-    if (previewStateKey === VIRTUAL_ANY_INPUT_STATE_KEY) {
-      return VIRTUAL_ANY_INPUT_COLOR;
-    }
-    if (previewStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY) {
-      return VIRTUAL_ANY_OUTPUT_COLOR;
-    }
-    return props.document.state_schema[previewStateKey]?.color?.trim() || "#2563eb";
-  }
-  if (activeConnection.value?.sourceKind === "route-out" && activeConnection.value.branchKey) {
-    return resolveRouteHandlePalette(activeConnection.value.branchKey).accent;
-  }
-  return "#c96b1f";
-});
-const connectionPreview = computed(() => {
-  if (!activeConnection.value || !pendingConnectionPoint.value || !activeConnectionSourceAnchorId.value) {
-    return null;
-  }
-
-  const sourceAnchor = projectedAnchors.value.find((anchor) => anchor.id === activeConnectionSourceAnchorId.value);
-  if (!sourceAnchor) {
-    return null;
-  }
-
-  return {
-    kind:
-      activeConnection.value.sourceKind === "route-out"
-        ? "route" as const
-        : activeConnection.value.sourceKind === "state-out" || activeConnection.value.sourceKind === "state-in"
-          ? "data" as const
-          : "flow" as const,
-    path: buildPendingConnectionPreviewPath({
-      kind: activeConnection.value.sourceKind,
-      sourceX: sourceAnchor.x,
-      sourceY: sourceAnchor.y,
-      targetX: pendingConnectionPoint.value.x,
-      targetY: pendingConnectionPoint.value.y,
-    }),
-  };
-});
+const connectionPreviewStateKey = computed(() =>
+  resolveConnectionPreviewStateKey({
+    connection: activeConnection.value,
+    autoSnappedTargetStateKey: autoSnappedTargetAnchor.value?.stateKey,
+  }),
+);
+const activeConnectionAccentColor = computed(() =>
+  resolveConnectionAccentColor({
+    connection: activeConnection.value,
+    previewStateKey: connectionPreviewStateKey.value,
+    stateSchema: props.document.state_schema,
+  }),
+);
+const connectionPreview = computed(() =>
+  buildConnectionPreviewModel({
+    connection: activeConnection.value,
+    pendingPoint: pendingConnectionPoint.value,
+    sourceAnchor: projectedAnchors.value.find((anchor) => anchor.id === activeConnectionSourceAnchorId.value) ?? null,
+  }),
+);
 const connectionPreviewStyle = computed(() =>
   buildConnectionPreviewStyle(connectionPreview.value?.kind ?? null, activeConnectionAccentColor.value),
 );
@@ -2733,7 +2673,7 @@ function handleAnchorPointerDown(anchor: ProjectedCanvasAnchor) {
   }
 
   window.getSelection()?.removeAllRanges();
-  const nextPendingConnection = createPendingConnection(anchor);
+  const nextPendingConnection = buildPendingConnectionFromAnchor(anchor);
   if (!nextPendingConnection) {
     return;
   }
@@ -2847,50 +2787,6 @@ function buildConditionRouteTargets(document: GraphPayload | GraphDocument, node
       const targetNode = targetNodeId ? document.nodes[targetNodeId] : null;
       return [branchKey, targetNode?.name ?? targetNodeId ?? null];
     }),
-  );
-}
-
-function createPendingConnection(anchor: ProjectedCanvasAnchor): PendingGraphConnection | null {
-  if (anchor.kind === "flow-out") {
-    return {
-      sourceNodeId: anchor.nodeId,
-      sourceKind: "flow-out",
-    };
-  }
-
-  if (anchor.kind === "route-out" && anchor.branch) {
-    return {
-      sourceNodeId: anchor.nodeId,
-      sourceKind: "route-out",
-      branchKey: anchor.branch,
-    };
-  }
-
-  if (anchor.kind === "state-out" && anchor.stateKey) {
-    return {
-      sourceNodeId: anchor.nodeId,
-      sourceKind: "state-out",
-      sourceStateKey: anchor.stateKey,
-    };
-  }
-
-  if (anchor.kind === "state-in" && anchor.stateKey) {
-    return {
-      sourceNodeId: anchor.nodeId,
-      sourceKind: "state-in",
-      sourceStateKey: anchor.stateKey,
-    };
-  }
-
-  return null;
-}
-
-function isSamePendingConnection(left: PendingGraphConnection | null, right: PendingGraphConnection | null) {
-  return (
-    left?.sourceNodeId === right?.sourceNodeId &&
-    left?.sourceKind === right?.sourceKind &&
-    left?.sourceStateKey === right?.sourceStateKey &&
-    left?.branchKey === right?.branchKey
   );
 }
 

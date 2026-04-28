@@ -21,6 +21,10 @@ function readCanvasDataEdgeStateModelSource() {
   return readFileSync(resolve(currentDirectory, "canvasDataEdgeStateModel.ts"), "utf8").replace(/\r\n/g, "\n");
 }
 
+function readCanvasConnectionModelSource() {
+  return readFileSync(resolve(currentDirectory, "canvasConnectionModel.ts"), "utf8").replace(/\r\n/g, "\n");
+}
+
 function readStateEditorModelSource() {
   return readFileSync(resolve(currentDirectory, "../nodes/stateEditorModel.ts"), "utf8").replace(/\r\n/g, "\n");
 }
@@ -436,6 +440,7 @@ test("EditorCanvas delays clearing node hover state so hover-dependent node chro
 
 test("EditorCanvas renders output flow hotspots only for allowed modes and interacted nodes", () => {
   const canvasInteractionStyleModelSource = readCanvasInteractionStyleModelSource();
+  const canvasConnectionModelSource = readCanvasConnectionModelSource();
 
   assert.match(componentSource, /v-for="anchor in flowAnchors"/);
   assert.match(componentSource, /class="editor-canvas__flow-hotspot"/);
@@ -460,15 +465,23 @@ test("EditorCanvas renders output flow hotspots only for allowed modes and inter
   assert.doesNotMatch(componentSource, /connectionPreview\.kind === 'route' \? 'url\(#editor-canvas-arrow-preview\)'/);
   assert.doesNotMatch(componentSource, /edge\.kind === 'route'[\s\S]*url\(#editor-canvas-arrow-route\)/);
   assert.doesNotMatch(componentSource, /editor-canvas-arrow-flow/);
-  assert.match(componentSource, /const activeConnectionAccentColor = computed\(\(\) =>/);
+  assert.match(componentSource, /import \{[\s\S]*buildConnectionPreviewModel,[\s\S]*buildPendingConnectionFromAnchor,[\s\S]*isConcreteStateConnectionKey,[\s\S]*isSamePendingConnection,[\s\S]*resolveConnectionAccentColor,[\s\S]*resolveConnectionPreviewStateKey,[\s\S]*resolveConnectionSourceAnchorId,[\s\S]*\} from "\.\/canvasConnectionModel";/);
+  assert.match(componentSource, /const connectionPreviewStateKey = computed\(\(\) =>\s*resolveConnectionPreviewStateKey\(\{/);
+  assert.match(componentSource, /const activeConnectionAccentColor = computed\(\(\) =>\s*resolveConnectionAccentColor\(\{/);
   assert.match(componentSource, /import \{[\s\S]*buildConnectionPreviewStyle,[\s\S]*buildFlowHotspotStyle,[\s\S]*buildFlowHotspotConnectStyle,[\s\S]*\} from "\.\/canvasInteractionStyleModel";/);
   assert.match(componentSource, /const flowHotspotStyle = buildFlowHotspotStyle;/);
   assert.match(componentSource, /const flowHotspotConnectStyle = \(anchor: ProjectedCanvasAnchor\) =>\s*buildFlowHotspotConnectStyle\(anchor, canvasInteractionStyleContext\.value\);/);
   assert.match(componentSource, /const connectionPreviewStyle = computed\(\(\) =>\s*buildConnectionPreviewStyle\(connectionPreview\.value\?\.kind \?\? null, activeConnectionAccentColor\.value\)/);
+  assert.match(componentSource, /const activeConnectionSourceAnchorId = computed\(\(\) =>\s*resolveConnectionSourceAnchorId\(activeConnection\.value, projectedAnchors\.value\)/);
+  assert.match(componentSource, /const connectionPreview = computed\(\(\) =>\s*buildConnectionPreviewModel\(\{/);
+  assert.match(componentSource, /sourceAnchor: projectedAnchors\.value\.find\(\(anchor\) => anchor\.id === activeConnectionSourceAnchorId\.value\) \?\? null,/);
+  assert.match(canvasConnectionModelSource, /export function buildConnectionPreviewModel/);
+  assert.match(canvasConnectionModelSource, /buildPendingConnectionPreviewPath\(\{/);
   assert.match(canvasInteractionStyleModelSource, /export function withAlpha\(hexColor: string, alpha: number\)/);
   assert.doesNotMatch(componentSource, /function withAlpha\(hexColor: string, alpha: number\)/);
   assert.doesNotMatch(componentSource, /function flowHotspotStyle\(anchor: ProjectedCanvasAnchor\)/);
   assert.doesNotMatch(componentSource, /function flowHotspotConnectStyle\(anchor: ProjectedCanvasAnchor\)/);
+  assert.doesNotMatch(componentSource, /buildPendingConnectionPreviewPath\(\{/);
   assert.match(componentSource, /\.editor-canvas__edge--data \{[\s\S]*animation:\s*editor-canvas-ant-line 1\.2s linear infinite;/);
   assert.match(componentSource, /\.editor-canvas__edge--flow \{[\s\S]*animation:\s*editor-canvas-flow-line 1\.8s linear infinite;/);
   assert.match(componentSource, /\.editor-canvas__edge--route \{[\s\S]*stroke-dasharray:\s*18 22;/);
@@ -734,15 +747,20 @@ test("EditorCanvas opens the creation flow when output drags end on empty canvas
 });
 
 test("EditorCanvas opens reverse node creation when input drags end on empty canvas", () => {
+  const canvasConnectionModelSource = readCanvasConnectionModelSource();
+
   assert.match(componentSource, /targetAnchorKind\?: Extract<GraphConnectionAnchorKind, "state-in">/);
   assert.match(componentSource, /connection\.sourceKind === "state-in"/);
   assert.match(componentSource, /targetNodeId:\s*connection\.sourceNodeId/);
   assert.match(componentSource, /targetAnchorKind:\s*connection\.sourceKind/);
   assert.match(componentSource, /targetStateKey: connection\.sourceStateKey/);
   assert.match(componentSource, /targetValueType:/);
-  assert.match(componentSource, /if \(anchor\.kind === "state-in" && anchor\.stateKey\)/);
-  assert.match(componentSource, /activeConnection\.value\.sourceKind === "state-in"[\s\S]*\? "data" as const/);
-  assert.match(componentSource, /buildPendingConnectionPreviewPath\(\{[\s\S]*kind: activeConnection\.value\.sourceKind/);
+  assert.match(componentSource, /const nextPendingConnection = buildPendingConnectionFromAnchor\(anchor\);/);
+  assert.match(componentSource, /isSamePendingConnection\(pendingConnection\.value, nextPendingConnection\)/);
+  assert.match(canvasConnectionModelSource, /if \(anchor\.kind === "state-in" && anchor\.stateKey\)/);
+  assert.match(canvasConnectionModelSource, /sourceKind === "state-out" \|\| sourceKind === "state-in"[\s\S]*return "data";/);
+  assert.doesNotMatch(componentSource, /function createPendingConnection/);
+  assert.doesNotMatch(componentSource, /function isSamePendingConnection/);
 });
 
 test("EditorCanvas snaps reverse input drags to existing upstream writer node bodies", () => {
@@ -789,19 +807,29 @@ test("EditorCanvas exposes transient new agent input anchors while state draggin
 });
 
 test("EditorCanvas previews concrete target state while dragging from a virtual output", () => {
+  const canvasConnectionModelSource = readCanvasConnectionModelSource();
+
   assert.match(componentSource, /type PendingStatePortPreview = \{/);
-  assert.match(componentSource, /function isConcreteStateConnectionKey\(stateKey: string \| null \| undefined\)/);
+  assert.match(componentSource, /import \{[\s\S]*isConcreteStateConnectionKey,[\s\S]*\} from "\.\/canvasConnectionModel";/);
   assert.match(componentSource, /function resolveStatePortPreview\(stateKey: string \| null \| undefined\)/);
   assert.match(componentSource, /const pendingStateOutputTargetByNodeId = computed<Record<string, PendingStatePortPreview>>\(\(\) =>/);
   assert.match(componentSource, /connection\.sourceStateKey !== VIRTUAL_ANY_OUTPUT_STATE_KEY/);
   assert.match(componentSource, /const targetPreview = resolveStatePortPreview\(autoSnappedTargetAnchor\.value\?\.stateKey\);/);
   assert.match(componentSource, /\[connection\.sourceNodeId\]: targetPreview/);
   assert.match(componentSource, /:pending-state-output-target="pendingStateOutputTargetByNodeId\[nodeId\] \?\? null"/);
-  assert.match(componentSource, /const previewStateKey = resolveConnectionPreviewStateKey\(\);/);
-  assert.match(componentSource, /return props\.document\.state_schema\[previewStateKey\]\?\.color\?\.trim\(\) \|\| "#2563eb";/);
+  assert.match(componentSource, /const connectionPreviewStateKey = computed\(\(\) =>\s*resolveConnectionPreviewStateKey\(\{/);
+  assert.match(componentSource, /autoSnappedTargetStateKey: autoSnappedTargetAnchor\.value\?\.stateKey,/);
+  assert.match(componentSource, /previewStateKey: connectionPreviewStateKey\.value,/);
+  assert.match(componentSource, /stateSchema: props\.document\.state_schema,/);
+  assert.match(canvasConnectionModelSource, /export function isConcreteStateConnectionKey/);
+  assert.match(canvasConnectionModelSource, /stateSchema\[input\.previewStateKey\]\?\.color\?\.trim\(\) \|\| "#2563eb"/);
+  assert.doesNotMatch(componentSource, /function isConcreteStateConnectionKey/);
+  assert.doesNotMatch(componentSource, /function resolveConnectionPreviewStateKey/);
 });
 
 test("EditorCanvas snaps reverse virtual input drags to concrete state output pills with state preview", () => {
+  const canvasConnectionModelSource = readCanvasConnectionModelSource();
+
   assert.match(componentSource, /const pendingStateInputSourceTargetByNodeId = computed<Record<string, PendingStatePortPreview>>\(\(\) =>/);
   assert.match(componentSource, /connection\?\.sourceKind !== "state-in" \|\| connection\.sourceStateKey !== VIRTUAL_ANY_INPUT_STATE_KEY/);
   assert.match(componentSource, /const sourcePreview = resolveStatePortPreview\(autoSnappedTargetAnchor\.value\?\.stateKey\);/);
@@ -810,7 +838,7 @@ test("EditorCanvas snaps reverse virtual input drags to concrete state output pi
   assert.match(componentSource, /function resolveEligibleConcreteStateInputSourceAnchorAtPointer\(nodeId: string, event: PointerEvent\)/);
   assert.match(componentSource, /const directStateInputSourceAnchor = resolveEligibleConcreteStateInputSourceAnchorAtPointer\(nodeId, event\);[\s\S]*if \(directStateInputSourceAnchor\) \{[\s\S]*return directStateInputSourceAnchor;/);
   assert.match(componentSource, /anchor\.nodeId === nodeId &&[\s\S]*anchor\.kind === "state-out" &&[\s\S]*isConcreteStateConnectionKey\(anchor\.stateKey\) &&[\s\S]*canCompleteCanvasConnection\(anchor\)/);
-  assert.match(componentSource, /activeConnection\.value\?\.sourceKind === "state-in" &&[\s\S]*activeConnection\.value\.sourceStateKey === VIRTUAL_ANY_INPUT_STATE_KEY &&[\s\S]*isConcreteStateConnectionKey\(autoSnappedTargetAnchor\.value\?\.stateKey\)/);
+  assert.match(canvasConnectionModelSource, /connection\?\.sourceKind === "state-in" &&[\s\S]*connection\.sourceStateKey === VIRTUAL_ANY_INPUT_STATE_KEY &&[\s\S]*isConcreteStateConnectionKey\(input\.autoSnappedTargetStateKey\)/);
   assert.match(componentSource, /emit\("connect-state", \{[\s\S]*sourceNodeId: targetAnchor\.nodeId,[\s\S]*sourceStateKey: targetAnchor\.stateKey,[\s\S]*targetNodeId: connection\.sourceNodeId,[\s\S]*targetStateKey: connection\.sourceStateKey/);
 });
 
@@ -877,7 +905,9 @@ test("EditorCanvas projects virtual agent output anchors only while the virtual 
 });
 
 test("EditorCanvas opens node creation from the virtual agent any output", () => {
-  assert.match(componentSource, /activeConnection\.value\.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY/);
+  const canvasConnectionModelSource = readCanvasConnectionModelSource();
+
+  assert.match(canvasConnectionModelSource, /connection\?\.sourceKind === "state-out" &&[\s\S]*connection\.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY/);
   assert.match(componentSource, /function resolveConnectionStateValueType\(stateKey: string \| undefined\)/);
   assert.match(componentSource, /stateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY/);
   assert.match(componentSource, /sourceValueType: resolveConnectionStateValueType\(connection\.sourceStateKey\)/);

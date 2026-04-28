@@ -256,10 +256,10 @@ test("NodeCard keeps skill actions below the agent while creating ports from plu
   assert.match(agentSection, /<ElPopover[\s\S]*:visible="isSkillPickerOpen"[\s\S]*popper-class="node-card__agent-add-popover-popper"/);
   assert.match(agentSection, /class="node-card__agent-add-popover node-card__skill-picker"/);
   assert.match(agentSection, /@click\.stop="toggleSkillPicker"/);
-  assert.match(agentSection, /@dblclick\.stop="openPortStateCreate\('input'\)"/);
-  assert.match(agentSection, /@dblclick\.stop="openPortStateCreate\('output'\)"/);
-  assert.doesNotMatch(agentSection, /@click\.stop="openPortStateCreate\('input'\)"/);
-  assert.doesNotMatch(agentSection, /@click\.stop="openPortStateCreate\('output'\)"/);
+  assert.match(agentSection, /@click\.stop="openPortStateCreate\('input'\)"/);
+  assert.match(agentSection, /@click\.stop="openPortStateCreate\('output'\)"/);
+  assert.doesNotMatch(agentSection, /@dblclick\.stop="openPortStateCreate\('input'\)"/);
+  assert.doesNotMatch(agentSection, /@dblclick\.stop="openPortStateCreate\('output'\)"/);
   assert.match(agentSection, /class="node-card__agent-create-port-popover node-card__port-picker"/);
   assert.match(agentSection, /class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start node-card__port-pill--create"/);
   assert.match(agentSection, /class="node-card__port-pill node-card__port-pill--output node-card__port-pill--dock-end node-card__port-pill--create"/);
@@ -306,11 +306,16 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.match(componentSource, /createStateDraftFromQuery\(side === "input" \? "Input" : "Output", Object\.keys\(props\.stateSchema\)\)/);
   assert.match(agentSection, /v-for="port in agentInputPorts"/);
   assert.match(agentSection, /v-for="port in agentOutputPorts"/);
+  assert.match(componentSource, /const shouldShowAgentCreateInputPort = computed\(\(\) => agentInputPorts\.value\.length === 0\);/);
+  assert.match(componentSource, /const shouldShowAgentCreateOutputPort = computed\(\(\) => agentOutputPorts\.value\.length === 0\);/);
   assert.match(agentSection, /data-agent-create-port="input"/);
   assert.match(agentSection, /data-agent-create-port="output"/);
-  assert.match(agentSection, /@click\.stop\s*\n/);
-  assert.match(agentSection, /@dblclick\.stop="openPortStateCreate\('input'\)"/);
-  assert.match(agentSection, /@dblclick\.stop="openPortStateCreate\('output'\)"/);
+  assert.match(agentSection, /:class="\{ 'node-card__port-pill-row--create-visible': shouldShowAgentCreateInputPort \}"/);
+  assert.match(agentSection, /:class="\{ 'node-card__port-pill-row--create-visible': shouldShowAgentCreateOutputPort \}"/);
+  assert.match(agentSection, /@click\.stop="openPortStateCreate\('input'\)"/);
+  assert.match(agentSection, /@click\.stop="openPortStateCreate\('output'\)"/);
+  assert.doesNotMatch(agentSection, /@dblclick\.stop="openPortStateCreate\('input'\)"/);
+  assert.doesNotMatch(agentSection, /@dblclick\.stop="openPortStateCreate\('output'\)"/);
   assert.match(componentSource, /const agentCreateInputAnchorStateKey = computed\(\(\) =>/);
   assert.match(componentSource, /props\.pendingStateInputSource \? CREATE_AGENT_INPUT_STATE_KEY : VIRTUAL_ANY_INPUT_STATE_KEY/);
   assert.match(agentSection, /:data-anchor-slot-id="\`\$\{nodeId\}:state-in:\$\{agentCreateInputAnchorStateKey\}\`"/);
@@ -334,8 +339,9 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.match(componentSource, /\.node-card:hover \.node-card__port-pill-row--create,/);
   assert.match(componentSource, /\.node-card--hovered \.node-card__port-pill-row--create,/);
   assert.match(componentSource, /\.node-card--selected \.node-card__port-pill-row--create,/);
+  assert.match(componentSource, /\.node-card__port-pill-row--create-visible,/);
   const visibleCreateRowStyle = componentSource.match(
-    /\.node-card:hover \.node-card__port-pill-row--create,[\s\S]*?\.node-card--floating-panel-open \.node-card__port-pill-row--create \{[\s\S]*?\}/,
+    /\.node-card__port-pill-row--create-visible,[\s\S]*?\.node-card--floating-panel-open \.node-card__port-pill-row--create \{[\s\S]*?\}/,
   );
   assert.ok(visibleCreateRowStyle, "expected visible create port row style");
   assert.match(visibleCreateRowStyle[0], /display:\s*flex;/);

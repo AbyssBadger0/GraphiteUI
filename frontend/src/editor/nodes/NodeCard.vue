@@ -529,15 +529,17 @@
             popper-class="node-card__agent-add-popover-popper"
           >
             <template #reference>
-              <div class="node-card__port-pill-row node-card__port-pill-row--create">
+              <div
+                class="node-card__port-pill-row node-card__port-pill-row--create"
+                :class="{ 'node-card__port-pill-row--create-visible': shouldShowAgentCreateInputPort }"
+              >
                 <span
                   class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start node-card__port-pill--create"
                   :style="{ '--node-card-port-accent': pendingStateInputSource?.stateColor ?? '#16a34a' }"
                   data-agent-create-port="input"
                   data-anchor-hitarea="true"
                   @pointerdown.stop
-                  @click.stop
-                  @dblclick.stop="openPortStateCreate('input')"
+                  @click.stop="openPortStateCreate('input')"
                 >
                   <span
                     class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"
@@ -724,15 +726,17 @@
             popper-class="node-card__agent-add-popover-popper"
           >
             <template #reference>
-              <div class="node-card__port-pill-row node-card__port-pill-row--right node-card__port-pill-row--create">
+              <div
+                class="node-card__port-pill-row node-card__port-pill-row--right node-card__port-pill-row--create"
+                :class="{ 'node-card__port-pill-row--create-visible': shouldShowAgentCreateOutputPort }"
+              >
                 <span
                   class="node-card__port-pill node-card__port-pill--output node-card__port-pill--dock-end node-card__port-pill--create"
                   :style="{ '--node-card-port-accent': VIRTUAL_ANY_OUTPUT_COLOR }"
                   data-agent-create-port="output"
                   data-anchor-hitarea="true"
                   @pointerdown.stop
-                  @click.stop
-                  @dblclick.stop="openPortStateCreate('output')"
+                  @click.stop="openPortStateCreate('output')"
                 >
                   <span class="node-card__port-pill-label">
                     <span class="node-card__port-pill-label-text">+ output</span>
@@ -1433,6 +1437,8 @@ const agentInputPorts = computed<NodePortViewModel[]>(() =>
 const agentOutputPorts = computed<NodePortViewModel[]>(() =>
   view.value.body.kind === "agent" ? view.value.outputs.filter((port) => !port.virtual) : [],
 );
+const shouldShowAgentCreateInputPort = computed(() => agentInputPorts.value.length === 0);
+const shouldShowAgentCreateOutputPort = computed(() => agentOutputPorts.value.length === 0);
 const agentCreateInputAnchorStateKey = computed(() =>
   props.pendingStateInputSource ? CREATE_AGENT_INPUT_STATE_KEY : VIRTUAL_ANY_INPUT_STATE_KEY,
 );
@@ -3531,6 +3537,7 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
   pointer-events: none;
 }
 
+.node-card__port-pill-row--create-visible,
 .node-card:hover .node-card__port-pill-row--create,
 .node-card--hovered .node-card__port-pill-row--create,
 .node-card--selected .node-card__port-pill-row--create,

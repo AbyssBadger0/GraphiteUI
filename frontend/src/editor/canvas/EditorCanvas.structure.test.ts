@@ -84,7 +84,6 @@ test("EditorCanvas exposes invisible corner hotzones for real node resizing", ()
   assert.match(componentSource, /\.editor-canvas__resize-hotzone \{[\s\S]*width:\s*40px;[\s\S]*height:\s*40px;/);
   assert.match(componentSource, /\.editor-canvas__resize-hotzone \{[\s\S]*background:\s*transparent;/);
   assert.match(componentSource, /\.editor-canvas__resize-hotzone \{[\s\S]*border:\s*0;/);
-  assert.doesNotMatch(componentSource, /editor-canvas__resize-handle/);
   assert.doesNotMatch(componentSource, /data-node-resize-handle/);
   assert.doesNotMatch(componentSource, /:title="t\('canvasResize\.resizeNode'\)"/);
   assert.match(componentSource, /\.editor-canvas__resize-hotzone--nw \{[\s\S]*top:\s*-6px;[\s\S]*left:\s*-6px;/);
@@ -95,6 +94,22 @@ test("EditorCanvas exposes invisible corner hotzones for real node resizing", ()
   assert.match(componentSource, /\.editor-canvas__resize-hotzone--ne,[\s\S]*\.editor-canvas__resize-hotzone--sw \{[\s\S]*cursor:\s*nesw-resize;/);
   const northwestHotzoneCssBlock = componentSource.match(/\.editor-canvas__resize-hotzone--nw \{([\s\S]*?)\n\}/)?.[1] ?? "";
   assert.doesNotMatch(northwestHotzoneCssBlock, /transform:/);
+});
+
+test("EditorCanvas shows selected or hovered nodes with discoverable resize corner affordances", () => {
+  assert.match(componentSource, /v-if="isNodeResizeHandleVisible\(nodeId\)"/);
+  assert.match(componentSource, /class="editor-canvas__resize-handles"/);
+  assert.match(componentSource, /class="editor-canvas__resize-handle"/);
+  assert.match(componentSource, /aria-hidden="true"/);
+  assert.match(componentSource, /function isNodeResizeHandleVisible\(nodeId: string\)/);
+  assert.match(componentSource, /return !isGraphEditingLocked\(\) && !activeConnection\.value && \(/);
+  assert.match(componentSource, /nodeResizeDrag\.value\?\.nodeId === nodeId/);
+  assert.match(componentSource, /isNodeVisuallySelected\(nodeId\)/);
+  assert.match(componentSource, /hoveredNodeId\.value === nodeId/);
+  assert.match(componentSource, /\.editor-canvas__resize-handles \{[\s\S]*pointer-events:\s*none;/);
+  assert.match(componentSource, /\.editor-canvas__resize-handle \{[\s\S]*width:\s*16px;[\s\S]*height:\s*16px;/);
+  assert.match(componentSource, /\.editor-canvas__resize-handle--nw \{[\s\S]*transform:\s*translate\(-50%,\s*-50%\);/);
+  assert.match(componentSource, /\.editor-canvas__resize-handle--se \{[\s\S]*transform:\s*translate\(50%,\s*50%\);/);
 });
 
 test("EditorCanvas forwards node model refresh requests to the workspace", () => {
@@ -159,8 +174,8 @@ test("EditorCanvas restores legacy runtime feedback styling on node cards and ac
   assert.match(componentSource, /:deep\(\.editor-canvas__node--paused-current\) \{[\s\S]*animation:\s*editor-canvas-paused-card-breathe 2\.05s ease-in-out infinite;/);
   assert.match(componentSource, /:deep\(\.editor-canvas__node--success\) \{[\s\S]*0 0 0 1\.5px rgba\(180,\s*83,\s*9,\s*0\.34\)/);
   assert.match(componentSource, /:deep\(\.editor-canvas__node--failed\) \{[\s\S]*0 0 0 1\.5px rgba\(239,\s*68,\s*68,\s*0\.56\)/);
-  assert.match(componentSource, /\.editor-canvas__node-halo--success \{[\s\S]*--editor-canvas-node-halo-border-rest:\s*rgba\(180,\s*83,\s*9,\s*0\.48\)/);
-  assert.match(componentSource, /\.editor-canvas__node-halo--failed \{[\s\S]*--editor-canvas-node-halo-border-rest:\s*rgba\(239,\s*68,\s*68,\s*0\.62\)/);
+  assert.doesNotMatch(componentSource, /\.editor-canvas__node-halo--success/);
+  assert.doesNotMatch(componentSource, /\.editor-canvas__node-halo--failed/);
   assert.match(componentSource, /\.editor-canvas__edge--active-run \{[\s\S]*stroke-width:\s*3px;/);
   assert.match(componentSource, /\.editor-canvas__edge--active-run \{[\s\S]*opacity:\s*1;/);
   assert.match(componentSource, /\.editor-canvas__edge--active-run \{[\s\S]*filter:\s*drop-shadow\(0 0 10px var\(--editor-edge-stroke,\s*rgba\(16,\s*185,\s*129,\s*0\.38\)\)\);/);
@@ -240,8 +255,8 @@ test("EditorCanvas styles runtime node card classes across the NodeCard componen
   assert.match(componentSource, /:deep\(\.editor-canvas__node--paused-current\) \{/);
   assert.match(componentSource, /:deep\(\.editor-canvas__node--success\) \{/);
   assert.match(componentSource, /:deep\(\.editor-canvas__node--failed\) \{/);
-  assert.match(componentSource, /\.editor-canvas__node-halo--success \{/);
-  assert.match(componentSource, /\.editor-canvas__node-halo--failed \{/);
+  assert.doesNotMatch(componentSource, /\.editor-canvas__node-halo--success/);
+  assert.doesNotMatch(componentSource, /\.editor-canvas__node-halo--failed/);
 });
 
 test("EditorCanvas treats awaiting-human current node as a persistent review node", () => {
@@ -453,6 +468,12 @@ test("EditorCanvas exposes page zoom controls and emits viewport draft updates",
   assert.match(componentSource, /function handleZoomIn\(\)/);
   assert.match(componentSource, /function handleZoomReset\(\)/);
   assert.match(componentSource, /function zoomViewportAroundCanvasCenter\(nextScale: number\)/);
+  assert.match(componentSource, /@wheel\.prevent="handleWheel"/);
+  assert.match(componentSource, /function resolveWheelZoomDelta\(event: WheelEvent\)/);
+  assert.match(componentSource, /function handleWheel\(event: WheelEvent\)[\s\S]*viewport\.zoomAt\(\{/);
+  assert.match(componentSource, /clientX:\s*event\.clientX/);
+  assert.match(componentSource, /clientY:\s*event\.clientY/);
+  assert.match(componentSource, /nextScale:\s*viewport\.viewport\.scale \+ wheelZoomDelta/);
   assert.doesNotMatch(componentSource, /\.editor-canvas__zoom-toolbar \{[\s\S]*position:\s*absolute;[\s\S]*left:\s*18px;/);
 });
 

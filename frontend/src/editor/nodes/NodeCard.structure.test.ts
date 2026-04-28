@@ -733,6 +733,14 @@ test("NodeCard renders condition nodes as clean control-flow proxies", () => {
   assert.match(conditionSection, /@blur="commitConditionRuleValue"/);
   assert.match(conditionSection, /@keydown\.enter\.prevent="handleConditionRuleValueEnter"/);
   assert.match(conditionSection, /conditionLoopLimitDraft/);
+  assert.match(componentSource, /from "\.\/conditionLoopLimit";/);
+  assert.match(componentSource, /conditionLoopLimitDraft\.value = resolveConditionLoopLimitDraft\(loopLimit\);/);
+  assert.match(componentSource, /const result = resolveConditionLoopLimitPatch\(conditionLoopLimitDraft\.value, props\.node\.config\.loopLimit\);/);
+  assert.match(componentSource, /if \(result\.kind === "reset"\) \{[\s\S]*conditionLoopLimitDraft\.value = result\.draftValue;[\s\S]*return;[\s\S]*\}/);
+  assert.match(componentSource, /if \(result\.kind === "noop"\) \{[\s\S]*return;[\s\S]*\}/);
+  assert.match(componentSource, /emitConditionConfigPatch\(result\.patch\);/);
+  assert.doesNotMatch(componentSource, /parseConditionLoopLimitDraft\(conditionLoopLimitDraft\.value\)/);
+  assert.doesNotMatch(componentSource, /String\(normalizeConditionLoopLimit\(props\.node\.config\.loopLimit\)\)/);
   assert.match(componentSource, /from "\.\/conditionRuleEditorModel";/);
   assert.match(componentSource, /const conditionRuleValueDraft = ref\(\"\"\);/);
   assert.match(componentSource, /conditionRuleValueDraft\.value = resolveConditionRuleValueDraft\(ruleValue\);/);

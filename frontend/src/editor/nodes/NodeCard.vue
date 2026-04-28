@@ -1238,8 +1238,8 @@ import {
   CONDITION_LOOP_LIMIT_DEFAULT,
   CONDITION_LOOP_LIMIT_MAX,
   CONDITION_LOOP_LIMIT_MIN,
-  normalizeConditionLoopLimit,
-  parseConditionLoopLimitDraft,
+  resolveConditionLoopLimitDraft,
+  resolveConditionLoopLimitPatch,
 } from "./conditionLoopLimit";
 import {
   CONDITION_RULE_OPERATOR_OPTIONS,
@@ -1626,7 +1626,7 @@ watch(
 watch(
   () => (props.node.kind === "condition" ? props.node.config.loopLimit : null),
   (loopLimit) => {
-    conditionLoopLimitDraft.value = loopLimit === null ? "" : String(normalizeConditionLoopLimit(loopLimit));
+    conditionLoopLimitDraft.value = resolveConditionLoopLimitDraft(loopLimit);
   },
   { immediate: true },
 );
@@ -2923,16 +2923,16 @@ function commitConditionLoopLimit() {
     return;
   }
 
-  const nextLoopLimit = parseConditionLoopLimitDraft(conditionLoopLimitDraft.value);
-  if (nextLoopLimit === null) {
-    conditionLoopLimitDraft.value = String(normalizeConditionLoopLimit(props.node.config.loopLimit));
+  const result = resolveConditionLoopLimitPatch(conditionLoopLimitDraft.value, props.node.config.loopLimit);
+  if (result.kind === "reset") {
+    conditionLoopLimitDraft.value = result.draftValue;
     return;
   }
-  if (nextLoopLimit === props.node.config.loopLimit) {
+  if (result.kind === "noop") {
     return;
   }
 
-  emitConditionConfigPatch({ loopLimit: nextLoopLimit });
+  emitConditionConfigPatch(result.patch);
 }
 
 function handleConditionLoopLimitEnter(event: KeyboardEvent) {

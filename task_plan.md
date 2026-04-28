@@ -1,59 +1,65 @@
-# Task Plan: Repository Cleanup Execution Round 2
+# Task Plan: Repository Cleanup Execution Round 3
 
 ## Goal
-Continue reducing GraphiteUI code concentration with conservative, behavior-preserving refactors based on the architecture roadmap, keeping editor functionality verified.
+Continue conservative GraphiteUI cleanup by extracting another small, tested NodeCard responsibility while preserving editor behavior.
 
 ## Current Phase
-Complete
+Phase 5: Commit and Push
 
 ## Phases
 
 ### Phase 1: Re-orientation
 - [x] Recover previous cleanup context.
 - [x] Confirm current git status.
-- [x] Inspect the next safest `NodeCard.vue` extraction target.
+- [x] Inspect next NodeCard model-adjacent cleanup target.
 - **Status:** completed
 
 ### Phase 2: Select Safe Refactor Slice
-- [x] Identify a small model or composable extraction with existing behavior to preserve.
-- [x] Confirm relevant tests or add focused tests before production edits.
-- [x] Avoid broad UI restructuring.
+- [x] Select state port create draft update helpers.
+- [x] Confirm existing model/test files can own the behavior.
+- [x] Keep UI template and emitted events stable.
 - **Status:** completed
 
 ### Phase 3: Implement Cleanup
-- [x] Add failing tests for the new boundary first.
-- [x] Move duplicated or pure logic out of the large component.
-- [x] Keep template bindings and emitted events stable.
+- [x] Add failing tests for the new state port draft helpers.
+- [x] Move draft patch logic into `statePortCreateModel.ts`.
+- [x] Update `NodeCard.vue` to call the model helpers.
 - **Status:** completed
 
 ### Phase 4: Verification
-- [x] Run focused tests for the touched surface.
+- [x] Run focused model and NodeCard structure tests.
 - [x] Run TypeScript and meaningful frontend checks.
 - [x] Restart the dev environment with `npm run dev`.
 - **Status:** completed
 
 ### Phase 5: Commit and Push
-- [x] Review diff for unrelated or runtime artifacts.
-- [x] Commit with a Chinese commit message.
-- [x] Push the branch.
-- **Status:** completed
+- [ ] Review diff for unrelated/runtime artifacts.
+- [ ] Commit with a Chinese commit message.
+- [ ] Push the branch.
+- **Status:** pending
 
-## Key Questions
-1. Which `NodeCard.vue` responsibility is still isolated enough to extract safely?
-2. Which tests can prove the behavior did not change?
-3. Can the refactor reduce duplication without changing the visual DOM contract?
+## Progress Estimate
+| Scope | Estimate |
+|-------|----------|
+| Overall roadmap cleanup | About 12% complete before this round. |
+| P1 `NodeCard.vue` cleanup | About 30% complete before this round. |
+| Low-risk model extraction subset | About 55% complete before this round. |
+| Overall roadmap cleanup after this round | About 14% complete. |
+| P1 `NodeCard.vue` cleanup after this round | About 35% complete. |
+| Low-risk model extraction subset after this round | About 65% complete. |
 
 ## Decisions Made
 | Decision | Rationale |
 |----------|-----------|
-| Continue inside `NodeCard.vue` before moving to canvas/backend | The roadmap marks NodeCard as P1 and the first extraction succeeded with good test coverage. |
-| Prefer model-level extraction over component splitting for this round | Model extraction is lower risk and easier to verify without a browser harness. |
-| Extract title/description editor model logic | Text editor metadata, pointer threshold, draft lookup, and commit patch calculation are pure behavior with existing structure coverage. |
-
-## Errors Encountered
-| Error | Attempt | Resolution |
-|-------|---------|------------|
+| Continue with `NodeCard.vue` model extraction | It remains the P1 target and still contains pure draft update logic. |
+| Use `statePortCreateModel.ts` for draft helper ownership | The file already owns create-port draft/search behavior. |
+| Defer route chunk splitting | Build chunk warning is not blocking the current structural cleanup round. |
 
 ## Notes
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
+
+## Errors Encountered
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+| `NodeCard.vue` missing `StateFieldType` after import cleanup | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | Restored the type-only import because later NodeCard state/input logic still uses it. |

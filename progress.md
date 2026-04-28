@@ -1,5 +1,64 @@
 # Progress Log
 
+## Session: 2026-04-28 Rounds 18-20
+
+### Phase 1: Re-orientation and Batch Planning
+- **Status:** completed
+- Actions taken:
+  - Recovered context after compaction and confirmed the worktree started clean on `main...origin/main`.
+  - Ran planning catchup, read the previous plan/progress/findings, and inspected the remaining `EditorCanvas.vue` hotspots.
+  - Selected three independent pure-model cleanup slices for an autonomous multi-round batch: condition route targets, run-node presentation wrappers, and flow/route edge delete projection.
+
+### Phase 2-4: Red Tests for Rounds 18-20
+- **Status:** completed
+- Actions taken:
+  - Added `conditionRouteTargetsModel.test.ts`, `canvasRunPresentationModel.test.ts`, and `flowEdgeDeleteModel.test.ts` before production code.
+  - Updated `EditorCanvas.structure.test.ts` to require the three new model boundaries.
+  - Ran the focused red suite and confirmed it fails because the three new model files do not exist yet.
+  - Added `conditionRouteTargetsModel.ts`, `canvasRunPresentationModel.ts`, and `flowEdgeDeleteModel.ts`.
+  - Updated `EditorCanvas.vue` to call the new models while keeping component state, timers, emits, and lock guards local.
+  - Fixed the new run presentation model to use a relative import so Node's native test runner can resolve it without Vite aliases.
+
+### Phase 5: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran the focused post-implementation model and structure suite.
+  - Ran `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters`; fixed one test object literal type issue and reran successfully.
+  - Ran the full frontend node test suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Ran `git diff --check` with no whitespace errors.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend returned HTTP 200 at `http://127.0.0.1:3477`.
+  - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
+  - Confirmed the restarted `node scripts/start.mjs`, uvicorn, and Vite processes remained alive after a delayed check.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red multi-model suite | `node --test frontend/src/editor/canvas/conditionRouteTargetsModel.test.ts frontend/src/editor/canvas/canvasRunPresentationModel.test.ts frontend/src/editor/canvas/flowEdgeDeleteModel.test.ts frontend/src/editor/canvas/EditorCanvas.structure.test.ts` before implementation | Fails because the new model files do not exist | Failed with `ERR_MODULE_NOT_FOUND`/`ENOENT` for `conditionRouteTargetsModel.ts`, `canvasRunPresentationModel.ts`, and `flowEdgeDeleteModel.ts` | Passed |
+| Focused multi-model suite | `node --test frontend/src/editor/canvas/conditionRouteTargetsModel.test.ts frontend/src/editor/canvas/canvasRunPresentationModel.test.ts frontend/src/editor/canvas/flowEdgeDeleteModel.test.ts frontend/src/editor/canvas/EditorCanvas.structure.test.ts` after implementation | All focused tests pass | 69 passed | Passed |
+| Unused symbol check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No unused-symbol diagnostics | Exit 0 after correcting a test object literal type | Passed |
+| Full frontend tests | `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts` | All frontend tests pass | 731 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without chunk warning regressions | Exit 0, no large chunk warning | Passed |
+| Whitespace check | `git diff --check` | No whitespace errors | Exit 0 | Passed |
+| Dev restart | `npm run dev` | Services start and respond | Frontend 200, backend `/health` 200, delayed process check alive | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Rounds 18-20 implementation, verification, source commit, planning update, and push are complete. |
+| Where am I going? | Ready for handoff or the next cleanup slice. |
+| What's the goal? | Continue reducing high-concentration editor components without changing graph editing behavior. |
+| What have I learned? | Condition route labels, run-node presentation wrappers, and flow/route edge deletion projection are pure canvas model boundaries. |
+| What have I done? | Extracted three models, added focused tests, ran full frontend checks, built without chunk warnings, and restarted the app. |
+
+### Phase 6: Commit and Push
+- **Status:** completed
+- Actions taken:
+  - Reviewed diffs and confirmed only source, tests, and planning files are included.
+  - Committed source and tests as `2572c6e` with Chinese message `抽取画布纯模型逻辑`.
+  - Prepared planning, findings, and progress updates for a Chinese progress commit and push.
+
 ## Session: 2026-04-28 Round 17
 
 ### Phase 1: Re-orientation

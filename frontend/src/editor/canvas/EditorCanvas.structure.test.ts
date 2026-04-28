@@ -13,6 +13,10 @@ function readCanvasInteractionStyleModelSource() {
   return readFileSync(resolve(currentDirectory, "canvasInteractionStyleModel.ts"), "utf8").replace(/\r\n/g, "\n");
 }
 
+function readCanvasNodePresentationModelSource() {
+  return readFileSync(resolve(currentDirectory, "canvasNodePresentationModel.ts"), "utf8").replace(/\r\n/g, "\n");
+}
+
 function firstCssBlock(selector: string) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const matches = Array.from(componentSource.matchAll(new RegExp(`${escapedSelector} \\{[\\s\\S]*?\\n\\}`, "g")));
@@ -25,10 +29,19 @@ test("EditorCanvas binds the canvas surface styling to the viewport state", () =
 });
 
 test("EditorCanvas mounts a right-bottom minimap backed by measured node geometry", () => {
+  const canvasNodePresentationModelSource = readCanvasNodePresentationModelSource();
+
   assert.match(componentSource, /import EditorMinimap from "\.\/EditorMinimap\.vue";/);
+  assert.match(componentSource, /import \{[\s\S]*buildMinimapNodeModel,[\s\S]*type MeasuredNodeSize,[\s\S]*\} from "\.\/canvasNodePresentationModel";/);
   assert.match(componentSource, /const measuredNodeSizes = ref<Record<string, MeasuredNodeSize>>\(\{\}\);/);
   assert.match(componentSource, /const canvasSize = ref\(\{ width: 0, height: 0 \}\);/);
-  assert.match(componentSource, /const minimapNodes = computed\(\(\) =>/);
+  assert.match(componentSource, /const minimapNodes = computed\(\(\) =>\s*nodeEntries\.value\.map\(\(\[nodeId, node\]\) =>\s*buildMinimapNodeModel\(\{/);
+  assert.match(componentSource, /measuredNodeSizes: measuredNodeSizes\.value,/);
+  assert.match(componentSource, /isSelected: selection\.selectedNodeId\.value === nodeId,/);
+  assert.match(componentSource, /runStatus: props\.runNodeStatusByNodeId\?\.\[nodeId\],/);
+  assert.match(canvasNodePresentationModelSource, /export function buildMinimapNodeModel/);
+  assert.doesNotMatch(componentSource, /const measuredSize = measuredNodeSizes\.value\[nodeId\];/);
+  assert.doesNotMatch(componentSource, /const fallbackSize = resolveFallbackNodeSize\(node\);/);
   assert.match(componentSource, /const minimapEdges = computed\(\(\) =>/);
   assert.match(componentSource, /const minimapEdges = computed\(\(\) =>[\s\S]*projectedEdges\.value[\s\S]*\.filter\(\(edge\) => visibleProjectedEdgeIds\.value\.has\(edge\.id\)\)/);
   assert.match(componentSource, /<EditorMinimap[\s\S]*class="editor-canvas__minimap"[\s\S]*:nodes="minimapNodes"[\s\S]*:edges="minimapEdges"[\s\S]*:viewport="viewport\.viewport"[\s\S]*:canvas-size="canvasSize"[\s\S]*@center-view="handleMinimapCenterView"/);
@@ -70,10 +83,24 @@ test("EditorCanvas raises hovered and selected nodes above sibling cards", () =>
 });
 
 test("EditorCanvas exposes invisible corner hotzones for real node resizing", () => {
-  assert.match(componentSource, /import \{[\s\S]*NODE_RESIZE_HANDLES,[\s\S]*normalizeNodeSize,[\s\S]*resolveNodeResize,[\s\S]*type NodeResizeHandle[\s\S]*\} from "\.\/nodeResize\.ts";/);
+  const canvasNodePresentationModelSource = readCanvasNodePresentationModelSource();
+
+  assert.match(componentSource, /import \{[\s\S]*NODE_RESIZE_HANDLES,[\s\S]*resolveNodeResize,[\s\S]*type NodeResizeHandle[\s\S]*\} from "\.\/nodeResize\.ts";/);
+  assert.doesNotMatch(componentSource, /normalizeNodeSize/);
+  assert.match(componentSource, /import \{[\s\S]*buildNodeCardSizeStyle,[\s\S]*buildNodeTransformStyle,[\s\S]*resolveFallbackNodeSize,[\s\S]*resolveNodeRenderedSize,[\s\S]*\} from "\.\/canvasNodePresentationModel";/);
   assert.match(componentSource, /\(event: "update:node-size", payload: \{ nodeId: string; position: GraphPosition; size: GraphNodeSize \}\): void;/);
   assert.match(componentSource, /const nodeResizeDrag = ref<\{/);
   assert.match(componentSource, /:style="nodeCardSizeStyle\(node\)"/);
+  assert.match(componentSource, /const nodeStyle = buildNodeTransformStyle;/);
+  assert.match(componentSource, /const nodeCardSizeStyle = buildNodeCardSizeStyle;/);
+  assert.match(componentSource, /originSize: resolveNodeRenderedSize\(\{[\s\S]*nodeId,[\s\S]*node,[\s\S]*measuredNodeSizes: measuredNodeSizes\.value,[\s\S]*\}\)/);
+  assert.match(componentSource, /resolveFallbackNodeSize\(node\)\.width/);
+  assert.match(canvasNodePresentationModelSource, /export function buildNodeTransformStyle/);
+  assert.match(canvasNodePresentationModelSource, /export function buildNodeCardSizeStyle/);
+  assert.match(canvasNodePresentationModelSource, /export function resolveNodeRenderedSize/);
+  assert.doesNotMatch(componentSource, /function nodeStyle\(position: GraphPosition\)/);
+  assert.doesNotMatch(componentSource, /function nodeCardSizeStyle\(node: GraphNode\)/);
+  assert.doesNotMatch(componentSource, /function resolveNodeRenderedSize\(nodeId: string, node: GraphNode\)/);
   assert.match(componentSource, /v-if="isNodeResizeHotzoneEnabled\(\)"/);
   assert.match(componentSource, /v-for="handle in NODE_RESIZE_HANDLES"/);
   assert.match(componentSource, /data-node-resize-hotzone="true"/);

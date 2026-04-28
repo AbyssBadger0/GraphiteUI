@@ -404,7 +404,6 @@ import { isEditableKeyboardEventTarget } from "@/editor/canvas/canvasKeyboard";
 import { DEFAULT_CANVAS_VIEWPORT, type CanvasViewport } from "@/editor/canvas/canvasViewport";
 import {
   NODE_RESIZE_HANDLES,
-  normalizeNodeSize,
   resolveNodeResize,
   type NodeResizeHandle,
 } from "./nodeResize.ts";
@@ -427,6 +426,14 @@ import {
   buildPointAnchorConnectStyle,
   buildProjectedEdgeStyle,
 } from "./canvasInteractionStyleModel";
+import {
+  buildMinimapNodeModel,
+  buildNodeCardSizeStyle,
+  buildNodeTransformStyle,
+  resolveFallbackNodeSize,
+  resolveNodeRenderedSize,
+  type MeasuredNodeSize,
+} from "./canvasNodePresentationModel";
 import {
   defaultValueForStateType,
   resolveStateColorOptions,
@@ -455,7 +462,7 @@ import { useViewport } from "./useViewport";
 import { isAgentBreakpointEnabledInDocument, resolveAgentBreakpointTimingInDocument } from "@/lib/graph-document";
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
 import type { SkillDefinition } from "@/types/skills";
-import type { AgentNode, ConditionNode, GraphDocument, GraphNode, GraphNodeSize, GraphPayload, GraphPosition, InputNode, OutputNode, StateDefinition } from "@/types/node-system";
+import type { AgentNode, ConditionNode, GraphDocument, GraphNodeSize, GraphPayload, GraphPosition, InputNode, OutputNode, StateDefinition } from "@/types/node-system";
 
 type NodeCreationMenuPayload = {
   position: GraphPosition;
@@ -545,10 +552,6 @@ const nodeElementMap = new Map<string, HTMLElement>();
 const nodeResizeObserverMap = new Map<string, ResizeObserver>();
 const nodeMutationObserverMap = new Map<string, MutationObserver>();
 const measuredAnchorOffsets = ref<Record<string, MeasuredAnchorOffset>>({});
-type MeasuredNodeSize = {
-  width: number;
-  height: number;
-};
 type PendingStateInputSource = {
   stateKey: string;
   label: string;
@@ -655,21 +658,15 @@ let canvasResizeObserver: ResizeObserver | null = null;
 
 const nodeEntries = computed(() => Object.entries(props.document.nodes));
 const minimapNodes = computed(() =>
-  nodeEntries.value.map(([nodeId, node]) => {
-    const measuredSize = measuredNodeSizes.value[nodeId];
-    const storedSize = normalizeNodeSize(node.ui.size);
-    const fallbackSize = resolveFallbackNodeSize(node);
-    return {
-      id: nodeId,
-      kind: node.kind,
-      x: node.ui.position.x,
-      y: node.ui.position.y,
-      width: measuredSize?.width ?? storedSize?.width ?? fallbackSize.width,
-      height: measuredSize?.height ?? storedSize?.height ?? fallbackSize.height,
-      selected: selection.selectedNodeId.value === nodeId,
-      runState: resolveMinimapRunState(props.runNodeStatusByNodeId?.[nodeId]),
-    };
-  }),
+  nodeEntries.value.map(([nodeId, node]) =>
+    buildMinimapNodeModel({
+      nodeId,
+      node,
+      measuredNodeSizes: measuredNodeSizes.value,
+      isSelected: selection.selectedNodeId.value === nodeId,
+      runStatus: props.runNodeStatusByNodeId?.[nodeId],
+    }),
+  ),
 );
 const minimapEdges = computed(() =>
   projectedEdges.value
@@ -1062,6 +1059,8 @@ const viewportStyle = computed(() => ({
 }));
 const zoomPercentLabel = computed(() => `${Math.round(viewport.viewport.scale * 100)}%`);
 const stateTypeOptions = STATE_FIELD_TYPE_OPTIONS;
+const nodeStyle = buildNodeTransformStyle;
+const nodeCardSizeStyle = buildNodeCardSizeStyle;
 const flowEdgeDeleteConfirmStyle = computed(() => {
   if (!activeFlowEdgeDeleteConfirm.value) {
     return undefined;
@@ -1605,53 +1604,6 @@ function handleDataEdgeStateEditorTypeValue(value: string | number | boolean | u
       value: defaultValueForStateType(value as StateFieldType),
     },
   });
-}
-
-function nodeStyle(position: GraphPosition) {
-  return {
-    transform: `translate(${position.x}px, ${position.y}px)`,
-  };
-}
-
-function nodeCardSizeStyle(node: GraphNode) {
-  const size = normalizeNodeSize(node.ui.size);
-  if (!size) {
-    return undefined;
-  }
-  return {
-    "--node-card-width": `${size.width}px`,
-    "--node-card-min-height": `${size.height}px`,
-  };
-}
-
-function resolveNodeRenderedSize(nodeId: string, node: GraphNode): GraphNodeSize {
-  return measuredNodeSizes.value[nodeId] ?? normalizeNodeSize(node.ui.size) ?? resolveFallbackNodeSize(node);
-}
-
-function resolveFallbackNodeSize(node: GraphNode): MeasuredNodeSize {
-  if (node.kind === "condition") {
-    return { width: 560, height: 280 };
-  }
-  if (node.kind === "output") {
-    return { width: 460, height: 340 };
-  }
-  if (node.kind === "input") {
-    return { width: 460, height: 320 };
-  }
-  return { width: 460, height: 360 };
-}
-
-function resolveMinimapRunState(status: string | undefined) {
-  if (status === "running" || status === "resuming") {
-    return "running";
-  }
-  if (status === "success" || status === "completed") {
-    return "success";
-  }
-  if (status === "failed") {
-    return "failed";
-  }
-  return null;
 }
 
 function handleMinimapCenterView(point: { worldX: number; worldY: number }) {
@@ -2675,7 +2627,11 @@ function handleNodeResizePointerDown(nodeId: string, handle: NodeResizeHandle, e
     startClientX: event.clientX,
     startClientY: event.clientY,
     originPosition: { ...node.ui.position },
-    originSize: resolveNodeRenderedSize(nodeId, node),
+    originSize: resolveNodeRenderedSize({
+      nodeId,
+      node,
+      measuredNodeSizes: measuredNodeSizes.value,
+    }),
     captureElement,
     moved: false,
   };

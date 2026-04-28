@@ -68,6 +68,53 @@
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
 
+## Session: 2026-04-28 Phase 16
+
+### Phase 1: Re-orientation and Safety Scope
+- **Status:** completed
+- Actions taken:
+  - Ran planning session catchup, confirmed the worktree started clean, and re-read the active plan, progress, and findings.
+  - Inspected the largest remaining files and selected `NodeCard.vue` title/description editing as the next safe high-impact slice.
+  - Chose this slice because it is already backed by pure text editor model helpers and does not touch canvas connection, auto-snap, port reorder, or node creation naming paths.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `frontend/src/editor/nodes/useNodeCardTextEditor.test.ts` before production code.
+  - Ran `node --test frontend/src/editor/nodes/useNodeCardTextEditor.test.ts` and verified the expected red failure: `ERR_MODULE_NOT_FOUND` for `useNodeCardTextEditor.ts`.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `useNodeCardTextEditor.ts` to own title/description editor state, pointer trigger activation, confirm/focus timers, draft values, and metadata patch commits.
+  - Updated `NodeCard.vue` to consume the composable while keeping title/description template bindings, locked interaction guard, peer panel cleanup, and metadata emits in the component.
+  - Updated `NodeCard.structure.test.ts` to verify the composable boundary instead of requiring the old inline state machine.
+  - Confirmed `NodeCard.vue` is down to 4,930 lines after this extraction.
+
+### Phase 4: Focused Verification
+- **Status:** completed
+- Actions taken:
+  - Ran `node --test frontend/src/editor/nodes/useNodeCardTextEditor.test.ts frontend/src/editor/nodes/textEditorModel.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts`.
+  - Result: 43 tests passed, 0 failed.
+
+### Phase 5: Full Verification and Dev Restart
+- **Status:** completed
+- Actions taken:
+  - Ran `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend`; the first run found a test helper type-narrowing issue, then the rerun exited 0 with no diagnostics after fixing it.
+  - Ran the full frontend test suite with `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts`.
+  - Result: 755 tests passed, 0 failed.
+  - Ran `npm run build` in `frontend`; the build completed without a Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend returned HTTP 200 at `http://127.0.0.1:3477`.
+  - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
+  - Confirmed the restarted backend and frontend dev processes remained alive after a delayed check.
+
+### Phase 6: Commit and Push
+- **Status:** in_progress
+- Actions taken:
+  - Checked git status after restart; only source, test, and planning files are modified or untracked.
+  - Confirmed no runtime logs or build output are listed for commit.
+
 ## Session: 2026-04-28 Baseline Interaction Repair and Large Connection Cleanup
 
 ### Phase 1: Baseline Regression Repair

@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 15 complete
+Phase 16 complete
 
 ## Phases
 
@@ -107,6 +107,18 @@ Phase 15 complete
 - [x] Commit and push the cleanup.
 - **Status:** completed
 
+### Phase 16: NodeCard Text Editor Composable
+- [x] Add failing composable coverage for title/description confirmation, pointer activation, and metadata commit behavior.
+- [x] Extract NodeCard title/description editor refs, timers, pointer handling, confirmation window, focus scheduling, draft editing, and commit behavior into `useNodeCardTextEditor.ts`.
+- [x] Update `NodeCard.vue` to consume the composable while keeping template event names and surrounding panel cleanup in the component.
+- [x] Update structure tests to lock the new composable boundary.
+- [x] Run focused NodeCard text editor, text model, and structure tests.
+- [x] Run TypeScript unused-symbol verification.
+- [x] Run the full frontend test suite and production build.
+- [x] Restart the dev environment with `npm run dev` and verify frontend/backend health.
+- [x] Commit and push the cleanup.
+- **Status:** completed
+
 ## Progress Estimate
 | Scope | Estimate |
 |-------|----------|
@@ -120,6 +132,8 @@ Phase 15 complete
 | Build/chunk warning remediation after this batch | Warning elimination confirmed; no Vite large chunk warning in production build. |
 | Overall roadmap cleanup after Phase 15 | About 39% complete. |
 | P2 `EditorCanvas.vue` cleanup after Phase 15 | About 41% complete after edge interaction and node measurement extraction. |
+| Overall roadmap cleanup after Phase 16 | About 41% complete after text editor composable extraction. |
+| P1 `NodeCard.vue` cleanup after Phase 16 | About 54% complete after moving text editor interaction state into a tested composable. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -136,6 +150,7 @@ Phase 15 complete
 - This batch leaves `EditorCanvas.vue` at 4,039 lines, down from 4,226 at the batch start.
 - The baseline interaction repair pass leaves `EditorCanvas.vue` at 3,848 lines by moving connection auto-snap and creation payload decisions into a tested model.
 - Phase 15 leaves `EditorCanvas.vue` at 3,363 lines by moving edge popover interaction state and node measurement state into composables.
+- Phase 16 moves NodeCard title/description editing state into `useNodeCardTextEditor.ts`; `NodeCard.vue` drops from 5,095 to 4,930 lines before final verification.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

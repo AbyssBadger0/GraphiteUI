@@ -1213,7 +1213,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ElButton, ElIcon, ElInput, ElOption, ElPopover, ElSelect } from "element-plus";
 import { Check, Collection, CollectionTag, Delete, Document, DocumentChecked, Flag, FolderOpened, Operation, Opportunity } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
@@ -1297,20 +1297,7 @@ import {
   updateStatePortDraftType,
   updateStatePortDraftValue,
 } from "./statePortCreateModel";
-import {
-  buildTextEditorDrafts,
-  createTextTriggerPointerState,
-  isTextEditorConfirmOpenState,
-  isTextEditorOpenState,
-  resolveTextEditorDraftValue,
-  resolveTextEditorMetadataPatch,
-  resolveTextEditorTitle,
-  resolveTextEditorWidth,
-  shouldActivateTextEditorFromPointerUp,
-  updateTextTriggerPointerMoveState,
-  type TextEditorField,
-  type TextTriggerPointerState,
-} from "./textEditorModel";
+import { useNodeCardTextEditor } from "./useNodeCardTextEditor";
 import {
   createUploadedAssetEnvelope,
   resolveUploadedAssetDescription,
@@ -1464,15 +1451,8 @@ const portStateError = ref<string | null>(null);
 const agentModelSelectRef = ref<{ blur?: () => void; toggleMenu?: () => void; expanded?: boolean } | null>(null);
 const activeTopAction = ref<"advanced" | "delete" | "preset" | null>(null);
 const topActionTimeoutRef = ref<number | null>(null);
-const activeTextEditor = ref<TextEditorField | null>(null);
-const activeTextEditorConfirmField = ref<TextEditorField | null>(null);
-const textTriggerPointerState = ref<TextTriggerPointerState | null>(null);
 const portReorderPointerState = ref<PortReorderPointerState | null>(null);
 const suppressNextPortPillClick = ref(false);
-const textEditorConfirmTimeoutRef = ref<number | null>(null);
-const textEditorFocusTimeoutRef = ref<number | null>(null);
-const titleEditorDraft = ref("");
-const descriptionEditorDraft = ref("");
 const titleEditorInputRef = ref<{ focus?: () => void } | null>(null);
 const descriptionEditorInputRef = ref<{ focus?: () => void } | null>(null);
 const activeStateEditorConfirmAnchorId = ref<string | null>(null);
@@ -1483,6 +1463,51 @@ const removePortStateConfirmTimeoutRef = ref<number | null>(null);
 const activeStateEditorAnchorId = ref<string | null>(null);
 const stateEditorDraft = ref<StateFieldDraft | null>(null);
 const stateEditorError = ref<string | null>(null);
+const {
+  activeTextEditor,
+  activeTextEditorConfirmField,
+  clearTextEditorConfirmState,
+  clearTextEditorConfirmTimeout,
+  clearTextEditorFocusTimeout,
+  clearTextTriggerPointerState,
+  closeTextEditor,
+  commitOpenTextEditorIfNeeded,
+  commitTextEditor,
+  handleTextEditorAction,
+  handleTextEditorDraftInput,
+  handleTextTriggerPointerDown,
+  handleTextTriggerPointerMove,
+  handleTextTriggerPointerUp,
+  isTextEditorConfirmOpen,
+  isTextEditorOpen,
+  textEditorDraftValue,
+  textEditorTitle,
+  textEditorWidth,
+} = useNodeCardTextEditor({
+  getMetadata: () => props.node,
+  guardLockedInteraction: guardLockedGraphInteraction,
+  prepareTextEditorAction: () => {
+    clearRemovePortStateConfirmState();
+  },
+  prepareOpenTextEditor: () => {
+    clearTopActionTimeout();
+    activeTopAction.value = null;
+    clearStateEditorConfirmState();
+    clearRemovePortStateConfirmState();
+    closeStateEditor();
+    closePortPicker();
+    isSkillPickerOpen.value = false;
+  },
+  emitUpdateNodeMetadata: (patch) => {
+    emit("update-node-metadata", { nodeId: props.nodeId, patch });
+  },
+  focusTitleInput: () => {
+    titleEditorInputRef.value?.focus?.();
+  },
+  focusDescriptionInput: () => {
+    descriptionEditorInputRef.value?.focus?.();
+  },
+});
 const stateColorOptions = computed(() => resolveStateColorOptions(stateEditorDraft.value?.definition.color ?? ""));
 const portReorderFloatingPort = computed<{ side: PortReorderSide; port: NodePortViewModel } | null>(() => {
   const pointerState = portReorderPointerState.value;
@@ -2008,197 +2033,7 @@ function commitPortStateCreate() {
   closePortPicker();
 }
 
-function syncTextEditorDraftsFromNode() {
-  const drafts = buildTextEditorDrafts(props.node);
-  titleEditorDraft.value = drafts.title;
-  descriptionEditorDraft.value = drafts.description;
-}
-
-function isTextEditorOpen(field: TextEditorField) {
-  return isTextEditorOpenState(activeTextEditor.value, field);
-}
-
-const textEditorWidth = resolveTextEditorWidth;
-const textEditorTitle = resolveTextEditorTitle;
-
-function textEditorDraftValue(field: TextEditorField) {
-  return resolveTextEditorDraftValue(
-    {
-      title: titleEditorDraft.value,
-      description: descriptionEditorDraft.value,
-    },
-    field,
-  );
-}
-
-function setTextEditorDraftValue(field: TextEditorField, value: string) {
-  if (field === "title") {
-    titleEditorDraft.value = value;
-    return;
-  }
-  descriptionEditorDraft.value = value;
-}
-
 function noop() {}
-
-function clearTextTriggerPointerState() {
-  textTriggerPointerState.value = null;
-}
-
-function handleTextTriggerPointerDown(field: TextEditorField, event: PointerEvent) {
-  if (guardLockedGraphInteraction()) {
-    return;
-  }
-  if (event.button !== 0) {
-    return;
-  }
-  textTriggerPointerState.value = createTextTriggerPointerState(field, event.pointerId, event.clientX, event.clientY);
-}
-
-function handleTextTriggerPointerMove(field: TextEditorField, event: PointerEvent) {
-  const pointerState = textTriggerPointerState.value;
-  if (!pointerState) {
-    return;
-  }
-
-  textTriggerPointerState.value = updateTextTriggerPointerMoveState(
-    pointerState,
-    field,
-    event.pointerId,
-    event.clientX,
-    event.clientY,
-  );
-}
-
-function handleTextTriggerPointerUp(field: TextEditorField, event: PointerEvent) {
-  if (guardLockedGraphInteraction()) {
-    return;
-  }
-  const pointerState = textTriggerPointerState.value;
-  clearTextTriggerPointerState();
-  if (!shouldActivateTextEditorFromPointerUp(pointerState, field, event.pointerId, event.clientX, event.clientY)) {
-    return;
-  }
-  handleTextEditorAction(field);
-}
-
-function focusTextEditorField(field: TextEditorField) {
-  void nextTick(() => {
-    clearTextEditorFocusTimeout();
-    textEditorFocusTimeoutRef.value = window.setTimeout(() => {
-      textEditorFocusTimeoutRef.value = null;
-      if (field === "title") {
-        titleEditorInputRef.value?.focus?.();
-        return;
-      }
-      descriptionEditorInputRef.value?.focus?.();
-    }, 0);
-  });
-}
-
-function clearTextEditorFocusTimeout() {
-  if (textEditorFocusTimeoutRef.value !== null) {
-    window.clearTimeout(textEditorFocusTimeoutRef.value);
-    textEditorFocusTimeoutRef.value = null;
-  }
-}
-
-function clearTextEditorConfirmTimeout() {
-  if (textEditorConfirmTimeoutRef.value !== null) {
-    window.clearTimeout(textEditorConfirmTimeoutRef.value);
-    textEditorConfirmTimeoutRef.value = null;
-  }
-}
-
-function clearTextEditorConfirmState() {
-  clearTextEditorConfirmTimeout();
-  activeTextEditorConfirmField.value = null;
-}
-
-function startTextEditorConfirmWindow(field: TextEditorField) {
-  clearTextEditorConfirmTimeout();
-  activeTextEditorConfirmField.value = field;
-  textEditorConfirmTimeoutRef.value = window.setTimeout(() => {
-    textEditorConfirmTimeoutRef.value = null;
-    if (activeTextEditorConfirmField.value === field) {
-      activeTextEditorConfirmField.value = null;
-    }
-  }, 2000);
-}
-
-function isTextEditorConfirmOpen(field: TextEditorField) {
-  return isTextEditorConfirmOpenState(activeTextEditorConfirmField.value, field);
-}
-
-function handleTextEditorAction(field: TextEditorField) {
-  if (guardLockedGraphInteraction()) {
-    return;
-  }
-  if (isTextEditorOpen(field)) {
-    return;
-  }
-  const wasConfirmOpen = isTextEditorConfirmOpen(field);
-  clearTextEditorConfirmState();
-  clearRemovePortStateConfirmState();
-  if (wasConfirmOpen) {
-    openTextEditor(field);
-    return;
-  }
-  closeTextEditor();
-  startTextEditorConfirmWindow(field);
-}
-
-function openTextEditor(field: TextEditorField) {
-  if (guardLockedGraphInteraction()) {
-    return;
-  }
-  clearTopActionTimeout();
-  activeTopAction.value = null;
-  clearTextEditorConfirmState();
-  clearStateEditorConfirmState();
-  clearRemovePortStateConfirmState();
-  closeStateEditor();
-  closePortPicker();
-  isSkillPickerOpen.value = false;
-  syncTextEditorDraftsFromNode();
-  activeTextEditor.value = field;
-  focusTextEditorField(field);
-}
-
-function closeTextEditor() {
-  clearTextEditorFocusTimeout();
-  activeTextEditor.value = null;
-  syncTextEditorDraftsFromNode();
-}
-
-function handleTextEditorDraftInput(field: TextEditorField, value: string | number) {
-  if (guardLockedGraphInteraction()) {
-    return;
-  }
-  if (typeof value !== "string") {
-    return;
-  }
-  setTextEditorDraftValue(field, value);
-}
-
-function commitTextEditor(field: TextEditorField | null = activeTextEditor.value) {
-  if (guardLockedGraphInteraction()) {
-    return;
-  }
-  if (!field) {
-    return;
-  }
-
-  const patch = resolveTextEditorMetadataPatch(field, textEditorDraftValue(field), props.node);
-  if (patch) {
-    emit("update-node-metadata", { nodeId: props.nodeId, patch });
-  }
-  closeTextEditor();
-}
-
-function commitOpenTextEditorIfNeeded() {
-  commitTextEditor(activeTextEditor.value);
-}
 
 function clearStateEditorConfirmTimeout() {
   if (stateEditorConfirmTimeoutRef.value !== null) {

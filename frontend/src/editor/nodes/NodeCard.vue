@@ -1454,20 +1454,26 @@ const portReorderPointerState = ref<PortReorderPointerState | null>(null);
 const suppressNextPortPillClick = ref(false);
 const titleEditorInputRef = ref<{ focus?: () => void } | null>(null);
 const descriptionEditorInputRef = ref<{ focus?: () => void } | null>(null);
-const activeStateEditorConfirmAnchorId = ref<string | null>(null);
-const activeRemovePortStateConfirmAnchorId = ref<string | null>(null);
 const hoveredStateEditorPillAnchorId = ref<string | null>(null);
-const stateEditorConfirmTimeoutRef = ref<number | null>(null);
-const removePortStateConfirmTimeoutRef = ref<number | null>(null);
 const activeStateEditorAnchorId = ref<string | null>(null);
 const stateEditorDraft = ref<StateFieldDraft | null>(null);
 const stateEditorError = ref<string | null>(null);
 const {
+  activeRemovePortStateConfirmAnchorId,
+  activeStateEditorConfirmAnchorId,
   activeTopAction,
   addGlobalFloatingPanelListeners,
+  clearRemovePortStateConfirmState,
+  clearRemovePortStateConfirmTimeout,
+  clearStateEditorConfirmState,
+  clearStateEditorConfirmTimeout,
   clearTopActionConfirmState,
   clearTopActionTimeout,
+  isRemovePortStateConfirmOpen,
+  isStateEditorConfirmOpen,
   removeGlobalFloatingPanelListeners,
+  startRemovePortStateConfirmWindow,
+  startStateEditorConfirmWindow,
   startTopActionConfirmWindow,
 } = useNodeFloatingPanels({
   isFloatingPanelOpen: () => hasFloatingPanelOpen.value,
@@ -2047,62 +2053,8 @@ function commitPortStateCreate() {
 
 function noop() {}
 
-function clearStateEditorConfirmTimeout() {
-  if (stateEditorConfirmTimeoutRef.value !== null) {
-    window.clearTimeout(stateEditorConfirmTimeoutRef.value);
-    stateEditorConfirmTimeoutRef.value = null;
-  }
-}
-
-function clearStateEditorConfirmState() {
-  clearStateEditorConfirmTimeout();
-  activeStateEditorConfirmAnchorId.value = null;
-}
-
-function clearRemovePortStateConfirmTimeout() {
-  if (removePortStateConfirmTimeoutRef.value !== null) {
-    window.clearTimeout(removePortStateConfirmTimeoutRef.value);
-    removePortStateConfirmTimeoutRef.value = null;
-  }
-}
-
-function clearRemovePortStateConfirmState() {
-  clearRemovePortStateConfirmTimeout();
-  activeRemovePortStateConfirmAnchorId.value = null;
-}
-
-function startRemovePortStateConfirmWindow(anchorId: string) {
-  clearRemovePortStateConfirmTimeout();
-  activeRemovePortStateConfirmAnchorId.value = anchorId;
-  removePortStateConfirmTimeoutRef.value = window.setTimeout(() => {
-    removePortStateConfirmTimeoutRef.value = null;
-    if (activeRemovePortStateConfirmAnchorId.value === anchorId) {
-      activeRemovePortStateConfirmAnchorId.value = null;
-    }
-  }, 2000);
-}
-
-function startStateEditorConfirmWindow(anchorId: string) {
-  clearStateEditorConfirmTimeout();
-  activeStateEditorConfirmAnchorId.value = anchorId;
-  stateEditorConfirmTimeoutRef.value = window.setTimeout(() => {
-    stateEditorConfirmTimeoutRef.value = null;
-    if (activeStateEditorConfirmAnchorId.value === anchorId) {
-      activeStateEditorConfirmAnchorId.value = null;
-    }
-  }, 2000);
-}
-
 function isStateEditorOpen(anchorId: string) {
   return activeStateEditorAnchorId.value === anchorId;
-}
-
-function isStateEditorConfirmOpen(anchorId: string) {
-  return activeStateEditorConfirmAnchorId.value === anchorId;
-}
-
-function isRemovePortStateConfirmOpen(anchorId: string) {
-  return activeRemovePortStateConfirmAnchorId.value === anchorId;
 }
 
 function isStateEditorPillRevealed(anchorId: string) {

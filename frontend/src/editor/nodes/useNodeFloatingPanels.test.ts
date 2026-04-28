@@ -66,6 +66,40 @@ test("node floating panels close outside interactions and wire document listener
   ]);
 });
 
+test("node floating panels track state editor and remove-state confirmation anchors", () => {
+  const scheduler = createManualTimeoutScheduler();
+  const controller = useNodeFloatingPanels({
+    isFloatingPanelOpen: () => false,
+    closeFloatingPanels: () => undefined,
+    timeoutScheduler: scheduler,
+  });
+
+  controller.startStateEditorConfirmWindow("agent-input:answer");
+
+  assert.equal(controller.activeStateEditorConfirmAnchorId.value, "agent-input:answer");
+  assert.equal(controller.isStateEditorConfirmOpen("agent-input:answer"), true);
+  assert.equal(controller.isStateEditorConfirmOpen("agent-output:answer"), false);
+
+  scheduler.runNext();
+
+  assert.equal(controller.activeStateEditorConfirmAnchorId.value, null);
+
+  controller.startRemovePortStateConfirmWindow("agent-output:answer");
+
+  assert.equal(controller.activeRemovePortStateConfirmAnchorId.value, "agent-output:answer");
+  assert.equal(controller.isRemovePortStateConfirmOpen("agent-output:answer"), true);
+  assert.equal(controller.isRemovePortStateConfirmOpen("agent-input:answer"), false);
+
+  controller.clearRemovePortStateConfirmState();
+
+  assert.equal(controller.activeRemovePortStateConfirmAnchorId.value, null);
+
+  controller.startStateEditorConfirmWindow("condition-input:answer");
+  controller.clearStateEditorConfirmState();
+
+  assert.equal(controller.activeStateEditorConfirmAnchorId.value, null);
+});
+
 function createManualTimeoutScheduler() {
   let nextId = 1;
   const callbacks = new Map<number, () => void>();

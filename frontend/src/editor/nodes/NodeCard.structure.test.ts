@@ -583,11 +583,12 @@ test("NodeCard reveals state pills on hover and opens state editing only after a
   assert.match(componentSource, /@click\.stop="[^"]*handleStateEditorActionClick\(/);
   assert.match(componentSource, /const stateEditorDraft = ref<StateFieldDraft \| null>\(null\);/);
   assert.match(componentSource, /const activeStateEditorAnchorId = ref<string \| null>\(null\);/);
-  assert.match(componentSource, /const activeStateEditorConfirmAnchorId = ref<string \| null>\(null\);/);
+  assert.match(componentSource, /activeStateEditorConfirmAnchorId,[\s\S]*activeTopAction,/);
   assert.match(componentSource, /const hoveredStateEditorPillAnchorId = ref<string \| null>\(null\);/);
-  assert.match(componentSource, /const stateEditorConfirmTimeoutRef = ref<number \| null>\(null\);/);
-  assert.match(componentSource, /function clearStateEditorConfirmState\(\)/);
-  assert.match(componentSource, /function startStateEditorConfirmWindow\(anchorId: string\)/);
+  assert.match(floatingPanelsComposableSource, /const activeStateEditorConfirmAnchorId = ref<string \| null>\(null\);/);
+  assert.match(floatingPanelsComposableSource, /const stateEditorConfirmTimeoutRef = ref<unknown \| null>\(null\);/);
+  assert.match(floatingPanelsComposableSource, /function clearStateEditorConfirmState\(\)/);
+  assert.match(floatingPanelsComposableSource, /function startStateEditorConfirmWindow\(anchorId: string\)/);
   assert.match(componentSource, /function handleStateEditorPillPointerEnter\(anchorId: string\)/);
   assert.match(componentSource, /function handleStateEditorPillPointerLeave\(anchorId: string\)/);
   assert.match(componentSource, /function handleStateEditorActionClick\(anchorId: string, stateKey: string \| null \| undefined\)/);
@@ -684,11 +685,12 @@ test("NodeCard reveals state pills on hover and opens state editing only after a
 test("NodeCard adds mirrored remove-binding buttons to non-output state pills", () => {
   assert.match(componentSource, /import \{[\s\S]*Delete[\s\S]*\} from "@element-plus\/icons-vue";/);
   assert.match(componentSource, /\(event: "remove-port-state", payload: \{ nodeId: string; side: "input" \| "output"; stateKey: string \}\): void;/);
-  assert.match(componentSource, /const activeRemovePortStateConfirmAnchorId = ref<string \| null>\(null\);/);
-  assert.match(componentSource, /const removePortStateConfirmTimeoutRef = ref<number \| null>\(null\);/);
-  assert.match(componentSource, /function clearRemovePortStateConfirmState\(\)/);
-  assert.match(componentSource, /function startRemovePortStateConfirmWindow\(anchorId: string\)/);
-  assert.match(componentSource, /function isRemovePortStateConfirmOpen\(anchorId: string\)/);
+  assert.match(componentSource, /activeRemovePortStateConfirmAnchorId,[\s\S]*activeStateEditorConfirmAnchorId,/);
+  assert.match(floatingPanelsComposableSource, /const activeRemovePortStateConfirmAnchorId = ref<string \| null>\(null\);/);
+  assert.match(floatingPanelsComposableSource, /const removePortStateConfirmTimeoutRef = ref<unknown \| null>\(null\);/);
+  assert.match(floatingPanelsComposableSource, /function clearRemovePortStateConfirmState\(\)/);
+  assert.match(floatingPanelsComposableSource, /function startRemovePortStateConfirmWindow\(anchorId: string\)/);
+  assert.match(floatingPanelsComposableSource, /function isRemovePortStateConfirmOpen\(anchorId: string\)/);
   assert.match(componentSource, /function handleRemovePortStateClick\(anchorId: string, side: "input" \| "output", stateKey: string \| null \| undefined\)/);
   assert.match(componentSource, /function handleRemovePortStateClick\(anchorId: string, side: "input" \| "output", stateKey: string \| null \| undefined\) \{[\s\S]*if \(guardLockedStateEditAttempt\(\)\) \{[\s\S]*return;[\s\S]*\}/);
   assert.match(componentSource, /emit\("remove-port-state", \{[\s\S]*nodeId: props\.nodeId,[\s\S]*side,[\s\S]*stateKey,[\s\S]*\}\);/);

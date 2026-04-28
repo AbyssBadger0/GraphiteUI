@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 17 complete
+Phase 18 in progress
 
 ## Phases
 
@@ -132,6 +132,19 @@ Phase 17 complete
 - [x] Commit and push the cleanup.
 - **Status:** completed
 
+### Phase 18: NodeCard State Confirm Floating Panel State
+- [x] Continue the formal roadmap `useNodeFloatingPanels` step.
+- [x] Add failing composable coverage for state editor confirmation and remove-state confirmation active anchors and timers.
+- [x] Extend `useNodeFloatingPanels.ts` to own state editor/remove-state confirm anchor refs, timeout lifecycle, and open-state helpers.
+- [x] Update `NodeCard.vue` to consume the composable while keeping state draft sync, update-state emits, and remove-port-state emits in the component.
+- [x] Update structure tests and roadmap notes for the expanded composable boundary.
+- [x] Run focused floating-panel and NodeCard structure tests.
+- [x] Run TypeScript unused-symbol verification.
+- [x] Run the full frontend test suite and production build.
+- [x] Restart the dev environment with `npm run dev` and verify frontend/backend health.
+- [ ] Commit and push the cleanup.
+- **Status:** in_progress
+
 ## Progress Estimate
 | Scope | Estimate |
 |-------|----------|
@@ -149,6 +162,8 @@ Phase 17 complete
 | P1 `NodeCard.vue` cleanup after Phase 16 | About 54% complete after moving text editor interaction state into a tested composable. |
 | Overall roadmap cleanup after Phase 17 | About 42% complete after starting the roadmap `useNodeFloatingPanels` extraction. |
 | P1 `NodeCard.vue` cleanup after Phase 17 | About 57% complete after moving top-action and global outside-close floating-panel state into a tested composable. |
+| Overall roadmap cleanup after Phase 18 | Targeting about 43% complete once commit and push pass. |
+| P1 `NodeCard.vue` cleanup after Phase 18 | Targeting about 59% complete after moving state edit/remove confirm refs and timers into `useNodeFloatingPanels`. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -167,6 +182,7 @@ Phase 17 complete
 - Phase 15 leaves `EditorCanvas.vue` at 3,363 lines by moving edge popover interaction state and node measurement state into composables.
 - Phase 16 moves NodeCard title/description editing state into `useNodeCardTextEditor.ts`; `NodeCard.vue` drops from 5,095 to 4,930 lines before final verification.
 - Phase 17 starts the roadmap `useNodeFloatingPanels` step by moving top-action confirmation timers and global outside-panel close listener wiring into a tested composable; `NodeCard.vue` drops to 4,856 lines before final verification.
+- Phase 18 continues `useNodeFloatingPanels` by moving state edit/remove confirmation refs and timers; `NodeCard.vue` drops to 4,808 lines before final verification.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

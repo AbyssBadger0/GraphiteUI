@@ -39,8 +39,8 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 当前执行进展：
 
 - `useNodeCardTextEditor.ts` 已先行承接标题/描述编辑确认、指针触发、焦点调度、草稿和 metadata patch 提交。
-- `useNodeFloatingPanels.ts` 已开始承接 roadmap 第 1 项中的 top action 确认定时器和全局 pointer/focus/keydown 外部关闭逻辑。
-- roadmap 第 1 项剩余部分是 state 编辑确认和删除绑定确认；这些应继续按小步 controller 测试迁移。
+- `useNodeFloatingPanels.ts` 已承接 roadmap 第 1 项中的 top action 确认定时器、全局 pointer/focus/keydown 外部关闭逻辑、state 编辑确认和删除绑定确认 active anchor/timer 状态。
+- roadmap 第 1 项剩余部分是进一步统一各类浮层的组件侧关闭编排；这些应继续按小步 controller 测试迁移，避免一次性改动 state 草稿和 graph mutation emit。
 
 不建议先做的事：
 

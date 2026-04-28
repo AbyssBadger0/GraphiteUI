@@ -169,6 +169,49 @@
   - Committed the cleanup as `dcd5e13` with Chinese message `抽取节点浮层交互基础`.
   - Pushed `main` to `origin/main`.
 
+## Session: 2026-04-28 Phase 18
+
+### Phase 1: Roadmap Sub-slice Selection
+- **Status:** completed
+- Actions taken:
+  - Continued the formal roadmap P1 step `useNodeFloatingPanels`.
+  - Selected state editor and remove-state confirmation refs/timers as the next safe sub-slice.
+  - Kept state draft synchronization, update-state emits, and remove-port-state emits in `NodeCard.vue`.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Extended `frontend/src/editor/nodes/useNodeFloatingPanels.test.ts` before production code.
+  - Ran `node --test frontend/src/editor/nodes/useNodeFloatingPanels.test.ts` and verified the expected red failure: missing `startStateEditorConfirmWindow`.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Extended `useNodeFloatingPanels.ts` with state editor and remove-state confirm anchor refs, timeout cleanup, start functions, and open-state helpers.
+  - Updated `NodeCard.vue` to consume the expanded composable.
+  - Updated `NodeCard.structure.test.ts` to assert the new floating-panel boundary.
+  - Updated the formal roadmap and findings with the expanded `useNodeFloatingPanels` progress.
+  - Confirmed `NodeCard.vue` is down to 4,808 lines after this extraction.
+
+### Phase 4: Focused Verification
+- **Status:** completed
+- Actions taken:
+  - Ran `node --test frontend/src/editor/nodes/useNodeFloatingPanels.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts`.
+  - Result: 38 tests passed, 0 failed.
+  - Ran `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend`.
+  - Result: exited 0 with no diagnostics.
+
+### Phase 5: Full Verification and Dev Restart
+- **Status:** completed
+- Actions taken:
+  - Ran `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts`.
+  - Result: 758 tests passed, 0 failed.
+  - Ran `npm run build` in `frontend`.
+  - Result: build passed with no Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend returned HTTP 200 at `http://127.0.0.1:3477`.
+  - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
+
 ## Session: 2026-04-28 Baseline Interaction Repair and Large Connection Cleanup
 
 ### Phase 1: Baseline Regression Repair

@@ -50,7 +50,11 @@ export function useNodeFloatingPanels(options: UseNodeFloatingPanelsOptions) {
   const timeoutScheduler = options.timeoutScheduler ?? defaultTimeoutScheduler;
   const documentTarget = options.documentTarget ?? (typeof document !== "undefined" ? document : null);
   const activeTopAction = ref<NodeTopAction | null>(null);
+  const activeStateEditorConfirmAnchorId = ref<string | null>(null);
+  const activeRemovePortStateConfirmAnchorId = ref<string | null>(null);
   const topActionTimeoutRef = ref<unknown | null>(null);
+  const stateEditorConfirmTimeoutRef = ref<unknown | null>(null);
+  const removePortStateConfirmTimeoutRef = ref<unknown | null>(null);
 
   function isFloatingPanelSurfaceTarget(target: EventTarget | null) {
     if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) {
@@ -107,6 +111,30 @@ export function useNodeFloatingPanels(options: UseNodeFloatingPanelsOptions) {
     }
   }
 
+  function clearStateEditorConfirmTimeout() {
+    if (stateEditorConfirmTimeoutRef.value !== null) {
+      timeoutScheduler.clearTimeout(stateEditorConfirmTimeoutRef.value);
+      stateEditorConfirmTimeoutRef.value = null;
+    }
+  }
+
+  function clearStateEditorConfirmState() {
+    clearStateEditorConfirmTimeout();
+    activeStateEditorConfirmAnchorId.value = null;
+  }
+
+  function clearRemovePortStateConfirmTimeout() {
+    if (removePortStateConfirmTimeoutRef.value !== null) {
+      timeoutScheduler.clearTimeout(removePortStateConfirmTimeoutRef.value);
+      removePortStateConfirmTimeoutRef.value = null;
+    }
+  }
+
+  function clearRemovePortStateConfirmState() {
+    clearRemovePortStateConfirmTimeout();
+    activeRemovePortStateConfirmAnchorId.value = null;
+  }
+
   function startTopActionConfirmWindow(action: "delete" | "preset") {
     clearTopActionTimeout();
     activeTopAction.value = action;
@@ -118,16 +146,56 @@ export function useNodeFloatingPanels(options: UseNodeFloatingPanelsOptions) {
     }, 2000);
   }
 
+  function startStateEditorConfirmWindow(anchorId: string) {
+    clearStateEditorConfirmTimeout();
+    activeStateEditorConfirmAnchorId.value = anchorId;
+    stateEditorConfirmTimeoutRef.value = timeoutScheduler.setTimeout(() => {
+      stateEditorConfirmTimeoutRef.value = null;
+      if (activeStateEditorConfirmAnchorId.value === anchorId) {
+        activeStateEditorConfirmAnchorId.value = null;
+      }
+    }, 2000);
+  }
+
+  function startRemovePortStateConfirmWindow(anchorId: string) {
+    clearRemovePortStateConfirmTimeout();
+    activeRemovePortStateConfirmAnchorId.value = anchorId;
+    removePortStateConfirmTimeoutRef.value = timeoutScheduler.setTimeout(() => {
+      removePortStateConfirmTimeoutRef.value = null;
+      if (activeRemovePortStateConfirmAnchorId.value === anchorId) {
+        activeRemovePortStateConfirmAnchorId.value = null;
+      }
+    }, 2000);
+  }
+
+  function isStateEditorConfirmOpen(anchorId: string) {
+    return activeStateEditorConfirmAnchorId.value === anchorId;
+  }
+
+  function isRemovePortStateConfirmOpen(anchorId: string) {
+    return activeRemovePortStateConfirmAnchorId.value === anchorId;
+  }
+
   return {
+    activeRemovePortStateConfirmAnchorId,
+    activeStateEditorConfirmAnchorId,
     activeTopAction,
     addGlobalFloatingPanelListeners,
+    clearRemovePortStateConfirmState,
+    clearRemovePortStateConfirmTimeout,
+    clearStateEditorConfirmState,
+    clearStateEditorConfirmTimeout,
     clearTopActionConfirmState,
     clearTopActionTimeout,
     handleGlobalFloatingPanelFocusIn,
     handleGlobalFloatingPanelKeyDown,
     handleGlobalFloatingPanelPointerDown,
+    isRemovePortStateConfirmOpen,
+    isStateEditorConfirmOpen,
     isFloatingPanelSurfaceTarget,
     removeGlobalFloatingPanelListeners,
+    startRemovePortStateConfirmWindow,
+    startStateEditorConfirmWindow,
     startTopActionConfirmWindow,
   };
 }

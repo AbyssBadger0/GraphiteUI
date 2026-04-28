@@ -331,6 +331,81 @@
   - Confirmed the frontend returned HTTP 200 at `http://127.0.0.1:3477`.
   - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
 
+### Phase 6: Commit and Push
+- **Status:** completed
+- Actions taken:
+  - Committed the source cleanup as `89fb8be` with Chinese message `抽取节点状态端口列表组件`.
+  - Committed planning updates as `c802768` with Chinese message `更新状态端口列表清理进度`.
+  - Pushed `main` to `origin/main`.
+
+## Session: 2026-04-29 Phase 21
+
+### Phase 1: Roadmap Sub-slice Selection
+- **Status:** completed
+- Actions taken:
+  - Continued the formal roadmap P1 `StatePortList.vue` sequence after agent real state rows.
+  - Selected agent `+ input` and `+ output` create entry rows as the next safe slice.
+  - Kept port draft mutation, validation, locked-edit guards, and graph mutation emits in `NodeCard.vue`.
+  - Noted that create-row styles must move with the extracted child markup because `NodeCard.vue` scoped CSS does not style child internals.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Extended `frontend/src/editor/nodes/StatePortList.structure.test.ts` and `frontend/src/editor/nodes/NodeCard.structure.test.ts` before production changes.
+  - Ran `node --test frontend/src/editor/nodes/StatePortList.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts`.
+  - Verified the expected red failure: `StatePortList.vue` did not yet expose create-entry props, create-popover wiring, or create-row styles, and `NodeCard.vue` still rendered agent create popovers directly.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Moved the agent `+ input` and `+ output` create row markup, side-specific anchor slots, and `StatePortCreatePopover` wiring into `StatePortList.vue`.
+  - Updated `NodeCard.vue` to pass create label/color/anchor/draft/error/title/hint/type-options and parent-owned handlers into `StatePortList`.
+  - Kept port draft mutation, validation, locked-edit guards, `create-port-state` emission, and picker lifecycle in `NodeCard.vue`.
+  - Moved create-row visibility and create-pill styles into `StatePortList.vue` so scoped CSS continues to apply after extraction.
+  - Added parent reveal computed values so selected, hovered, empty, and floating-panel-open states still reveal the create rows.
+  - Updated the formal roadmap and findings with the expanded `StatePortList.vue` boundary.
+  - Confirmed `NodeCard.vue` is down to 4,472 lines after this extraction.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused StatePortList, NodeCard structure, port reorder model, and usePortReorder tests.
+  - Ran `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend`.
+  - Ran the full frontend test suite.
+  - Ran the frontend production build and confirmed the large chunk warning did not return.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend returned HTTP 200 at `http://127.0.0.1:3477`.
+  - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
+  - Captured a headless Chrome screenshot of `http://127.0.0.1:3477/editor/new` and checked for obvious layout regressions.
+
+### Phase 5: Commit and Push
+- **Status:** completed
+- Actions taken:
+  - Committed source, tests, roadmap, and findings as `6ff8424` with Chinese message `迁移节点状态端口创建入口`.
+  - Committed planning updates with Chinese message `更新状态端口创建入口清理进度`.
+  - Pushed `main` to `origin/main`.
+
+## Test Results: Phase 21
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red structure tests | `node --test frontend/src/editor/nodes/StatePortList.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts` before implementation | Fails because create entries are still parent-owned | Failed on missing create props/wiring/styles | Passed |
+| Focused StatePortList/NodeCard suite | `node --test frontend/src/editor/nodes/StatePortList.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts` | Structure tests pass | 36 passed | Passed |
+| Focused port reorder safety suite | `node --test frontend/src/editor/nodes/StatePortList.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts frontend/src/editor/nodes/usePortReorder.test.ts frontend/src/editor/nodes/portReorderModel.test.ts` | Touched structure and reorder tests pass | 46 passed | Passed |
+| Unused symbol check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No unused-symbol diagnostics | Exit 0, no diagnostics | Passed |
+| Full frontend tests | `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts` | All frontend tests pass | 761 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without large chunk warning | Exit 0, no large chunk warning | Passed |
+| Dev restart | `npm run dev` | Services start and respond | Frontend 200, backend `/health` 200 | Passed |
+| Visual check | Headless Chrome screenshot of `/editor/new` | Editor route renders without obvious layout regression | Screenshot captured at `/tmp/graphiteui-editor-phase21.png` | Passed |
+
+## 5-Question Reboot Check: Phase 21
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 21 implementation, verification, dev restart, commits, and push are complete. |
+| Where am I going? | Next safe P1 slice is remaining `StatePortList.vue`/node body component extraction. |
+| What's the goal? | Continue reducing `NodeCard.vue` responsibility without changing state creation, auto-snap, or graph mutation behavior. |
+| What have I learned? | Agent create rows can move to `StatePortList.vue` safely if `NodeCard.vue` retains draft/validation/emit ownership and passes reveal state explicitly. |
+| What have I done? | Migrated agent state create rows and popover wiring into `StatePortList.vue`, verified tests/build/dev health, and kept the large chunk warning resolved. |
+
 ## Session: 2026-04-28 Baseline Interaction Repair and Large Connection Cleanup
 
 ### Phase 1: Baseline Regression Repair

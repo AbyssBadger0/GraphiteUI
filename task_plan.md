@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 20 in progress
+Phase 21 completed
 
 ## Phases
 
@@ -170,6 +170,18 @@ Phase 20 in progress
 - [x] Commit and push the cleanup.
 - **Status:** completed
 
+### Phase 21: Agent State Port Create Entry Component
+- [x] Continue the formal roadmap P1 `StatePortList.vue` sequence.
+- [x] Add failing structure coverage for agent create rows and create-popover delegation.
+- [x] Move agent `+ input` and `+ output` create row markup, anchor slots, create popover wiring, and local create-row styles into `StatePortList.vue`.
+- [x] Keep port draft mutation, validation, locked-edit guards, and graph mutation emits in `NodeCard.vue`.
+- [x] Update roadmap/progress notes for the expanded `StatePortList.vue` boundary.
+- [x] Run focused StatePortList, NodeCard structure, port reorder, and TypeScript checks.
+- [x] Run the full frontend test suite and production build.
+- [x] Restart the dev environment with `npm run dev` and verify frontend/backend health.
+- [x] Commit and push the cleanup.
+- **Status:** completed
+
 ## Progress Estimate
 | Scope | Estimate |
 |-------|----------|
@@ -193,6 +205,8 @@ Phase 20 in progress
 | P1 `NodeCard.vue` cleanup after Phase 19 | About 62% complete after moving port reorder interaction state into a tested composable. |
 | Overall roadmap cleanup after Phase 20 | About 45% complete after moving agent real state port list markup into `StatePortList.vue`. |
 | P1 `NodeCard.vue` cleanup after Phase 20 | About 65% complete after moving agent real state port list markup into `StatePortList.vue`. |
+| Overall roadmap cleanup after Phase 21 | About 46% complete after moving agent state port create entries into `StatePortList.vue`. |
+| P1 `NodeCard.vue` cleanup after Phase 21 | About 68% complete after moving agent create rows and create-popover wiring into `StatePortList.vue`. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -214,6 +228,7 @@ Phase 20 in progress
 - Phase 18 continues `useNodeFloatingPanels` by moving state edit/remove confirmation refs and timers; `NodeCard.vue` drops to 4,808 lines before final verification.
 - Phase 19 starts the roadmap `usePortReorder` step by moving pointer/listener/click-suppression state extraction from `NodeCard.vue`; `NodeCard.vue` drops to 4,652 lines before final verification.
 - Phase 20 starts the roadmap `StatePortList.vue` step with a conservative slice for agent real input/output state port rows only; create-port popovers remain in `NodeCard.vue`. `NodeCard.vue` drops to 4,544 lines before final verification.
+- Phase 21 continues the roadmap `StatePortList.vue` step by moving agent `+ input`/`+ output` create rows and create-popover wiring into the child component while leaving draft mutation, validation, locked guards, and graph emits in `NodeCard.vue`. `NodeCard.vue` drops to 4,472 lines before final verification.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

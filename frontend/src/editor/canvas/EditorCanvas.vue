@@ -396,7 +396,6 @@ import StateEditorPopover from "@/editor/nodes/StateEditorPopover.vue";
 import { type ProjectedCanvasAnchor, type ProjectedCanvasEdge } from "@/editor/canvas/edgeProjection";
 import { resolveFlowAnchorOffset } from "@/editor/canvas/flowAnchorLayout";
 import { resolveEdgeRunPresentation } from "@/editor/canvas/runEdgePresentation";
-import { resolveNodeRunPresentation } from "@/editor/canvas/runNodePresentation";
 import { resolveCanvasLayout, type MeasuredAnchorOffset } from "@/editor/canvas/resolvedCanvasLayout";
 import { resolveCanvasSurfaceStyle } from "@/editor/canvas/canvasSurfaceStyle";
 import { isEditableKeyboardEventTarget } from "@/editor/canvas/canvasKeyboard";
@@ -434,6 +433,20 @@ import {
   resolveConnectionPreviewStateKey,
   resolveConnectionSourceAnchorId,
 } from "./canvasConnectionModel";
+import { buildConditionRouteTargetsByNodeId } from "./conditionRouteTargetsModel";
+import {
+  isCanvasNodeVisuallySelected,
+  isHumanReviewRunNode,
+  resolveRunNodeClassListForCanvasNode,
+  resolveRunNodePresentationForCanvasNode,
+} from "./canvasRunPresentationModel";
+import {
+  buildFlowEdgeDeleteConfirmFromEdge,
+  buildFlowEdgeDeleteConfirmStyle,
+  isFlowEdgeDeleteConfirmActive,
+  resolveFlowEdgeDeleteAction,
+  type FlowEdgeDeleteConfirmTarget,
+} from "./flowEdgeDeleteModel";
 import {
   buildMinimapNodeModel,
   buildNodeCardSizeStyle,
@@ -638,15 +651,7 @@ const autoSnappedTargetAnchor = ref<ProjectedCanvasAnchor | null>(null);
 const activeConnectionHoverNodeId = ref<string | null>(null);
 const selectedEdgeId = ref<string | null>(null);
 const edgeVisibilityMode = ref<EdgeVisibilityMode>("smart");
-const activeFlowEdgeDeleteConfirm = ref<{
-  id: string;
-  kind: "flow" | "route";
-  source: string;
-  target: string;
-  branch?: string;
-  x: number;
-  y: number;
-} | null>(null);
+const activeFlowEdgeDeleteConfirm = ref<FlowEdgeDeleteConfirmTarget | null>(null);
 const flowEdgeDeleteConfirmTimeoutRef = ref<number | null>(null);
 const activeDataEdgeStateConfirm = ref<DataEdgeStateConfirmTarget | null>(null);
 const dataEdgeStateConfirmTimeoutRef = ref<number | null>(null);
@@ -687,13 +692,7 @@ const minimapEdges = computed(() =>
       color: edge.kind === "route" ? resolveRouteHandlePalette(edge.branch).accent : edge.color,
     })),
 );
-const conditionRouteTargetsByNodeId = computed(() =>
-  Object.fromEntries(
-    Object.entries(props.document.nodes)
-      .filter(([, node]) => node.kind === "condition")
-      .map(([nodeId]) => [nodeId, buildConditionRouteTargets(props.document, nodeId)]),
-  ) as Record<string, Record<string, string | null>>,
-);
+const conditionRouteTargetsByNodeId = computed(() => buildConditionRouteTargetsByNodeId(props.document));
 const resolvedCanvasLayout = computed(() => resolveCanvasLayout(props.document, measuredAnchorOffsets.value));
 const projectedEdges = computed(() => resolvedCanvasLayout.value.edges);
 const forceVisibleProjectedEdgeIds = computed(() => {
@@ -1002,16 +1001,7 @@ const zoomPercentLabel = computed(() => `${Math.round(viewport.viewport.scale * 
 const stateTypeOptions = STATE_FIELD_TYPE_OPTIONS;
 const nodeStyle = buildNodeTransformStyle;
 const nodeCardSizeStyle = buildNodeCardSizeStyle;
-const flowEdgeDeleteConfirmStyle = computed(() => {
-  if (!activeFlowEdgeDeleteConfirm.value) {
-    return undefined;
-  }
-
-  return {
-    left: `${activeFlowEdgeDeleteConfirm.value.x}px`,
-    top: `${activeFlowEdgeDeleteConfirm.value.y}px`,
-  };
-});
+const flowEdgeDeleteConfirmStyle = computed(() => buildFlowEdgeDeleteConfirmStyle(activeFlowEdgeDeleteConfirm.value));
 const dataEdgeStateConfirmStyle = computed(() => buildFloatingCanvasPointStyle(activeDataEdgeStateConfirm.value));
 const dataEdgeStateEditorStyle = computed(() => buildFloatingCanvasPointStyle(activeDataEdgeStateEditor.value));
 const dataEdgeStateColorOptions = computed(() => resolveStateColorOptions(dataEdgeStateDraft.value?.definition.color ?? ""));
@@ -1029,7 +1019,7 @@ watch(
 );
 
 function isFlowEdgeDeleteConfirmOpen(edgeId: string) {
-  return activeFlowEdgeDeleteConfirm.value?.id === edgeId;
+  return isFlowEdgeDeleteConfirmActive(activeFlowEdgeDeleteConfirm.value, edgeId);
 }
 
 function isDataEdgeStateInteractionOpen(edge: Pick<ProjectedCanvasEdge, "kind" | "source" | "target" | "state">) {
@@ -1232,15 +1222,12 @@ function clearCanvasTransientState() {
 function startFlowEdgeDeleteConfirm(edge: ProjectedCanvasEdge, event: PointerEvent) {
   clearFlowEdgeDeleteConfirmTimeout();
   const point = resolveCanvasPoint(event);
-  activeFlowEdgeDeleteConfirm.value = {
-    id: edge.id,
-    kind: edge.kind === "route" ? "route" : "flow",
-    source: edge.source,
-    target: edge.target,
-    ...(edge.kind === "route" && edge.branch ? { branch: edge.branch } : {}),
-    x: point.x,
-    y: point.y,
-  };
+  const nextConfirm = buildFlowEdgeDeleteConfirmFromEdge(edge, point);
+  if (!nextConfirm) {
+    return;
+  }
+
+  activeFlowEdgeDeleteConfirm.value = nextConfirm;
   selectedEdgeId.value = edge.id;
   flowEdgeDeleteConfirmTimeoutRef.value = window.setTimeout(() => {
     flowEdgeDeleteConfirmTimeoutRef.value = null;
@@ -1258,18 +1245,23 @@ function confirmFlowEdgeDelete() {
     return;
   }
 
-  if (activeFlowEdgeDeleteConfirm.value.kind === "route" && activeFlowEdgeDeleteConfirm.value.branch) {
+  const action = resolveFlowEdgeDeleteAction(activeFlowEdgeDeleteConfirm.value);
+  if (!action) {
+    return;
+  }
+
+  if (action.kind === "route") {
     emit("remove-route", {
-      sourceNodeId: activeFlowEdgeDeleteConfirm.value.source,
-      branchKey: activeFlowEdgeDeleteConfirm.value.branch,
+      sourceNodeId: action.sourceNodeId,
+      branchKey: action.branchKey,
     });
     clearFlowEdgeDeleteConfirmState();
     return;
   }
 
   emit("remove-flow", {
-    sourceNodeId: activeFlowEdgeDeleteConfirm.value.source,
-    targetNodeId: activeFlowEdgeDeleteConfirm.value.target,
+    sourceNodeId: action.sourceNodeId,
+    targetNodeId: action.targetNodeId,
   });
   clearFlowEdgeDeleteConfirmState();
 }
@@ -2774,22 +2766,6 @@ function focusNode(nodeId: string) {
   );
 }
 
-function buildConditionRouteTargets(document: GraphPayload | GraphDocument, nodeId: string) {
-  const node = document.nodes[nodeId];
-  if (!node || node.kind !== "condition") {
-    return {};
-  }
-
-  const routeBranches = document.conditional_edges.find((edge) => edge.source === nodeId)?.branches ?? {};
-  return Object.fromEntries(
-    node.config.branches.map((branchKey) => {
-      const targetNodeId = routeBranches[branchKey];
-      const targetNode = targetNodeId ? document.nodes[targetNodeId] : null;
-      return [branchKey, targetNode?.name ?? targetNodeId ?? null];
-    }),
-  );
-}
-
 function completePendingConnection(targetAnchor: ProjectedCanvasAnchor) {
   if (isGraphEditingLocked()) {
     return;
@@ -2910,21 +2886,38 @@ function resolveEdgeTargetPoint(edge: ProjectedCanvasEdge) {
 }
 
 function resolveRunNodePresentationForNode(nodeId: string) {
-  const status = isHumanReviewNode(nodeId) ? "paused" : props.runNodeStatusByNodeId?.[nodeId];
-  return resolveNodeRunPresentation(status, props.currentRunNodeId === nodeId);
+  return resolveRunNodePresentationForCanvasNode({
+    nodeId,
+    currentRunNodeId: props.currentRunNodeId,
+    latestRunStatus: props.latestRunStatus,
+    runNodeStatusByNodeId: props.runNodeStatusByNodeId,
+  });
 }
 
 function resolveRunNodeClassList(nodeId: string) {
-  const presentation = resolveRunNodePresentationForNode(nodeId);
-  return presentation?.shellClass ? [presentation.shellClass] : [];
+  return resolveRunNodeClassListForCanvasNode({
+    nodeId,
+    currentRunNodeId: props.currentRunNodeId,
+    latestRunStatus: props.latestRunStatus,
+    runNodeStatusByNodeId: props.runNodeStatusByNodeId,
+  });
 }
 
 function isHumanReviewNode(nodeId: string) {
-  return props.latestRunStatus === "awaiting_human" && props.currentRunNodeId === nodeId;
+  return isHumanReviewRunNode({
+    nodeId,
+    currentRunNodeId: props.currentRunNodeId,
+    latestRunStatus: props.latestRunStatus,
+  });
 }
 
 function isNodeVisuallySelected(nodeId: string) {
-  return selection.selectedNodeId.value === nodeId || isHumanReviewNode(nodeId);
+  return isCanvasNodeVisuallySelected({
+    nodeId,
+    selectedNodeId: selection.selectedNodeId.value,
+    currentRunNodeId: props.currentRunNodeId,
+    latestRunStatus: props.latestRunStatus,
+  });
 }
 
 function isGraphEditingLocked() {

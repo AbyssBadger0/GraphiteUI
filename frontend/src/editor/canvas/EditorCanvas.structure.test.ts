@@ -25,6 +25,18 @@ function readCanvasConnectionModelSource() {
   return readFileSync(resolve(currentDirectory, "canvasConnectionModel.ts"), "utf8").replace(/\r\n/g, "\n");
 }
 
+function readConditionRouteTargetsModelSource() {
+  return readFileSync(resolve(currentDirectory, "conditionRouteTargetsModel.ts"), "utf8").replace(/\r\n/g, "\n");
+}
+
+function readCanvasRunPresentationModelSource() {
+  return readFileSync(resolve(currentDirectory, "canvasRunPresentationModel.ts"), "utf8").replace(/\r\n/g, "\n");
+}
+
+function readFlowEdgeDeleteModelSource() {
+  return readFileSync(resolve(currentDirectory, "flowEdgeDeleteModel.ts"), "utf8").replace(/\r\n/g, "\n");
+}
+
 function readStateEditorModelSource() {
   return readFileSync(resolve(currentDirectory, "../nodes/stateEditorModel.ts"), "utf8").replace(/\r\n/g, "\n");
 }
@@ -312,14 +324,23 @@ test("EditorCanvas styles runtime node card classes across the NodeCard componen
 });
 
 test("EditorCanvas treats awaiting-human current node as a persistent review node", () => {
+  const canvasRunPresentationModelSource = readCanvasRunPresentationModelSource();
+
   assert.match(componentSource, /'editor-canvas__node--selected': isNodeVisuallySelected\(nodeId\)/);
   assert.match(componentSource, /:human-review-pending="isHumanReviewNode\(nodeId\)"/);
   assert.match(componentSource, /@open-human-review="emit\('open-human-review', \$event\)"/);
+  assert.match(componentSource, /import \{[\s\S]*isCanvasNodeVisuallySelected,[\s\S]*isHumanReviewRunNode,[\s\S]*resolveRunNodeClassListForCanvasNode,[\s\S]*resolveRunNodePresentationForCanvasNode,[\s\S]*\} from "\.\/canvasRunPresentationModel";/);
   assert.match(componentSource, /function isHumanReviewNode\(nodeId: string\)/);
-  assert.match(componentSource, /props\.latestRunStatus === "awaiting_human" && props\.currentRunNodeId === nodeId/);
-  assert.match(componentSource, /isHumanReviewNode\(nodeId\) \? "paused" : props\.runNodeStatusByNodeId\?\.\[nodeId\]/);
+  assert.match(componentSource, /return isHumanReviewRunNode\(\{[\s\S]*nodeId,[\s\S]*currentRunNodeId: props\.currentRunNodeId,[\s\S]*latestRunStatus: props\.latestRunStatus,[\s\S]*\}\);/);
+  assert.match(componentSource, /resolveRunNodePresentationForCanvasNode\(\{[\s\S]*nodeId,[\s\S]*currentRunNodeId: props\.currentRunNodeId,[\s\S]*latestRunStatus: props\.latestRunStatus,[\s\S]*runNodeStatusByNodeId: props\.runNodeStatusByNodeId,[\s\S]*\}\)/);
+  assert.match(componentSource, /resolveRunNodeClassListForCanvasNode\(\{[\s\S]*nodeId,[\s\S]*currentRunNodeId: props\.currentRunNodeId,[\s\S]*latestRunStatus: props\.latestRunStatus,[\s\S]*runNodeStatusByNodeId: props\.runNodeStatusByNodeId,[\s\S]*\}\)/);
   assert.match(componentSource, /function isNodeVisuallySelected\(nodeId: string\)/);
-  assert.match(componentSource, /return selection\.selectedNodeId\.value === nodeId \|\| isHumanReviewNode\(nodeId\);/);
+  assert.match(componentSource, /return isCanvasNodeVisuallySelected\(\{[\s\S]*nodeId,[\s\S]*selectedNodeId: selection\.selectedNodeId\.value,[\s\S]*currentRunNodeId: props\.currentRunNodeId,[\s\S]*latestRunStatus: props\.latestRunStatus,[\s\S]*\}\);/);
+  assert.match(canvasRunPresentationModelSource, /export function isHumanReviewRunNode/);
+  assert.match(canvasRunPresentationModelSource, /export function resolveRunNodePresentationForCanvasNode/);
+  assert.doesNotMatch(componentSource, /props\.latestRunStatus === "awaiting_human" && props\.currentRunNodeId === nodeId/);
+  assert.doesNotMatch(componentSource, /isHumanReviewNode\(nodeId\) \? "paused" : props\.runNodeStatusByNodeId\?\.\[nodeId\]/);
+  assert.doesNotMatch(componentSource, /selection\.selectedNodeId\.value === nodeId \|\| isHumanReviewNode\(nodeId\)/);
 });
 
 test("EditorCanvas keeps paused human-review graphs viewable but read-only", () => {
@@ -376,8 +397,15 @@ test("EditorCanvas lets top-left floating tools respect workspace overlay cleara
 
 test("EditorCanvas renders condition route outputs as right-side floating branch handles", () => {
   const canvasInteractionStyleModelSource = readCanvasInteractionStyleModelSource();
+  const conditionRouteTargetsModelSource = readConditionRouteTargetsModelSource();
 
   assert.match(componentSource, /const routeHandles = computed\(\(\) => projectedAnchors\.value\.filter\(\(anchor\) => anchor\.kind === "route-out"\)\);/);
+  assert.match(componentSource, /import \{[\s\S]*buildConditionRouteTargetsByNodeId[\s\S]*\} from "\.\/conditionRouteTargetsModel";/);
+  assert.match(componentSource, /const conditionRouteTargetsByNodeId = computed\(\(\) => buildConditionRouteTargetsByNodeId\(props\.document\)\);/);
+  assert.match(conditionRouteTargetsModelSource, /export function buildConditionRouteTargets/);
+  assert.match(conditionRouteTargetsModelSource, /export function buildConditionRouteTargetsByNodeId/);
+  assert.doesNotMatch(componentSource, /function buildConditionRouteTargets\(document: GraphPayload \| GraphDocument, nodeId: string\)/);
+  assert.doesNotMatch(componentSource, /\.filter\(\(\[, node\]\) => node\.kind === "condition"\)[\s\S]*buildConditionRouteTargets\(props\.document, nodeId\)/);
   assert.match(componentSource, /<div class="editor-canvas__route-handles" aria-hidden="true">/);
   assert.match(componentSource, /v-for="anchor in routeHandles"/);
   assert.match(componentSource, /class="editor-canvas__flow-hotspot editor-canvas__flow-hotspot--outbound editor-canvas__route-handle"/);
@@ -558,14 +586,21 @@ test("EditorCanvas exposes page zoom controls and emits viewport draft updates",
 });
 
 test("EditorCanvas shows a clicked-position delete confirm for flow edges before removing them", () => {
+  const flowEdgeDeleteModelSource = readFlowEdgeDeleteModelSource();
+
   assert.match(componentSource, /@pointerdown\.stop="handleEdgePointerDown\(edge, \$event\)"/);
-  assert.match(componentSource, /const activeFlowEdgeDeleteConfirm = ref<\{/);
+  assert.match(componentSource, /import \{[\s\S]*buildFlowEdgeDeleteConfirmFromEdge,[\s\S]*buildFlowEdgeDeleteConfirmStyle,[\s\S]*isFlowEdgeDeleteConfirmActive,[\s\S]*resolveFlowEdgeDeleteAction,[\s\S]*type FlowEdgeDeleteConfirmTarget,[\s\S]*\} from "\.\/flowEdgeDeleteModel";/);
+  assert.match(componentSource, /const activeFlowEdgeDeleteConfirm = ref<FlowEdgeDeleteConfirmTarget \| null>\(null\);/);
   assert.match(componentSource, /function isFlowEdgeDeleteConfirmOpen\(edgeId: string\)/);
   assert.match(componentSource, /function clearFlowEdgeDeleteConfirmState\(\)/);
   assert.match(componentSource, /function startFlowEdgeDeleteConfirm\(edge: ProjectedCanvasEdge, event: PointerEvent\)/);
   assert.match(componentSource, /function confirmFlowEdgeDelete\(\)/);
   assert.match(componentSource, /if \(activeFlowEdgeDeleteConfirm\.value\?\.id === selectedEdgeId\.value\) \{[\s\S]*return null;/);
   assert.match(componentSource, /if \(activeFlowEdgeDeleteConfirm\.value\?\.id\) \{[\s\S]*edgeIds\.add\(activeFlowEdgeDeleteConfirm\.value\.id\);/);
+  assert.match(componentSource, /const flowEdgeDeleteConfirmStyle = computed\(\(\) => buildFlowEdgeDeleteConfirmStyle\(activeFlowEdgeDeleteConfirm\.value\)\);/);
+  assert.match(componentSource, /return isFlowEdgeDeleteConfirmActive\(activeFlowEdgeDeleteConfirm\.value, edgeId\);/);
+  assert.match(componentSource, /const nextConfirm = buildFlowEdgeDeleteConfirmFromEdge\(edge, point\);/);
+  assert.match(componentSource, /const action = resolveFlowEdgeDeleteAction\(activeFlowEdgeDeleteConfirm\.value\);/);
   assert.match(componentSource, /selectedEdgeId\.value = edge\.id;[\s\S]*flowEdgeDeleteConfirmTimeoutRef\.value = window\.setTimeout/);
   assert.match(componentSource, /<path[\s\S]*v-for="edge in projectedEdges\.filter\(\(edge\) => edge\.kind === 'flow' \|\| edge\.kind === 'route'\)"[\s\S]*class="editor-canvas__edge-delete-highlight"/);
   assert.match(componentSource, /'editor-canvas__edge-delete-highlight--active': isFlowEdgeDeleteConfirmOpen\(edge\.id\)/);
@@ -574,8 +609,12 @@ test("EditorCanvas shows a clicked-position delete confirm for flow edges before
   assert.match(componentSource, /class="editor-canvas__edge-delete-button"/);
   assert.match(componentSource, /<ElIcon><Check \/><\/ElIcon>/);
   assert.match(componentSource, /if \(edge\.kind === "flow" \|\| edge\.kind === "route"\) \{[\s\S]*startFlowEdgeDeleteConfirm\(edge, event\);[\s\S]*return;/);
-  assert.match(componentSource, /emit\("remove-flow", \{[\s\S]*sourceNodeId: activeFlowEdgeDeleteConfirm\.value\.source,[\s\S]*targetNodeId: activeFlowEdgeDeleteConfirm\.value\.target,[\s\S]*\}\);/);
-  assert.match(componentSource, /emit\("remove-route", \{[\s\S]*branchKey: activeFlowEdgeDeleteConfirm\.value\.branch/);
+  assert.match(componentSource, /if \(action\.kind === "route"\) \{[\s\S]*emit\("remove-route", \{[\s\S]*sourceNodeId: action\.sourceNodeId,[\s\S]*branchKey: action\.branchKey,[\s\S]*\}\);/);
+  assert.match(componentSource, /emit\("remove-flow", \{[\s\S]*sourceNodeId: action\.sourceNodeId,[\s\S]*targetNodeId: action\.targetNodeId,[\s\S]*\}\);/);
+  assert.match(flowEdgeDeleteModelSource, /export function buildFlowEdgeDeleteConfirmFromEdge/);
+  assert.match(flowEdgeDeleteModelSource, /export function resolveFlowEdgeDeleteAction/);
+  assert.doesNotMatch(componentSource, /activeFlowEdgeDeleteConfirm\.value = \{[\s\S]*kind: edge\.kind === "route" \? "route" : "flow"/);
+  assert.doesNotMatch(componentSource, /activeFlowEdgeDeleteConfirm\.value\.kind === "route" && activeFlowEdgeDeleteConfirm\.value\.branch/);
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight \{[\s\S]*stroke:\s*var\(--editor-edge-outline, rgba\(201,\s*107,\s*31,\s*0\.16\)\);/);
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight \{[\s\S]*stroke-width:\s*7px;/);
   assert.match(componentSource, /\.editor-canvas__edge-delete-highlight--active \{[\s\S]*stroke:\s*rgba\(220,\s*38,\s*38,\s*0\.34\);/);

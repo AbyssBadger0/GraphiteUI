@@ -1,57 +1,54 @@
-# Task Plan: Repository Cleanup Execution
+# Task Plan: Repository Cleanup Execution Round 2
 
 ## Goal
-Clean up the GraphiteUI codebase by implementing conservative, behavior-preserving refactors based on the existing architecture audit, while keeping the application functional and verified.
+Continue reducing GraphiteUI code concentration with conservative, behavior-preserving refactors based on the architecture roadmap, keeping editor functionality verified.
 
 ## Current Phase
-Complete
+Phase 5: Commit and Push
 
 ## Phases
 
 ### Phase 1: Re-orientation
-- [x] Re-read architecture reports and current planning context.
-- [x] Inspect the highest-priority cleanup target from the roadmap.
-- [x] Confirm current git status and verification commands.
+- [x] Recover previous cleanup context.
+- [x] Confirm current git status.
+- [x] Inspect the next safest `NodeCard.vue` extraction target.
 - **Status:** completed
 
 ### Phase 2: Select Safe Refactor Slice
-- [x] Identify duplicated or over-concentrated logic with clear test coverage.
-- [x] Avoid broad rewrites or behavior-sensitive runtime changes.
-- [x] Choose the smallest useful extraction or cleanup.
+- [x] Identify a small model or composable extraction with existing behavior to preserve.
+- [x] Confirm relevant tests or add focused tests before production edits.
+- [x] Avoid broad UI restructuring.
 - **Status:** completed
 
 ### Phase 3: Implement Cleanup
-- [x] Add or identify relevant regression coverage before production edits.
-- [x] Refactor the selected code path without changing public behavior.
-- [x] Keep changes scoped to touched modules.
+- [x] Add failing tests for the new boundary first.
+- [x] Move duplicated or pure logic out of the large component.
+- [x] Keep template bindings and emitted events stable.
 - **Status:** completed
 
 ### Phase 4: Verification
 - [x] Run focused tests for the touched surface.
-- [x] Run the smallest meaningful broader frontend/backend checks.
-- [x] Restart the dev environment with `npm run dev` after code changes.
+- [x] Run TypeScript and meaningful frontend checks.
+- [x] Restart the dev environment with `npm run dev`.
 - **Status:** completed
 
 ### Phase 5: Commit and Push
-- [x] Review git diff for unrelated/runtime artifacts.
-- [x] Commit with a Chinese commit message.
-- [x] Push the branch.
-- **Status:** completed
+- [ ] Review diff for unrelated or runtime artifacts.
+- [ ] Commit with a Chinese commit message.
+- [ ] Push the branch.
+- **Status:** in_progress
 
 ## Key Questions
-1. Which roadmap recommendation can be implemented safely in one pass?
-2. Which duplicated state or interaction logic can be extracted without changing UI behavior?
-3. Which tests prove the editor still works after cleanup?
-4. Are any generated/runtime artifacts present that must stay uncommitted?
+1. Which `NodeCard.vue` responsibility is still isolated enough to extract safely?
+2. Which tests can prove the behavior did not change?
+3. Can the refactor reduce duplication without changing the visual DOM contract?
 
 ## Decisions Made
 | Decision | Rationale |
 |----------|-----------|
-| Use the existing architecture roadmap as the starting point | It already identifies risk-ranked cleanup targets. |
-| Prefer frontend NodeCard cleanup first | The roadmap marks it as P1 and it has existing structure/model tests. |
-| Preserve behavior over reducing line count aggressively | The user explicitly prioritized functional stability. |
-| Extract NodeCard port reorder helpers first | The logic has a clear boundary and can receive focused model tests. |
-| Share identical transparent popover style objects | This removes exact duplication without changing template bindings. |
+| Continue inside `NodeCard.vue` before moving to canvas/backend | The roadmap marks NodeCard as P1 and the first extraction succeeded with good test coverage. |
+| Prefer model-level extraction over component splitting for this round | Model extraction is lower risk and easier to verify without a browser harness. |
+| Extract title/description editor model logic | Text editor metadata, pointer threshold, draft lookup, and commit patch calculation are pure behavior with existing structure coverage. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

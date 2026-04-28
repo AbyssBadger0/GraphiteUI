@@ -1253,6 +1253,20 @@ import {
 } from "./portReorderModel";
 import { listAttachableSkillDefinitions, resolveAttachedSkillBadges } from "./skillPickerModel";
 import { createStateDraftFromQuery } from "./statePortCreateModel";
+import {
+  buildTextEditorDrafts,
+  createTextTriggerPointerState,
+  isTextEditorConfirmOpenState,
+  isTextEditorOpenState,
+  resolveTextEditorDraftValue,
+  resolveTextEditorMetadataPatch,
+  resolveTextEditorTitle,
+  resolveTextEditorWidth,
+  shouldActivateTextEditorFromPointerUp,
+  updateTextTriggerPointerMoveState,
+  type TextEditorField,
+  type TextTriggerPointerState,
+} from "./textEditorModel";
 import { createUploadedAssetEnvelope, resolveUploadedAssetInputAccept, tryParseUploadedAssetEnvelope } from "./uploadedAssetModel";
 import {
   defaultValueForStateType,
@@ -1261,8 +1275,6 @@ import {
   type StateFieldDraft,
   type StateFieldType,
 } from "@/editor/workspace/statePanelFields";
-
-type TextEditorField = "title" | "description";
 
 const props = defineProps<{
   nodeId: string;
@@ -1413,13 +1425,7 @@ const activeTopAction = ref<"advanced" | "delete" | "preset" | null>(null);
 const topActionTimeoutRef = ref<number | null>(null);
 const activeTextEditor = ref<TextEditorField | null>(null);
 const activeTextEditorConfirmField = ref<TextEditorField | null>(null);
-const textTriggerPointerState = ref<{
-  field: TextEditorField;
-  pointerId: number;
-  startClientX: number;
-  startClientY: number;
-  moved: boolean;
-} | null>(null);
+const textTriggerPointerState = ref<TextTriggerPointerState | null>(null);
 const portReorderPointerState = ref<PortReorderPointerState | null>(null);
 const suppressNextPortPillClick = ref(false);
 const textEditorConfirmTimeoutRef = ref<number | null>(null);
@@ -2065,24 +2071,26 @@ function buildStateDraftFromSchema(stateKey: string): StateFieldDraft | null {
 }
 
 function syncTextEditorDraftsFromNode() {
-  titleEditorDraft.value = props.node.name;
-  descriptionEditorDraft.value = props.node.description;
+  const drafts = buildTextEditorDrafts(props.node);
+  titleEditorDraft.value = drafts.title;
+  descriptionEditorDraft.value = drafts.description;
 }
 
 function isTextEditorOpen(field: TextEditorField) {
-  return activeTextEditor.value === field;
+  return isTextEditorOpenState(activeTextEditor.value, field);
 }
 
-function textEditorWidth(field: TextEditorField) {
-  return field === "title" ? 360 : 420;
-}
-
-function textEditorTitle(field: TextEditorField) {
-  return field === "title" ? "Edit Name" : "Edit Description";
-}
+const textEditorWidth = resolveTextEditorWidth;
+const textEditorTitle = resolveTextEditorTitle;
 
 function textEditorDraftValue(field: TextEditorField) {
-  return field === "title" ? titleEditorDraft.value : descriptionEditorDraft.value;
+  return resolveTextEditorDraftValue(
+    {
+      title: titleEditorDraft.value,
+      description: descriptionEditorDraft.value,
+    },
+    field,
+  );
 }
 
 function setTextEditorDraftValue(field: TextEditorField, value: string) {
@@ -2106,26 +2114,22 @@ function handleTextTriggerPointerDown(field: TextEditorField, event: PointerEven
   if (event.button !== 0) {
     return;
   }
-  textTriggerPointerState.value = {
-    field,
-    pointerId: event.pointerId,
-    startClientX: event.clientX,
-    startClientY: event.clientY,
-    moved: false,
-  };
+  textTriggerPointerState.value = createTextTriggerPointerState(field, event.pointerId, event.clientX, event.clientY);
 }
 
 function handleTextTriggerPointerMove(field: TextEditorField, event: PointerEvent) {
   const pointerState = textTriggerPointerState.value;
-  if (!pointerState || pointerState.field !== field || pointerState.pointerId !== event.pointerId) {
+  if (!pointerState) {
     return;
   }
 
-  const deltaX = event.clientX - pointerState.startClientX;
-  const deltaY = event.clientY - pointerState.startClientY;
-  if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-    pointerState.moved = true;
-  }
+  textTriggerPointerState.value = updateTextTriggerPointerMoveState(
+    pointerState,
+    field,
+    event.pointerId,
+    event.clientX,
+    event.clientY,
+  );
 }
 
 function handleTextTriggerPointerUp(field: TextEditorField, event: PointerEvent) {
@@ -2134,16 +2138,7 @@ function handleTextTriggerPointerUp(field: TextEditorField, event: PointerEvent)
   }
   const pointerState = textTriggerPointerState.value;
   clearTextTriggerPointerState();
-  if (!pointerState || pointerState.field !== field || pointerState.pointerId !== event.pointerId) {
-    return;
-  }
-
-  const deltaX = event.clientX - pointerState.startClientX;
-  const deltaY = event.clientY - pointerState.startClientY;
-  if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-    return;
-  }
-  if (pointerState.moved) {
+  if (!shouldActivateTextEditorFromPointerUp(pointerState, field, event.pointerId, event.clientX, event.clientY)) {
     return;
   }
   handleTextEditorAction(field);
@@ -2194,7 +2189,7 @@ function startTextEditorConfirmWindow(field: TextEditorField) {
 }
 
 function isTextEditorConfirmOpen(field: TextEditorField) {
-  return activeTextEditorConfirmField.value === field;
+  return isTextEditorConfirmOpenState(activeTextEditorConfirmField.value, field);
 }
 
 function handleTextEditorAction(field: TextEditorField) {
@@ -2256,13 +2251,9 @@ function commitTextEditor(field: TextEditorField | null = activeTextEditor.value
     return;
   }
 
-  const nextValue = textEditorDraftValue(field).trim();
-  if (field === "title") {
-    if (nextValue && nextValue !== props.node.name) {
-      emit("update-node-metadata", { nodeId: props.nodeId, patch: { name: nextValue } });
-    }
-  } else if (nextValue !== props.node.description) {
-    emit("update-node-metadata", { nodeId: props.nodeId, patch: { description: nextValue } });
+  const patch = resolveTextEditorMetadataPatch(field, textEditorDraftValue(field), props.node);
+  if (patch) {
+    emit("update-node-metadata", { nodeId: props.nodeId, patch });
   }
   closeTextEditor();
 }

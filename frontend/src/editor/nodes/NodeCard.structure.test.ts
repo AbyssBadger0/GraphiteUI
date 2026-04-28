@@ -275,7 +275,7 @@ test("NodeCard keeps skill actions below the agent while creating ports from plu
   assert.match(agentSection, /class="node-card__agent-create-port-popover node-card__port-picker"/);
   assert.match(agentSection, /class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start node-card__port-pill--create"/);
   assert.match(agentSection, /class="node-card__port-pill node-card__port-pill--output node-card__port-pill--dock-end node-card__port-pill--create"/);
-  assert.match(agentSection, />\+ input</);
+  assert.match(agentSection, /pendingStateInputTarget\?\.label \?\? pendingStateInputSource\?\.label \?\? '\+ input'/);
   assert.match(agentSection, /pendingStateOutputTarget\?\.label \?\? '\+ output'/);
   assert.match(agentSection, /<ElSelect[\s\S]*class="node-card__control-select graphite-select"[\s\S]*popper-class="graphite-select-popper node-card__port-picker-select-popper"/);
   assert.doesNotMatch(agentSection, /t\("nodeCard\.key"\)/);
@@ -310,6 +310,7 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.match(componentSource, /hovered\?:\s*boolean;/);
   assert.match(componentSource, /'node-card--hovered': hovered/);
   assert.match(componentSource, /pendingStateInputSource\?: \{ stateKey: string; label: string; stateColor: string \} \| null;/);
+  assert.match(componentSource, /pendingStateInputTarget\?: \{ stateKey: string; label: string; stateColor: string \} \| null;/);
   assert.match(componentSource, /pendingStateOutputTarget\?: \{ stateKey: string; label: string; stateColor: string \} \| null;/);
   assert.match(componentSource, /const agentInputPorts = computed<NodePortViewModel\[\]>\(\(\) =>/);
   assert.match(componentSource, /const agentOutputPorts = computed<NodePortViewModel\[\]>\(\(\) =>/);
@@ -334,13 +335,13 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.match(agentSection, /:data-anchor-slot-id="\`\$\{nodeId\}:state-in:\$\{agentCreateInputAnchorStateKey\}\`"/);
   assert.match(agentSection, /:data-anchor-slot-id="\`\$\{nodeId\}:state-out:\$\{VIRTUAL_ANY_OUTPUT_STATE_KEY\}\`"/);
   assert.match(agentSection, /node-card__port-pill--create/);
-  assert.match(agentSection, /\+ input/);
+  assert.match(agentSection, /pendingStateInputTarget\?\.label \?\? pendingStateInputSource\?\.label \?\? '\+ input'/);
   assert.match(agentSection, /pendingStateOutputTarget\?\.label \?\? '\+ output'/);
   assert.match(agentSection, /pendingStateOutputTarget\?\.stateColor \?\? VIRTUAL_ANY_OUTPUT_COLOR/);
   assert.doesNotMatch(componentSource, /const shouldRenderPendingStateInputCapsule = computed/);
   assert.doesNotMatch(agentSection, /node-card__port-pill-create-badge/);
   assert.doesNotMatch(agentSection, /t\("common\.new"\)/);
-  assert.doesNotMatch(agentSection, /\{\{ pendingStateInputSource\?\.label \}\}/);
+  assert.match(agentSection, /pendingStateInputTarget\?\.stateColor \?\? pendingStateInputSource\?\.stateColor \?\? '#16a34a'/);
   assert.match(componentSource, /\.node-card__port-pill--create \{[^}]*border-style:\s*dashed;/);
   assert.match(componentSource, /\.node-card__port-pill--create \{[^}]*background:\s*color-mix\(in srgb,\s*var\(--node-card-port-accent\) 10%, transparent\);/);
   assert.match(componentSource, /\.node-card__port-pill--create \{[^}]*box-shadow:\s*none;/);

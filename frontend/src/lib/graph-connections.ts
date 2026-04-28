@@ -407,7 +407,11 @@ export function canCompleteGraphConnection(
   }
 
   if (pending.sourceKind === "state-in") {
-    return false;
+    return target.kind === "state-out" &&
+      typeof pending.sourceStateKey === "string" &&
+      typeof target.stateKey === "string"
+      ? canConnectStateBinding(document, target.nodeId, target.stateKey, pending.sourceNodeId, pending.sourceStateKey)
+      : false;
   }
 
   if (target.kind !== "flow-in") {

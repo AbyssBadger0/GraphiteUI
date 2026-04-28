@@ -300,6 +300,50 @@ test("canCompleteGraphConnection allows an existing state binding to restore a m
   );
 });
 
+test("canCompleteGraphConnection allows reverse virtual input drags to target concrete state outputs", () => {
+  const graphWithEmptyAgent: GraphPayload = {
+    ...document,
+    nodes: {
+      ...document.nodes,
+      empty_agent: {
+        kind: "agent",
+        name: "empty_agent",
+        description: "",
+        ui: { position: { x: 240, y: 120 } },
+        reads: [],
+        writes: [],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "off",
+          temperature: 0,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+  };
+
+  assert.equal(
+    canCompleteGraphConnection(
+      graphWithEmptyAgent,
+      {
+        sourceNodeId: "empty_agent",
+        sourceKind: "state-in",
+        sourceStateKey: VIRTUAL_ANY_INPUT_STATE_KEY,
+      },
+      {
+        nodeId: "input_question",
+        kind: "state-out",
+        stateKey: "question",
+      },
+    ),
+    true,
+  );
+});
+
 test("canCompleteGraphConnection allows a concrete state input source to be replaced", () => {
   const replacementGraph: GraphPayload = {
     ...document,

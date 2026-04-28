@@ -642,7 +642,7 @@
               >
                 <span
                   class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start node-card__port-pill--create"
-                  :style="{ '--node-card-port-accent': pendingStateInputSource?.stateColor ?? '#16a34a' }"
+                  :style="{ '--node-card-port-accent': pendingStateInputTarget?.stateColor ?? pendingStateInputSource?.stateColor ?? '#16a34a' }"
                   data-agent-create-port="input"
                   data-anchor-hitarea="true"
                   @pointerdown.stop
@@ -654,7 +654,7 @@
                     aria-hidden="true"
                   />
                   <span class="node-card__port-pill-label">
-                    <span class="node-card__port-pill-label-text">+ input</span>
+                    <span class="node-card__port-pill-label-text">{{ pendingStateInputTarget?.label ?? pendingStateInputSource?.label ?? '+ input' }}</span>
                   </span>
                 </span>
               </div>
@@ -1472,6 +1472,7 @@ const props = defineProps<{
   runOutputDisplayMode?: string | null;
   runFailureMessage?: string | null;
   pendingStateInputSource?: { stateKey: string; label: string; stateColor: string } | null;
+  pendingStateInputTarget?: { stateKey: string; label: string; stateColor: string } | null;
   pendingStateOutputTarget?: { stateKey: string; label: string; stateColor: string } | null;
   humanReviewPending: boolean;
   selected: boolean;

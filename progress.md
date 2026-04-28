@@ -39,9 +39,12 @@
   - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
 
 ### Phase 5: Commit and Push
-- **Status:** in_progress
+- **Status:** completed
 - Actions taken:
   - Checked git status after restart; only source/planning changes are visible, no runtime logs or build output are staged.
+  - Ran `git diff --check` with no whitespace errors.
+  - Committed the cleanup as `a724c19` with Chinese message `抽取节点文本编辑模型`.
+  - Pushed `main` to `origin/main`.
 
 ## Test Results
 | Test | Input | Expected | Actual | Status |
@@ -63,8 +66,8 @@
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Commit and push phase. |
-| Where am I going? | Review diff/status, commit with a Chinese message, and push. |
+| Where am I? | Second cleanup implementation, verification, dev restart, commit, and push are complete. |
+| Where am I going? | Ready for final handoff. |
 | What's the goal? | Continue reducing NodeCard concentration without changing user-visible behavior. |
 | What have I learned? | Title/description edit behavior has a stable pure boundary around draft lookup, pointer activation, and metadata patch calculation. |
 | What have I done? | Extracted and tested `textEditorModel.ts`, then updated NodeCard to use it. |

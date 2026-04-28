@@ -4,7 +4,7 @@
 Continue reducing GraphiteUI code concentration with conservative, behavior-preserving refactors based on the architecture roadmap, keeping editor functionality verified.
 
 ## Current Phase
-Phase 5: Commit and Push
+Complete
 
 ## Phases
 
@@ -33,10 +33,10 @@ Phase 5: Commit and Push
 - **Status:** completed
 
 ### Phase 5: Commit and Push
-- [ ] Review diff for unrelated or runtime artifacts.
-- [ ] Commit with a Chinese commit message.
-- [ ] Push the branch.
-- **Status:** in_progress
+- [x] Review diff for unrelated or runtime artifacts.
+- [x] Commit with a Chinese commit message.
+- [x] Push the branch.
+- **Status:** completed
 
 ## Key Questions
 1. Which `NodeCard.vue` responsibility is still isolated enough to extract safely?

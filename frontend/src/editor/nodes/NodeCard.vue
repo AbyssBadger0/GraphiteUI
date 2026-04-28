@@ -473,84 +473,31 @@
     <section v-else-if="view.body.kind === 'agent'" class="node-card__body node-card__body--agent">
       <div class="node-card__port-grid">
         <div class="node-card__port-column">
-          <TransitionGroup name="node-card-port-reorder" tag="div" class="node-card__port-reorder-stack">
-          <div v-for="port in orderedAgentInputPorts" :key="port.key" class="node-card__port-pill-row">
-            <ElPopover
-              :visible="
-                isStateEditorOpen(`agent-input:${port.key}`) ||
-                isStateEditorConfirmOpen(`agent-input:${port.key}`) ||
-                isRemovePortStateConfirmOpen(`agent-input:${port.key}`)
-              "
-              :placement="isStateEditorOpen(`agent-input:${port.key}`) ? 'bottom-start' : 'top-start'"
-              :width="isStateEditorOpen(`agent-input:${port.key}`) ? 320 : undefined"
-              :show-arrow="false"
-              :popper-style="stateEditorPopoverStyle"
-              popper-class="node-card__state-editor-popper"
-            >
-              <template #reference>
-                <span
-                  class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start"
-                  :class="{
-                    'node-card__port-pill--removable': !port.virtual,
-                    'node-card__port-pill--revealed': isStateEditorPillRevealed(`agent-input:${port.key}`),
-                    'node-card__port-pill--confirm': isStateEditorConfirmOpen(`agent-input:${port.key}`),
-                    'node-card__port-pill--reordering': isPortReordering('input', port.key),
-                    'node-card__port-pill--reorder-placeholder': isPortReorderPlaceholder('input', port.key),
-                  }"
-                  :style="{ '--node-card-port-accent': port.stateColor }"
-                  data-state-editor-trigger="true"
-                  data-anchor-hitarea="true"
-                  :data-port-reorder-node-id="nodeId"
-                  data-port-reorder-side="input"
-                  :data-port-reorder-state-key="port.key"
-                  @pointerenter="handleStateEditorPillPointerEnter(`agent-input:${port.key}`)"
-                  @pointerleave="handleStateEditorPillPointerLeave(`agent-input:${port.key}`)"
-                  @pointerdown.stop="handlePortReorderPointerDown('input', port.key, $event)"
-                  @click.stop="handlePortStatePillClick(`agent-input:${port.key}`, port.key)"
-                >
-                  <span
-                    class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"
-                    :data-anchor-slot-id="`${nodeId}:state-in:${port.key}`"
-                    aria-hidden="true"
-                  />
-                  <span
-                    class="node-card__port-pill-label"
-                    :class="{ 'node-card__port-pill-label--confirm': isStateEditorConfirmOpen(`agent-input:${port.key}`) }"
-                  >
-                    <span class="node-card__port-pill-label-text">{{ port.label }}</span>
-                    <ElIcon class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
-                  </span>
-                  <button
-                    v-if="!port.virtual"
-                    type="button"
-                    class="node-card__port-pill-remove node-card__port-pill-remove--trailing"
-                    :class="{ 'node-card__port-pill-remove--confirm': isRemovePortStateConfirmOpen(`agent-input:${port.key}`) }"
-                    :aria-label="t('nodeCard.removeStateBinding')"
-                    @pointerdown.stop
-                    @click.stop="handleRemovePortStateClick(`agent-input:${port.key}`, 'input', port.key)"
-                  >
-                    <ElIcon v-if="isRemovePortStateConfirmOpen(`agent-input:${port.key}`)"><Check /></ElIcon>
-                    <ElIcon v-else><Delete /></ElIcon>
-                  </button>
-                </span>
-              </template>
-              <div v-if="isRemovePortStateConfirmOpen(`agent-input:${port.key}`)" class="node-card__confirm-hint node-card__confirm-hint--remove">{{ t("nodeCard.removeStateQuestion") }}</div>
-              <div v-else-if="isStateEditorConfirmOpen(`agent-input:${port.key}`)" class="node-card__confirm-hint node-card__confirm-hint--state">{{ t("nodeCard.editStateQuestion") }}</div>
-              <StateEditorPopover
-                v-else-if="stateEditorDraft"
-                class="node-card__state-editor"
-                :draft="stateEditorDraft"
-                :error="stateEditorError"
-                :type-options="stateTypeOptions"
-                :color-options="stateColorOptions"
-                @update:name="handleStateEditorNameInput"
-                @update:type="handleStateEditorTypeValue"
-                @update:color="handleStateEditorColorInput"
-                @update:description="handleStateEditorDescriptionInput"
-              />
-            </ElPopover>
-          </div>
-          </TransitionGroup>
+          <StatePortList
+            side="input"
+            :ports="orderedAgentInputPorts"
+            :node-id="nodeId"
+            :popover-style="stateEditorPopoverStyle"
+            :state-editor-draft="stateEditorDraft"
+            :state-editor-error="stateEditorError"
+            :type-options="stateTypeOptions"
+            :color-options="stateColorOptions"
+            :is-state-editor-open="isStateEditorOpen"
+            :is-state-editor-confirm-open="isStateEditorConfirmOpen"
+            :is-remove-port-state-confirm-open="isRemovePortStateConfirmOpen"
+            :is-state-editor-pill-revealed="isStateEditorPillRevealed"
+            :is-port-reordering="isPortReordering"
+            :is-port-reorder-placeholder="isPortReorderPlaceholder"
+            @pointer-enter="handleStateEditorPillPointerEnter"
+            @pointer-leave="handleStateEditorPillPointerLeave"
+            @reorder-pointer-down="handlePortReorderPointerDown"
+            @port-click="handlePortStatePillClick"
+            @remove-click="handleRemovePortStateClick"
+            @update:name="handleStateEditorNameInput"
+            @update:type="handleStateEditorTypeValue"
+            @update:color="handleStateEditorColorInput"
+            @update:description="handleStateEditorDescriptionInput"
+          />
           <ElPopover
             :visible="isPortCreateOpen('input')"
             placement="bottom-start"
@@ -601,83 +548,31 @@
           </ElPopover>
         </div>
         <div class="node-card__port-column node-card__port-column--right">
-          <TransitionGroup name="node-card-port-reorder" tag="div" class="node-card__port-reorder-stack node-card__port-reorder-stack--right">
-          <div v-for="port in orderedAgentOutputPorts" :key="port.key" class="node-card__port-pill-row node-card__port-pill-row--right">
-            <ElPopover
-              :visible="
-                isStateEditorOpen(`agent-output:${port.key}`) ||
-                isStateEditorConfirmOpen(`agent-output:${port.key}`) ||
-                isRemovePortStateConfirmOpen(`agent-output:${port.key}`)
-              "
-              :placement="isStateEditorOpen(`agent-output:${port.key}`) ? 'bottom-end' : 'top-end'"
-              :width="isStateEditorOpen(`agent-output:${port.key}`) ? 320 : undefined"
-              :show-arrow="false"
-              :popper-style="stateEditorPopoverStyle"
-              popper-class="node-card__state-editor-popper"
-            >
-              <template #reference>
-                <span
-                  class="node-card__port-pill node-card__port-pill--output node-card__port-pill--dock-end"
-                  :class="{
-                    'node-card__port-pill--removable': !port.virtual,
-                    'node-card__port-pill--revealed': isStateEditorPillRevealed(`agent-output:${port.key}`),
-                    'node-card__port-pill--confirm': isStateEditorConfirmOpen(`agent-output:${port.key}`),
-                    'node-card__port-pill--reordering': isPortReordering('output', port.key),
-                    'node-card__port-pill--reorder-placeholder': isPortReorderPlaceholder('output', port.key),
-                  }"
-                  :style="{ '--node-card-port-accent': port.stateColor }"
-                  data-state-editor-trigger="true"
-                  :data-port-reorder-node-id="nodeId"
-                  data-port-reorder-side="output"
-                  :data-port-reorder-state-key="port.key"
-                  @pointerenter="handleStateEditorPillPointerEnter(`agent-output:${port.key}`)"
-                  @pointerleave="handleStateEditorPillPointerLeave(`agent-output:${port.key}`)"
-                  @pointerdown.stop="handlePortReorderPointerDown('output', port.key, $event)"
-                  @click.stop="handlePortStatePillClick(`agent-output:${port.key}`, port.key)"
-                >
-                  <button
-                    v-if="!port.virtual"
-                    type="button"
-                    class="node-card__port-pill-remove node-card__port-pill-remove--leading"
-                    :class="{ 'node-card__port-pill-remove--confirm': isRemovePortStateConfirmOpen(`agent-output:${port.key}`) }"
-                    :aria-label="t('nodeCard.removeStateBinding')"
-                    @pointerdown.stop
-                    @click.stop="handleRemovePortStateClick(`agent-output:${port.key}`, 'output', port.key)"
-                  >
-                    <ElIcon v-if="isRemovePortStateConfirmOpen(`agent-output:${port.key}`)"><Check /></ElIcon>
-                    <ElIcon v-else><Delete /></ElIcon>
-                  </button>
-                  <span
-                    class="node-card__port-pill-label"
-                    :class="{ 'node-card__port-pill-label--confirm': isStateEditorConfirmOpen(`agent-output:${port.key}`) }"
-                  >
-                    <span class="node-card__port-pill-label-text">{{ port.label }}</span>
-                    <ElIcon class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
-                  </span>
-                  <span
-                    class="node-card__port-pill-anchor-slot"
-                    :data-anchor-slot-id="`${nodeId}:state-out:${port.key}`"
-                    aria-hidden="true"
-                  />
-              </span>
-            </template>
-              <div v-if="isRemovePortStateConfirmOpen(`agent-output:${port.key}`)" class="node-card__confirm-hint node-card__confirm-hint--remove">{{ t("nodeCard.removeStateQuestion") }}</div>
-              <div v-else-if="isStateEditorConfirmOpen(`agent-output:${port.key}`)" class="node-card__confirm-hint node-card__confirm-hint--state">{{ t("nodeCard.editStateQuestion") }}</div>
-              <StateEditorPopover
-                v-else-if="stateEditorDraft"
-                class="node-card__state-editor"
-                :draft="stateEditorDraft"
-                :error="stateEditorError"
-                :type-options="stateTypeOptions"
-                :color-options="stateColorOptions"
-                @update:name="handleStateEditorNameInput"
-                @update:type="handleStateEditorTypeValue"
-                @update:color="handleStateEditorColorInput"
-                @update:description="handleStateEditorDescriptionInput"
-              />
-            </ElPopover>
-          </div>
-          </TransitionGroup>
+          <StatePortList
+            side="output"
+            :ports="orderedAgentOutputPorts"
+            :node-id="nodeId"
+            :popover-style="stateEditorPopoverStyle"
+            :state-editor-draft="stateEditorDraft"
+            :state-editor-error="stateEditorError"
+            :type-options="stateTypeOptions"
+            :color-options="stateColorOptions"
+            :is-state-editor-open="isStateEditorOpen"
+            :is-state-editor-confirm-open="isStateEditorConfirmOpen"
+            :is-remove-port-state-confirm-open="isRemovePortStateConfirmOpen"
+            :is-state-editor-pill-revealed="isStateEditorPillRevealed"
+            :is-port-reordering="isPortReordering"
+            :is-port-reorder-placeholder="isPortReorderPlaceholder"
+            @pointer-enter="handleStateEditorPillPointerEnter"
+            @pointer-leave="handleStateEditorPillPointerLeave"
+            @reorder-pointer-down="handlePortReorderPointerDown"
+            @port-click="handlePortStatePillClick"
+            @remove-click="handleRemovePortStateClick"
+            @update:name="handleStateEditorNameInput"
+            @update:type="handleStateEditorTypeValue"
+            @update:color="handleStateEditorColorInput"
+            @update:description="handleStateEditorDescriptionInput"
+          />
           <ElPopover
             :visible="isPortCreateOpen('output')"
             placement="bottom-end"
@@ -1220,6 +1115,7 @@ import { useI18n } from "vue-i18n";
 
 import StateEditorPopover from "./StateEditorPopover.vue";
 import StatePortCreatePopover from "./StatePortCreatePopover.vue";
+import StatePortList from "./StatePortList.vue";
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
 import type { AgentNode, ConditionNode, GraphNode, InputNode, OutputNode, StateDefinition } from "@/types/node-system";
 import type { SkillDefinition } from "@/types/skills";

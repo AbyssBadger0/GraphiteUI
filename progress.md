@@ -278,6 +278,52 @@
   - Committed the cleanup as `799d48d` with Chinese message `抽取节点端口排序交互`.
   - Pushed `main` to `origin/main`.
 
+## Session: 2026-04-28 Phase 20
+
+### Phase 1: Roadmap Sub-slice Selection
+- **Status:** completed
+- Actions taken:
+  - Continued the formal roadmap P1 sequence after `usePortReorder`.
+  - Selected a conservative `StatePortList.vue` slice for agent real input/output state port rows only.
+  - Kept create-port popovers, state draft mutation, and graph mutation emits in `NodeCard.vue` to avoid mixing UI extraction with behavior changes.
+  - Noted that scoped styling requires the extracted component to carry the real port-list styles it owns; otherwise parent scoped CSS will not style child internals.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `frontend/src/editor/nodes/StatePortList.structure.test.ts` before production code.
+  - Ran `node --test frontend/src/editor/nodes/StatePortList.structure.test.ts` and verified the expected red failure: `ENOENT` for `StatePortList.vue`.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `StatePortList.vue` for agent real input/output state port rows, state-editor popover wiring, remove buttons, hover/click/reorder event forwarding, and local real-port styles.
+  - Updated `NodeCard.vue` to render `StatePortList` for ordered agent input/output ports while keeping create-port popovers and graph mutation behavior in the parent.
+  - Updated `NodeCard.structure.test.ts`, roadmap notes, and findings for the new component boundary.
+  - Confirmed `NodeCard.vue` is down to 4,544 lines after this extraction.
+
+### Phase 4: Focused Verification
+- **Status:** completed
+- Actions taken:
+  - Ran `node --test frontend/src/editor/nodes/StatePortList.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts`.
+  - Result: 36 tests passed, 0 failed.
+  - Ran `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend`.
+  - First run failed because `StatePortList.vue` widened `StateEditorPopover` update event types and used `string[]` for state type options.
+  - Narrowed the event and prop types to the actual `StateEditorPopover` contract.
+  - Re-ran TypeScript verification; result: exited 0 with no diagnostics.
+  - Re-ran focused StatePortList, NodeCard structure, port reorder model, and usePortReorder tests; result: 46 tests passed, 0 failed.
+
+### Phase 5: Full Verification and Dev Restart
+- **Status:** completed
+- Actions taken:
+  - Ran `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts`.
+  - Result: 761 tests passed, 0 failed.
+  - Ran `npm run build` in `frontend`.
+  - Result: build passed with no Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend returned HTTP 200 at `http://127.0.0.1:3477`.
+  - Confirmed the backend health route returned HTTP 200 at `http://127.0.0.1:8765/health`.
+
 ## Session: 2026-04-28 Baseline Interaction Repair and Large Connection Cleanup
 
 ### Phase 1: Baseline Regression Repair

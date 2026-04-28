@@ -3600,10 +3600,16 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
 }
 
 .node-card__port-pill--create {
+  border-style: dashed;
   border-color: color-mix(in srgb, var(--node-card-port-accent) 38%, transparent);
-  background: transparent;
+  background: color-mix(in srgb, var(--node-card-port-accent) 10%, transparent);
   color: var(--node-card-port-accent);
   box-shadow: none;
+}
+
+.node-card__port-pill--create:focus-visible {
+  border-color: color-mix(in srgb, var(--node-card-port-accent) 48%, transparent);
+  background: color-mix(in srgb, var(--node-card-port-accent) 14%, transparent);
 }
 
 .node-card__port-pill--output {

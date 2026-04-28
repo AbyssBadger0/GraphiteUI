@@ -327,10 +327,11 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.doesNotMatch(agentSection, /node-card__port-pill-create-badge/);
   assert.doesNotMatch(agentSection, /t\("common\.new"\)/);
   assert.doesNotMatch(agentSection, /\{\{ pendingStateInputSource\?\.label \}\}/);
-  assert.match(componentSource, /\.node-card__port-pill--create \{[\s\S]*background:\s*transparent;/);
-  assert.match(componentSource, /\.node-card__port-pill--create \{[\s\S]*box-shadow:\s*none;/);
-  assert.match(componentSource, /\.node-card__port-pill--create \{[\s\S]*color:\s*var\(--node-card-port-accent\);/);
-  assert.doesNotMatch(componentSource, /\.node-card__port-pill--create \{[\s\S]*background:\s*color-mix/);
+  assert.match(componentSource, /\.node-card__port-pill--create \{[^}]*border-style:\s*dashed;/);
+  assert.match(componentSource, /\.node-card__port-pill--create \{[^}]*background:\s*color-mix\(in srgb,\s*var\(--node-card-port-accent\) 10%, transparent\);/);
+  assert.match(componentSource, /\.node-card__port-pill--create \{[^}]*box-shadow:\s*none;/);
+  assert.match(componentSource, /\.node-card__port-pill--create \{[^}]*color:\s*var\(--node-card-port-accent\);/);
+  assert.doesNotMatch(componentSource, /\.node-card__port-pill--create \{[^}]*background:\s*transparent;/);
   const createRowStyle = componentSource.match(/\.node-card__port-pill-row--create \{[\s\S]*?\}/);
   assert.ok(createRowStyle, "expected create port row style");
   assert.match(createRowStyle[0], /display:\s*none;/);

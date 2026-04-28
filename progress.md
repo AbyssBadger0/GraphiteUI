@@ -1,5 +1,74 @@
 # Progress Log
 
+## Session: 2026-04-28 Rounds 21-30
+
+### Phase 1: Re-orientation and Ten-Round Planning
+- **Status:** completed
+- Actions taken:
+  - Confirmed the worktree started clean on `main...origin/main`.
+  - Ran planning catchup after the user's request to increase the next cleanup batch to ten rounds.
+  - Re-read the latest plan, progress, findings, and current high-line-count files.
+  - Inspected `EditorCanvas.vue` computed/helper clusters around minimap edges, forced visible edges, pending state previews, virtual anchors, reconnect projection, delete actions, data-edge disconnects, pinch math, and viewport display values.
+  - Selected ten low-risk pure boundaries for Rounds 21-30 while keeping DOM, refs, timers, emits, and lock guards local.
+
+### Phase 2-11: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added focused red tests before production extraction for all ten canvas helper boundaries.
+  - Added `canvasMinimapEdgeModel.ts`, `canvasPendingStatePortModel.ts`, `canvasVirtualCreatePortModel.ts`, `canvasPinchZoomModel.ts`, and `canvasViewportDisplayModel.ts`.
+  - Extended `edgeVisibilityModel.ts`, `canvasConnectionModel.ts`, `flowEdgeDeleteModel.ts`, and `canvasDataEdgeStateModel.ts` with pure helpers now reused by `EditorCanvas.vue`.
+  - Updated `EditorCanvas.vue` to delegate those pure projections while keeping DOM refs, timers, lock guards, emits, viewport mutation, and pointer side effects in the component.
+  - Updated `EditorCanvas.structure.test.ts` to assert the new module boundaries instead of locking the previous inline helper implementations.
+  - Reduced `EditorCanvas.vue` from 4,226 lines at batch start to 4,039 lines.
+
+### Phase 12: Verification
+- **Status:** completed
+- Actions taken:
+  - Verified the initial focused suite failed before implementation because the new model files/exports did not exist.
+  - Fixed one post-extraction structure assertion that still expected inline forced-edge-id code.
+  - Ran focused canvas model and structure tests.
+  - Ran TypeScript unused-symbol verification.
+  - Ran the full frontend node test suite.
+  - Ran the frontend production build and confirmed no Vite large chunk warning was emitted.
+  - Ran `git diff --check` with no whitespace errors.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend returned HTTP 200 at `http://127.0.0.1:3477`.
+  - Confirmed the backend health route returned `{"status":"ok"}` at `http://127.0.0.1:8765/health`.
+  - Confirmed `node scripts/start.mjs`, uvicorn, and Vite processes remained alive after a delayed check.
+
+### Phase 13: Commit and Push
+- **Status:** completed
+- Actions taken:
+  - Reviewed staged source/test diff and confirmed it excludes runtime artifacts.
+  - Committed source and tests as `8cc4a60` with Chinese message `抽取画布十轮辅助模型`.
+  - Committed planning updates with Chinese message `更新第二十一至三十轮清理进度`.
+  - Pushed `main` to `origin/main`.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red focused suite | `node --test` with the new/extended canvas model and structure tests before implementation | Fails because the new model files/exports and component wiring are missing | Failed with missing model files/exports | Passed |
+| Focused canvas suite | `node --test frontend/src/editor/canvas/canvasMinimapEdgeModel.test.ts ... frontend/src/editor/canvas/EditorCanvas.structure.test.ts` | All focused canvas model and structure tests pass | 96 passed | Passed |
+| Unused symbol check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No unused-symbol diagnostics | Exit 0, no diagnostics | Passed |
+| Full frontend tests | `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts` | All frontend tests pass | 745 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without a large chunk warning | Exit 0, no Vite large chunk warning | Passed |
+| Whitespace check | `git diff --check` | No whitespace errors | Exit 0 | Passed |
+| Dev restart | `npm run dev` | Services start and respond | Frontend 200, backend `/health` ok, delayed process check alive | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Rounds 21-30 implementation, verification, dev restart, commits, and push are complete. |
+| Where am I going? | Ready for handoff or the next cleanup slice. |
+| What's the goal? | Continue reducing `EditorCanvas.vue` responsibility concentration without changing graph editing behavior. |
+| What have I learned? | Several canvas display and interaction projections are pure enough to model-test outside the Vue component. |
+| What have I done? | Extracted ten focused canvas helper boundaries, added tests, kept side effects inside the component, and confirmed the build no longer emits a large chunk warning. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-28 | One structure test still searched for the old inline forced-visible-edge-id block. | Focused post-implementation suite. | Replaced it with an assertion that the flow delete confirm id is passed into `buildForceVisibleProjectedEdgeIds`. |
+
 ## Session: 2026-04-28 Rounds 18-20
 
 ### Phase 1: Re-orientation and Batch Planning

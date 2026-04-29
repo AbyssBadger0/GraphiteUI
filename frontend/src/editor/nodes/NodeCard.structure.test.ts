@@ -12,6 +12,7 @@ const stateEditorModelSource = readFileSync(resolve(currentDirectory, "stateEdit
 const textEditorComposableSource = readFileSync(resolve(currentDirectory, "useNodeCardTextEditor.ts"), "utf8").replace(/\r\n/g, "\n");
 const floatingPanelsComposableSource = readFileSync(resolve(currentDirectory, "useNodeFloatingPanels.ts"), "utf8").replace(/\r\n/g, "\n");
 const portReorderComposableSource = readFileSync(resolve(currentDirectory, "usePortReorder.ts"), "utf8").replace(/\r\n/g, "\n");
+const agentNodeBodySource = readFileSync(resolve(currentDirectory, "AgentNodeBody.vue"), "utf8").replace(/\r\n/g, "\n");
 const agentSkillPickerSource = readFileSync(resolve(currentDirectory, "AgentSkillPicker.vue"), "utf8").replace(/\r\n/g, "\n");
 const agentRuntimeControlsSource = readFileSync(resolve(currentDirectory, "AgentRuntimeControls.vue"), "utf8").replace(/\r\n/g, "\n");
 const statePortListSource = readFileSync(resolve(currentDirectory, "StatePortList.vue"), "utf8").replace(/\r\n/g, "\n");
@@ -35,10 +36,10 @@ test("NodeCard renders output state pills with an integrated anchor slot", () =>
   assert.match(componentSource, /data-anchor-slot-id=/);
   assert.doesNotMatch(componentSource, /class="node-card__port-pill-anchor"/);
   assert.doesNotMatch(componentSource, /view\.body\.primaryOutput\.typeLabel/);
-  const rightOutputColumnStart = componentSource.indexOf('<div class="node-card__port-column node-card__port-column--right">');
-  const agentRuntimeControlsStart = componentSource.indexOf("<AgentRuntimeControls", rightOutputColumnStart);
+  const rightOutputColumnStart = agentNodeBodySource.indexOf('<div class="node-card__port-column node-card__port-column--right">');
+  const agentRuntimeControlsStart = agentNodeBodySource.indexOf("<AgentRuntimeControls", rightOutputColumnStart);
   assert.ok(rightOutputColumnStart >= 0 && agentRuntimeControlsStart > rightOutputColumnStart, "expected to find the right-side output port column");
-  const rightOutputColumn = componentSource.slice(rightOutputColumnStart, agentRuntimeControlsStart);
+  const rightOutputColumn = agentNodeBodySource.slice(rightOutputColumnStart, agentRuntimeControlsStart);
   assert.doesNotMatch(rightOutputColumn, /port\.typeLabel/);
 });
 
@@ -184,8 +185,10 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.ok(agentSectionMatch, "expected to find the agent node section");
   const agentSection = agentSectionMatch[0];
 
-  assert.match(componentSource, /import AgentRuntimeControls from "\.\/AgentRuntimeControls\.vue";/);
-  assert.match(agentSection, /<AgentRuntimeControls[\s\S]*ref="agentRuntimeControlsRef"[\s\S]*:model-value="agentResolvedModelValue \|\| undefined"[\s\S]*:model-options="agentModelOptions"[\s\S]*:global-model-ref="trimmedGlobalTextModelRef"[\s\S]*:thinking-mode-value="agentThinkingModeValue"[\s\S]*:thinking-options="agentThinkingOptions"[\s\S]*:thinking-enabled="agentThinkingEnabled"[\s\S]*:breakpoint-enabled="Boolean\(agentBreakpointEnabled\)"[\s\S]*:confirm-popover-style="confirmPopoverStyle"[\s\S]*@model-visible-change="handleAgentModelSelectVisibleChange"[\s\S]*@update:model-value="handleAgentModelValueChange"[\s\S]*@update:thinking-mode="handleAgentThinkingModeSelect"[\s\S]*@update:breakpoint-enabled="handleAgentBreakpointToggleValue"/);
+  assert.match(componentSource, /import AgentNodeBody from "\.\/AgentNodeBody\.vue";/);
+  assert.match(agentSection, /<AgentNodeBody[\s\S]*ref="agentNodeBodyRef"[\s\S]*:model-value="agentResolvedModelValue \|\| undefined"[\s\S]*:model-options="agentModelOptions"[\s\S]*:global-model-ref="trimmedGlobalTextModelRef"[\s\S]*:thinking-mode-value="agentThinkingModeValue"[\s\S]*:thinking-options="agentThinkingOptions"[\s\S]*:thinking-enabled="agentThinkingEnabled"[\s\S]*:breakpoint-enabled="Boolean\(agentBreakpointEnabled\)"[\s\S]*@model-visible-change="handleAgentModelSelectVisibleChange"[\s\S]*@update:model-value="handleAgentModelValueChange"[\s\S]*@update:thinking-mode="handleAgentThinkingModeSelect"[\s\S]*@update:breakpoint-enabled="handleAgentBreakpointToggleValue"/);
+  assert.match(agentNodeBodySource, /import AgentRuntimeControls from "\.\/AgentRuntimeControls\.vue";/);
+  assert.match(agentNodeBodySource, /<AgentRuntimeControls[\s\S]*ref="runtimeControlsRef"[\s\S]*:model-value="modelValue"[\s\S]*:model-options="modelOptions"[\s\S]*:global-model-ref="globalModelRef"[\s\S]*:thinking-mode-value="thinkingModeValue"[\s\S]*:thinking-options="thinkingOptions"[\s\S]*:thinking-enabled="thinkingEnabled"[\s\S]*:breakpoint-enabled="breakpointEnabled"[\s\S]*:confirm-popover-style="confirmPopoverStyle"[\s\S]*@model-visible-change="emit\('model-visible-change', \$event\)"[\s\S]*@update:model-value="emit\('update:model-value', \$event\)"[\s\S]*@update:thinking-mode="emit\('update:thinking-mode', \$event\)"[\s\S]*@update:breakpoint-enabled="emit\('update:breakpoint-enabled', \$event\)"/);
   assert.match(agentRuntimeControlsSource, /class="node-card__agent-runtime-row"/);
   assert.match(agentRuntimeControlsSource, /class="node-card__agent-model-select-shell"/);
   assert.match(agentRuntimeControlsSource, /@pointerdown\.stop/);
@@ -261,8 +264,8 @@ test("NodeCard restores the legacy agent runtime control order with Element Plus
   assert.match(componentSource, /@update:model-value="handleAgentBreakpointTimingSelect"/);
   assert.match(componentSource, /t\('nodeCard\.runAfter'\)/);
   assert.match(componentSource, /t\('nodeCard\.runBefore'\)/);
-  assert.match(componentSource, /const agentRuntimeControlsRef = ref<\{ collapseModelSelect\?: \(\) => void \} \| null>\(null\);/);
-  assert.match(componentSource, /function collapseAgentModelSelect\(\) \{[\s\S]*agentRuntimeControlsRef\.value\?\.collapseModelSelect\?\.\(\);[\s\S]*\}/);
+  assert.match(componentSource, /const agentNodeBodyRef = ref<\{ collapseModelSelect\?: \(\) => void \} \| null>\(null\);/);
+  assert.match(componentSource, /function collapseAgentModelSelect\(\) \{[\s\S]*agentNodeBodyRef\.value\?\.collapseModelSelect\?\.\(\);[\s\S]*\}/);
   assert.match(componentSource, /collapseAgentModelSelect\(\);/);
   assert.doesNotMatch(agentSection, /class="node-card__agent-runtime-row"/);
 });
@@ -280,7 +283,8 @@ test("NodeCard keeps agent model selection in the dropdown without rendering dup
   assert.ok(agentSectionMatch, "expected to find the agent node section");
   const agentSection = agentSectionMatch[0];
 
-  assert.match(agentSection, /<AgentRuntimeControls/);
+  assert.match(agentSection, /<AgentNodeBody/);
+  assert.match(agentNodeBodySource, /<AgentRuntimeControls/);
   assert.match(agentRuntimeControlsSource, /class="node-card__agent-model-select graphite-select"/);
   assert.match(agentRuntimeControlsSource, /v-for="option in modelOptions"/);
   assert.match(agentSection, /@update:model-value="handleAgentModelValueChange"/);
@@ -299,8 +303,9 @@ test("NodeCard keeps skill actions below the agent while creating ports from plu
   assert.ok(agentSectionMatch, "expected to find the agent node section");
   const agentSection = agentSectionMatch[0];
 
-  assert.match(componentSource, /import AgentSkillPicker from "\.\/AgentSkillPicker\.vue";/);
-  assert.match(agentSection, /<AgentSkillPicker[\s\S]*:open="isSkillPickerOpen"[\s\S]*:show-trigger="showSkillPickerTrigger"[\s\S]*:available-skill-definitions="availableSkillDefinitions"[\s\S]*:attached-skill-badges="attachedSkillBadges"[\s\S]*@toggle="toggleSkillPicker"[\s\S]*@attach="attachAgentSkill"[\s\S]*@remove="removeAgentSkill"/);
+  assert.match(agentNodeBodySource, /import AgentSkillPicker from "\.\/AgentSkillPicker\.vue";/);
+  assert.match(agentNodeBodySource, /<AgentSkillPicker[\s\S]*:open="skillPickerOpen"[\s\S]*:show-trigger="showSkillPickerTrigger"[\s\S]*:available-skill-definitions="availableSkillDefinitions"[\s\S]*:attached-skill-badges="attachedSkillBadges"[\s\S]*@toggle="emit\('toggle-skill-picker'\)"[\s\S]*@attach="emit\('attach-skill', \$event\)"[\s\S]*@remove="emit\('remove-skill', \$event\)"/);
+  assert.match(agentSection, /@toggle-skill-picker="toggleSkillPicker"[\s\S]*@attach-skill="attachAgentSkill"[\s\S]*@remove-skill="removeAgentSkill"/);
   assert.match(agentSkillPickerSource, /<ElPopover[\s\S]*:visible="open"[\s\S]*popper-class="node-card__agent-add-popover-popper"/);
   assert.match(agentSkillPickerSource, /class="node-card__agent-add-popover node-card__skill-picker"/);
   assert.match(agentSkillPickerSource, /@click\.stop="emit\('toggle'\)"/);
@@ -370,8 +375,10 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.match(componentSource, /VIRTUAL_ANY_OUTPUT_STATE_KEY/);
   assert.match(componentSource, /function openPortStateCreate\(side: "input" \| "output"\)/);
   assert.match(componentSource, /createStateDraftFromQuery\("", Object\.keys\(props\.stateSchema\)\)/);
-  assert.match(agentSection, /<StatePortList[\s\S]*side="input"[\s\S]*:ports="orderedAgentInputPorts"/);
-  assert.match(agentSection, /<StatePortList[\s\S]*side="output"[\s\S]*:ports="orderedAgentOutputPorts"/);
+  assert.match(agentNodeBodySource, /<StatePortList[\s\S]*side="input"[\s\S]*:ports="orderedInputPorts"/);
+  assert.match(agentNodeBodySource, /<StatePortList[\s\S]*side="output"[\s\S]*:ports="orderedOutputPorts"/);
+  assert.match(agentSection, /:ordered-input-ports="orderedAgentInputPorts"/);
+  assert.match(agentSection, /:ordered-output-ports="orderedAgentOutputPorts"/);
   assert.match(statePortListSource, /v-for="port in ports"/);
   assert.match(componentSource, /const shouldShowAgentCreateInputPort = computed\(\(\) => agentInputPorts\.value\.length === 0\);/);
   assert.match(componentSource, /const shouldShowAgentCreateOutputPort = computed\(\(\) => agentOutputPorts\.value\.length === 0\);/);
@@ -379,16 +386,16 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.match(componentSource, /const shouldRevealAgentCreateOutputPort = computed\(\(\) =>[\s\S]*shouldShowAgentCreateOutputPort\.value[\s\S]*props\.selected[\s\S]*props\.hovered[\s\S]*hasFloatingPanelOpen\.value/);
   assert.match(statePortListSource, /:data-agent-create-port="side"/);
   assert.match(statePortListSource, /'node-card__port-pill-row--create-visible': createVisible/);
-  assert.match(agentSection, /:create-visible="shouldRevealAgentCreateInputPort"/);
-  assert.match(agentSection, /:create-visible="shouldRevealAgentCreateOutputPort"/);
+  assert.match(agentSection, /:input-create-visible="shouldRevealAgentCreateInputPort"/);
+  assert.match(agentSection, /:output-create-visible="shouldRevealAgentCreateOutputPort"/);
   assert.match(agentSection, /@open-create="openPortStateCreate"/);
   assert.match(statePortListSource, /@click\.stop="emit\('open-create', side\)"/);
   assert.doesNotMatch(agentSection, /@dblclick\.stop="openPortStateCreate\('input'\)"/);
   assert.doesNotMatch(agentSection, /@dblclick\.stop="openPortStateCreate\('output'\)"/);
   assert.match(componentSource, /const agentCreateInputAnchorStateKey = computed\(\(\) =>/);
   assert.match(componentSource, /props\.pendingStateInputSource \? CREATE_AGENT_INPUT_STATE_KEY : VIRTUAL_ANY_INPUT_STATE_KEY/);
-  assert.match(agentSection, /:create-anchor-state-key="agentCreateInputAnchorStateKey"/);
-  assert.match(agentSection, /:create-anchor-state-key="VIRTUAL_ANY_OUTPUT_STATE_KEY"/);
+  assert.match(agentSection, /:input-create-anchor-state-key="agentCreateInputAnchorStateKey"/);
+  assert.match(agentSection, /:output-create-anchor-state-key="VIRTUAL_ANY_OUTPUT_STATE_KEY"/);
   assert.match(statePortListSource, /:data-anchor-slot-id="\`\$\{nodeId\}:state-in:\$\{createAnchorStateKey\}\`"/);
   assert.match(statePortListSource, /:data-anchor-slot-id="\`\$\{nodeId\}:state-out:\$\{createAnchorStateKey\}\`"/);
   assert.match(statePortListSource, /node-card__port-pill--create/);
@@ -425,15 +432,15 @@ test("NodeCard constrains long state port labels without pushing anchor slots ou
 });
 
 test("NodeCard hides virtual agent output any behind the plus output row", () => {
-  const rightOutputColumnStart = componentSource.indexOf('<div class="node-card__port-column node-card__port-column--right">');
-  const agentRuntimeControlsStart = componentSource.indexOf("<AgentRuntimeControls", rightOutputColumnStart);
+  const rightOutputColumnStart = agentNodeBodySource.indexOf('<div class="node-card__port-column node-card__port-column--right">');
+  const agentRuntimeControlsStart = agentNodeBodySource.indexOf("<AgentRuntimeControls", rightOutputColumnStart);
   assert.ok(rightOutputColumnStart >= 0 && agentRuntimeControlsStart > rightOutputColumnStart, "expected to find the agent output port column");
-  const agentOutputPortSection = componentSource.slice(rightOutputColumnStart, agentRuntimeControlsStart);
+  const agentOutputPortSection = agentNodeBodySource.slice(rightOutputColumnStart, agentRuntimeControlsStart);
 
   assert.match(statePortListSource, /'node-card__port-pill--removable': !port\.virtual/);
   assert.match(componentSource, /const agentOutputPorts = computed<NodePortViewModel\[\]>\(\(\) =>[\s\S]*filter\(\(port\) => !port\.virtual\)/);
   assert.match(statePortListSource, /:data-agent-create-port="side"/);
-  assert.match(agentOutputPortSection, /:create-anchor-state-key="VIRTUAL_ANY_OUTPUT_STATE_KEY"/);
+  assert.match(agentOutputPortSection, /:create-anchor-state-key="outputCreateAnchorStateKey"/);
   assert.match(statePortListSource, /:data-anchor-slot-id="\`\$\{nodeId\}:state-out:\$\{createAnchorStateKey\}\`"/);
   assert.match(componentSource, /@port-click="handlePortStatePillClick"/);
   assert.match(statePortListSource, /@click\.stop="emit\('port-click', anchorId\(port\.key\), port\.key\)"/);
@@ -643,7 +650,7 @@ test("NodeCard reveals state pills on hover and opens state editing only after a
   assert.match(statePortListSource, /node-card__port-pill-label-text/);
   assert.match(statePortListSource, /node-card__port-pill-label--confirm/);
   assert.match(statePortListSource, /:show-arrow="false"/);
-  assert.match(componentSource, /:popover-style="stateEditorPopoverStyle"/);
+  assert.match(agentNodeBodySource, /:popover-style="stateEditorPopoverStyle"/);
   assert.doesNotMatch(componentSource, /@cancel="closeStateEditor"/);
   assert.doesNotMatch(componentSource, /@save="commitStateEditor"/);
   assert.doesNotMatch(componentSource, /function commitStateEditor\(\)/);

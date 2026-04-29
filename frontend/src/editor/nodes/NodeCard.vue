@@ -471,102 +471,39 @@
     </section>
 
     <section v-else-if="view.body.kind === 'agent'" class="node-card__body node-card__body--agent">
-      <div class="node-card__port-grid">
-        <div class="node-card__port-column">
-          <StatePortList
-            side="input"
-            :ports="orderedAgentInputPorts"
-            :node-id="nodeId"
-            :popover-style="stateEditorPopoverStyle"
-            :state-editor-draft="stateEditorDraft"
-            :state-editor-error="stateEditorError"
-            :type-options="stateTypeOptions"
-            :color-options="stateColorOptions"
-            :is-state-editor-open="isStateEditorOpen"
-            :is-state-editor-confirm-open="isStateEditorConfirmOpen"
-            :is-remove-port-state-confirm-open="isRemovePortStateConfirmOpen"
-            :is-state-editor-pill-revealed="isStateEditorPillRevealed"
-            :is-port-reordering="isPortReordering"
-            :is-port-reorder-placeholder="isPortReorderPlaceholder"
-            :create-visible="shouldRevealAgentCreateInputPort"
-            :create-open="isPortCreateOpen('input')"
-            :create-accent-color="pendingStateInputTarget?.stateColor ?? pendingStateInputSource?.stateColor ?? '#16a34a'"
-            :create-label="pendingStateInputTarget?.label ?? pendingStateInputSource?.label ?? '+ input'"
-            :create-anchor-state-key="agentCreateInputAnchorStateKey"
-            :create-draft="portStateDraft"
-            :create-title="portPickerTitle"
-            :create-error="portStateError"
-            :create-hint="t('nodeCard.createStateBindHint')"
-            :create-type-options="stateTypeOptions"
-            :create-popover-style="agentAddPopoverStyle"
-            @pointer-enter="handleStateEditorPillPointerEnter"
-            @pointer-leave="handleStateEditorPillPointerLeave"
-            @reorder-pointer-down="handlePortReorderPointerDown"
-            @port-click="handlePortStatePillClick"
-            @remove-click="handleRemovePortStateClick"
-            @update:name="handleStateEditorNameInput"
-            @update:type="handleStateEditorTypeValue"
-            @update:color="handleStateEditorColorInput"
-            @update:description="handleStateEditorDescriptionInput"
-            @open-create="openPortStateCreate"
-            @update:create-name="handlePortDraftNameValue"
-            @update:create-type="handlePortDraftTypeSelect"
-            @update:create-color="handlePortDraftColorSelect"
-            @update:create-description="handlePortDraftDescriptionValue"
-            @update:create-value="updatePortDraftValue"
-            @cancel-create="closePortPicker"
-            @commit-create="commitPortStateCreate"
-          />
-        </div>
-        <div class="node-card__port-column node-card__port-column--right">
-          <StatePortList
-            side="output"
-            :ports="orderedAgentOutputPorts"
-            :node-id="nodeId"
-            :popover-style="stateEditorPopoverStyle"
-            :state-editor-draft="stateEditorDraft"
-            :state-editor-error="stateEditorError"
-            :type-options="stateTypeOptions"
-            :color-options="stateColorOptions"
-            :is-state-editor-open="isStateEditorOpen"
-            :is-state-editor-confirm-open="isStateEditorConfirmOpen"
-            :is-remove-port-state-confirm-open="isRemovePortStateConfirmOpen"
-            :is-state-editor-pill-revealed="isStateEditorPillRevealed"
-            :is-port-reordering="isPortReordering"
-            :is-port-reorder-placeholder="isPortReorderPlaceholder"
-            :create-visible="shouldRevealAgentCreateOutputPort"
-            :create-open="isPortCreateOpen('output')"
-            :create-accent-color="pendingStateOutputTarget?.stateColor ?? VIRTUAL_ANY_OUTPUT_COLOR"
-            :create-label="pendingStateOutputTarget?.label ?? '+ output'"
-            :create-anchor-state-key="VIRTUAL_ANY_OUTPUT_STATE_KEY"
-            :create-draft="portStateDraft"
-            :create-title="portPickerTitle"
-            :create-error="portStateError"
-            :create-hint="t('nodeCard.createStateBindHint')"
-            :create-type-options="stateTypeOptions"
-            :create-popover-style="agentAddPopoverStyle"
-            @pointer-enter="handleStateEditorPillPointerEnter"
-            @pointer-leave="handleStateEditorPillPointerLeave"
-            @reorder-pointer-down="handlePortReorderPointerDown"
-            @port-click="handlePortStatePillClick"
-            @remove-click="handleRemovePortStateClick"
-            @update:name="handleStateEditorNameInput"
-            @update:type="handleStateEditorTypeValue"
-            @update:color="handleStateEditorColorInput"
-            @update:description="handleStateEditorDescriptionInput"
-            @open-create="openPortStateCreate"
-            @update:create-name="handlePortDraftNameValue"
-            @update:create-type="handlePortDraftTypeSelect"
-            @update:create-color="handlePortDraftColorSelect"
-            @update:create-description="handlePortDraftDescriptionValue"
-            @update:create-value="updatePortDraftValue"
-            @cancel-create="closePortPicker"
-            @commit-create="commitPortStateCreate"
-          />
-        </div>
-      </div>
-      <AgentRuntimeControls
-        ref="agentRuntimeControlsRef"
+      <AgentNodeBody
+        ref="agentNodeBodyRef"
+        :node-id="nodeId"
+        :body="view.body"
+        :ordered-input-ports="orderedAgentInputPorts"
+        :ordered-output-ports="orderedAgentOutputPorts"
+        :state-editor-popover-style="stateEditorPopoverStyle"
+        :agent-add-popover-style="agentAddPopoverStyle"
+        :confirm-popover-style="confirmPopoverStyle"
+        :state-editor-draft="stateEditorDraft"
+        :state-editor-error="stateEditorError"
+        :type-options="stateTypeOptions"
+        :color-options="stateColorOptions"
+        :is-state-editor-open="isStateEditorOpen"
+        :is-state-editor-confirm-open="isStateEditorConfirmOpen"
+        :is-remove-port-state-confirm-open="isRemovePortStateConfirmOpen"
+        :is-state-editor-pill-revealed="isStateEditorPillRevealed"
+        :is-port-reordering="isPortReordering"
+        :is-port-reorder-placeholder="isPortReorderPlaceholder"
+        :input-create-visible="shouldRevealAgentCreateInputPort"
+        :input-create-open="isPortCreateOpen('input')"
+        :input-create-accent-color="pendingStateInputTarget?.stateColor ?? pendingStateInputSource?.stateColor ?? '#16a34a'"
+        :input-create-label="pendingStateInputTarget?.label ?? pendingStateInputSource?.label ?? '+ input'"
+        :input-create-anchor-state-key="agentCreateInputAnchorStateKey"
+        :output-create-visible="shouldRevealAgentCreateOutputPort"
+        :output-create-open="isPortCreateOpen('output')"
+        :output-create-accent-color="pendingStateOutputTarget?.stateColor ?? VIRTUAL_ANY_OUTPUT_COLOR"
+        :output-create-label="pendingStateOutputTarget?.label ?? '+ output'"
+        :output-create-anchor-state-key="VIRTUAL_ANY_OUTPUT_STATE_KEY"
+        :create-draft="portStateDraft"
+        :create-title="portPickerTitle"
+        :create-error="portStateError"
+        :create-hint="t('nodeCard.createStateBindHint')"
         :model-value="agentResolvedModelValue || undefined"
         :model-options="agentModelOptions"
         :global-model-ref="trimmedGlobalTextModelRef"
@@ -574,31 +511,37 @@
         :thinking-options="agentThinkingOptions"
         :thinking-enabled="agentThinkingEnabled"
         :breakpoint-enabled="Boolean(agentBreakpointEnabled)"
-        :confirm-popover-style="confirmPopoverStyle"
+        :skill-picker-open="isSkillPickerOpen"
+        :show-skill-picker-trigger="showSkillPickerTrigger"
+        :skill-definitions-loading="skillDefinitionsLoading"
+        :skill-definitions-error="skillDefinitionsError"
+        :available-skill-definitions="availableSkillDefinitions"
+        :attached-skill-badges="attachedSkillBadges"
+        @pointer-enter="handleStateEditorPillPointerEnter"
+        @pointer-leave="handleStateEditorPillPointerLeave"
+        @reorder-pointer-down="handlePortReorderPointerDown"
+        @port-click="handlePortStatePillClick"
+        @remove-click="handleRemovePortStateClick"
+        @update:name="handleStateEditorNameInput"
+        @update:type="handleStateEditorTypeValue"
+        @update:color="handleStateEditorColorInput"
+        @update:description="handleStateEditorDescriptionInput"
+        @open-create="openPortStateCreate"
+        @update:create-name="handlePortDraftNameValue"
+        @update:create-type="handlePortDraftTypeSelect"
+        @update:create-color="handlePortDraftColorSelect"
+        @update:create-description="handlePortDraftDescriptionValue"
+        @update:create-value="updatePortDraftValue"
+        @cancel-create="closePortPicker"
+        @commit-create="commitPortStateCreate"
         @model-visible-change="handleAgentModelSelectVisibleChange"
         @update:model-value="handleAgentModelValueChange"
         @update:thinking-mode="handleAgentThinkingModeSelect"
         @update:breakpoint-enabled="handleAgentBreakpointToggleValue"
-      />
-      <AgentSkillPicker
-        :open="isSkillPickerOpen"
-        :show-trigger="showSkillPickerTrigger"
-        :loading="skillDefinitionsLoading"
-        :error="skillDefinitionsError"
-        :available-skill-definitions="availableSkillDefinitions"
-        :attached-skill-badges="attachedSkillBadges"
-        :popover-style="agentAddPopoverStyle"
-        @toggle="toggleSkillPicker"
-        @attach="attachAgentSkill"
-        @remove="removeAgentSkill"
-      />
-      <textarea
-        class="node-card__surface node-card__surface-textarea"
-        :value="view.body.taskInstruction"
-        :placeholder="t('nodeCard.nodePromptPlaceholder')"
-        @pointerdown.stop
-        @click.stop
-        @input="handleAgentTaskInstructionInput"
+        @toggle-skill-picker="toggleSkillPicker"
+        @attach-skill="attachAgentSkill"
+        @remove-skill="removeAgentSkill"
+        @task-input="handleAgentTaskInstructionInput"
       />
     </section>
 
@@ -914,11 +857,9 @@ import { ElButton, ElIcon, ElInput, ElOption, ElPopover, ElSelect } from "elemen
 import { Check, Collection, CollectionTag, Delete, Document, DocumentChecked, FolderOpened, Operation } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 
-import AgentRuntimeControls from "./AgentRuntimeControls.vue";
-import AgentSkillPicker from "./AgentSkillPicker.vue";
+import AgentNodeBody from "./AgentNodeBody.vue";
 import StateEditorPopover from "./StateEditorPopover.vue";
 import StatePortCreatePopover from "./StatePortCreatePopover.vue";
-import StatePortList from "./StatePortList.vue";
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
 import type { AgentNode, ConditionNode, GraphNode, InputNode, OutputNode, StateDefinition } from "@/types/node-system";
 import type { SkillDefinition } from "@/types/skills";
@@ -1129,7 +1070,7 @@ const isSkillPickerOpen = ref(false);
 const activePortPickerSide = ref<"input" | "output" | null>(null);
 const portStateDraft = ref<StateFieldDraft | null>(null);
 const portStateError = ref<string | null>(null);
-const agentRuntimeControlsRef = ref<{ collapseModelSelect?: () => void } | null>(null);
+const agentNodeBodyRef = ref<{ collapseModelSelect?: () => void } | null>(null);
 const titleEditorInputRef = ref<{ focus?: () => void } | null>(null);
 const descriptionEditorInputRef = ref<{ focus?: () => void } | null>(null);
 const hoveredStateEditorPillAnchorId = ref<string | null>(null);
@@ -2021,7 +1962,7 @@ function handleAgentModelSelectVisibleChange(visible: boolean) {
 }
 
 function collapseAgentModelSelect() {
-  agentRuntimeControlsRef.value?.collapseModelSelect?.();
+  agentNodeBodyRef.value?.collapseModelSelect?.();
 }
 
 function handleAgentThinkingModeSelect(nextValue: string | number | boolean | undefined) {

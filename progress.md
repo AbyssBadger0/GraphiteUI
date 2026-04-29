@@ -1,5 +1,74 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 49
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Confirmed Phase 48 was committed and pushed as `3678ab6`.
+  - Re-read the formal roadmap, active plan, latest findings, and current lock-banner click flow.
+  - Inspected `handleLockBannerClick`, `canvasRunPresentationModel.ts`, and existing run presentation/lock structure coverage.
+  - Selected the next P2 Canvas boundary: lock-banner click routing.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `resolveLockBannerClickAction` model expectations before production code.
+  - Updated `EditorCanvas.structure.test.ts` to require the new lock-banner click action model boundary.
+  - Verified the expected red failure: the model export was missing and the component still owned missing-current-run-node versus open-human-review branching.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `CanvasLockBannerClickAction` and `resolveLockBannerClickAction` to `canvasRunPresentationModel.ts`.
+  - Updated `EditorCanvas.vue` so `handleLockBannerClick` delegates branch selection to the model.
+  - Kept the lock-banner event binding and actual `locked-edit-attempt` / `open-human-review` emits inside the component.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused run presentation model and structure tests.
+  - Ran the broader run presentation, Canvas connection, edge visibility, flow-edge delete, and graph regression set.
+  - Ran TypeScript unused-symbol verification from `frontend`.
+  - Ran the full frontend `node --test` suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed backend `/health` returned `{"status":"ok"}` and the frontend entry returned HTTP 200.
+  - Captured a headless Chrome screenshot after a virtual-time wait and confirmed the workspace rendered normally.
+
+### Phase 5: Continuation Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated overall roadmap cleanup at about 76%.
+  - Recalculated P2 `EditorCanvas.vue` cleanup at about 77%.
+  - Opened Phase 50 automatically because total roadmap progress is below 100%.
+  - Selected the next candidate boundary as locked-node pointer capture routing around unlocked no-op, locked-attempt notification, and pointer-capture setup policy.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red focused tests | `node --test frontend/src/editor/canvas/canvasRunPresentationModel.test.ts frontend/src/editor/canvas/EditorCanvas.structure.test.ts` before implementation | Fails because lock-banner click export and component wiring do not exist | Failed on missing export and structure assertions | Passed |
+| Focused model/structure tests | Same focused files after implementation | All focused tests pass | 65 passed | Passed |
+| Focused run/Canvas regression | `node --test` over run presentation, Canvas connection, edge visibility, flow-edge delete, and graph document tests | Related interaction tests pass | 178 passed | Passed |
+| Unused symbol check | `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No diagnostics | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src vite.config.structure.test.ts | rg '\.test\.ts$')` in `frontend` | All frontend tests pass | 810 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without a large chunk warning | Exit 0, no Vite chunk warning | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+| Browser smoke | Headless Chrome screenshot with virtual-time wait | Workspace renders normally | Workspace UI rendered | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 49 implementation, verification, docs update, and dev restart are complete. |
+| Where am I going? | Phase 50 is open for locked-node pointer capture action extraction. |
+| What's the goal? | Continue reducing `EditorCanvas.vue` interaction ownership without changing drag, resize, snap, create-node, pan/zoom, edge deletion, lock handling, or connection-completion behavior. |
+| What have I learned? | Lock-banner click routing is pure run-presentation behavior; the component should keep the actual UI event and emit dispatch. |
+| What have I done? | Extracted lock-banner click routing, added focused tests, verified the full frontend suite, built, restarted, and visually smoked the app. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+
 ## Session: 2026-04-30 Phase 48
 
 ### Phase 1: Re-orientation

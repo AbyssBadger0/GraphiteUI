@@ -433,7 +433,7 @@ test("EditorCanvas treats awaiting-human current node as a persistent review nod
   assert.match(componentSource, /'editor-canvas__node--selected': isNodeVisuallySelected\(nodeId\)/);
   assert.match(componentSource, /:human-review-pending="isHumanReviewNode\(nodeId\)"/);
   assert.match(componentSource, /@open-human-review="emit\('open-human-review', \$event\)"/);
-  assert.match(componentSource, /import \{[\s\S]*isCanvasNodeVisuallySelected,[\s\S]*isHumanReviewRunNode,[\s\S]*resolveRunNodeClassListForCanvasNode,[\s\S]*resolveRunNodePresentationForCanvasNode,[\s\S]*\} from "\.\/canvasRunPresentationModel";/);
+  assert.match(componentSource, /import \{[\s\S]*isCanvasNodeVisuallySelected,[\s\S]*isHumanReviewRunNode,[\s\S]*resolveLockBannerClickAction,[\s\S]*resolveRunNodeClassListForCanvasNode,[\s\S]*resolveRunNodePresentationForCanvasNode,[\s\S]*\} from "\.\/canvasRunPresentationModel";/);
   assert.match(componentSource, /function isHumanReviewNode\(nodeId: string\)/);
   assert.match(componentSource, /return isHumanReviewRunNode\(\{[\s\S]*nodeId,[\s\S]*currentRunNodeId: props\.currentRunNodeId,[\s\S]*latestRunStatus: props\.latestRunStatus,[\s\S]*\}\);/);
   assert.match(componentSource, /resolveRunNodePresentationForCanvasNode\(\{[\s\S]*nodeId,[\s\S]*currentRunNodeId: props\.currentRunNodeId,[\s\S]*latestRunStatus: props\.latestRunStatus,[\s\S]*runNodeStatusByNodeId: props\.runNodeStatusByNodeId,[\s\S]*\}\)/);
@@ -441,6 +441,7 @@ test("EditorCanvas treats awaiting-human current node as a persistent review nod
   assert.match(componentSource, /function isNodeVisuallySelected\(nodeId: string\)/);
   assert.match(componentSource, /return isCanvasNodeVisuallySelected\(\{[\s\S]*nodeId,[\s\S]*selectedNodeId: selection\.selectedNodeId\.value,[\s\S]*currentRunNodeId: props\.currentRunNodeId,[\s\S]*latestRunStatus: props\.latestRunStatus,[\s\S]*\}\);/);
   assert.match(canvasRunPresentationModelSource, /export function isHumanReviewRunNode/);
+  assert.match(canvasRunPresentationModelSource, /export function resolveLockBannerClickAction/);
   assert.match(canvasRunPresentationModelSource, /export function resolveRunNodePresentationForCanvasNode/);
   assert.doesNotMatch(componentSource, /props\.latestRunStatus === "awaiting_human" && props\.currentRunNodeId === nodeId/);
   assert.doesNotMatch(componentSource, /isHumanReviewNode\(nodeId\) \? "paused" : props\.runNodeStatusByNodeId\?\.\[nodeId\]/);
@@ -463,7 +464,9 @@ test("EditorCanvas keeps paused human-review graphs viewable but read-only", () 
   assert.match(componentSource, /@keydown\.space\.prevent="handleLockBannerClick"/);
   assert.match(componentSource, /t\("editor\.lockBanner"\)/);
   assert.match(componentSource, /@keyframes editor-canvas-lock-banner-breathe/);
-  assert.match(componentSource, /function handleLockBannerClick\(\)[\s\S]*emit\("open-human-review", \{ nodeId: props\.currentRunNodeId \}\);/);
+  assert.match(componentSource, /const lockBannerClickAction = resolveLockBannerClickAction\(\{[\s\S]*currentRunNodeId: props\.currentRunNodeId,[\s\S]*\}\);/);
+  assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);
+  assert.match(componentSource, /case "open-human-review":[\s\S]*emit\("open-human-review", \{ nodeId: lockBannerClickAction\.nodeId \}\);/);
   assert.match(componentSource, /\.editor-canvas__lock-banner \{[\s\S]*top:\s*calc\(var\(--editor-canvas-floating-top-clearance,\s*18px\) \+ 64px\);/);
   assert.match(componentSource, /\.editor-canvas__lock-banner \{[\s\S]*min-width:\s*min\(420px,\s*calc\(100vw - 56px\)\);/);
   assert.match(componentSource, /\.editor-canvas__lock-banner \{[\s\S]*justify-content:\s*center;/);

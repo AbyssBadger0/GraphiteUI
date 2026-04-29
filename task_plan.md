@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 49 in progress
+Phase 50 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -459,12 +459,21 @@ Phase 49 in progress
 - **Status:** completed
 
 ### Phase 49: EditorCanvas Lock Banner Click Gate
-- [ ] Re-read the formal roadmap, Phase 48 findings, and current lock-banner click flow before changing code.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a lock-banner action model around missing current run node versus opening human review for the current run node.
-- [ ] Add focused red tests for the selected lock-banner boundary before production changes.
-- [ ] Keep actual button event binding, `locked-edit-attempt` emit, `open-human-review` emit, lock styling, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [x] Re-read the formal roadmap, Phase 48 findings, and current lock-banner click flow before changing code.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is a lock-banner action model around missing current run node versus opening human review for the current run node.
+- [x] Add focused red tests for the selected lock-banner boundary before production changes.
+- [x] Keep actual button event binding, `locked-edit-attempt` emit, `open-human-review` emit, lock styling, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [x] Run focused run-presentation/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 49.
+- **Status:** completed
+
+### Phase 50: EditorCanvas Locked Node Pointer Capture Gate
+- [ ] Re-read the formal roadmap, Phase 49 findings, and current locked-node pointer capture flow before changing code.
+- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a locked-node pointer capture action model around unlocked no-op, human-review/edit target locked-attempt notification, and locked pointer-capture setup policy.
+- [ ] Add focused red tests for the selected locked-node pointer capture boundary before production changes.
+- [ ] Keep actual DOM target classification, `preventDefault`, `stopPropagation`, canvas focus, locked-attempt emit, transient cleanup, pending connection cleanup, selected-edge clearing, node selection, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
 - [ ] Run focused run-presentation/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 49.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 50.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -575,6 +584,9 @@ Phase 49 in progress
 | Overall roadmap cleanup after Phase 48 | About 75% complete after moving edge visibility toolbar click routing into `edgeVisibilityModel.ts`. |
 | P2 `EditorCanvas.vue` cleanup after Phase 48 | About 76% complete after extracting locked-edit, same-mode no-op, and mode-change cleanup policy while preserving actual toolbar event binding and cleanup side effects in the component. |
 | Current continuation gate after Phase 48 | Total roadmap progress is below 100%, so Phase 49 is automatically opened for the next safe P2 Canvas lock-banner click boundary. |
+| Overall roadmap cleanup after Phase 49 | About 76% complete after moving lock-banner click routing into `canvasRunPresentationModel.ts`. |
+| P2 `EditorCanvas.vue` cleanup after Phase 49 | About 77% complete after extracting missing-current-run-node versus open-human-review decisions while preserving actual lock-banner event binding and emits in the component. |
+| Current continuation gate after Phase 49 | Total roadmap progress is below 100%, so Phase 50 is automatically opened for the next safe P2 Canvas locked-node pointer capture boundary. |
 
 ## Decisions Made
 | Decision | Rationale |

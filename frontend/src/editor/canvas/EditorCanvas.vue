@@ -456,6 +456,7 @@ import {
 import {
   isCanvasNodeVisuallySelected,
   isHumanReviewRunNode,
+  resolveLockBannerClickAction,
   resolveRunNodeClassListForCanvasNode,
   resolveRunNodePresentationForCanvasNode,
 } from "./canvasRunPresentationModel";
@@ -1986,11 +1987,16 @@ function isGraphEditingLocked() {
 }
 
 function handleLockBannerClick() {
-  if (!props.currentRunNodeId) {
-    emit("locked-edit-attempt");
-    return;
+  const lockBannerClickAction = resolveLockBannerClickAction({
+    currentRunNodeId: props.currentRunNodeId,
+  });
+  switch (lockBannerClickAction.type) {
+    case "locked-edit-attempt":
+      emit("locked-edit-attempt");
+      return;
+    case "open-human-review":
+      emit("open-human-review", { nodeId: lockBannerClickAction.nodeId });
   }
-  emit("open-human-review", { nodeId: props.currentRunNodeId });
 }
 
 function guardLockedCanvasInteraction() {

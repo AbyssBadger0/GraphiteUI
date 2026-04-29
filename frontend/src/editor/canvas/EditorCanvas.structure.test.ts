@@ -899,11 +899,15 @@ test("EditorCanvas emits node-creation intents for empty-canvas double click and
   assert.match(componentSource, /\(event: "open-node-creation-menu", payload:/);
   assert.match(componentSource, /\(event: "create-node-from-file", payload:/);
   assert.match(componentSource, /@dblclick="handleCanvasDoubleClick"/);
+  assert.match(componentSource, /@dragover\.prevent="handleCanvasDragOver"/);
   assert.match(componentSource, /@drop\.prevent="handleCanvasDrop"/);
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasDoubleClickCreationAction/);
+  assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasDragOverDropEffect/);
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasDropCreationAction/);
   assert.match(componentSource, /import \{[\s\S]*resolveCanvasDoubleClickCreationAction,[\s\S]*\} from "\.\/canvasConnectionInteractionModel";/);
+  assert.match(componentSource, /import \{[\s\S]*resolveCanvasDragOverDropEffect,[\s\S]*\} from "\.\/canvasConnectionInteractionModel";/);
   assert.match(componentSource, /import \{[\s\S]*resolveCanvasDropCreationAction,[\s\S]*\} from "\.\/canvasConnectionInteractionModel";/);
+  assert.match(componentSource, /event\.dataTransfer!\.dropEffect = resolveCanvasDragOverDropEffect\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*hasDraggedFiles: Boolean\(event\.dataTransfer\?\.files\?\.length\),[\s\S]*\}\);/);
   assert.match(componentSource, /function handleCanvasDoubleClick\(event: MouseEvent\)/);
   assert.match(componentSource, /const doubleClickCreationAction = resolveCanvasDoubleClickCreationAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*isIgnoredTarget: isIgnoredCanvasDoubleClickTarget\(target\),[\s\S]*position: resolveCanvasPoint\(event\),[\s\S]*clientX: event\.clientX,[\s\S]*clientY: event\.clientY,[\s\S]*\}\);/);
   assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);

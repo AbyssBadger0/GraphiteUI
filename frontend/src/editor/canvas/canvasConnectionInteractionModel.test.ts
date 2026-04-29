@@ -21,6 +21,7 @@ import {
   resolveCanvasEligibleTargetAnchorForNodeBody,
   resolveCanvasConnectionPointerMoveRequest,
   resolveCanvasAnchorPointerDownAction,
+  resolveCanvasDragOverDropEffect,
   resolveCanvasDoubleClickCreationAction,
   resolveCanvasDropCreationAction,
   resolveCanvasNodePointerDownConnectionAction,
@@ -146,6 +147,30 @@ test("canvas connection interaction model resolves file-drop creation actions", 
       type: "create-from-file",
       payload,
     },
+  );
+});
+
+test("canvas connection interaction model resolves drag-over drop effects", () => {
+  assert.equal(
+    resolveCanvasDragOverDropEffect({
+      interactionLocked: true,
+      hasDraggedFiles: true,
+    }),
+    "none",
+  );
+  assert.equal(
+    resolveCanvasDragOverDropEffect({
+      interactionLocked: false,
+      hasDraggedFiles: false,
+    }),
+    "none",
+  );
+  assert.equal(
+    resolveCanvasDragOverDropEffect({
+      interactionLocked: false,
+      hasDraggedFiles: true,
+    }),
+    "copy",
   );
 });
 

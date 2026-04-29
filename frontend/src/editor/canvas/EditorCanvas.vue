@@ -480,6 +480,7 @@ import {
   resolveCanvasConnectionPointerMoveRequest,
   resolveCanvasConnectionPointerUpAction,
   resolveCanvasDoubleClickCreationAction,
+  resolveCanvasDragOverDropEffect,
   resolveCanvasDropCreationAction,
   resolveCanvasNodePointerDownConnectionAction,
   resolveCanvasPendingConnectionCreationMenuRequest,
@@ -1350,11 +1351,10 @@ function canCompleteCanvasConnection(anchor: ProjectedCanvasAnchor) {
 }
 
 function handleCanvasDragOver(event: DragEvent) {
-  if (isGraphEditingLocked()) {
-    event.dataTransfer!.dropEffect = "none";
-    return;
-  }
-  event.dataTransfer!.dropEffect = event.dataTransfer?.files?.length ? "copy" : "none";
+  event.dataTransfer!.dropEffect = resolveCanvasDragOverDropEffect({
+    interactionLocked: isGraphEditingLocked(),
+    hasDraggedFiles: Boolean(event.dataTransfer?.files?.length),
+  });
 }
 
 function handleCanvasDrop(event: DragEvent) {

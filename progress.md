@@ -1,5 +1,74 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 46
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Confirmed Phase 45 was committed and pushed as `23990bc`.
+  - Re-read the formal roadmap, active plan, latest findings, and current drag-over/drop flow.
+  - Inspected `handleCanvasDragOver`, `handleCanvasDrop`, `canvasConnectionInteractionModel.ts`, and existing node-creation structure coverage.
+  - Selected the next P2 Canvas boundary: drag-over drop-effect selection.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `resolveCanvasDragOverDropEffect` model expectations before production code.
+  - Updated `EditorCanvas.structure.test.ts` to require the new drag-over drop-effect boundary.
+  - Verified the expected red failure: the model export was missing and the component still owned the inline locked / copy / none branch.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `CanvasDragOverDropEffect` and `resolveCanvasDragOverDropEffect` to `canvasConnectionInteractionModel.ts`.
+  - Updated `EditorCanvas.vue` so `handleCanvasDragOver` delegates copy/none selection to the model.
+  - Kept actual `event.dataTransfer.dropEffect` mutation and dragover event binding inside the component.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused connection interaction model and structure tests.
+  - Ran the broader Canvas creation, connection, viewport, drag/resize, edge, and graph regression set.
+  - Ran TypeScript unused-symbol verification from `frontend`.
+  - Ran the full frontend `node --test` suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed backend `/health` returned `{"status":"ok"}` and the frontend entry returned HTTP 200.
+  - Captured a headless Chrome screenshot after a virtual-time wait and confirmed the workspace rendered normally.
+
+### Phase 5: Continuation Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated overall roadmap cleanup at about 73%.
+  - Recalculated P2 `EditorCanvas.vue` cleanup at about 74%.
+  - Opened Phase 47 automatically because total roadmap progress is below 100%.
+  - Selected the next candidate boundary as selected-edge keyboard delete routing around editable targets, locked edit, missing/no-op edge, and flow/route delete payloads.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red focused tests | `node --test frontend/src/editor/canvas/canvasConnectionInteractionModel.test.ts frontend/src/editor/canvas/EditorCanvas.structure.test.ts` before implementation | Fails because drag-over drop-effect export and component wiring do not exist | Failed on missing export and structure assertions | Passed |
+| Focused model/structure tests | Same focused files after implementation | All focused tests pass | 76 passed | Passed |
+| Focused Canvas and graph regression | `node --test` over Canvas creation, connection, viewport, drag/resize, edge, and graph document tests | Related interaction tests pass | 187 passed | Passed |
+| Unused symbol check | `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No diagnostics | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src vite.config.structure.test.ts | rg '\.test\.ts$')` in `frontend` | All frontend tests pass | 807 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without a large chunk warning | Exit 0, no Vite chunk warning | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+| Browser smoke | Headless Chrome screenshot with virtual-time wait | Workspace renders normally | Workspace UI rendered | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 46 implementation, verification, docs update, and dev restart are complete. |
+| Where am I going? | Phase 47 is open for selected-edge keyboard delete action extraction. |
+| What's the goal? | Continue reducing `EditorCanvas.vue` interaction ownership without changing drag, resize, snap, create-node, pan/zoom, edge deletion, or connection-completion behavior. |
+| What have I learned? | Drag-over drop-effect selection is pure; the component should only write the chosen effect back to the browser event. |
+| What have I done? | Extracted drag-over drop-effect selection, added focused tests, verified the full frontend suite, built, restarted, and visually smoked the app. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+
 ## Session: 2026-04-30 Phase 45
 
 ### Phase 1: Re-orientation

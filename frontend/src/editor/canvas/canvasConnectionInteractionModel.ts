@@ -63,6 +63,8 @@ export type CanvasDropCreationAction =
   | { type: "ignore-missing-file" }
   | { type: "create-from-file"; payload: CanvasFileDropCreationPayload };
 
+export type CanvasDragOverDropEffect = "copy" | "none";
+
 export type CanvasConnectionPointerUpAction =
   | { type: "clear-connection-interaction" }
   | { type: "complete-connection"; targetAnchor: ProjectedCanvasAnchor }
@@ -234,6 +236,17 @@ export function resolveCanvasDropCreationAction(input: {
       clientY: input.clientY,
     },
   };
+}
+
+export function resolveCanvasDragOverDropEffect(input: {
+  interactionLocked: boolean;
+  hasDraggedFiles: boolean;
+}): CanvasDragOverDropEffect {
+  if (input.interactionLocked) {
+    return "none";
+  }
+
+  return input.hasDraggedFiles ? "copy" : "none";
 }
 
 export function resolveCanvasConnectionPointerUpAction(input: {

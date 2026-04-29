@@ -1148,6 +1148,11 @@ test("EditorCanvas snaps state drags to transient or matching state inputs from 
   assert.match(canvasConnectionInteractionModelSource, /return resolveCanvasEligibleStateTargetAnchorForNodeBody\(\{/);
   assert.match(componentSource, /function isStateTargetAnchorAllowedForActiveConnection\(anchor: ProjectedCanvasAnchor\)/);
   assert.match(componentSource, /return isCanvasStateTargetAnchorAllowedForConnection\(activeConnection\.value, anchor\);/);
+  assert.match(canvasConnectionInteractionModelSource, /export type CanvasNodePointerDownConnectionAction/);
+  assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasNodePointerDownConnectionAction/);
+  assert.match(componentSource, /const connectionNodePointerDownAction = resolveCanvasNodePointerDownConnectionAction\(\{[\s\S]*connection: activeConnection\.value,[\s\S]*targetAnchor: resolveEligibleTargetAnchorForNodeBody\(nodeId\),[\s\S]*preserveInlineEditorFocus,[\s\S]*\}\);/);
+  assert.match(componentSource, /case "complete-connection":[\s\S]*if \(connectionNodePointerDownAction\.preventDefault\) \{[\s\S]*event\.preventDefault\(\);[\s\S]*\}[\s\S]*if \(connectionNodePointerDownAction\.focusCanvas\) \{[\s\S]*canvasRef\.value\?\.focus\(\);[\s\S]*\}[\s\S]*completePendingConnection\(connectionNodePointerDownAction\.targetAnchor\);[\s\S]*return;/);
+  assert.match(componentSource, /case "continue-node-pointer-down":[\s\S]*break;/);
   assert.doesNotMatch(componentSource, /resolveCanvasConcreteStateTargetAnchorAtPointerY\(\{/);
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasAgentCreateInputTargetAnchor/);
   assert.match(canvasConnectionInteractionModelSource, /connection\.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY/);

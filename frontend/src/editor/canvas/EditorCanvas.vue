@@ -469,6 +469,7 @@ import {
   resolveCanvasAutoSnappedTargetAnchor as resolveCanvasAutoSnappedTargetAnchorModel,
   resolveCanvasEligibleTargetAnchorForNodeBody,
   resolveCanvasConnectionPointerUpAction,
+  resolveCanvasNodePointerDownConnectionAction,
   resolveCanvasPendingConnectionCreationMenuRequest,
   type CanvasNodeCreationMenuPayload,
 } from "./canvasConnectionInteractionModel";
@@ -1356,14 +1357,23 @@ function handleNodePointerDown(nodeId: string, event: PointerEvent) {
   const preserveInlineEditorFocus =
     target instanceof HTMLElement && Boolean(target.closest("[data-text-editor-trigger='true']"));
   if (activeConnection.value) {
-    const snappedAnchor = resolveEligibleTargetAnchorForNodeBody(nodeId);
-    if (snappedAnchor) {
-      event.preventDefault();
-      if (!preserveInlineEditorFocus) {
-        canvasRef.value?.focus();
-      }
-      completePendingConnection(snappedAnchor);
-      return;
+    const connectionNodePointerDownAction = resolveCanvasNodePointerDownConnectionAction({
+      connection: activeConnection.value,
+      targetAnchor: resolveEligibleTargetAnchorForNodeBody(nodeId),
+      preserveInlineEditorFocus,
+    });
+    switch (connectionNodePointerDownAction?.type) {
+      case "complete-connection":
+        if (connectionNodePointerDownAction.preventDefault) {
+          event.preventDefault();
+        }
+        if (connectionNodePointerDownAction.focusCanvas) {
+          canvasRef.value?.focus();
+        }
+        completePendingConnection(connectionNodePointerDownAction.targetAnchor);
+        return;
+      case "continue-node-pointer-down":
+        break;
     }
   }
   if (!preserveInlineEditorFocus) {

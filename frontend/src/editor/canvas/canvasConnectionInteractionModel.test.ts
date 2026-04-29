@@ -19,6 +19,7 @@ import {
   resolveCanvasConnectionPointerUpAction,
   resolveCanvasConnectionStateValueType,
   resolveCanvasEligibleTargetAnchorForNodeBody,
+  resolveCanvasNodePointerDownConnectionAction,
 } from "./canvasConnectionInteractionModel.ts";
 
 const document: GraphPayload = {
@@ -174,6 +175,59 @@ test("canvas connection interaction model resolves pointer-up routing actions", 
     }),
     {
       type: "open-creation-menu",
+    },
+  );
+});
+
+test("canvas connection interaction model resolves node pointer-down connection actions", () => {
+  const targetAnchor = flowAnchor("target", 440, 180);
+  const connection: PendingGraphConnection = {
+    sourceNodeId: "writer",
+    sourceKind: "flow-out",
+  };
+
+  assert.equal(
+    resolveCanvasNodePointerDownConnectionAction({
+      connection: null,
+      targetAnchor,
+      preserveInlineEditorFocus: false,
+    }),
+    null,
+  );
+  assert.deepEqual(
+    resolveCanvasNodePointerDownConnectionAction({
+      connection,
+      targetAnchor: null,
+      preserveInlineEditorFocus: false,
+    }),
+    {
+      type: "continue-node-pointer-down",
+    },
+  );
+  assert.deepEqual(
+    resolveCanvasNodePointerDownConnectionAction({
+      connection,
+      targetAnchor,
+      preserveInlineEditorFocus: false,
+    }),
+    {
+      type: "complete-connection",
+      targetAnchor,
+      preventDefault: true,
+      focusCanvas: true,
+    },
+  );
+  assert.deepEqual(
+    resolveCanvasNodePointerDownConnectionAction({
+      connection,
+      targetAnchor,
+      preserveInlineEditorFocus: true,
+    }),
+    {
+      type: "complete-connection",
+      targetAnchor,
+      preventDefault: true,
+      focusCanvas: false,
     },
   );
 });

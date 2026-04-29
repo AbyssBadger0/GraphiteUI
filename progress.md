@@ -68,6 +68,47 @@
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
 
+## Session: 2026-04-29 Phase 26 Input Node Body Component
+
+### Phase 26: Input Node Body Component
+- **Status:** completed
+- Actions taken:
+  - Re-read `task_plan.md`, `findings.md`, `progress.md`, and `docs/future/2026-04-28-architecture-refactor-roadmap.md`.
+  - Added `InputNodeBody.structure.test.ts` and updated `NodeCard.structure.test.ts` before production code.
+  - Verified the red test failed because `InputNodeBody.vue` did not exist yet.
+  - Added `InputNodeBody.vue` for input boundary selection, knowledge-base selector, upload/dropzone/preview, editable textarea, read-only surface, and local input scoped styles.
+  - Updated `NodeCard.vue` to delegate input body presentation through `InputNodeBody` while keeping the output state pill popover in a parent-owned slot.
+  - Removed the input upload DOM ref/open-picker presentation helper and input-specific scoped styles from `NodeCard.vue`.
+  - `NodeCard.vue` line count moved from 3,895 after Phase 25 to 3,562 after Phase 26.
+  - Recalculated total roadmap cleanup as about 50% complete; because it remains below 100%, opened Phase 27 for the `OutputNodeBody.vue` slice.
+
+### Verification
+- **Status:** completed
+- Results:
+  - Red test: `node --test frontend/src/editor/nodes/InputNodeBody.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts` failed with `ENOENT` for `InputNodeBody.vue` before implementation.
+  - Focused structure tests: `node --test frontend/src/editor/nodes/InputNodeBody.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts` passed, 36 tests.
+  - Focused input tests: `node --test frontend/src/editor/nodes/InputNodeBody.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts frontend/src/editor/nodes/uploadedAssetModel.test.ts frontend/src/editor/nodes/inputKnowledgeBaseModel.test.ts frontend/src/editor/nodes/inputValueTypeModel.test.ts` passed, 48 tests.
+  - Unused-symbol check: `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` passed with exit 0 and no diagnostics.
+  - Full frontend tests: `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts` passed, 765 tests.
+  - Frontend production build: `npm run build` in `frontend` passed; the build completed without a Vite large chunk warning.
+  - Dev restart: root `npm run dev` started services on frontend `http://127.0.0.1:3477` and backend `http://127.0.0.1:8765`.
+  - Health checks: frontend `/` returned HTTP 200 and backend `/health` returned HTTP 200 with `{"status":"ok"}`.
+  - Visual check: captured `/tmp/graphiteui-editor-phase26.png` from `http://127.0.0.1:3477/editor/new`; the input node segmented controls, output state pill, and textarea surface render with the expected warm styling.
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 26 implementation, verification, dev restart, visual check, and continuation planning are complete. |
+| Where am I going? | Phase 27 is open for the `OutputNodeBody.vue` extraction because total cleanup is still below 100%. |
+| What's the goal? | Keep reducing `NodeCard.vue` presentation concentration without changing graph editing or input upload/value semantics. |
+| What have I learned? | Input body presentation can move safely if the output state pill stays parent-owned through a slot and file/drop/value handlers remain in `NodeCard.vue`. |
+| What have I done? | Added `InputNodeBody.vue`, moved input-specific scoped styles with it, updated structure tests, and verified the editor visually. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-29 | Root `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` printed TypeScript help instead of checking the Vue project. | First Phase 26 TypeScript verification attempt from the repository root. | Re-ran `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` from `frontend`, which passed with exit 0 and no diagnostics. |
+
 ## Session: 2026-04-28 Phase 16
 
 ### Phase 1: Re-orientation and Safety Scope

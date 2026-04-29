@@ -13,6 +13,7 @@ const textEditorComposableSource = readFileSync(resolve(currentDirectory, "useNo
 const floatingPanelsComposableSource = readFileSync(resolve(currentDirectory, "useNodeFloatingPanels.ts"), "utf8").replace(/\r\n/g, "\n");
 const portReorderComposableSource = readFileSync(resolve(currentDirectory, "usePortReorder.ts"), "utf8").replace(/\r\n/g, "\n");
 const agentNodeBodySource = readFileSync(resolve(currentDirectory, "AgentNodeBody.vue"), "utf8").replace(/\r\n/g, "\n");
+const inputNodeBodySource = readFileSync(resolve(currentDirectory, "InputNodeBody.vue"), "utf8").replace(/\r\n/g, "\n");
 const agentSkillPickerSource = readFileSync(resolve(currentDirectory, "AgentSkillPicker.vue"), "utf8").replace(/\r\n/g, "\n");
 const agentRuntimeControlsSource = readFileSync(resolve(currentDirectory, "AgentRuntimeControls.vue"), "utf8").replace(/\r\n/g, "\n");
 const statePortListSource = readFileSync(resolve(currentDirectory, "StatePortList.vue"), "utf8").replace(/\r\n/g, "\n");
@@ -76,11 +77,9 @@ test("NodeCard stretches primary editable surfaces when the canvas resizes the n
     componentSource,
     /\.node-card__body--input,[\s\S]*\.node-card__body--agent,[\s\S]*\.node-card__body--output \{[\s\S]*display:\s*flex;[\s\S]*flex-direction:\s*column;/,
   );
-  assert.match(
-    componentSource,
-    /\.node-card__body--input > \.node-card__surface-textarea,[\s\S]*\.node-card__body--agent > \.node-card__surface-textarea \{[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/,
-  );
-  assert.match(componentSource, /\.node-card__surface-textarea \{[\s\S]*width:\s*100%;[\s\S]*height:\s*100%;[\s\S]*resize:\s*none;/);
+  assert.match(inputNodeBodySource, /\.node-card__input-body \{[\s\S]*display:\s*flex;[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);
+  assert.match(inputNodeBodySource, /\.node-card__surface-textarea \{[\s\S]*flex:\s*1 1 auto;[\s\S]*width:\s*100%;[\s\S]*height:\s*100%;[\s\S]*resize:\s*none;/);
+  assert.match(agentNodeBodySource, /\.node-card__surface-textarea \{[\s\S]*flex:\s*1 1 auto;[\s\S]*resize:\s*none;/);
   assert.match(componentSource, /\.node-card__surface--output \{[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);
   assert.match(componentSource, /\.node-card__preview \{[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);
 });
@@ -109,34 +108,38 @@ test("NodeCard clips long state port labels inside the pill", () => {
   assert.doesNotMatch(labelBlock, /overflow:\s*visible;/);
 });
 
-test("NodeCard uses Element Plus segmented control on the same row as the input output pill", () => {
+test("NodeCard delegates input body presentation while keeping the output state slot", () => {
   const inputSectionMatch = componentSource.match(
     /<section v-if="view\.body\.kind === 'input'"[\s\S]*?<\/section>/,
   );
   assert.ok(inputSectionMatch, "expected to find the input node section");
   const inputSection = inputSectionMatch[0];
 
-  assert.match(inputSection, /<div class="node-card__port-row node-card__port-row--single node-card__port-row--input-boundary">/);
-  assert.match(inputSection, /<ElSegmented/);
-  assert.match(inputSection, /class="node-card__input-boundary-toggle"/);
-  assert.match(inputSection, /:options="inputTypeOptions"/);
-  assert.match(inputSection, /:model-value="inputBoundarySelection"/);
-  assert.match(inputSection, /:disabled="Boolean\(inputAssetEnvelope\)"/);
+  assert.match(componentSource, /import InputNodeBody from "\.\/InputNodeBody\.vue";/);
+  assert.match(inputSection, /<InputNodeBody[\s\S]*:body="view\.body"[\s\S]*:input-boundary-selection="inputBoundarySelection"[\s\S]*:input-type-options="inputTypeOptions"[\s\S]*:input-asset-envelope="inputAssetEnvelope"[\s\S]*@update:boundary-selection="handleInputBoundarySelection"[\s\S]*@update:knowledge-base="handleInputKnowledgeBaseSelect"[\s\S]*@asset-file-change="handleInputAssetFileChange"[\s\S]*@asset-drop="handleInputAssetDrop"[\s\S]*@clear-asset="clearInputAsset"[\s\S]*@input-value="handleInputValueInput"/);
+  assert.match(inputSection, /<template #primary-output>/);
+  assert.match(inputNodeBodySource, /<slot name="primary-output" \/>/);
+  assert.match(inputNodeBodySource, /<ElSegmented/);
+  assert.match(inputNodeBodySource, /class="node-card__input-boundary-toggle"/);
+  assert.match(inputNodeBodySource, /:options="inputTypeOptions"/);
+  assert.match(inputNodeBodySource, /:model-value="inputBoundarySelection"/);
+  assert.match(inputNodeBodySource, /:disabled="Boolean\(inputAssetEnvelope\)"/);
   assert.match(componentSource, /from "\.\/uploadedAssetModel";/);
   assert.match(componentSource, /resolveUploadedAssetLabel\(inputAssetType\.value\)/);
   assert.match(componentSource, /resolveUploadedAssetSummary\(inputAssetEnvelope\.value\)/);
   assert.match(componentSource, /resolveUploadedAssetTextPreview\(inputAssetEnvelope\.value\)/);
   assert.match(componentSource, /resolveUploadedAssetDescription\(inputAssetEnvelope\.value, inputAssetType\.value\)/);
   assert.doesNotMatch(componentSource, /return `Stored as \$\{asset\.detectedType\} upload\. \$\{inputAssetSummary\.value\}`;/);
-  assert.match(inputSection, /<template #default="\{ item \}">/);
-  assert.match(inputSection, /class="node-card__input-boundary-icon-wrap"/);
-  assert.match(inputSection, /<component :is="item\.icon" class="node-card__input-boundary-icon" aria-hidden="true" \/>/);
-  assert.match(inputSection, /<span class="node-card__sr-only">\{\{ item\.label \}\}<\/span>/);
+  assert.match(inputNodeBodySource, /<template #default="\{ item \}">/);
+  assert.match(inputNodeBodySource, /class="node-card__input-boundary-icon-wrap"/);
+  assert.match(inputNodeBodySource, /<component :is="item\.icon" class="node-card__input-boundary-icon" aria-hidden="true" \/>/);
+  assert.match(inputNodeBodySource, /<span class="node-card__sr-only">\{\{ item\.label \}\}<\/span>/);
   assert.match(inputSection, /class="node-card__port-pill[\s\S]*node-card__port-pill--output/);
   assert.match(componentSource, /from "@element-plus\/icons-vue"/);
   assert.match(componentSource, /icon:\s*Document/);
   assert.match(componentSource, /icon:\s*FolderOpened/);
   assert.match(componentSource, /icon:\s*Collection/);
+  assert.doesNotMatch(inputSection, /<ElSegmented/);
   assert.doesNotMatch(inputSection, /v-for="option in inputTypeOptions"/);
   assert.doesNotMatch(inputSection, /class="node-card__control-button"/);
 });

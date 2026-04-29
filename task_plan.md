@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 26 in progress
+Phase 27 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -234,11 +234,24 @@ Phase 26 in progress
 - **Status:** completed
 
 ### Phase 26: Input Node Body Component
-- [ ] Continue P1 node body component extraction with the input-body presentation wrapper.
-- [ ] Add failing structure coverage for `InputNodeBody.vue` and `NodeCard.vue` delegation.
-- [ ] Move input boundary controls, knowledge-base selector, asset upload/dropzone/preview, editable input textarea, and read-only surface presentation into `InputNodeBody.vue`.
-- [ ] Keep input value derivation, uploaded asset parsing, knowledge-base option derivation, lock guards, file/drop handlers, and graph/state mutation emits in `NodeCard.vue`.
-- [ ] Run focused InputNodeBody/NodeCard structure tests plus uploaded asset, knowledge-base, and input boundary model tests.
+- [x] Continue P1 node body component extraction with the input-body presentation wrapper.
+- [x] Add failing structure coverage for `InputNodeBody.vue` and `NodeCard.vue` delegation.
+- [x] Move input boundary controls, knowledge-base selector, asset upload/dropzone/preview, editable input textarea, and read-only surface presentation into `InputNodeBody.vue`.
+- [x] Keep input value derivation, uploaded asset parsing, knowledge-base option derivation, lock guards, file/drop handlers, and graph/state mutation emits in `NodeCard.vue`.
+- [x] Run focused InputNodeBody/NodeCard structure tests plus uploaded asset, knowledge-base, and input boundary model tests.
+- [x] Run TypeScript unused-symbol verification, full frontend tests, and production build.
+- [x] Restart the dev environment with `npm run dev` and verify frontend/backend health.
+- [x] Recalculate total roadmap progress; because it is still below 100%, automatically open the next phase.
+- [x] Commit and push the cleanup and planning updates.
+- **Status:** completed
+
+### Phase 27: Output Node Body Component
+- [ ] Continue P1 node body component extraction with the output-body presentation wrapper.
+- [ ] Add failing structure coverage for `OutputNodeBody.vue` and `NodeCard.vue` delegation.
+- [ ] Move output persistence controls, preview surface metadata, and rendered output preview presentation into `OutputNodeBody.vue`.
+- [ ] Keep output preview content derivation, display/persist option derivation, lock guards, output config handlers, and graph/state mutation emits in `NodeCard.vue`.
+- [ ] Preserve the output input state pill popover in a parent-owned slot unless tests prove moving it is low risk.
+- [ ] Run focused OutputNodeBody/NodeCard structure tests plus output preview and output config model tests.
 - [ ] Run TypeScript unused-symbol verification, full frontend tests, and production build.
 - [ ] Restart the dev environment with `npm run dev` and verify frontend/backend health.
 - [ ] Recalculate total roadmap progress; if below 100%, automatically open the next phase.
@@ -282,6 +295,9 @@ Phase 26 in progress
 | Overall roadmap cleanup after Phase 25 | About 49% complete after moving the agent body presentation wrapper into `AgentNodeBody.vue`. |
 | P1 `NodeCard.vue` cleanup after Phase 25 | About 75% complete after moving agent body wiring and preserving parent-side graph mutations. |
 | Current continuation gate after Phase 25 | Total roadmap progress is below 100%, so Phase 26 is automatically opened for the `InputNodeBody.vue` slice. |
+| Overall roadmap cleanup after Phase 26 | About 50% complete after moving input body presentation into `InputNodeBody.vue`. |
+| P1 `NodeCard.vue` cleanup after Phase 26 | About 79% complete after removing the input body controls, upload/dropzone preview, and textarea styling from `NodeCard.vue`. |
+| Current continuation gate after Phase 26 | Total roadmap progress is below 100%, so Phase 27 is automatically opened for the `OutputNodeBody.vue` slice. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -308,6 +324,7 @@ Phase 26 in progress
 - Phase 23 starts the roadmap node-body component step with `AgentSkillPicker.vue`; `NodeCard.vue` drops to 4,231 lines before final verification while keeping skill config mutation behavior in the parent.
 - Phase 24 continues the roadmap node-body component step with `AgentRuntimeControls.vue`; `NodeCard.vue` drops to 3,954 lines before final verification while keeping model derivation, refresh-model emit, lock guards, and agent config mutation behavior in the parent.
 - Phase 25 wraps the agent node body presentation in `AgentNodeBody.vue`; `NodeCard.vue` drops to 3,895 lines before final verification while keeping state derivation, draft mutation, lock guards, skill patch creation, and graph emits in the parent.
+- Phase 26 moves the input node body presentation into `InputNodeBody.vue`; `NodeCard.vue` drops to 3,562 lines while keeping input value derivation, uploaded asset parsing, knowledge-base options, lock guards, file/drop handlers, and state/config emits in the parent.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 
@@ -318,3 +335,4 @@ Phase 26 in progress
 | Virtual any output drags no longer auto-snapped to new agent inputs after cleanup | Baseline comparison against `8017081` | Restored virtual output pending-source preservation in `buildPendingAgentInputSourceByNodeId`, added regression coverage, and extracted follow-up interaction helpers into `canvasConnectionInteractionModel.ts`. |
 | `vue-tsc` flagged unused NodeCard destructures and mock DOM type gaps after `usePortReorder` extraction | Phase 19 TypeScript verification | Stopped destructuring global pointer handlers/pointer state in `NodeCard.vue`, made test source elements satisfy `EventTarget`, and narrowed query results inside `usePortReorder.ts`. |
 | Agent prompt textarea lost parent scoped surface styling after moving into `AgentNodeBody.vue` | Phase 25 visual screenshot | Moved the required surface/textarea styles into `AgentNodeBody.vue` and added structure coverage for the local scoped style. |
+| Root `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` printed TypeScript help instead of checking the project | Phase 26 TypeScript verification | Re-ran the unused-symbol check through `frontend/node_modules/.bin/vue-tsc` from the `frontend` directory, which completed with exit 0 and no diagnostics. |

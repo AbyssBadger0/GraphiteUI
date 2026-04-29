@@ -20,6 +20,7 @@ import {
   resolveCanvasConnectionStateValueType,
   resolveCanvasEligibleTargetAnchorForNodeBody,
   resolveCanvasConnectionPointerMoveRequest,
+  resolveCanvasAnchorPointerDownAction,
   resolveCanvasNodePointerDownConnectionAction,
 } from "./canvasConnectionInteractionModel.ts";
 
@@ -260,6 +261,63 @@ test("canvas connection interaction model resolves pointer-move preview requests
       hoverNodeId: "target",
       targetAnchor,
       fallbackPoint: { x: 480, y: 240 },
+    },
+  );
+});
+
+test("canvas connection interaction model resolves anchor pointer-down actions", () => {
+  const targetAnchor = flowAnchor("target", 440, 180);
+  const setupPolicy = {
+    focusCanvas: true,
+    clearCanvasTransientState: true,
+    selectNodeId: "target",
+  } as const;
+
+  assert.deepEqual(
+    resolveCanvasAnchorPointerDownAction({
+      interactionLocked: true,
+      anchor: targetAnchor,
+      canComplete: true,
+      canStart: true,
+    }),
+    { type: "locked-edit-attempt" },
+  );
+  assert.deepEqual(
+    resolveCanvasAnchorPointerDownAction({
+      interactionLocked: false,
+      anchor: targetAnchor,
+      canComplete: true,
+      canStart: true,
+    }),
+    {
+      type: "complete-connection",
+      targetAnchor,
+      ...setupPolicy,
+    },
+  );
+  assert.deepEqual(
+    resolveCanvasAnchorPointerDownAction({
+      interactionLocked: false,
+      anchor: targetAnchor,
+      canComplete: false,
+      canStart: false,
+    }),
+    {
+      type: "ignore-anchor",
+      ...setupPolicy,
+    },
+  );
+  assert.deepEqual(
+    resolveCanvasAnchorPointerDownAction({
+      interactionLocked: false,
+      anchor: targetAnchor,
+      canComplete: false,
+      canStart: true,
+    }),
+    {
+      type: "start-or-toggle-connection",
+      clearWindowSelection: true,
+      ...setupPolicy,
     },
   );
 });

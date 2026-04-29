@@ -56,6 +56,24 @@ export type CanvasConnectionPointerMoveRequest = {
   fallbackPoint: GraphPosition;
 };
 
+type CanvasAnchorPointerDownSetupPolicy = {
+  focusCanvas: true;
+  clearCanvasTransientState: true;
+  selectNodeId: string;
+};
+
+export type CanvasAnchorPointerDownAction =
+  | { type: "locked-edit-attempt" }
+  | ({
+      type: "complete-connection";
+      targetAnchor: ProjectedCanvasAnchor;
+    } & CanvasAnchorPointerDownSetupPolicy)
+  | ({ type: "ignore-anchor" } & CanvasAnchorPointerDownSetupPolicy)
+  | ({
+      type: "start-or-toggle-connection";
+      clearWindowSelection: true;
+    } & CanvasAnchorPointerDownSetupPolicy);
+
 export type CanvasNodePointerDownConnectionAction =
   | {
       type: "complete-connection";
@@ -202,6 +220,44 @@ export function resolveCanvasConnectionPointerMoveRequest(input: {
     hoverNodeId: input.hoverNodeId,
     targetAnchor: input.targetAnchor,
     fallbackPoint: input.fallbackPoint,
+  };
+}
+
+export function resolveCanvasAnchorPointerDownAction(input: {
+  interactionLocked: boolean;
+  anchor: ProjectedCanvasAnchor;
+  canComplete: boolean;
+  canStart: boolean;
+}): CanvasAnchorPointerDownAction {
+  if (input.interactionLocked) {
+    return { type: "locked-edit-attempt" };
+  }
+
+  const setupPolicy = {
+    focusCanvas: true,
+    clearCanvasTransientState: true,
+    selectNodeId: input.anchor.nodeId,
+  } as const;
+
+  if (input.canComplete) {
+    return {
+      type: "complete-connection",
+      targetAnchor: input.anchor,
+      ...setupPolicy,
+    };
+  }
+
+  if (!input.canStart) {
+    return {
+      type: "ignore-anchor",
+      ...setupPolicy,
+    };
+  }
+
+  return {
+    type: "start-or-toggle-connection",
+    clearWindowSelection: true,
+    ...setupPolicy,
   };
 }
 

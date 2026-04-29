@@ -435,6 +435,7 @@ test("EditorCanvas treats awaiting-human current node as a persistent review nod
 });
 
 test("EditorCanvas keeps paused human-review graphs viewable but read-only", () => {
+  const canvasConnectionInteractionModelSource = readCanvasConnectionInteractionModelSource();
   const canvasEdgeInteractionsSource = readCanvasEdgeInteractionsSource();
 
   assert.match(componentSource, /interactionLocked\?: boolean;/);
@@ -480,7 +481,9 @@ test("EditorCanvas keeps paused human-review graphs viewable but read-only", () 
   assert.match(componentSource, /function handleCanvasDoubleClick\(event: MouseEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
   assert.match(componentSource, /function handleCanvasDrop\(event: DragEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
   assert.match(componentSource, /function handleEdgePointerDown\(edge: ProjectedCanvasEdge, event: PointerEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
-  assert.match(componentSource, /function handleAnchorPointerDown\(anchor: ProjectedCanvasAnchor\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
+  assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasAnchorPointerDownAction/);
+  assert.match(componentSource, /const anchorPointerDownAction = resolveCanvasAnchorPointerDownAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*anchor,[\s\S]*canComplete: canCompleteCanvasConnection\(anchor\),[\s\S]*canStart: canStartGraphConnection\(anchor\.kind\),[\s\S]*\}\);/);
+  assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);
   assert.match(componentSource, /function handleSelectedEdgeDelete\(event: KeyboardEvent\)[\s\S]*if \(guardLockedCanvasInteraction\(\)\) \{[\s\S]*return;/);
 });
 
@@ -924,6 +927,11 @@ test("EditorCanvas opens reverse node creation when input drags end on empty can
   assert.match(canvasConnectionInteractionModelSource, /targetAnchorKind: connection\.sourceKind/);
   assert.match(canvasConnectionInteractionModelSource, /targetStateKey: connection\.sourceStateKey/);
   assert.match(canvasConnectionInteractionModelSource, /targetValueType:/);
+  assert.match(canvasConnectionInteractionModelSource, /export type CanvasAnchorPointerDownAction/);
+  assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasAnchorPointerDownAction/);
+  assert.match(componentSource, /switch \(anchorPointerDownAction\.type\) \{[\s\S]*case "complete-connection":[\s\S]*completePendingConnection\(anchorPointerDownAction\.targetAnchor\);[\s\S]*return;/);
+  assert.match(componentSource, /case "ignore-anchor":[\s\S]*return;/);
+  assert.match(componentSource, /case "start-or-toggle-connection":[\s\S]*window\.getSelection\(\)\?\.removeAllRanges\(\);[\s\S]*const pendingConnectionResult = startOrTogglePendingConnectionFromAnchor\(anchor\);/);
   assert.match(componentSource, /const pendingConnectionResult = startOrTogglePendingConnectionFromAnchor\(anchor\);/);
   assert.match(componentSource, /if \(pendingConnectionResult\.status !== "ignored"\) \{[\s\S]*selectedEdgeId\.value = null;/);
   assert.match(canvasConnectionInteractionsSource, /const nextPendingConnection = buildPendingConnectionFromAnchor\(anchor\);/);

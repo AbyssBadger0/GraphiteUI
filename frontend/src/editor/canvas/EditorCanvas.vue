@@ -468,10 +468,12 @@ import {
   isCanvasStateTargetAnchorAllowedForConnection,
   resolveCanvasAutoSnappedTargetAnchor as resolveCanvasAutoSnappedTargetAnchorModel,
   resolveCanvasEligibleTargetAnchorForNodeBody,
+  resolveCanvasAnchorPointerDownAction,
   resolveCanvasConnectionPointerMoveRequest,
   resolveCanvasConnectionPointerUpAction,
   resolveCanvasNodePointerDownConnectionAction,
   resolveCanvasPendingConnectionCreationMenuRequest,
+  type CanvasAnchorPointerDownAction,
   type CanvasNodeCreationMenuPayload,
 } from "./canvasConnectionInteractionModel";
 import {
@@ -1623,28 +1625,47 @@ function handleEdgePointerDown(edge: ProjectedCanvasEdge, event: PointerEvent) {
 }
 
 function handleAnchorPointerDown(anchor: ProjectedCanvasAnchor) {
-  if (isGraphEditingLocked()) {
-    emit("locked-edit-attempt");
-    return;
+  const anchorPointerDownAction = resolveCanvasAnchorPointerDownAction({
+    interactionLocked: isGraphEditingLocked(),
+    anchor,
+    canComplete: canCompleteCanvasConnection(anchor),
+    canStart: canStartGraphConnection(anchor.kind),
+  });
+  switch (anchorPointerDownAction.type) {
+    case "locked-edit-attempt":
+      emit("locked-edit-attempt");
+      return;
+    case "complete-connection":
+      applyAnchorPointerDownSetup(anchorPointerDownAction);
+      completePendingConnection(anchorPointerDownAction.targetAnchor);
+      return;
+    case "ignore-anchor":
+      applyAnchorPointerDownSetup(anchorPointerDownAction);
+      return;
+    case "start-or-toggle-connection": {
+      applyAnchorPointerDownSetup(anchorPointerDownAction);
+      if (anchorPointerDownAction.clearWindowSelection) {
+        window.getSelection()?.removeAllRanges();
+      }
+      const pendingConnectionResult = startOrTogglePendingConnectionFromAnchor(anchor);
+      if (pendingConnectionResult.status !== "ignored") {
+        selectedEdgeId.value = null;
+      }
+      return;
+    }
   }
-  canvasRef.value?.focus();
-  clearCanvasTransientState();
-  selection.selectNode(anchor.nodeId);
+}
 
-  if (canCompleteCanvasConnection(anchor)) {
-    completePendingConnection(anchor);
-    return;
+function applyAnchorPointerDownSetup(
+  action: Exclude<CanvasAnchorPointerDownAction, { type: "locked-edit-attempt" }>,
+) {
+  if (action.focusCanvas) {
+    canvasRef.value?.focus();
   }
-
-  if (!canStartGraphConnection(anchor.kind)) {
-    return;
+  if (action.clearCanvasTransientState) {
+    clearCanvasTransientState();
   }
-
-  window.getSelection()?.removeAllRanges();
-  const pendingConnectionResult = startOrTogglePendingConnectionFromAnchor(anchor);
-  if (pendingConnectionResult.status !== "ignored") {
-    selectedEdgeId.value = null;
-  }
+  selection.selectNode(action.selectNodeId);
 }
 
 function openCreationMenuFromPendingConnection(event: PointerEvent) {

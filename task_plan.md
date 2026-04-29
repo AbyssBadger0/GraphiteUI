@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 28 in progress
+Phase 29 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -258,13 +258,26 @@ Phase 28 in progress
 - [x] Commit and push the cleanup and planning updates.
 - **Status:** completed
 
-### Phase 28: Condition Node Body Component
-- [ ] Continue P1 node body component extraction with the condition-body presentation wrapper.
-- [ ] Add failing structure coverage for `ConditionNodeBody.vue` and `NodeCard.vue` delegation.
-- [ ] Move condition source row surface, operator/value/loop controls, route branch display, and local condition body styles into `ConditionNodeBody.vue`.
-- [ ] Keep condition rule draft synchronization, loop-limit draft commits, branch mutation handlers, lock guards, state editor popovers, and graph/state mutation emits in `NodeCard.vue`.
-- [ ] Preserve condition source state pill popover and route output state/flow popovers in parent-owned slots unless tests prove moving them is low risk.
-- [ ] Run focused ConditionNodeBody/NodeCard structure tests plus condition rule and loop-limit model tests.
+### Phase 28: NodeCard Presentation Closeout
+- [x] Continue P1 node presentation extraction with a larger NodeCard closeout slice.
+- [x] Add failing structure coverage for `ConditionNodeBody.vue`, `NodeCardTopActions.vue`, and `NodeCard.vue` delegation.
+- [x] Move condition source state pill presentation, state/create popover wiring, operator/value/loop controls, and local condition body styles into `ConditionNodeBody.vue`.
+- [x] Move top action dock, advanced agent/output popover controls, confirm popover presentation, and top-action styles into `NodeCardTopActions.vue`.
+- [x] Keep condition rule draft synchronization, loop-limit draft commits, output/agent config patch handlers, action confirmations, lock guards, and graph/state mutation emits in `NodeCard.vue`.
+- [x] Remove stale condition branch editor styles that are no longer rendered.
+- [x] Run focused ConditionNodeBody/NodeCardTopActions/NodeCard structure tests plus condition rule, loop-limit, output config, and agent config model tests.
+- [x] Run TypeScript unused-symbol verification, full frontend tests, and production build.
+- [x] Restart the dev environment with `npm run dev` and verify frontend/backend health.
+- [x] Recalculate total roadmap progress; if below 100%, automatically open the next phase.
+- [x] Commit and push the cleanup and planning updates.
+- **Status:** completed
+
+### Phase 29: NodeCard Primary State Port and Residual Chrome Closeout
+- [ ] Continue P1 NodeCard residual cleanup after the Phase 28 presentation closeout.
+- [ ] Add failing structure coverage for primary input/output state-port slot extraction or the next residual chrome boundary.
+- [ ] Move the remaining input/output primary state pill presentation and reusable local styles out of `NodeCard.vue` where tests prove the boundary is low risk.
+- [ ] Keep state editor confirmation timers, state draft synchronization, port creation/validation, locked guards, and graph/state mutation emits in `NodeCard.vue`.
+- [ ] Run focused primary-state/NodeCard structure tests plus state editor, create-port, and reorder model tests.
 - [ ] Run TypeScript unused-symbol verification, full frontend tests, and production build.
 - [ ] Restart the dev environment with `npm run dev` and verify frontend/backend health.
 - [ ] Recalculate total roadmap progress; if below 100%, automatically open the next phase.
@@ -314,6 +327,10 @@ Phase 28 in progress
 | Overall roadmap cleanup after Phase 27 | About 51% complete after moving output body presentation into `OutputNodeBody.vue`. |
 | P1 `NodeCard.vue` cleanup after Phase 27 | About 82% complete after removing output persistence, preview surface, and output preview styles from `NodeCard.vue`. |
 | Current continuation gate after Phase 27 | Total roadmap progress is below 100%, so Phase 28 is automatically opened for the `ConditionNodeBody.vue` slice. |
+| P1 `NodeCard.vue` cleanup target for Phase 28 | About 89-91% if condition body presentation and the top action/advanced popover presentation move into child components without changing mutation handlers. |
+| Overall roadmap cleanup after Phase 28 | About 54% complete after moving condition body and top action/advanced popover presentation into child components. |
+| P1 `NodeCard.vue` cleanup after Phase 28 | About 91% complete after reducing `NodeCard.vue` from 3,373 to 2,577 lines in this round. |
+| Current continuation gate after Phase 28 | Total roadmap progress is below 100%, so Phase 29 is automatically opened for primary state-port and residual chrome cleanup. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -342,6 +359,7 @@ Phase 28 in progress
 - Phase 25 wraps the agent node body presentation in `AgentNodeBody.vue`; `NodeCard.vue` drops to 3,895 lines before final verification while keeping state derivation, draft mutation, lock guards, skill patch creation, and graph emits in the parent.
 - Phase 26 moves the input node body presentation into `InputNodeBody.vue`; `NodeCard.vue` drops to 3,562 lines while keeping input value derivation, uploaded asset parsing, knowledge-base options, lock guards, file/drop handlers, and state/config emits in the parent.
 - Phase 27 moves the output node body presentation into `OutputNodeBody.vue`; `NodeCard.vue` drops to 3,373 lines while keeping output preview derivation, output config handlers, lock guards, and state/config emits in the parent.
+- Phase 28 moves condition body presentation into `ConditionNodeBody.vue` and the top action/advanced popover presentation into `NodeCardTopActions.vue`; `NodeCard.vue` drops to 2,577 lines while keeping condition drafts, action confirmations, config handlers, lock guards, and graph/state emits in the parent.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 
@@ -353,3 +371,6 @@ Phase 28 in progress
 | `vue-tsc` flagged unused NodeCard destructures and mock DOM type gaps after `usePortReorder` extraction | Phase 19 TypeScript verification | Stopped destructuring global pointer handlers/pointer state in `NodeCard.vue`, made test source elements satisfy `EventTarget`, and narrowed query results inside `usePortReorder.ts`. |
 | Agent prompt textarea lost parent scoped surface styling after moving into `AgentNodeBody.vue` | Phase 25 visual screenshot | Moved the required surface/textarea styles into `AgentNodeBody.vue` and added structure coverage for the local scoped style. |
 | Root `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` printed TypeScript help instead of checking the project | Phase 26 TypeScript verification | Re-ran the unused-symbol check through `frontend/node_modules/.bin/vue-tsc` from the `frontend` directory, which completed with exit 0 and no diagnostics. |
+| `ConditionNodeBody.vue` and `NodeCardTopActions.vue` were missing during the Phase 28 red test | First focused structure run before implementation | Added both child components and reran focused structure/model tests successfully. |
+| Unescaped backticks in `rg` shell commands triggered `/bin/bash: line 1: NodeCard.vue: command not found` | Phase 28 source inspection and plan sanity-check commands | Re-ran inspection with safer quoting; no code was changed by the failed shell interpolation. |
+| Fresh screenshot tooling probe found no `chromium`, `playwright`, or `puppeteer` available from the current shell | Final visual-check refresh after dev restart | Kept the Phase 28 screenshots already captured earlier in this round and used fresh HTTP health checks for final dev verification. |

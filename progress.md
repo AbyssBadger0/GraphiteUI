@@ -150,6 +150,52 @@
 |-----------|-------|---------|------------|
 | 2026-04-29 | `OutputNodeBody.vue` was missing during the Phase 27 red test. | First focused test run before implementation. | Added `OutputNodeBody.vue` and reran focused structure/output tests successfully. |
 
+## Session: 2026-04-29 Phase 28 NodeCard Presentation Closeout
+
+### Phase 28: NodeCard Presentation Closeout
+- **Status:** completed
+- Actions taken:
+  - Re-read `task_plan.md`, `findings.md`, `progress.md`, and `docs/future/2026-04-28-architecture-refactor-roadmap.md`.
+  - Widened Phase 28 from only `ConditionNodeBody.vue` to a larger NodeCard presentation closeout covering both condition body presentation and top action/advanced popover presentation.
+  - Added `ConditionNodeBody.structure.test.ts`, `NodeCardTopActions.structure.test.ts`, and updated `NodeCard.structure.test.ts` before production code.
+  - Verified the red test failed because `ConditionNodeBody.vue` and `NodeCardTopActions.vue` did not exist yet.
+  - Added `ConditionNodeBody.vue` for condition source state pill presentation, state/create popover wiring, operator/value/loop controls, and local condition scoped styles.
+  - Added `NodeCardTopActions.vue` for the top action dock, human-review button, advanced agent/output popover controls, preset/delete confirm popovers, and local top-action scoped styles.
+  - Updated `NodeCard.vue` to delegate condition and top-action presentation while keeping condition rule draft synchronization, loop-limit commits, output/agent config patch handlers, action confirmations, lock guards, and graph/state mutation emits in the parent.
+  - Removed stale top-action, advanced-popover, condition-control, and old branch-editor scoped styles from `NodeCard.vue`.
+  - `NodeCard.vue` line count moved from 3,373 after Phase 27 to 2,577 after Phase 28.
+  - Recalculated total roadmap cleanup as about 54% complete and P1 NodeCard cleanup as about 91% complete; because total cleanup remains below 100%, opened Phase 29 for primary state-port and residual chrome cleanup.
+
+### Verification
+- **Status:** completed
+- Results:
+  - Red test: `node --test frontend/src/editor/nodes/ConditionNodeBody.structure.test.ts frontend/src/editor/nodes/NodeCardTopActions.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts` failed with `ENOENT` for the two new component files before implementation.
+  - Focused structure tests: `node --test frontend/src/editor/nodes/ConditionNodeBody.structure.test.ts frontend/src/editor/nodes/NodeCardTopActions.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts` passed, 40 tests.
+  - Focused related tests: `node --test frontend/src/editor/nodes/ConditionNodeBody.structure.test.ts frontend/src/editor/nodes/NodeCardTopActions.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts frontend/src/editor/nodes/conditionRuleEditorModel.test.ts frontend/src/editor/nodes/conditionLoopLimit.test.ts frontend/src/editor/nodes/outputConfigModel.test.ts frontend/src/editor/nodes/agentConfigModel.test.ts` passed, 64 tests.
+  - Unused-symbol check: `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` passed with exit 0 and no diagnostics.
+  - Whitespace check: `git diff --check` passed with exit 0.
+  - Full frontend tests: `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts` passed, 771 tests.
+  - Frontend production build: `npm run build` in `frontend` passed; the build completed without a Vite large chunk warning.
+  - Dev restart: root `npm run dev` started services on frontend `http://127.0.0.1:3477` and backend `http://127.0.0.1:8765`.
+  - Health checks: frontend `/` returned HTTP 200 and backend `/health` returned HTTP 200 with `{"status":"ok"}`.
+  - Visual checks: captured `/tmp/graphiteui-editor-phase28.png` for the default editor flow and `/tmp/graphiteui-editor-phase28-top-actions.png` for a selected node with the top action dock visible.
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 28 implementation, verification, dev restart, visual checks, and continuation planning are complete. |
+| Where am I going? | Phase 29 is open for primary state-port and residual chrome cleanup because total roadmap progress is still below 100%. |
+| What's the goal? | Keep reducing `NodeCard.vue` responsibility while preserving state popover behavior, config mutation handlers, and graph editing behavior. |
+| What have I learned? | NodeCard condition and top-action presentation can move safely if the mutation handlers, confirmation windows, lock guards, and draft synchronization stay parent-owned. |
+| What have I done? | Added `ConditionNodeBody.vue` and `NodeCardTopActions.vue`, removed stale parent styles, verified focused/full checks, and visually checked the editor. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-29 | `ConditionNodeBody.vue` and `NodeCardTopActions.vue` were missing during the Phase 28 red test. | First focused structure run before implementation. | Added both components and reran focused structure/model tests successfully. |
+| 2026-04-29 | Unescaped backticks in `rg` commands caused `/bin/bash: line 1: NodeCard.vue: command not found`. | Phase 28 source inspection and plan sanity-check commands. | Re-ran inspection with safer quoting; the failed shell interpolation had no code impact. |
+| 2026-04-29 | Fresh screenshot tooling probe found no `chromium`, `playwright`, or `puppeteer` available from the current shell. | Final visual-check refresh after dev restart. | Kept the Phase 28 screenshots already captured earlier in this round and used fresh HTTP health checks for final dev verification. |
+
 ## Session: 2026-04-28 Phase 16
 
 ### Phase 1: Re-orientation and Safety Scope

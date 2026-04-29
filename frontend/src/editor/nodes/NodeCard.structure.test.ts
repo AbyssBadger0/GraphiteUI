@@ -17,27 +17,28 @@ const inputNodeBodySource = readFileSync(resolve(currentDirectory, "InputNodeBod
 const outputNodeBodySource = readFileSync(resolve(currentDirectory, "OutputNodeBody.vue"), "utf8").replace(/\r\n/g, "\n");
 const conditionNodeBodySource = readFileSync(resolve(currentDirectory, "ConditionNodeBody.vue"), "utf8").replace(/\r\n/g, "\n");
 const topActionsSource = readFileSync(resolve(currentDirectory, "NodeCardTopActions.vue"), "utf8").replace(/\r\n/g, "\n");
+const primaryStatePortSource = readFileSync(resolve(currentDirectory, "PrimaryStatePort.vue"), "utf8").replace(/\r\n/g, "\n");
+const floatingStatePortPillSource = readFileSync(resolve(currentDirectory, "FloatingStatePortPill.vue"), "utf8").replace(/\r\n/g, "\n");
 const agentSkillPickerSource = readFileSync(resolve(currentDirectory, "AgentSkillPicker.vue"), "utf8").replace(/\r\n/g, "\n");
 const agentRuntimeControlsSource = readFileSync(resolve(currentDirectory, "AgentRuntimeControls.vue"), "utf8").replace(/\r\n/g, "\n");
 const statePortListSource = readFileSync(resolve(currentDirectory, "StatePortList.vue"), "utf8").replace(/\r\n/g, "\n");
-const portListSurfaceSource = `${componentSource}\n${statePortListSource}\n${conditionNodeBodySource}`;
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const cssRuleBlock = (selector: string) => {
-  const match = componentSource.match(new RegExp(`${escapeRegExp(selector)} \\{[\\s\\S]*?\\n\\}`));
-  assert.ok(match, `expected to find CSS rule block for ${selector}`);
-  return match[0];
-};
+const portListSurfaceSource = `${statePortListSource}\n${conditionNodeBodySource}\n${primaryStatePortSource}\n${floatingStatePortPillSource}`;
 
 test("NodeCard does not render the reads and writes summary block", () => {
   assert.doesNotMatch(componentSource, /class="node-card__state-summary"/);
+  assert.doesNotMatch(componentSource, /\.node-card__state-summary \{/);
+  assert.doesNotMatch(componentSource, /\.node-card__state-token \{/);
   assert.doesNotMatch(componentSource, />Reads</);
   assert.doesNotMatch(componentSource, />Writes</);
 });
 
 test("NodeCard renders output state pills with an integrated anchor slot", () => {
-  assert.match(componentSource, /class="node-card__port-pill[\s\S]*node-card__port-pill--output/);
-  assert.match(componentSource, /class="node-card__port-pill-anchor-slot"/);
-  assert.match(componentSource, /data-anchor-slot-id=/);
+  assert.match(
+    primaryStatePortSource,
+    /\? 'node-card__port-pill--input node-card__port-pill--dock-start'[\s\S]*: 'node-card__port-pill--output node-card__port-pill--dock-end'/,
+  );
+  assert.match(primaryStatePortSource, /class="node-card__port-pill-anchor-slot"/);
+  assert.match(primaryStatePortSource, /data-anchor-slot-id=/);
   assert.doesNotMatch(componentSource, /class="node-card__port-pill-anchor"/);
   assert.doesNotMatch(componentSource, /view\.body\.primaryOutput\.typeLabel/);
   const rightOutputColumnStart = agentNodeBodySource.indexOf('<div class="node-card__port-column node-card__port-column--right">');
@@ -48,9 +49,9 @@ test("NodeCard renders output state pills with an integrated anchor slot", () =>
 });
 
 test("NodeCard renders input state pills with leading anchor slots", () => {
-  assert.match(componentSource, /class="node-card__port-pill[\s\S]*node-card__port-pill--input/);
-  assert.match(componentSource, /data-anchor-slot-id="\`\$\{nodeId\}:state-in:/);
-  assert.match(componentSource, /class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"/);
+  assert.match(primaryStatePortSource, /side === 'input'[\s\S]*'node-card__port-pill--input node-card__port-pill--dock-start'/);
+  assert.match(primaryStatePortSource, /`\$\{props\.nodeId\}:\$\{anchorSlotKind\.value\}:\$\{props\.port\.key\}`/);
+  assert.match(primaryStatePortSource, /class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"/);
 });
 
 test("NodeCard does not render Required badges for visible state inputs", () => {
@@ -59,11 +60,11 @@ test("NodeCard does not render Required badges for visible state inputs", () => 
 });
 
 test("NodeCard docks state pills against the card edges", () => {
-  assert.match(componentSource, /node-card__port-pill--dock-start/);
-  assert.match(componentSource, /node-card__port-pill--dock-end/);
+  assert.match(portListSurfaceSource, /node-card__port-pill--dock-start/);
+  assert.match(portListSurfaceSource, /node-card__port-pill--dock-end/);
   assert.match(componentSource, /\.node-card \{[\s\S]*--node-card-inline-padding:\s*24px;/);
-  assert.match(componentSource, /\.node-card__port-pill--dock-start \{[\s\S]*margin-left:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
-  assert.match(componentSource, /\.node-card__port-pill--dock-end \{[\s\S]*margin-right:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--dock-start \{[\s\S]*margin-left:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--dock-end \{[\s\S]*margin-right:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
 });
 
 test("NodeCard accepts canvas-provided real dimensions through CSS variables", () => {
@@ -89,20 +90,22 @@ test("NodeCard stretches primary editable surfaces when the canvas resizes the n
 });
 
 test("NodeCard keeps state pill geometry but hides the pill chrome visually", () => {
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*display:\s*inline-flex;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*align-items:\s*center;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*border:\s*1px solid transparent;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*background:\s*transparent;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*box-shadow:\s*none;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*border-radius:\s*999px;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*padding:\s*5px 10px;/);
-  assert.match(componentSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*width:\s*14px;/);
-  assert.match(componentSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*height:\s*14px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*display:\s*inline-flex;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*align-items:\s*center;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*border:\s*1px solid transparent;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*background:\s*transparent;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*box-shadow:\s*none;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*border-radius:\s*999px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*padding:\s*5px 10px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*width:\s*14px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*height:\s*14px;/);
 });
 
 test("NodeCard clips long state port labels inside the pill", () => {
-  const labelBlock = cssRuleBlock(".node-card__port-pill-label");
-  const labelTextBlock = cssRuleBlock(".node-card__port-pill-label-text");
+  const labelBlock = portListSurfaceSource.match(/\.node-card__port-pill-label \{[\s\S]*?\n\}/)?.[0] ?? "";
+  const labelTextBlock = portListSurfaceSource.match(/\.node-card__port-pill-label-text \{[\s\S]*?\n\}/)?.[0] ?? "";
+  assert.ok(labelBlock, "expected to find port pill label styles in extracted port surfaces");
+  assert.ok(labelTextBlock, "expected to find port pill label text styles in extracted port surfaces");
   assert.match(labelBlock, /overflow:\s*hidden;/);
   assert.match(labelBlock, /text-overflow:\s*ellipsis;/);
   assert.match(labelBlock, /line-height:\s*1\.2;/);
@@ -123,6 +126,8 @@ test("NodeCard delegates input body presentation while keeping the output state 
   assert.match(inputSection, /<InputNodeBody[\s\S]*:body="view\.body"[\s\S]*:input-boundary-selection="inputBoundarySelection"[\s\S]*:input-type-options="inputTypeOptions"[\s\S]*:input-asset-envelope="inputAssetEnvelope"[\s\S]*@update:boundary-selection="handleInputBoundarySelection"[\s\S]*@update:knowledge-base="handleInputKnowledgeBaseSelect"[\s\S]*@asset-file-change="handleInputAssetFileChange"[\s\S]*@asset-drop="handleInputAssetDrop"[\s\S]*@clear-asset="clearInputAsset"[\s\S]*@input-value="handleInputValueInput"/);
   assert.match(inputSection, /<template #primary-output>/);
   assert.match(inputNodeBodySource, /<slot name="primary-output" \/>/);
+  assert.match(componentSource, /import PrimaryStatePort from "\.\/PrimaryStatePort\.vue";/);
+  assert.match(inputSection, /<PrimaryStatePort[\s\S]*side="output"[\s\S]*:port="view\.body\.primaryOutput"[\s\S]*anchor-prefix="input-primary-output"[\s\S]*@open-create="openPortStateCreate"[\s\S]*@port-click="handleStateEditorActionClick"/);
   assert.match(inputNodeBodySource, /<ElSegmented/);
   assert.match(inputNodeBodySource, /class="node-card__input-boundary-toggle"/);
   assert.match(inputNodeBodySource, /:options="inputTypeOptions"/);
@@ -138,7 +143,8 @@ test("NodeCard delegates input body presentation while keeping the output state 
   assert.match(inputNodeBodySource, /class="node-card__input-boundary-icon-wrap"/);
   assert.match(inputNodeBodySource, /<component :is="item\.icon" class="node-card__input-boundary-icon" aria-hidden="true" \/>/);
   assert.match(inputNodeBodySource, /<span class="node-card__sr-only">\{\{ item\.label \}\}<\/span>/);
-  assert.match(inputSection, /class="node-card__port-pill[\s\S]*node-card__port-pill--output/);
+  assert.doesNotMatch(inputSection, /class="node-card__port-pill[\s\S]*node-card__port-pill--output/);
+  assert.match(primaryStatePortSource, /class="node-card__port-pill"[\s\S]*node-card__port-pill--output node-card__port-pill--dock-end/);
   assert.match(componentSource, /from "@element-plus\/icons-vue"/);
   assert.match(componentSource, /icon:\s*Document/);
   assert.match(componentSource, /icon:\s*FolderOpened/);
@@ -329,9 +335,10 @@ test("NodeCard keeps skill actions below the agent while creating ports from plu
   assert.match(agentSection, /@open-create="openPortStateCreate"/);
   assert.doesNotMatch(agentSection, /@dblclick\.stop="openPortStateCreate\('input'\)"/);
   assert.doesNotMatch(agentSection, /@dblclick\.stop="openPortStateCreate\('output'\)"/);
-  assert.match(componentSource, /import StatePortCreatePopover from "\.\/StatePortCreatePopover\.vue";/);
+  assert.doesNotMatch(componentSource, /import StatePortCreatePopover from "\.\/StatePortCreatePopover\.vue";/);
   assert.doesNotMatch(agentSection, /<StatePortCreatePopover/);
   assert.match(statePortListSource, /<StatePortCreatePopover/);
+  assert.match(primaryStatePortSource, /<StatePortCreatePopover/);
   assert.match(statePortListSource, /node-card__port-pill--input node-card__port-pill--dock-start/);
   assert.match(statePortListSource, /node-card__port-pill--output node-card__port-pill--dock-end/);
   assert.match(statePortListSource, /node-card__port-pill--create/);
@@ -351,9 +358,10 @@ test("NodeCard keeps skill actions below the agent while creating ports from plu
   assert.match(agentSkillPickerSource, /\.node-card__agent-add-popover \{[\s\S]*background:\s*rgba\(255,\s*244,\s*232,\s*0\.96\);/);
   assert.match(createPopoverSource, /\.node-card__agent-create-port-popover \{[\s\S]*background:\s*rgba\(255,\s*244,\s*232,\s*0\.96\);/);
   assert.match(componentSource, /:deep\(\.node-card__agent-add-popover-popper\.el-popper\) \{[\s\S]*background:\s*transparent;/);
-  assert.equal((componentSource.match(/<StatePortCreatePopover/g) ?? []).length, 2);
+  assert.equal((componentSource.match(/<StatePortCreatePopover/g) ?? []).length, 0);
   assert.equal((statePortListSource.match(/<StatePortCreatePopover/g) ?? []).length, 1);
   assert.equal((conditionNodeBodySource.match(/<StatePortCreatePopover/g) ?? []).length, 1);
+  assert.equal((primaryStatePortSource.match(/<StatePortCreatePopover/g) ?? []).length, 1);
   assert.doesNotMatch(agentSection, /v-for="picker in agentPortPickerActions"/);
   assert.doesNotMatch(agentSection, /@click\.stop="openPortPicker\(picker\.side\)"/);
   assert.doesNotMatch(componentSource, /const agentPortPickerActions/);
@@ -432,12 +440,12 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
 });
 
 test("NodeCard constrains long state port labels without pushing anchor slots outside cards", () => {
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*box-sizing:\s*border-box;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*max-width:\s*min\(100%,\s*var\(--node-card-port-pill-max-width,\s*188px\)\);/);
-  assert.match(componentSource, /\.node-card__port-pill-label \{[\s\S]*min-width:\s*0;/);
-  assert.match(componentSource, /\.node-card__port-pill-label \{[\s\S]*overflow:\s*hidden;/);
-  assert.match(componentSource, /\.node-card__port-pill-label-text \{[\s\S]*overflow:\s*hidden;[\s\S]*text-overflow:\s*ellipsis;[\s\S]*white-space:\s*nowrap;/);
-  assert.match(componentSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*flex:\s*none;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*box-sizing:\s*border-box;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*max-width:\s*min\(100%,\s*var\(--node-card-port-pill-max-width,\s*188px\)\);/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-label \{[\s\S]*min-width:\s*0;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-label \{[\s\S]*overflow:\s*hidden;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-label-text \{[\s\S]*overflow:\s*hidden;[\s\S]*text-overflow:\s*ellipsis;[\s\S]*white-space:\s*nowrap;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*flex:\s*none;/);
 });
 
 test("NodeCard hides virtual agent output any behind the plus output row", () => {
@@ -471,15 +479,18 @@ test("NodeCard renders condition and output virtual inputs as plus input create 
 
   assert.match(componentSource, /import ConditionNodeBody from "\.\/ConditionNodeBody\.vue";/);
   assert.match(conditionSection, /<ConditionNodeBody[\s\S]*:body="view\.body"[\s\S]*:node-id="nodeId"/);
-  assert.match(outputSection, /'node-card__port-pill--create': view\.body\.primaryInput\.virtual/);
+  assert.match(outputSection, /<PrimaryStatePort[\s\S]*side="input"[\s\S]*:port="view\.body\.primaryInput"[\s\S]*anchor-prefix="output-input"/);
+  assert.match(primaryStatePortSource, /'node-card__port-pill--create': port\.virtual/);
   assert.match(conditionNodeBodySource, /'node-card__port-pill--create': body\.primaryInput\.virtual/);
-  assert.match(outputSection, /view\.body\.primaryInput\.virtual[\s\S]*isPortCreateOpen\('input'\)/);
+  assert.match(outputSection, /:create-open="isPortCreateOpen\('input'\)"/);
+  assert.match(primaryStatePortSource, /port\.virtual[\s\S]*createOpen/);
   assert.match(conditionNodeBodySource, /body\.primaryInput\.virtual[\s\S]*isPortCreateOpen\('input'\)/);
-  assert.match(outputSection, /@click\.stop="view\.body\.primaryInput\.virtual \? openPortStateCreate\('input'\) : handleStateEditorActionClick/);
+  assert.match(primaryStatePortSource, /@click\.stop="handlePortClick"/);
+  assert.match(primaryStatePortSource, /emit\("open-create", props\.side\)/);
   assert.match(conditionNodeBodySource, /@click\.stop="body\.primaryInput\.virtual \? emit\('open-create', 'input'\) : emit\('source-click', conditionInputAnchorId, body\.primaryInput\.key\)"/);
-  assert.match(outputSection, /:data-anchor-slot-id="\`\$\{nodeId\}:state-in:\$\{view\.body\.primaryInput\.key\}\`"/);
+  assert.match(primaryStatePortSource, /`\$\{props\.nodeId\}:\$\{anchorSlotKind\.value\}:\$\{props\.port\.key\}`/);
   assert.match(conditionNodeBodySource, /:data-anchor-slot-id="\`\$\{nodeId\}:state-in:\$\{body\.primaryInput\.key\}\`"/);
-  assert.match(outputSection, /view\.body\.primaryInput\.virtual && isPortCreateOpen\('input'\) && portStateDraft/);
+  assert.match(primaryStatePortSource, /port\.virtual && createOpen && createDraft/);
   assert.match(conditionNodeBodySource, /body\.primaryInput\.virtual && isPortCreateOpen\('input'\) && portStateDraft/);
   assert.doesNotMatch(outputSection, />any</);
   assert.doesNotMatch(conditionNodeBodySource, />any</);
@@ -492,13 +503,14 @@ test("NodeCard renders empty input outputs as virtual plus output create pills",
   assert.ok(inputSectionMatch, "expected to find the input node section");
   const inputSection = inputSectionMatch[0];
 
-  assert.match(inputSection, /'node-card__port-pill--create': view\.body\.primaryOutput\.virtual/);
-  assert.match(inputSection, /view\.body\.primaryOutput\.virtual \? \(pendingStateOutputTarget\?\.stateColor \?\? view\.body\.primaryOutput\.stateColor\) : view\.body\.primaryOutput\.stateColor/);
-  assert.match(inputSection, /view\.body\.primaryOutput\.virtual \? \(pendingStateOutputTarget\?\.label \?\? view\.body\.primaryOutput\.label\) : view\.body\.primaryOutput\.label/);
-  assert.match(inputSection, /@click\.stop="view\.body\.primaryOutput\.virtual \? openPortStateCreate\('output'\) : handleStateEditorActionClick/);
-  assert.match(inputSection, /:data-anchor-slot-id="\`\$\{nodeId\}:state-out:\$\{view\.body\.primaryOutput\.key\}\`"/);
-  assert.match(inputSection, /view\.body\.primaryOutput\.virtual && isPortCreateOpen\('output'\) && portStateDraft/);
-  assert.match(inputSection, /<StatePortCreatePopover/);
+  assert.match(inputSection, /<PrimaryStatePort[\s\S]*side="output"[\s\S]*:port="view\.body\.primaryOutput"[\s\S]*:pending-virtual-target="pendingStateOutputTarget"/);
+  assert.match(primaryStatePortSource, /'node-card__port-pill--create': port\.virtual/);
+  assert.match(primaryStatePortSource, /pendingVirtualTarget\?\.stateColor \?\? port\.stateColor/);
+  assert.match(primaryStatePortSource, /pendingVirtualTarget\?\.label \?\? port\.label/);
+  assert.match(primaryStatePortSource, /emit\("open-create", props\.side\)/);
+  assert.match(primaryStatePortSource, /`\$\{props\.nodeId\}:\$\{anchorSlotKind\.value\}:\$\{props\.port\.key\}`/);
+  assert.match(primaryStatePortSource, /port\.virtual && createOpen && createDraft/);
+  assert.match(primaryStatePortSource, /<StatePortCreatePopover/);
   assert.doesNotMatch(inputSection, />any</);
 });
 
@@ -620,8 +632,9 @@ test("NodeCard blocks every in-canvas control while graph editing is locked", ()
 test("NodeCard reveals state pills on hover and opens state editing only after a confirm click", () => {
   assert.match(componentSource, /interactionLocked\?: boolean;/);
   assert.match(componentSource, /\(event: "locked-edit-attempt"\): void;/);
-  assert.match(componentSource, /import StateEditorPopover from "\.\/StateEditorPopover\.vue";/);
+  assert.doesNotMatch(componentSource, /import StateEditorPopover from "\.\/StateEditorPopover\.vue";/);
   assert.match(statePortListSource, /@click\.stop="emit\('port-click', anchorId\(port\.key\), port\.key\)"/);
+  assert.match(primaryStatePortSource, /emit\("port-click", anchorId\.value, props\.port\.key\)/);
   assert.match(componentSource, /@port-click="handlePortStatePillClick"/);
   assert.match(componentSource, /onPortPillClick: \(anchorId, stateKey\) => \{[\s\S]*handleStateEditorActionClick\(anchorId, stateKey\);[\s\S]*\},/);
   assert.match(componentSource, /const stateEditorDraft = ref<StateFieldDraft \| null>\(null\);/);
@@ -687,44 +700,44 @@ test("NodeCard reveals state pills on hover and opens state editing only after a
   assert.match(stateEditorModelSource, /export function resolveStateEditorUpdatePatch/);
   assert.doesNotMatch(componentSource, /trigger="manual"/);
   assert.match(createPopoverSource, /StateDefaultValueEditor/);
-  assert.match(componentSource, /class="node-card__state-editor"/);
+  assert.match(portListSurfaceSource, /class="node-card__state-editor"/);
   assert.match(componentSource, /const transparentPopoverStyle = \{/);
   assert.match(componentSource, /const stateEditorPopoverStyle = transparentPopoverStyle;/);
   assert.match(componentSource, /"--el-popover-bg-color":\s*"transparent"/);
   assert.match(componentSource, /"--el-popover-border-color":\s*"transparent"/);
   assert.match(componentSource, /"--el-popover-padding":\s*"0px"/);
   assert.match(componentSource, /"min-width":\s*"0"/);
-  assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*border-radius:\s*16px;/);
-  assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*background:\s*transparent;/);
-  assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*padding:\s*0;/);
-  assert.match(componentSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*box-shadow:\s*none;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*position:\s*relative;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*padding:\s*5px 10px;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*border:\s*1px solid transparent;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*border-radius:\s*999px;/);
-  assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*min-width:\s*132px;/);
-  assert.match(componentSource, /\.node-card__port-pill-label \{[\s\S]*padding-inline:\s*0;/);
-  assert.match(componentSource, /\.node-card__port-pill--output \{[\s\S]*color:\s*#1f2937;/);
-  assert.match(componentSource, /\.node-card__port-pill--input \{[\s\S]*justify-content:\s*flex-start;[\s\S]*color:\s*#1f2937;/);
-  assert.doesNotMatch(componentSource, /\.node-card__port-pill--input \{[\s\S]*#1d4ed8/);
-  assert.match(componentSource, /\.node-card__port-pill--dock-start \{[\s\S]*margin-left:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
-  assert.match(componentSource, /\.node-card__port-pill--dock-end \{[\s\S]*margin-right:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
+  assert.match(portListSurfaceSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*border-radius:\s*16px;/);
+  assert.match(portListSurfaceSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*background:\s*transparent;/);
+  assert.match(portListSurfaceSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*padding:\s*0;/);
+  assert.match(portListSurfaceSource, /:deep\(.node-card__state-editor-popper\.el-popper\) \{[\s\S]*box-shadow:\s*none;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*position:\s*relative;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*padding:\s*5px 10px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*border:\s*1px solid transparent;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*border-radius:\s*999px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*min-width:\s*132px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-label \{[\s\S]*padding-inline:\s*0;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--output \{[\s\S]*color:\s*#1f2937;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--input \{[\s\S]*justify-content:\s*flex-start;[\s\S]*color:\s*#1f2937;/);
+  assert.doesNotMatch(portListSurfaceSource, /\.node-card__port-pill--input \{[\s\S]*#1d4ed8/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--dock-start \{[\s\S]*margin-left:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--dock-end \{[\s\S]*margin-right:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
   assert.match(
-    componentSource,
+    portListSurfaceSource,
     /\.node-card__port-pill:focus-visible,\n\.node-card__port-pill--revealed \{[\s\S]*border-color:\s*rgba\(154,\s*52,\s*18,\s*0\.14\);/,
   );
-  assert.doesNotMatch(componentSource, /\.node-card__port-pill--confirm \{[^}]*min-width:/);
-  assert.match(componentSource, /\.node-card__port-pill--confirm \{[^}]*background:\s*rgba\(59,\s*130,\s*246,\s*0\.96\);/);
-  assert.match(componentSource, /\.node-card__port-pill--confirm \{[^}]*color:\s*#eff6ff;/);
-  assert.match(componentSource, /\.node-card__port-pill--confirm \{[^}]*box-shadow:\s*none;/);
-  assert.match(componentSource, /\.node-card__port-pill--confirm .node-card__port-pill-anchor-slot \{[^}]*opacity:\s*0;/);
-  assert.match(componentSource, /\.node-card__port-pill-label--confirm .node-card__port-pill-label-text \{[\s\S]*opacity:\s*0;/);
-  assert.match(componentSource, /\.node-card__port-pill-label--confirm .node-card__port-pill-confirm-icon \{[\s\S]*opacity:\s*1;/);
-  assert.doesNotMatch(componentSource, /\.node-card__port-pill-label \{[^}]*position:\s*relative;/);
-  assert.match(componentSource, /\.node-card__confirm-hint--state \{[\s\S]*padding:\s*5px 10px;/);
-  assert.match(componentSource, /\.node-card__confirm-hint--state \{[\s\S]*letter-spacing:\s*0\.12em;/);
-  assert.match(componentSource, /\.node-card__confirm-hint \{[\s\S]*display:\s*inline-flex;/);
-  assert.match(componentSource, /\.node-card__confirm-hint \{[\s\S]*width:\s*fit-content;/);
+  assert.doesNotMatch(portListSurfaceSource, /\.node-card__port-pill--confirm \{[^}]*min-width:/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--confirm \{[^}]*background:\s*rgba\(59,\s*130,\s*246,\s*0\.96\);/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--confirm \{[^}]*color:\s*#eff6ff;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--confirm \{[^}]*box-shadow:\s*none;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--confirm .node-card__port-pill-anchor-slot \{[^}]*opacity:\s*0;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-label--confirm .node-card__port-pill-label-text \{[\s\S]*opacity:\s*0;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-label--confirm .node-card__port-pill-confirm-icon \{[\s\S]*opacity:\s*1;/);
+  assert.doesNotMatch(portListSurfaceSource, /\.node-card__port-pill-label \{[^}]*position:\s*relative;/);
+  assert.match(portListSurfaceSource, /\.node-card__confirm-hint--state \{[\s\S]*padding:\s*5px 10px;/);
+  assert.match(portListSurfaceSource, /\.node-card__confirm-hint--state \{[\s\S]*letter-spacing:\s*0\.12em;/);
+  assert.match(portListSurfaceSource, /\.node-card__confirm-hint \{[\s\S]*display:\s*inline-flex;/);
+  assert.match(portListSurfaceSource, /\.node-card__confirm-hint \{[\s\S]*width:\s*fit-content;/);
 });
 
 test("NodeCard adds mirrored remove-binding buttons to non-output state pills", () => {
@@ -756,22 +769,22 @@ test("NodeCard adds mirrored remove-binding buttons to non-output state pills", 
   );
   assert.ok(outputSectionMatch, "expected to find the output node section");
   assert.doesNotMatch(outputSectionMatch[0], /node-card__port-pill-remove/);
-  assert.match(componentSource, /\.node-card__port-pill-remove \{[\s\S]*width:\s*28px;/);
-  assert.match(componentSource, /\.node-card__port-pill-remove \{[\s\S]*height:\s*28px;/);
-  assert.match(componentSource, /\.node-card__port-pill-remove \{[\s\S]*position:\s*absolute;/);
-  assert.match(componentSource, /\.node-card__port-pill-remove \{[\s\S]*top:\s*50%;/);
-  assert.match(componentSource, /\.node-card__port-pill-remove \{[\s\S]*appearance:\s*none;/);
-  assert.match(componentSource, /\.node-card__port-pill-remove \{[\s\S]*transform:\s*translateY\(-50%\);/);
-  assert.match(componentSource, /\.node-card__port-pill-remove \{[\s\S]*border-radius:\s*999px;/);
-  assert.match(componentSource, /\.node-card__port-pill--removable\.node-card__port-pill--input \{[\s\S]*padding-right:\s*39px;/);
-  assert.match(componentSource, /\.node-card__port-pill--removable\.node-card__port-pill--output \{[\s\S]*padding-left:\s*39px;/);
-  assert.match(componentSource, /\.node-card__port-pill-remove--leading \{[\s\S]*left:\s*7px;/);
-  assert.match(componentSource, /\.node-card__port-pill-remove--trailing \{[\s\S]*right:\s*7px;/);
-  assert.match(componentSource, /\.node-card__port-pill-remove--confirm,\n\.node-card__port-pill-remove--confirm:hover,\n\.node-card__port-pill-remove--confirm:focus-visible \{/);
-  assert.match(componentSource, /\.node-card__port-pill-remove \{[\s\S]*z-index:\s*2;/);
-  assert.match(componentSource, /\.node-card__port-pill--confirm \.node-card__port-pill-remove \{[^}]*opacity:\s*1;/);
-  assert.match(componentSource, /\.node-card__port-pill--confirm \.node-card__port-pill-remove \{[^}]*pointer-events:\s*auto;/);
-  assert.match(componentSource, /\.node-card__confirm-hint--remove \{[\s\S]*background:\s*rgba\(255,\s*248,\s*248,\s*0\.98\);/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove \{[\s\S]*width:\s*28px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove \{[\s\S]*height:\s*28px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove \{[\s\S]*position:\s*absolute;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove \{[\s\S]*top:\s*50%;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove \{[\s\S]*appearance:\s*none;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove \{[\s\S]*transform:\s*translateY\(-50%\);/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove \{[\s\S]*border-radius:\s*999px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--removable\.node-card__port-pill--input \{[\s\S]*padding-right:\s*39px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--removable\.node-card__port-pill--output \{[\s\S]*padding-left:\s*39px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove--leading \{[\s\S]*left:\s*7px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove--trailing \{[\s\S]*right:\s*7px;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove--confirm,\n\.node-card__port-pill-remove--confirm:hover,\n\.node-card__port-pill-remove--confirm:focus-visible \{/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-remove \{[\s\S]*z-index:\s*2;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--confirm \.node-card__port-pill-remove \{[^}]*opacity:\s*1;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill--confirm \.node-card__port-pill-remove \{[^}]*pointer-events:\s*auto;/);
+  assert.match(portListSurfaceSource, /\.node-card__confirm-hint--remove \{[\s\S]*background:\s*rgba\(255,\s*248,\s*248,\s*0\.98\);/);
 });
 
 test("NodeCard renders condition nodes as clean control-flow proxies", () => {
@@ -992,7 +1005,9 @@ test("NodeCard lets real agent state pills drag-reorder within their own side", 
   assert.match(portReorderComposableSource, /windowTarget\?\.addEventListener\("pointermove", handlePortReorderPointerMove as EventListener\)/);
   assert.match(portReorderComposableSource, /resolvePortReorderTargetIndexFromElements\(targetElements, pointerState\.stateKey, clientY\)/);
   assert.match(portReorderComposableSource, /options\.onReorder\(\{[\s\S]*nodeId: options\.getNodeId\(\),[\s\S]*side: pointerState\.side,[\s\S]*stateKey: pointerState\.stateKey,[\s\S]*targetIndex,[\s\S]*\}\);/);
-  assert.match(componentSource, /<Teleport to="body">/);
+  assert.match(componentSource, /import FloatingStatePortPill from "\.\/FloatingStatePortPill\.vue";/);
+  assert.match(componentSource, /<FloatingStatePortPill[\s\S]*:floating-port="portReorderFloatingPort"[\s\S]*:floating-style="portReorderFloatingStyle"/);
+  assert.match(floatingStatePortPillSource, /<Teleport to="body">/);
   assert.match(statePortListSource, /data-port-reorder-node-id/);
   assert.match(statePortListSource, /:data-port-reorder-side="side"/);
   assert.match(statePortListSource, /:data-port-reorder-state-key="port\.key"/);
@@ -1002,7 +1017,7 @@ test("NodeCard lets real agent state pills drag-reorder within their own side", 
   assert.match(statePortListSource, /@pointerdown\.stop="emit\('reorder-pointer-down', side, port\.key, \$event\)"/);
   assert.match(statePortListSource, /@click\.stop="emit\('port-click', anchorId\(port\.key\), port\.key\)"/);
   assert.match(portListSurfaceSource, /\.node-card-port-reorder-move \{/);
-  assert.match(componentSource, /\.node-card__port-pill--floating \{/);
+  assert.match(floatingStatePortPillSource, /\.node-card__port-pill--floating \{/);
   assert.match(portListSurfaceSource, /\.node-card__port-pill--reorder-placeholder \{/);
   assert.match(portListSurfaceSource, /\.node-card__port-pill--reordering \{/);
   const createRow = statePortListSource.match(/node-card__port-pill-row--create[\s\S]*?<StatePortCreatePopover/)?.[0] ?? "";
@@ -1027,6 +1042,7 @@ test("NodeCard delegates output preview presentation while keeping Advanced in t
   assert.match(componentSource, /import OutputNodeBody from "\.\/OutputNodeBody\.vue";/);
   assert.match(outputSection, /<OutputNodeBody[\s\S]*:body="view\.body"[\s\S]*:output-preview-content="outputPreviewContent"[\s\S]*@update:persist-enabled="handleOutputPersistToggle"/);
   assert.match(outputSection, /<template #primary-input>/);
+  assert.match(outputSection, /<PrimaryStatePort[\s\S]*side="input"[\s\S]*:port="view\.body\.primaryInput"[\s\S]*fallback-label="t\('nodeCard\.unbound'\)"/);
   assert.match(outputNodeBodySource, /<slot name="primary-input" \/>/);
   assert.match(outputNodeBodySource, /node-card__preview--markdown/);
   assert.match(outputNodeBodySource, /v-html="outputPreviewContent\.html"/);

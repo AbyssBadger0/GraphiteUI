@@ -68,6 +68,73 @@
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
 
+## Session: 2026-04-29 Phase 29
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued the formal roadmap from `docs/future/2026-04-28-architecture-refactor-roadmap.md` and the Phase 28 execution notes.
+  - Confirmed the active slice should stay inside the remaining `NodeCard.vue` P1 residual surface instead of starting a new subsystem mid-round.
+  - Chose primary input/output state-port presentation and the floating reorder preview as the safest remaining NodeCard presentation boundaries.
+
+### Phase 2: Implement Cleanup
+- **Status:** completed
+- Actions taken:
+  - Added red structure coverage for `PrimaryStatePort.vue`, `FloatingStatePortPill.vue`, and the updated `NodeCard.vue` delegation boundary.
+  - Extracted primary input/output state-pill popover presentation, create-popover wiring, state-editor popover wiring, anchor-slot projection, and local pill styles into `PrimaryStatePort.vue`.
+  - Extracted the port-reorder floating drag preview Teleport and local floating-pill styles into `FloatingStatePortPill.vue`.
+  - Kept state draft synchronization, port create validation, state editor confirm timers, lock guards, and graph/state mutation emits in `NodeCard.vue`.
+  - Removed stale state-summary, port-list, top-action, action-popover, and port-option styles from `NodeCard.vue`.
+  - Reduced `NodeCard.vue` from 2,577 lines to 1,988 lines.
+
+### Phase 3: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused structure tests for the new components and `NodeCard.vue`.
+  - Ran related state-editor, create-port, and reorder model tests.
+  - Ran TypeScript unused-symbol verification from the `frontend` directory.
+  - Ran the full frontend source test suite and the Vite structure test.
+  - Ran the frontend production build; no Vite large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed `/editor/new` returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Captured a Chrome headless screenshot for `/editor/new` at 1440x1000 and confirmed it was nonblank by PNG size and sampled color count.
+
+### Phase 4: Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated total roadmap progress at about 56%.
+  - Recalculated P1 `NodeCard.vue` cleanup at about 96%.
+  - Opened Phase 30 because total roadmap progress remains below 100%.
+  - Decided the next round should be a NodeCard P1 completion gate first, then move to the next safest P2/P3 slice if remaining NodeCard code is intentional orchestration.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red structure test | `node --test frontend/src/editor/nodes/PrimaryStatePort.structure.test.ts frontend/src/editor/nodes/FloatingStatePortPill.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts` before implementation | Fails because the extracted components do not exist | Failed with `ERR_MODULE_NOT_FOUND` for the new components | Passed |
+| Focused NodeCard structure | Same command after implementation | New component boundaries pass | 39 passed | Passed |
+| Related NodeCard models | `node --test` over primary-state, NodeCard, state editor, state create, and port reorder tests | Related interaction/model tests pass | 61 passed | Passed |
+| TypeScript unused-symbol check | `cd frontend && ./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | No diagnostics | Exit 0, no diagnostics | Passed |
+| Full frontend source tests | `node --test $(rg --files frontend/src | rg '\.test\.ts$')` | All frontend source tests pass | 772 passed | Passed |
+| Vite structure tests | `node --test frontend/vite.config.structure.test.ts` | Vite structure tests pass | 3 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without chunk-warning regression | Exit 0, no large chunk warning | Passed |
+| Dev restart and health | `npm run dev`, then HTTP checks | Services start and respond | Frontend `/editor/new` 200, backend `/health` 200 ok | Passed |
+| Browser visual smoke | Chrome headless screenshot of `/editor/new` | Page renders nonblank | 1440x1000 PNG, sampledColors=318 | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 29 cleanup, verification, dev restart, commit, and push are complete. |
+| Where am I going? | Phase 30 is open as the NodeCard P1 completion gate before moving to the next roadmap subsystem. |
+| What's the goal? | Finish the repository cleanup roadmap without regressing editor interactions such as snapping, node creation context, state editing, or port reorder. |
+| What have I learned? | Primary state-port presentation can live in a child component, but state drafts, validation, lock guards, and mutation emits should stay parent-owned for now. |
+| What have I done? | Extracted `PrimaryStatePort.vue` and `FloatingStatePortPill.vue`, removed stale NodeCard chrome, ran focused/full verification, built without chunk warnings, and restarted the app. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-29 | Initial post-implementation structure test still expected old quote/style ownership details | Ran focused structure tests after extracting `PrimaryStatePort.vue` and `FloatingStatePortPill.vue` | Updated structure assertions to check the new child-component boundary and restored the row wrapper in `PrimaryStatePort.vue` to preserve alignment. |
+| 2026-04-29 | `identify` was not available and Pillow was not installed for screenshot pixel checks | Tried lightweight image inspection after Chrome headless screenshot | Used a small Node PNG parser with built-in `zlib` to confirm dimensions and sampled color count without adding dependencies. |
+
 ## Session: 2026-04-29 Phase 26 Input Node Body Component
 
 ### Phase 26: Input Node Body Component

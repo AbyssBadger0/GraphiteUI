@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 29 in progress
+Phase 30 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -273,15 +273,25 @@ Phase 29 in progress
 - **Status:** completed
 
 ### Phase 29: NodeCard Primary State Port and Residual Chrome Closeout
-- [ ] Continue P1 NodeCard residual cleanup after the Phase 28 presentation closeout.
-- [ ] Add failing structure coverage for primary input/output state-port slot extraction or the next residual chrome boundary.
-- [ ] Move the remaining input/output primary state pill presentation and reusable local styles out of `NodeCard.vue` where tests prove the boundary is low risk.
-- [ ] Keep state editor confirmation timers, state draft synchronization, port creation/validation, locked guards, and graph/state mutation emits in `NodeCard.vue`.
-- [ ] Run focused primary-state/NodeCard structure tests plus state editor, create-port, and reorder model tests.
-- [ ] Run TypeScript unused-symbol verification, full frontend tests, and production build.
-- [ ] Restart the dev environment with `npm run dev` and verify frontend/backend health.
-- [ ] Recalculate total roadmap progress; if below 100%, automatically open the next phase.
-- [ ] Commit and push the cleanup and planning updates.
+- [x] Continue P1 NodeCard residual cleanup after the Phase 28 presentation closeout.
+- [x] Add failing structure coverage for primary input/output state-port slot extraction and floating drag-preview delegation.
+- [x] Move the remaining input/output primary state pill presentation and reusable local styles out of `NodeCard.vue` into `PrimaryStatePort.vue`.
+- [x] Move the port-reorder floating pill Teleport and local floating styles out of `NodeCard.vue` into `FloatingStatePortPill.vue`.
+- [x] Keep state editor confirmation timers, state draft synchronization, port creation/validation, locked guards, and graph/state mutation emits in `NodeCard.vue`.
+- [x] Run focused primary-state/NodeCard structure tests plus state editor, create-port, and reorder model tests.
+- [x] Run TypeScript unused-symbol verification, full frontend tests, Vite structure tests, and production build.
+- [x] Restart the dev environment with `npm run dev` and verify frontend/backend health.
+- [x] Recalculate total roadmap progress; because it is still below 100%, automatically open the next phase.
+- [x] Commit and push the cleanup and planning updates.
+- **Status:** completed
+
+### Phase 30: NodeCard P1 Completion Gate and Next-Roadmap Slice Selection
+- [ ] Re-read the formal roadmap and decide whether remaining `NodeCard.vue` code is intentional orchestration or still safe P1 presentation debt.
+- [ ] If a safe NodeCard residual boundary remains, add focused red tests and extract it without changing graph mutation behavior.
+- [ ] If P1 is effectively closed, open the next safest P2/P3 roadmap slice and document why it is safer than further NodeCard surgery.
+- [ ] Preserve baseline-sensitive interactions: automatic snapping, node creation context/naming, state editor confirm windows, port creation, and drag reorder.
+- [ ] Run focused tests for the selected boundary, then full verification, dev restart, commit, push, and re-evaluate total progress.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 30.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -331,6 +341,9 @@ Phase 29 in progress
 | Overall roadmap cleanup after Phase 28 | About 54% complete after moving condition body and top action/advanced popover presentation into child components. |
 | P1 `NodeCard.vue` cleanup after Phase 28 | About 91% complete after reducing `NodeCard.vue` from 3,373 to 2,577 lines in this round. |
 | Current continuation gate after Phase 28 | Total roadmap progress is below 100%, so Phase 29 is automatically opened for primary state-port and residual chrome cleanup. |
+| Overall roadmap cleanup after Phase 29 | About 56% complete after moving primary state-port presentation and floating reorder preview out of `NodeCard.vue`. |
+| P1 `NodeCard.vue` cleanup after Phase 29 | About 96% complete after reducing `NodeCard.vue` from 2,577 to 1,988 lines while leaving state drafts, lock guards, and graph emits in the parent. |
+| Current continuation gate after Phase 29 | Total roadmap progress is below 100%, so Phase 30 is automatically opened to finish the P1 gate or select the next safest P2/P3 slice. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -360,6 +373,7 @@ Phase 29 in progress
 - Phase 26 moves the input node body presentation into `InputNodeBody.vue`; `NodeCard.vue` drops to 3,562 lines while keeping input value derivation, uploaded asset parsing, knowledge-base options, lock guards, file/drop handlers, and state/config emits in the parent.
 - Phase 27 moves the output node body presentation into `OutputNodeBody.vue`; `NodeCard.vue` drops to 3,373 lines while keeping output preview derivation, output config handlers, lock guards, and state/config emits in the parent.
 - Phase 28 moves condition body presentation into `ConditionNodeBody.vue` and the top action/advanced popover presentation into `NodeCardTopActions.vue`; `NodeCard.vue` drops to 2,577 lines while keeping condition drafts, action confirmations, config handlers, lock guards, and graph/state emits in the parent.
+- Phase 29 moves primary input/output state-port presentation into `PrimaryStatePort.vue` and the port-reorder floating preview into `FloatingStatePortPill.vue`; `NodeCard.vue` drops to 1,988 lines while keeping state drafts, port validation, lock guards, and graph/state emits in the parent.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

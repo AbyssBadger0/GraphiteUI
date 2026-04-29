@@ -16,6 +16,7 @@ import {
   resolveCanvasPendingConnectionCreationMenuRequest,
   resolveCanvasAutoSnappedTargetAnchor,
   resolveCanvasAgentCreateInputTargetAnchor,
+  resolveCanvasConnectionPointerUpAction,
   resolveCanvasConnectionStateValueType,
   resolveCanvasEligibleTargetAnchorForNodeBody,
 } from "./canvasConnectionInteractionModel.ts";
@@ -126,6 +127,54 @@ test("canvas connection interaction model ignores empty creation menu requests",
       stateSchema: document.state_schema,
     }),
     null,
+  );
+});
+
+test("canvas connection interaction model resolves pointer-up routing actions", () => {
+  const targetAnchor = flowAnchor("target", 440, 180);
+  const connection: PendingGraphConnection = {
+    sourceNodeId: "writer",
+    sourceKind: "flow-out",
+  };
+
+  assert.equal(
+    resolveCanvasConnectionPointerUpAction({
+      connection: null,
+      interactionLocked: false,
+      autoSnappedTargetAnchor: targetAnchor,
+    }),
+    null,
+  );
+  assert.deepEqual(
+    resolveCanvasConnectionPointerUpAction({
+      connection,
+      interactionLocked: true,
+      autoSnappedTargetAnchor: targetAnchor,
+    }),
+    {
+      type: "clear-connection-interaction",
+    },
+  );
+  assert.deepEqual(
+    resolveCanvasConnectionPointerUpAction({
+      connection,
+      interactionLocked: false,
+      autoSnappedTargetAnchor: targetAnchor,
+    }),
+    {
+      type: "complete-connection",
+      targetAnchor,
+    },
+  );
+  assert.deepEqual(
+    resolveCanvasConnectionPointerUpAction({
+      connection,
+      interactionLocked: false,
+      autoSnappedTargetAnchor: null,
+    }),
+    {
+      type: "open-creation-menu",
+    },
   );
 });
 

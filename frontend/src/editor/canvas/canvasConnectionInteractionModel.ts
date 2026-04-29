@@ -45,6 +45,11 @@ export type CanvasPendingConnectionCreationMenuRequest = {
   clearSelectedEdge: true;
 };
 
+export type CanvasConnectionPointerUpAction =
+  | { type: "clear-connection-interaction" }
+  | { type: "complete-connection"; targetAnchor: ProjectedCanvasAnchor }
+  | { type: "open-creation-menu" };
+
 type CanvasAutoSnapResolverInput = {
   connection: PendingGraphConnection | null;
   nodeIdAtPointer: string | null;
@@ -122,6 +127,29 @@ export function resolveCanvasPendingConnectionCreationMenuRequest(
     clearConnectionInteraction: true,
     clearSelectedEdge: true,
   };
+}
+
+export function resolveCanvasConnectionPointerUpAction(input: {
+  connection: PendingGraphConnection | null;
+  interactionLocked: boolean;
+  autoSnappedTargetAnchor: ProjectedCanvasAnchor | null;
+}): CanvasConnectionPointerUpAction | null {
+  if (!input.connection) {
+    return null;
+  }
+
+  if (input.interactionLocked) {
+    return { type: "clear-connection-interaction" };
+  }
+
+  if (input.autoSnappedTargetAnchor) {
+    return {
+      type: "complete-connection",
+      targetAnchor: input.autoSnappedTargetAnchor,
+    };
+  }
+
+  return { type: "open-creation-menu" };
 }
 
 export function isCanvasStateTargetAnchorAllowedForConnection(

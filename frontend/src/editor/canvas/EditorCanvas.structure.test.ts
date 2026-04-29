@@ -980,7 +980,11 @@ test("EditorCanvas snaps flow drags to eligible target node bodies before mouseu
   assert.match(componentSource, /if \(activeConnection\.value\) \{[\s\S]*updatePendingConnectionTarget\(\{[\s\S]*targetAnchor: resolveAutoSnappedTargetAnchor\(event\),[\s\S]*fallbackPoint: resolveCanvasPoint\(event\),/);
   assert.match(canvasConnectionInteractionsSource, /autoSnappedTargetAnchor\.value = input\.targetAnchor;/);
   assert.match(canvasConnectionInteractionsSource, /pendingConnectionPoint\.value = input\.targetAnchor[\s\S]*\? \{ x: input\.targetAnchor\.x, y: input\.targetAnchor\.y \}[\s\S]*: input\.fallbackPoint;/);
-  assert.match(componentSource, /if \(activeConnection\.value\) \{[\s\S]*if \(autoSnappedTargetAnchor\.value\) \{[\s\S]*completePendingConnection\(autoSnappedTargetAnchor\.value\);[\s\S]*return;[\s\S]*\}[\s\S]*openCreationMenuFromPendingConnection\(event\);[\s\S]*\}/);
+  assert.match(componentSource, /const connectionPointerUpAction = resolveCanvasConnectionPointerUpAction\(\{[\s\S]*connection: activeConnection\.value,[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*autoSnappedTargetAnchor: autoSnappedTargetAnchor\.value,[\s\S]*\}\);/);
+  assert.match(componentSource, /case "complete-connection":[\s\S]*completePendingConnection\(connectionPointerUpAction\.targetAnchor\);[\s\S]*return;/);
+  assert.match(componentSource, /case "open-creation-menu":[\s\S]*openCreationMenuFromPendingConnection\(event\);[\s\S]*break;/);
+  assert.match(canvasConnectionInteractionModelSource, /export type CanvasConnectionPointerUpAction/);
+  assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasConnectionPointerUpAction/);
   assert.match(componentSource, /return resolveCanvasAutoSnappedTargetAnchorModel\(\{[\s\S]*connection: activeConnection\.value,[\s\S]*nodeIdAtPointer: resolveNodeIdAtPointer\(event\),[\s\S]*canvasPoint: resolveCanvasPoint\(event\),/);
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasAutoSnappedTargetAnchor/);
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasFlowHotspotTargetAnchor/);

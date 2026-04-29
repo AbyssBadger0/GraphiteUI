@@ -468,6 +468,7 @@ import {
   isCanvasStateTargetAnchorAllowedForConnection,
   resolveCanvasAutoSnappedTargetAnchor as resolveCanvasAutoSnappedTargetAnchorModel,
   resolveCanvasEligibleTargetAnchorForNodeBody,
+  resolveCanvasConnectionPointerUpAction,
   resolveCanvasPendingConnectionCreationMenuRequest,
   type CanvasNodeCreationMenuPayload,
 } from "./canvasConnectionInteractionModel";
@@ -1189,15 +1190,22 @@ function handleCanvasPointerUp(event: PointerEvent) {
   }
   releaseNodeDragResizePointerCapture(event.pointerId);
   if (activeConnection.value) {
-    if (isGraphEditingLocked()) {
-      clearConnectionInteractionState();
-      return;
+    const connectionPointerUpAction = resolveCanvasConnectionPointerUpAction({
+      connection: activeConnection.value,
+      interactionLocked: isGraphEditingLocked(),
+      autoSnappedTargetAnchor: autoSnappedTargetAnchor.value,
+    });
+    switch (connectionPointerUpAction?.type) {
+      case "clear-connection-interaction":
+        clearConnectionInteractionState();
+        return;
+      case "complete-connection":
+        completePendingConnection(connectionPointerUpAction.targetAnchor);
+        return;
+      case "open-creation-menu":
+        openCreationMenuFromPendingConnection(event);
+        break;
     }
-    if (autoSnappedTargetAnchor.value) {
-      completePendingConnection(autoSnappedTargetAnchor.value);
-      return;
-    }
-    openCreationMenuFromPendingConnection(event);
   }
   finishNodeDragResizePointer(event.pointerId);
   viewport.endPan(event);

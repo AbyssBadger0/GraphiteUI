@@ -176,6 +176,10 @@
   - Confirmed `/editor/new` returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
   - Captured a Google Chrome headless screenshot for `/editor/new` at 1440x1000 and confirmed it was nonblank by sampled color count.
   - Confirmed the restarted backend and frontend processes remained alive after a delayed check.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed `/editor/new` returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Captured a Google Chrome headless screenshot for `/editor/new` at 1440x1000 and confirmed it was nonblank by sampled color count.
+  - Confirmed the restarted backend and frontend processes remained alive after a delayed check.
 
 ### Phase 5: Progress Gate
 - **Status:** completed
@@ -210,6 +214,74 @@
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
 | 2026-04-29 | `vue-tsc` flagged `nodeDrag` as an unused `EditorCanvas.vue` destructure after moving drag state into the composable | Ran TypeScript unused-symbol verification after implementation | Removed the unused destructure and updated structure tests to confirm `nodeDrag` remains internal to `useCanvasNodeDragResize.ts`. |
+
+## Session: 2026-04-29 Phase 32
+
+### Phase 1: Connection Interaction Controller Boundary
+- **Status:** completed
+- Actions taken:
+  - Re-read the formal roadmap, task plan, findings, and Phase 31 progress.
+  - Selected a narrow P2 Canvas connection slice: pending connection refs, pending preview point, auto-snapped target ref, active connection hover node ref, pending start/toggle, preview point updates, and hover-change notification.
+  - Kept auto-snap target selection, node creation payload construction, connection completion emit mapping, panning, node drag/resize, DOM measurement, and graph mutation emits in `EditorCanvas.vue`.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `useCanvasConnectionInteraction.test.ts` before the composable existed.
+  - Updated `EditorCanvas.structure.test.ts` to require the new connection interaction controller boundary.
+  - Ran the focused tests and verified the expected red failure: missing `useCanvasConnectionInteraction.ts`.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `useCanvasConnectionInteraction.ts` with pending connection refs, preview point state, auto-snap target state, active connection hover state, start/toggle handling, preview target updates, and clear helpers.
+  - Updated `EditorCanvas.vue` to consume the composable and remove local connection refs plus repeated pending/preview cleanup assignments.
+  - Kept the existing auto-snap resolver functions and `completePendingConnection` emit branches in the component.
+  - Reduced `EditorCanvas.vue` from 3,267 lines to 3,238 lines.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused composable and `EditorCanvas` structure tests.
+  - Ran focused Canvas regression tests covering connection state, auto-snap, creation payloads, node drag/resize, node measurements, and edge interactions.
+  - Ran TypeScript unused-symbol verification from the `frontend` directory.
+  - Ran the full frontend source test suite and the Vite structure test in one Node test invocation.
+  - Ran the frontend production build; no Vite large chunk warning was emitted.
+
+### Phase 5: Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated total roadmap progress at about 59%.
+  - Recalculated P2 `EditorCanvas.vue` cleanup at about 49%.
+  - Confirmed the build/chunk warning remains resolved because the production build emitted no large chunk warning.
+  - Opened Phase 33 because total roadmap progress remains below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red focused test | `node --test frontend/src/editor/canvas/useCanvasConnectionInteraction.test.ts frontend/src/editor/canvas/EditorCanvas.structure.test.ts` before implementation | Fails because the composable does not exist | Failed with missing `useCanvasConnectionInteraction.ts` | Passed |
+| Focused connection structure | Same command after implementation | New connection controller boundary passes | 62 passed | Passed |
+| Focused Canvas related suite | `node --test` over connection, auto-snap, node drag/resize, measurements, and edge interactions | Related Canvas behavior/model tests pass | 94 passed | Passed |
+| TypeScript unused-symbol check | `cd frontend && ./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | No diagnostics | Exit 0, no diagnostics | Passed |
+| Full frontend tests | `node --test $(rg --files src vite.config.structure.test.ts | rg '\.test\.ts$')` in `frontend` | All frontend tests pass | 785 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without chunk-warning regression | Exit 0, no large chunk warning | Passed |
+| Dev restart and health | `npm run dev`, then HTTP checks | Services start and respond | Frontend `/editor/new` 200, backend `/health` 200 ok | Passed |
+| Browser visual smoke | Google Chrome headless screenshot of `/editor/new` | Page renders nonblank | 1440x1000 PNG, sampledColors=207 | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 32 implementation, verification, dev restart, browser smoke, commit, and push are complete. |
+| Where am I going? | Phase 33 is open for a safe connection completion action boundary. |
+| What's the goal? | Continue reducing `EditorCanvas.vue` responsibility concentration while preserving auto-snap, node creation context, connection completion, drag/resize behavior, and runtime UI. |
+| What have I learned? | Connection state lifecycle is separable from auto-snap selection and completion emits; those higher-risk behaviors should stay in place until covered by their own focused model tests. |
+| What have I done? | Extracted `useCanvasConnectionInteraction.ts`, added focused tests, verified full frontend behavior, built without chunk warnings, and opened the next continuation phase. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-29 | `useCanvasConnectionInteraction.ts` initially imported `./canvasConnectionModel` without the `.ts` extension | First focused green run | Updated the import to `./canvasConnectionModel.ts`, matching Node test resolution. |
+| 2026-04-29 | The auto-snap target unit test used strict object identity against a Vue-ref-wrapped object | First focused green run | Changed the assertion to compare structure with `assert.deepEqual`. |
 
 ## Session: 2026-04-29 Phase 29
 

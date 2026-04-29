@@ -49,6 +49,10 @@ function readCanvasEdgeInteractionsSource() {
   return readFileSync(resolve(currentDirectory, "useCanvasEdgeInteractions.ts"), "utf8").replace(/\r\n/g, "\n");
 }
 
+function readCanvasConnectionInteractionsSource() {
+  return readFileSync(resolve(currentDirectory, "useCanvasConnectionInteraction.ts"), "utf8").replace(/\r\n/g, "\n");
+}
+
 function readCanvasNodeMeasurementsSource() {
   return readFileSync(resolve(currentDirectory, "useCanvasNodeMeasurements.ts"), "utf8").replace(/\r\n/g, "\n");
 }
@@ -557,6 +561,7 @@ test("EditorCanvas delays clearing node hover state so hover-dependent node chro
 test("EditorCanvas renders output flow hotspots only for allowed modes and interacted nodes", () => {
   const canvasInteractionStyleModelSource = readCanvasInteractionStyleModelSource();
   const canvasConnectionModelSource = readCanvasConnectionModelSource();
+  const canvasConnectionInteractionsSource = readCanvasConnectionInteractionsSource();
 
   assert.match(componentSource, /v-for="anchor in flowAnchors"/);
   assert.match(componentSource, /class="editor-canvas__flow-hotspot"/);
@@ -581,7 +586,16 @@ test("EditorCanvas renders output flow hotspots only for allowed modes and inter
   assert.doesNotMatch(componentSource, /connectionPreview\.kind === 'route' \? 'url\(#editor-canvas-arrow-preview\)'/);
   assert.doesNotMatch(componentSource, /edge\.kind === 'route'[\s\S]*url\(#editor-canvas-arrow-route\)/);
   assert.doesNotMatch(componentSource, /editor-canvas-arrow-flow/);
-  assert.match(componentSource, /import \{[\s\S]*buildConnectionPreviewModel,[\s\S]*buildPendingConnectionFromAnchor,[\s\S]*isSamePendingConnection,[\s\S]*resolveConnectionAccentColor,[\s\S]*resolveConnectionPreviewStateKey,[\s\S]*resolveConnectionSourceAnchorId,[\s\S]*resolveSelectedReconnectConnection,[\s\S]*\} from "\.\/canvasConnectionModel";/);
+  assert.match(componentSource, /import \{ useCanvasConnectionInteraction \} from "\.\/useCanvasConnectionInteraction";/);
+  assert.match(componentSource, /const connectionInteraction = useCanvasConnectionInteraction\(\{[\s\S]*onActiveConnectionHoverNodeChange: \(\{ previousNodeId, nextNodeId \}\) => \{[\s\S]*\}\);/);
+  assert.match(componentSource, /pendingConnection,[\s\S]*pendingConnectionPoint,[\s\S]*autoSnappedTargetAnchor,[\s\S]*activeConnectionHoverNodeId,/);
+  assert.match(canvasConnectionInteractionsSource, /const pendingConnection = ref<PendingGraphConnection \| null>\(null\);/);
+  assert.match(canvasConnectionInteractionsSource, /const pendingConnectionPoint = ref<CanvasConnectionPreviewPoint \| null>\(null\);/);
+  assert.match(canvasConnectionInteractionsSource, /const autoSnappedTargetAnchor = ref<ProjectedCanvasAnchor \| null>\(null\);/);
+  assert.match(canvasConnectionInteractionsSource, /const activeConnectionHoverNodeId = ref<string \| null>\(null\);/);
+  assert.match(canvasConnectionInteractionsSource, /buildPendingConnectionFromAnchor\(anchor\)/);
+  assert.match(canvasConnectionInteractionsSource, /isSamePendingConnection\(pendingConnection\.value, nextPendingConnection\)/);
+  assert.match(componentSource, /import \{[\s\S]*buildConnectionPreviewModel,[\s\S]*resolveConnectionAccentColor,[\s\S]*resolveConnectionPreviewStateKey,[\s\S]*resolveConnectionSourceAnchorId,[\s\S]*resolveSelectedReconnectConnection,[\s\S]*\} from "\.\/canvasConnectionModel";/);
   assert.match(componentSource, /const connectionPreviewStateKey = computed\(\(\) =>\s*resolveConnectionPreviewStateKey\(\{/);
   assert.match(componentSource, /const activeConnectionAccentColor = computed\(\(\) =>\s*resolveConnectionAccentColor\(\{/);
   assert.match(componentSource, /import \{[\s\S]*buildConnectionPreviewStyle,[\s\S]*buildFlowHotspotStyle,[\s\S]*buildFlowHotspotConnectStyle,[\s\S]*\} from "\.\/canvasInteractionStyleModel";/);
@@ -896,6 +910,7 @@ test("EditorCanvas opens the creation flow when output drags end on empty canvas
 test("EditorCanvas opens reverse node creation when input drags end on empty canvas", () => {
   const canvasConnectionModelSource = readCanvasConnectionModelSource();
   const canvasConnectionInteractionModelSource = readCanvasConnectionInteractionModelSource();
+  const canvasConnectionInteractionsSource = readCanvasConnectionInteractionsSource();
 
   assert.match(componentSource, /type CanvasNodeCreationMenuPayload/);
   assert.match(canvasConnectionInteractionModelSource, /connection\.sourceKind === "state-in"/);
@@ -903,8 +918,10 @@ test("EditorCanvas opens reverse node creation when input drags end on empty can
   assert.match(canvasConnectionInteractionModelSource, /targetAnchorKind: connection\.sourceKind/);
   assert.match(canvasConnectionInteractionModelSource, /targetStateKey: connection\.sourceStateKey/);
   assert.match(canvasConnectionInteractionModelSource, /targetValueType:/);
-  assert.match(componentSource, /const nextPendingConnection = buildPendingConnectionFromAnchor\(anchor\);/);
-  assert.match(componentSource, /isSamePendingConnection\(pendingConnection\.value, nextPendingConnection\)/);
+  assert.match(componentSource, /const pendingConnectionResult = startOrTogglePendingConnectionFromAnchor\(anchor\);/);
+  assert.match(componentSource, /if \(pendingConnectionResult\.status !== "ignored"\) \{[\s\S]*selectedEdgeId\.value = null;/);
+  assert.match(canvasConnectionInteractionsSource, /const nextPendingConnection = buildPendingConnectionFromAnchor\(anchor\);/);
+  assert.match(canvasConnectionInteractionsSource, /isSamePendingConnection\(pendingConnection\.value, nextPendingConnection\)/);
   assert.match(canvasConnectionModelSource, /if \(anchor\.kind === "state-in" && anchor\.stateKey\)/);
   assert.match(canvasConnectionModelSource, /sourceKind === "state-out" \|\| sourceKind === "state-in"[\s\S]*return "data";/);
   assert.doesNotMatch(componentSource, /function createPendingConnection/);
@@ -920,14 +937,16 @@ test("EditorCanvas snaps reverse input drags to existing upstream writer node bo
 });
 
 test("EditorCanvas snaps flow drags to eligible target node bodies before mouseup", () => {
-  assert.match(componentSource, /const autoSnappedTargetAnchor = ref<ProjectedCanvasAnchor \| null>\(null\);/);
+  const canvasConnectionInteractionsSource = readCanvasConnectionInteractionsSource();
+
+  assert.doesNotMatch(componentSource, /const autoSnappedTargetAnchor = ref<ProjectedCanvasAnchor \| null>\(null\);/);
+  assert.match(canvasConnectionInteractionsSource, /const autoSnappedTargetAnchor = ref<ProjectedCanvasAnchor \| null>\(null\);/);
   assert.match(componentSource, /function resolveAutoSnappedTargetAnchor\(event: PointerEvent\)/);
   assert.match(componentSource, /function isPointerWithinFlowHotspot\(anchor: ProjectedCanvasAnchor, event: PointerEvent\)/);
   assert.match(componentSource, /function resolveEligibleTargetAnchorForNodeBody\(nodeId: string\)/);
-  assert.match(componentSource, /if \(activeConnection\.value\) \{[\s\S]*autoSnappedTargetAnchor\.value = resolveAutoSnappedTargetAnchor\(event\);/);
-  assert.match(componentSource, /pendingConnectionPoint\.value = autoSnappedTargetAnchor\.value/);
-  assert.match(componentSource, /\? \{ x: autoSnappedTargetAnchor\.value\.x, y: autoSnappedTargetAnchor\.value\.y \}/);
-  assert.match(componentSource, /: resolveCanvasPoint\(event\);/);
+  assert.match(componentSource, /if \(activeConnection\.value\) \{[\s\S]*updatePendingConnectionTarget\(\{[\s\S]*targetAnchor: resolveAutoSnappedTargetAnchor\(event\),[\s\S]*fallbackPoint: resolveCanvasPoint\(event\),/);
+  assert.match(canvasConnectionInteractionsSource, /autoSnappedTargetAnchor\.value = input\.targetAnchor;/);
+  assert.match(canvasConnectionInteractionsSource, /pendingConnectionPoint\.value = input\.targetAnchor[\s\S]*\? \{ x: input\.targetAnchor\.x, y: input\.targetAnchor\.y \}[\s\S]*: input\.fallbackPoint;/);
   assert.match(componentSource, /if \(activeConnection\.value\) \{[\s\S]*if \(autoSnappedTargetAnchor\.value\) \{[\s\S]*completePendingConnection\(autoSnappedTargetAnchor\.value\);[\s\S]*return;[\s\S]*\}[\s\S]*openCreationMenuFromPendingConnection\(event\);[\s\S]*\}/);
   assert.match(componentSource, /for \(const anchor of flowAnchors\.value\) \{[\s\S]*if \(isPointerWithinFlowHotspot\(anchor, event\) && eligibleTargetAnchorIds\.value\.has\(anchor\.id\)\) \{[\s\S]*return anchor;[\s\S]*\}/);
   assert.match(componentSource, /const hotspot = flowHotspotStyle\(anchor\);/);
@@ -1020,13 +1039,16 @@ test("EditorCanvas measures only rendered anchor slots so hidden virtual input c
 });
 
 test("EditorCanvas keeps transient input capsules aligned while dragging over node bodies on touch", () => {
-  assert.match(componentSource, /const activeConnectionHoverNodeId = ref<string \| null>\(null\);/);
+  const canvasConnectionInteractionsSource = readCanvasConnectionInteractionsSource();
+
+  assert.doesNotMatch(componentSource, /const activeConnectionHoverNodeId = ref<string \| null>\(null\);/);
+  assert.match(canvasConnectionInteractionsSource, /const activeConnectionHoverNodeId = ref<string \| null>\(null\);/);
   assert.match(componentSource, /:hovered="hoveredNodeId === nodeId \|\| activeConnectionHoverNodeId === nodeId \|\| hoveredPointAnchorNodeId === nodeId"/);
   assert.match(componentSource, /function syncActiveConnectionHoverNode\(event: PointerEvent\)/);
   assert.match(componentSource, /function resolveNodeIdAtPointer\(event: PointerEvent\)/);
-  assert.match(componentSource, /function setActiveConnectionHoverNode\(nodeId: string \| null\)/);
-  assert.match(componentSource, /void nextTick\(\)\.then\(\(\) => \{[\s\S]*scheduleAnchorMeasurement\(nodeId\);[\s\S]*\}\);/);
-  assert.match(componentSource, /if \(activeConnection\.value\) \{[\s\S]*syncActiveConnectionHoverNode\(event\);[\s\S]*autoSnappedTargetAnchor\.value = resolveAutoSnappedTargetAnchor\(event\);/);
+  assert.match(componentSource, /onActiveConnectionHoverNodeChange: \(\{ previousNodeId, nextNodeId \}\) => \{[\s\S]*if \(previousNodeId\) \{[\s\S]*scheduleAnchorMeasurement\(previousNodeId\);[\s\S]*if \(nextNodeId\) \{[\s\S]*void nextTick\(\)\.then\(\(\) => \{[\s\S]*scheduleAnchorMeasurement\(nextNodeId\);/);
+  assert.match(canvasConnectionInteractionsSource, /function setActiveConnectionHoverNode\(nodeId: string \| null\)/);
+  assert.match(componentSource, /if \(activeConnection\.value\) \{[\s\S]*syncActiveConnectionHoverNode\(event\);[\s\S]*updatePendingConnectionTarget\(\{/);
   assert.match(componentSource, /setActiveConnectionHoverNode\(null\);/);
 });
 

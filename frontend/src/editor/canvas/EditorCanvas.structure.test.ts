@@ -904,10 +904,12 @@ test("EditorCanvas opens the creation flow when output drags end on empty canvas
   const canvasConnectionInteractionModelSource = readCanvasConnectionInteractionModelSource();
 
   assert.match(componentSource, /function openCreationMenuFromPendingConnection/);
-  assert.match(componentSource, /const payload = buildCanvasNodeCreationMenuPayload\(\{/);
+  assert.match(componentSource, /const creationMenuRequest = resolveCanvasPendingConnectionCreationMenuRequest\(\{/);
   assert.match(canvasConnectionInteractionModelSource, /connection\.sourceKind === "state-out"/);
   assert.match(canvasConnectionInteractionModelSource, /connection\.sourceKind === "flow-out"/);
   assert.match(canvasConnectionInteractionModelSource, /connection\.sourceKind === "route-out"/);
+  assert.match(canvasConnectionInteractionModelSource, /clearConnectionInteraction: true/);
+  assert.match(canvasConnectionInteractionModelSource, /clearSelectedEdge: true/);
   assert.match(componentSource, /openCreationMenuFromPendingConnection\(event\)/);
 });
 
@@ -947,18 +949,22 @@ test("EditorCanvas snaps reverse input drags to existing upstream writer node bo
 test("EditorCanvas delegates connection completion action projection to a model", () => {
   const canvasConnectionCompletionModelSource = readCanvasConnectionCompletionModelSource();
 
-  assert.match(componentSource, /import \{[\s\S]*resolveCanvasConnectionCompletionAction,[\s\S]*type CanvasConnectionCompletionAction,[\s\S]*\} from "\.\/canvasConnectionCompletionModel";/);
+  assert.match(componentSource, /import \{[\s\S]*resolveCanvasConnectionCompletionRequest,[\s\S]*type CanvasConnectionCompletionAction,[\s\S]*\} from "\.\/canvasConnectionCompletionModel";/);
   assert.match(canvasConnectionCompletionModelSource, /export type CanvasConnectionCompletionAction/);
   assert.match(canvasConnectionCompletionModelSource, /export function resolveCanvasConnectionCompletionAction/);
+  assert.match(canvasConnectionCompletionModelSource, /export function resolveCanvasConnectionCompletionRequest/);
   assert.match(canvasConnectionCompletionModelSource, /type: "connect-flow"/);
   assert.match(canvasConnectionCompletionModelSource, /type: "connect-route"/);
   assert.match(canvasConnectionCompletionModelSource, /type: "connect-state"/);
   assert.match(canvasConnectionCompletionModelSource, /type: "connect-state-input-source"/);
   assert.match(canvasConnectionCompletionModelSource, /type: "reconnect-flow"/);
   assert.match(canvasConnectionCompletionModelSource, /type: "reconnect-route"/);
-  assert.match(componentSource, /const completionAction = resolveCanvasConnectionCompletionAction\(\{/);
-  assert.match(componentSource, /emitCanvasConnectionCompletionAction\(completionAction\);/);
+  assert.match(componentSource, /const completionRequest = resolveCanvasConnectionCompletionRequest\(\{/);
+  assert.match(componentSource, /emitCanvasConnectionCompletionAction\(completionRequest\.action\);/);
+  assert.match(componentSource, /if \(completionRequest\.clearConnectionInteraction\) \{[\s\S]*clearConnectionInteractionState\(\);[\s\S]*\}/);
+  assert.match(componentSource, /if \(completionRequest\.clearSelectedEdge\) \{[\s\S]*selectedEdgeId\.value = null;[\s\S]*\}/);
   assert.match(componentSource, /function emitCanvasConnectionCompletionAction\(action: CanvasConnectionCompletionAction \| null\)/);
+  assert.doesNotMatch(componentSource, /resolveCanvasConnectionCompletionAction/);
   assert.doesNotMatch(componentSource, /targetValueType: resolveCanvasConnectionStateValueType\(connection\.sourceStateKey, props\.document\.state_schema\)/);
 });
 
@@ -1114,9 +1120,12 @@ test("EditorCanvas opens node creation from the virtual agent any output", () =>
   const canvasConnectionInteractionModelSource = readCanvasConnectionInteractionModelSource();
 
   assert.match(canvasConnectionModelSource, /connection\?\.sourceKind === "state-out" &&[\s\S]*connection\.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY/);
-  assert.match(componentSource, /import \{[\s\S]*buildCanvasNodeCreationMenuPayload,[\s\S]*type CanvasNodeCreationMenuPayload,[\s\S]*\} from "\.\/canvasConnectionInteractionModel";/);
-  assert.match(componentSource, /const payload = buildCanvasNodeCreationMenuPayload\(\{[\s\S]*connection,[\s\S]*position: resolveCanvasPoint\(event\),[\s\S]*stateSchema: props\.document\.state_schema,[\s\S]*\}\);/);
-  assert.match(componentSource, /emit\("open-node-creation-menu", payload\);/);
+  assert.match(componentSource, /import \{[\s\S]*resolveCanvasPendingConnectionCreationMenuRequest,[\s\S]*type CanvasNodeCreationMenuPayload,[\s\S]*\} from "\.\/canvasConnectionInteractionModel";/);
+  assert.match(componentSource, /const creationMenuRequest = resolveCanvasPendingConnectionCreationMenuRequest\(\{[\s\S]*connection,[\s\S]*position: resolveCanvasPoint\(event\),[\s\S]*stateSchema: props\.document\.state_schema,[\s\S]*\}\);/);
+  assert.match(componentSource, /emit\("open-node-creation-menu", creationMenuRequest\.payload\);/);
+  assert.match(componentSource, /if \(creationMenuRequest\.clearConnectionInteraction\) \{[\s\S]*clearConnectionInteractionState\(\);[\s\S]*\}/);
+  assert.match(componentSource, /if \(creationMenuRequest\.clearSelectedEdge\) \{[\s\S]*selectedEdgeId\.value = null;[\s\S]*\}/);
+  assert.doesNotMatch(componentSource, /buildCanvasNodeCreationMenuPayload/);
   assert.match(canvasConnectionInteractionModelSource, /sourceStateKey: connection\.sourceStateKey/);
   assert.match(canvasConnectionInteractionModelSource, /sourceValueType: resolveCanvasConnectionStateValueType\(connection\.sourceStateKey, input\.stateSchema\)/);
   assert.match(canvasConnectionInteractionModelSource, /stateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY/);

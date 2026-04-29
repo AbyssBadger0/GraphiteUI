@@ -42,11 +42,21 @@ export type CanvasConnectionCompletionAction =
       payload: { sourceNodeId: string; branchKey: string; nextTargetNodeId: string };
     };
 
-export function resolveCanvasConnectionCompletionAction(input: {
+type CanvasConnectionCompletionInput = {
   connection: PendingGraphConnection | null;
   targetAnchor: ProjectedCanvasAnchor;
   stateSchema: StateSchemaLike;
-}): CanvasConnectionCompletionAction | null {
+};
+
+export type CanvasConnectionCompletionRequest = {
+  action: CanvasConnectionCompletionAction | null;
+  clearConnectionInteraction: true;
+  clearSelectedEdge: true;
+};
+
+export function resolveCanvasConnectionCompletionAction(
+  input: CanvasConnectionCompletionInput,
+): CanvasConnectionCompletionAction | null {
   const { connection, targetAnchor } = input;
   if (!connection) {
     return null;
@@ -136,5 +146,19 @@ export function resolveCanvasConnectionCompletionAction(input: {
       sourceNodeId: connection.sourceNodeId,
       targetNodeId: targetAnchor.nodeId,
     },
+  };
+}
+
+export function resolveCanvasConnectionCompletionRequest(
+  input: CanvasConnectionCompletionInput,
+): CanvasConnectionCompletionRequest | null {
+  if (!input.connection) {
+    return null;
+  }
+
+  return {
+    action: resolveCanvasConnectionCompletionAction(input),
+    clearConnectionInteraction: true,
+    clearSelectedEdge: true,
   };
 }

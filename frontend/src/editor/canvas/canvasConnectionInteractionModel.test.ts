@@ -13,6 +13,7 @@ import type { PendingStateInputSource } from "./canvasPendingStatePortModel.ts";
 import type { ProjectedCanvasAnchor } from "./edgeProjection.ts";
 import {
   buildCanvasNodeCreationMenuPayload,
+  resolveCanvasPendingConnectionCreationMenuRequest,
   resolveCanvasAutoSnappedTargetAnchor,
   resolveCanvasAgentCreateInputTargetAnchor,
   resolveCanvasConnectionStateValueType,
@@ -57,6 +58,75 @@ test("canvas connection interaction model resolves creation payloads without dro
   });
   assert.equal(resolveCanvasConnectionStateValueType("answer", document.state_schema), "markdown");
   assert.equal(resolveCanvasConnectionStateValueType(VIRTUAL_ANY_OUTPUT_STATE_KEY, document.state_schema), null);
+});
+
+test("canvas connection interaction model resolves forward creation menu requests with cleanup policy", () => {
+  const request = resolveCanvasPendingConnectionCreationMenuRequest({
+    connection: {
+      sourceNodeId: "writer",
+      sourceKind: "state-out",
+      sourceStateKey: VIRTUAL_ANY_OUTPUT_STATE_KEY,
+    },
+    position: { x: 320, y: 180 },
+    clientX: 900,
+    clientY: 420,
+    stateSchema: document.state_schema,
+  });
+
+  assert.deepEqual(request, {
+    payload: {
+      position: { x: 320, y: 180 },
+      sourceNodeId: "writer",
+      sourceAnchorKind: "state-out",
+      sourceStateKey: VIRTUAL_ANY_OUTPUT_STATE_KEY,
+      sourceValueType: null,
+      clientX: 900,
+      clientY: 420,
+    },
+    clearConnectionInteraction: true,
+    clearSelectedEdge: true,
+  });
+});
+
+test("canvas connection interaction model resolves reverse creation menu requests with cleanup policy", () => {
+  const request = resolveCanvasPendingConnectionCreationMenuRequest({
+    connection: {
+      sourceNodeId: "target",
+      sourceKind: "state-in",
+      sourceStateKey: "answer",
+    },
+    position: { x: 160, y: 220 },
+    clientX: 740,
+    clientY: 480,
+    stateSchema: document.state_schema,
+  });
+
+  assert.deepEqual(request, {
+    payload: {
+      position: { x: 160, y: 220 },
+      targetNodeId: "target",
+      targetAnchorKind: "state-in",
+      targetStateKey: "answer",
+      targetValueType: "markdown",
+      clientX: 740,
+      clientY: 480,
+    },
+    clearConnectionInteraction: true,
+    clearSelectedEdge: true,
+  });
+});
+
+test("canvas connection interaction model ignores empty creation menu requests", () => {
+  assert.equal(
+    resolveCanvasPendingConnectionCreationMenuRequest({
+      connection: null,
+      position: { x: 0, y: 0 },
+      clientX: 0,
+      clientY: 0,
+      stateSchema: document.state_schema,
+    }),
+    null,
+  );
 });
 
 test("canvas connection interaction model builds fallback create-input anchors for virtual output snapping", () => {

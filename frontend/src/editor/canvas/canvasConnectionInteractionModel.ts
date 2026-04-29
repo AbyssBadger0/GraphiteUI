@@ -31,6 +31,20 @@ export type CanvasNodeCreationMenuPayload = {
 
 type StateSchemaLike = Record<string, Pick<StateDefinition, "type"> | undefined>;
 
+type CanvasNodeCreationMenuInput = {
+  connection: PendingGraphConnection | null;
+  position: GraphPosition;
+  clientX: number;
+  clientY: number;
+  stateSchema: StateSchemaLike;
+};
+
+export type CanvasPendingConnectionCreationMenuRequest = {
+  payload: CanvasNodeCreationMenuPayload;
+  clearConnectionInteraction: true;
+  clearSelectedEdge: true;
+};
+
 type CanvasAutoSnapResolverInput = {
   connection: PendingGraphConnection | null;
   nodeIdAtPointer: string | null;
@@ -61,13 +75,7 @@ export function resolveCanvasConnectionStateValueType(
   return stateSchema[stateKey]?.type ?? null;
 }
 
-export function buildCanvasNodeCreationMenuPayload(input: {
-  connection: PendingGraphConnection | null;
-  position: GraphPosition;
-  clientX: number;
-  clientY: number;
-  stateSchema: StateSchemaLike;
-}): CanvasNodeCreationMenuPayload | null {
+export function buildCanvasNodeCreationMenuPayload(input: CanvasNodeCreationMenuInput): CanvasNodeCreationMenuPayload | null {
   const connection = input.connection;
   if (!connection) {
     return null;
@@ -99,6 +107,21 @@ export function buildCanvasNodeCreationMenuPayload(input: {
   }
 
   return null;
+}
+
+export function resolveCanvasPendingConnectionCreationMenuRequest(
+  input: CanvasNodeCreationMenuInput,
+): CanvasPendingConnectionCreationMenuRequest | null {
+  const payload = buildCanvasNodeCreationMenuPayload(input);
+  if (!payload) {
+    return null;
+  }
+
+  return {
+    payload,
+    clearConnectionInteraction: true,
+    clearSelectedEdge: true,
+  };
 }
 
 export function isCanvasStateTargetAnchorAllowedForConnection(

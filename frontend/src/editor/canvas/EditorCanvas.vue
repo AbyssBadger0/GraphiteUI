@@ -465,14 +465,14 @@ import { useCanvasNodeMeasurements } from "./useCanvasNodeMeasurements";
 import { buildPinchZoomStart, resolvePointerCenter, resolvePointerDistance } from "./canvasPinchZoomModel";
 import { buildCanvasViewportStyle, buildZoomPercentLabel } from "./canvasViewportDisplayModel";
 import {
-  buildCanvasNodeCreationMenuPayload,
   isCanvasStateTargetAnchorAllowedForConnection,
   resolveCanvasAutoSnappedTargetAnchor as resolveCanvasAutoSnappedTargetAnchorModel,
   resolveCanvasEligibleTargetAnchorForNodeBody,
+  resolveCanvasPendingConnectionCreationMenuRequest,
   type CanvasNodeCreationMenuPayload,
 } from "./canvasConnectionInteractionModel";
 import {
-  resolveCanvasConnectionCompletionAction,
+  resolveCanvasConnectionCompletionRequest,
   type CanvasConnectionCompletionAction,
 } from "./canvasConnectionCompletionModel";
 import { STATE_FIELD_TYPE_OPTIONS } from "@/editor/workspace/statePanelFields";
@@ -1638,21 +1638,25 @@ function openCreationMenuFromPendingConnection(event: PointerEvent) {
     return;
   }
   clearCanvasTransientState();
-  const payload = buildCanvasNodeCreationMenuPayload({
+  const creationMenuRequest = resolveCanvasPendingConnectionCreationMenuRequest({
     connection,
     position: resolveCanvasPoint(event),
     clientX: event.clientX,
     clientY: event.clientY,
     stateSchema: props.document.state_schema,
   });
-  if (!payload) {
+  if (!creationMenuRequest) {
     return;
   }
 
-  emit("open-node-creation-menu", payload);
+  emit("open-node-creation-menu", creationMenuRequest.payload);
 
-  clearConnectionInteractionState();
-  selectedEdgeId.value = null;
+  if (creationMenuRequest.clearConnectionInteraction) {
+    clearConnectionInteractionState();
+  }
+  if (creationMenuRequest.clearSelectedEdge) {
+    selectedEdgeId.value = null;
+  }
 }
 
 function focusNode(nodeId: string) {
@@ -1687,15 +1691,23 @@ function completePendingConnection(targetAnchor: ProjectedCanvasAnchor) {
     return;
   }
 
-  const completionAction = resolveCanvasConnectionCompletionAction({
+  const completionRequest = resolveCanvasConnectionCompletionRequest({
     connection,
     targetAnchor,
     stateSchema: props.document.state_schema,
   });
-  emitCanvasConnectionCompletionAction(completionAction);
+  if (!completionRequest) {
+    return;
+  }
 
-  clearConnectionInteractionState();
-  selectedEdgeId.value = null;
+  emitCanvasConnectionCompletionAction(completionRequest.action);
+
+  if (completionRequest.clearConnectionInteraction) {
+    clearConnectionInteractionState();
+  }
+  if (completionRequest.clearSelectedEdge) {
+    selectedEdgeId.value = null;
+  }
 }
 
 function emitCanvasConnectionCompletionAction(action: CanvasConnectionCompletionAction | null) {

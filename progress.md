@@ -1,5 +1,78 @@
 # Progress Log
 
+## Session: 2026-04-29 Phase 35
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Re-read the active plan, Phase 34 findings, and the formal roadmap section for `EditorCanvas.vue`.
+  - Confirmed the worktree started clean on `main...origin/main`.
+  - Inspected the pending connection creation-menu flow and the adjacent connection completion flow in `EditorCanvas.vue`.
+  - Selected a wider but still safe P2 Canvas slice: request-level projection for empty-canvas node creation and snapped connection completion.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added focused model tests for forward/reverse pending connection creation-menu requests, including cleanup flags and virtual output payload preservation.
+  - Added completion request tests covering a normal `connect-state` action and an invalid reconnect no-op that still clears connection interaction state.
+  - Updated `EditorCanvas.structure.test.ts` to require the new request model boundaries before implementation.
+  - Verified the expected red failures before production code because the new request functions were not exported and `EditorCanvas.vue` still called the older inline helpers.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `resolveCanvasPendingConnectionCreationMenuRequest` to `canvasConnectionInteractionModel.ts`.
+  - Added `resolveCanvasConnectionCompletionRequest` to `canvasConnectionCompletionModel.ts`.
+  - Updated `EditorCanvas.vue` so the component keeps DOM pointer coordinates, actual Vue emits, and imperative cleanup execution while models own payload/action request projection and cleanup policy.
+  - Preserved the current no-op completion behavior: if an active connection resolves to no emit action, the connection interaction state is still cleared.
+  - `EditorCanvas.vue` is now 3,126 lines; this phase intentionally traded a small line-count increase for clearer request contracts and lower inline decision ownership.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused request/model/structure tests.
+  - Ran the broader Canvas and graph-connection regression set.
+  - Ran TypeScript unused-symbol verification from `frontend`.
+  - Ran the full frontend `node --test` suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed backend `/health` returned `{"status":"ok"}` and the frontend entry returned HTML.
+  - Captured a headless Chrome screenshot after a virtual-time wait and confirmed the workspace rendered normally.
+
+### Phase 5: Continuation Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated overall roadmap cleanup at about 62%.
+  - Recalculated P2 `EditorCanvas.vue` cleanup at about 56%.
+  - Opened Phase 36 automatically because total roadmap progress is below 100%.
+  - Selected the next candidate boundary as connection pointer-up routing between locked cleanup, auto-snapped completion, and empty-canvas creation-menu opening.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red focused tests | `node --test frontend/src/editor/canvas/canvasConnectionInteractionModel.test.ts frontend/src/editor/canvas/canvasConnectionCompletionModel.test.ts frontend/src/editor/canvas/EditorCanvas.structure.test.ts` before implementation | Fails because request exports and component wiring do not exist | Failed on missing exports and structure assertions | Passed |
+| Focused request/model/structure tests | Same focused files after implementation | All focused tests pass | 73 passed | Passed |
+| Focused Canvas and graph regression | `node --test` over Canvas connection, drag/resize, edge, and graph document tests | Related interaction tests pass | 169 passed | Passed |
+| Unused symbol check | `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No diagnostics | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src vite.config.structure.test.ts | rg '\.test\.ts$')` in `frontend` | All frontend tests pass | 795 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without a large chunk warning | Exit 0, no Vite chunk warning | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTML returned, backend `/health` ok | Passed |
+| Browser smoke | Headless Chrome screenshot with virtual-time wait | Workspace renders normally | Workspace UI rendered | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 35 implementation, verification, docs update, and dev restart are complete. |
+| Where am I going? | Phase 36 is open for the next safe P2 Canvas pointer-up decision boundary. |
+| What's the goal? | Continue reducing `EditorCanvas.vue` connection interaction ownership without changing drag, snap, create-node, or connection-completion behavior. |
+| What have I learned? | Request-level projection is a useful boundary because it can carry payload/action plus cleanup policy while leaving actual emits and DOM details in the component. |
+| What have I done? | Extracted creation-menu request and completion request models, added regression coverage, verified the full frontend suite, built, restarted, and visually smoked the app. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-29 | First headless Chrome screenshot showed only the warm app background | Browser smoke after dev restart | Re-ran with `--virtual-time-budget=5000`; the second screenshot rendered the workspace normally. |
+
 ## Session: 2026-04-28 Rounds 21-30
 
 ### Phase 1: Re-orientation and Ten-Round Planning

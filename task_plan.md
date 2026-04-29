@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 35 in progress
+Phase 36 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -333,12 +333,21 @@ Phase 35 in progress
 - **Status:** completed
 
 ### Phase 35: EditorCanvas Connection Creation Menu Coordination Gate
-- [ ] Re-read the formal roadmap, Phase 34 findings, and current pending connection creation-menu flow before changing code.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a small controller/model around pending connection creation-menu payload resolution and cleanup coordination.
-- [ ] Add focused red tests for the selected connection creation-menu boundary before production changes.
-- [ ] Keep actual `emit("open-node-creation-menu")`, node creation context/naming payloads, auto-snap selection, completion emits, panning, node drag/resize, and DOM measurement behaviorally stable.
+- [x] Re-read the formal roadmap, Phase 34 findings, and current pending connection creation-menu flow before changing code.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is a small controller/model around pending connection creation-menu payload resolution and cleanup coordination.
+- [x] Add focused red tests for the selected connection creation-menu boundary before production changes.
+- [x] Keep actual `emit("open-node-creation-menu")`, node creation context/naming payloads, auto-snap selection, completion emits, panning, node drag/resize, and DOM measurement behaviorally stable.
+- [x] Run focused Canvas and graph-connection tests, TypeScript checks, full frontend tests, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 35.
+- **Status:** completed
+
+### Phase 36: EditorCanvas Connection Pointer-Up Decision Gate
+- [ ] Re-read the formal roadmap, Phase 35 findings, and current active-connection pointer-up flow before changing code.
+- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a controller/model around pointer-up routing between locked cleanup, auto-snapped completion, and empty-canvas creation-menu opening.
+- [ ] Add focused red tests for the selected pointer-up decision boundary before production changes.
+- [ ] Keep actual DOM pointer capture/release, `emit` dispatch, node creation context/naming payloads, auto-snap target selection, panning, node drag/resize, and DOM measurement behaviorally stable.
 - [ ] Run focused Canvas and graph-connection tests, TypeScript checks, full frontend tests, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 35.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 36.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -407,6 +416,9 @@ Phase 35 in progress
 | Overall roadmap cleanup after Phase 34 | About 61% complete after moving high-level auto-snap target resolution into `canvasConnectionInteractionModel.ts`. |
 | P2 `EditorCanvas.vue` cleanup after Phase 34 | About 54% complete after extracting flow hotspot, reverse state input, state target, and node-body auto-snap selection while keeping DOM hit-testing in the component. |
 | Current continuation gate after Phase 34 | Total roadmap progress is below 100%, so Phase 35 is automatically opened for the next safe P2 Canvas connection creation-menu coordination boundary. |
+| Overall roadmap cleanup after Phase 35 | About 62% complete after moving connection creation-menu and completion cleanup policies into tested request models. |
+| P2 `EditorCanvas.vue` cleanup after Phase 35 | About 56% complete after extracting creation-menu request and completion request coordination while keeping actual emits and DOM event handling in `EditorCanvas.vue`. |
+| Current continuation gate after Phase 35 | Total roadmap progress is below 100%, so Phase 36 is automatically opened for the next safe P2 Canvas pointer-up decision boundary. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -442,6 +454,7 @@ Phase 35 in progress
 - Phase 32 moves connection interaction refs, pending connection start/toggle, preview point updates, auto-snap target storage, and active connection hover node state into `useCanvasConnectionInteraction.ts`; `EditorCanvas.vue` drops to 3,238 lines while keeping auto-snap selection, connection completion emits, node creation payloads, panning, node drag/resize, and DOM measurement in the component.
 - Phase 33 moves completion action projection for `connect-flow`, `connect-route`, `connect-state`, `connect-state-input-source`, `reconnect-flow`, and `reconnect-route` into `canvasConnectionCompletionModel.ts`; `EditorCanvas.vue` drops to 3,224 lines while keeping actual `emit` dispatch, active connection refs, auto-snap selection, node creation payloads, panning, node drag/resize, and DOM measurement in the component.
 - Phase 34 moves high-level auto-snap target resolution into `canvasConnectionInteractionModel.ts`; `EditorCanvas.vue` drops to 3,114 lines while keeping DOM node hit-testing, pointer-to-canvas coordinate conversion, actual completion emits, node creation payload emits, panning, node drag/resize, and DOM measurement in the component.
+- Phase 35 moves pending connection creation-menu request projection into `canvasConnectionInteractionModel.ts` and completion request projection into `canvasConnectionCompletionModel.ts`; `EditorCanvas.vue` is 3,126 lines because the explicit request cleanup flags are more verbose than the prior inline calls, but the component now keeps only actual emits, DOM pointer inputs, and imperative cleanup execution.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 
@@ -460,3 +473,4 @@ Phase 35 in progress
 | Vue `emit` overloads rejected a union event name from `CanvasConnectionCompletionAction` | Phase 33 TypeScript verification | Kept action projection pure, but emitted through an explicit `switch` in `EditorCanvas.vue` so each overload stays type-safe. |
 | Unescaped backticks in an `rg` shell command triggered `/bin/bash: line 1: emit: command not found` | Phase 33 planning verification | Re-ran the search with single-quoted shell text; no files were changed by the failed read-only command. |
 | Structure tests still expected local `EditorCanvas.vue` auto-snap helper names after the resolver extraction | Phase 34 focused green run | Updated the assertions to lock the new `canvasConnectionInteractionModel.ts` resolver boundary instead of the previous local helper layout. |
+| First browser screenshot after Phase 35 dev restart captured only the app background | Phase 35 browser smoke | Re-ran headless Chrome with a virtual-time budget; the second screenshot rendered the workspace normally. |

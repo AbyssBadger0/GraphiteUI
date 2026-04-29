@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 import type { PendingGraphConnection } from "../../lib/graph-connections.ts";
 import type { StateDefinition } from "../../types/node-system.ts";
 import type { ProjectedCanvasAnchor } from "./edgeProjection.ts";
-import { resolveCanvasConnectionCompletionAction } from "./canvasConnectionCompletionModel.ts";
+import {
+  resolveCanvasConnectionCompletionAction,
+  resolveCanvasConnectionCompletionRequest,
+} from "./canvasConnectionCompletionModel.ts";
 
 const stateSchema: Record<string, Pick<StateDefinition, "type">> = {
   answer: { type: "markdown" },
@@ -178,6 +181,59 @@ test("canvas connection completion model preserves no-op invalid reconnects", ()
   assert.equal(
     resolveCanvasConnectionCompletionAction({
       connection: invalidReconnect,
+      targetAnchor: flowAnchor("target"),
+      stateSchema,
+    }),
+    null,
+  );
+});
+
+test("canvas connection completion model resolves completion requests with cleanup policy", () => {
+  assert.deepEqual(
+    resolveCanvasConnectionCompletionRequest({
+      connection: {
+        sourceNodeId: "writer",
+        sourceKind: "state-out",
+        sourceStateKey: "answer",
+      },
+      targetAnchor: stateAnchor("reader", "state-in", "answer", 240, 160),
+      stateSchema,
+    }),
+    {
+      action: {
+        type: "connect-state",
+        payload: {
+          sourceNodeId: "writer",
+          sourceStateKey: "answer",
+          targetNodeId: "reader",
+          targetStateKey: "answer",
+          position: { x: 240, y: 160 },
+        },
+      },
+      clearConnectionInteraction: true,
+      clearSelectedEdge: true,
+    },
+  );
+
+  assert.deepEqual(
+    resolveCanvasConnectionCompletionRequest({
+      connection: {
+        sourceNodeId: "source",
+        sourceKind: "flow-out",
+        mode: "reconnect",
+      },
+      targetAnchor: flowAnchor("target"),
+      stateSchema,
+    }),
+    {
+      action: null,
+      clearConnectionInteraction: true,
+      clearSelectedEdge: true,
+    },
+  );
+  assert.equal(
+    resolveCanvasConnectionCompletionRequest({
+      connection: null,
       targetAnchor: flowAnchor("target"),
       stateSchema,
     }),

@@ -49,6 +49,10 @@ function readCanvasLockedInteractionModelSource() {
   return readFileSync(resolve(currentDirectory, "canvasLockedInteractionModel.ts"), "utf8").replace(/\r\n/g, "\n");
 }
 
+function readCanvasEdgePointerInteractionModelSource() {
+  return readFileSync(resolve(currentDirectory, "canvasEdgePointerInteractionModel.ts"), "utf8").replace(/\r\n/g, "\n");
+}
+
 function readFlowEdgeDeleteModelSource() {
   return readFileSync(resolve(currentDirectory, "flowEdgeDeleteModel.ts"), "utf8").replace(/\r\n/g, "\n");
 }
@@ -453,6 +457,7 @@ test("EditorCanvas treats awaiting-human current node as a persistent review nod
 });
 
 test("EditorCanvas keeps paused human-review graphs viewable but read-only", () => {
+  const canvasEdgePointerInteractionModelSource = readCanvasEdgePointerInteractionModelSource();
   const canvasLockedInteractionModelSource = readCanvasLockedInteractionModelSource();
   const canvasConnectionInteractionModelSource = readCanvasConnectionInteractionModelSource();
   const canvasEdgeInteractionsSource = readCanvasEdgeInteractionsSource();
@@ -514,7 +519,12 @@ test("EditorCanvas keeps paused human-review graphs viewable but read-only", () 
   assert.match(canvasEdgeInteractionsSource, /function openDataEdgeStateEditor\(\)[\s\S]*if \(input\.guardLockedInteraction\(\)\) \{[\s\S]*return;/);
   assert.match(componentSource, /function handleCanvasDoubleClick\(event: MouseEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
   assert.match(componentSource, /function handleCanvasDrop\(event: DragEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
-  assert.match(componentSource, /function handleEdgePointerDown\(edge: ProjectedCanvasEdge, event: PointerEvent\)[\s\S]*if \(isGraphEditingLocked\(\)\) \{[\s\S]*emit\("locked-edit-attempt"\);/);
+  assert.match(canvasEdgePointerInteractionModelSource, /export function resolveCanvasEdgePointerDownAction/);
+  assert.match(componentSource, /const edgePointerDownAction = resolveCanvasEdgePointerDownAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*edge,[\s\S]*selectedEdgeId: selectedEdgeId\.value,[\s\S]*\}\);/);
+  assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*event\.preventDefault\(\);[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);
+  assert.match(componentSource, /case "start-flow-edge-delete-confirm":[\s\S]*startFlowEdgeDeleteConfirm\(edge, event\);[\s\S]*return;/);
+  assert.match(componentSource, /case "start-data-edge-state-confirm":[\s\S]*startDataEdgeStateConfirm\(edge, event\);[\s\S]*return;/);
+  assert.match(componentSource, /case "select-edge":[\s\S]*selectedEdgeId\.value = edgePointerDownAction\.selectEdgeId;[\s\S]*setPendingConnectionPoint\(resolveEdgeTargetPoint\(edge\)\);/);
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasAnchorPointerDownAction/);
   assert.match(componentSource, /const anchorPointerDownAction = resolveCanvasAnchorPointerDownAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*anchor,[\s\S]*canComplete: canCompleteCanvasConnection\(anchor\),[\s\S]*canStart: canStartGraphConnection\(anchor\.kind\),[\s\S]*\}\);/);
   assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);
@@ -766,7 +776,7 @@ test("EditorCanvas shows a clicked-position delete confirm for flow edges before
   assert.match(componentSource, /<div class="editor-canvas__confirm-hint editor-canvas__confirm-hint--remove">Delete edge\?<\/div>/);
   assert.match(componentSource, /class="editor-canvas__edge-delete-button"/);
   assert.match(componentSource, /<ElIcon><Check \/><\/ElIcon>/);
-  assert.match(componentSource, /if \(edge\.kind === "flow" \|\| edge\.kind === "route"\) \{[\s\S]*startFlowEdgeDeleteConfirm\(edge, event\);[\s\S]*return;/);
+  assert.match(componentSource, /case "start-flow-edge-delete-confirm":[\s\S]*startFlowEdgeDeleteConfirm\(edge, event\);[\s\S]*return;/);
   assert.match(canvasEdgeInteractionsSource, /if \(action\.kind === "route"\) \{[\s\S]*input\.emitRemoveRoute\(\{[\s\S]*sourceNodeId: action\.sourceNodeId,[\s\S]*branchKey: action\.branchKey,[\s\S]*\}\);/);
   assert.match(canvasEdgeInteractionsSource, /input\.emitRemoveFlow\(\{[\s\S]*sourceNodeId: action\.sourceNodeId,[\s\S]*targetNodeId: action\.targetNodeId,[\s\S]*\}\);/);
   assert.match(flowEdgeDeleteModelSource, /export function buildFlowEdgeDeleteConfirmFromEdge/);
@@ -841,7 +851,7 @@ test("EditorCanvas gives data edges the same two-step state editing entry patter
   assert.match(canvasEdgeInteractionsSource, /const nextEditor = buildDataEdgeStateEditorFromRequest\(request\);/);
   assert.match(canvasEdgeInteractionsSource, /input\.setSelectedEdgeId\(nextEditor\.id\);/);
   assert.match(canvasEdgeInteractionsSource, /activeDataEdgeStateEditor\.value = nextEditor;/);
-  assert.match(componentSource, /if \(edge\.kind === "data"\) \{[\s\S]*startDataEdgeStateConfirm\(edge, event\);[\s\S]*return;/);
+  assert.match(componentSource, /case "start-data-edge-state-confirm":[\s\S]*startDataEdgeStateConfirm\(edge, event\);[\s\S]*return;/);
   assert.match(componentSource, /<div[\s\S]*v-if="activeDataEdgeStateConfirm"[\s\S]*class="editor-canvas__edge-state-confirm"/);
   assert.match(componentSource, /<div class="editor-canvas__confirm-hint editor-canvas__confirm-hint--state">\{\{ t\("nodeCard\.editStateQuestion"\) \}\}<\/div>/);
   assert.match(componentSource, /class="editor-canvas__edge-state-button"/);

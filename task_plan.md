@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 52 in progress
+Phase 53 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -486,12 +486,21 @@ Phase 52 in progress
 - **Status:** completed
 
 ### Phase 52: EditorCanvas Edge Pointer Down Gate
-- [ ] Re-read the formal roadmap, Phase 51 findings, and current edge pointer-down flow before changing code.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is an edge pointer-down action model around locked edit, flow/route delete confirm, data-edge state confirm, selected-edge toggle, selected-edge preview, and selection cleanup policy.
-- [ ] Add focused red tests for the selected edge pointer-down boundary before production changes.
-- [ ] Keep actual `event.preventDefault`, canvas focus, transient cleanup, pending connection cleanup, edge confirm composable calls, selected-edge ref mutation, pending connection point mutation, selection clearing, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
-- [ ] Run focused edge-pointer/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 52.
+- [x] Re-read the formal roadmap, Phase 51 findings, and current edge pointer-down flow before changing code.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is an edge pointer-down action model around locked edit, flow/route delete confirm, data-edge state confirm, selected-edge toggle, selected-edge preview, and selection cleanup policy.
+- [x] Add focused red tests for the selected edge pointer-down boundary before production changes.
+- [x] Keep actual `event.preventDefault`, canvas focus, transient cleanup, pending connection cleanup, edge confirm composable calls, selected-edge ref mutation, pending connection point mutation, selection clearing, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [x] Run focused edge-pointer/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 52.
+- **Status:** completed
+
+### Phase 53: EditorCanvas Pending Creation Menu Gate
+- [ ] Re-read the formal roadmap, Phase 52 findings, and current pending-connection creation menu flow before changing code.
+- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a pending-connection creation-menu action model around locked/no-connection ignore, empty-request ignore, open-menu payload, and connection cleanup policy.
+- [ ] Add focused red tests for the selected pending creation-menu boundary before production changes.
+- [ ] Keep actual canvas point resolution, event coordinates, `open-node-creation-menu` emit, transient cleanup, pending connection cleanup, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [ ] Run focused creation-menu/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 53.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -611,6 +620,9 @@ Phase 52 in progress
 | Overall roadmap cleanup after Phase 51 | About 78% complete after moving generic locked-interaction guard cleanup policy into `canvasLockedInteractionModel.ts`. |
 | P2 `EditorCanvas.vue` cleanup after Phase 51 | About 79% complete after extracting shared locked guard no-op/block decisions while preserving actual cleanup and emit execution in the component. |
 | Current continuation gate after Phase 51 | Total roadmap progress is below 100%, so Phase 52 is automatically opened for the next safe P2 Canvas edge pointer-down boundary. |
+| Overall roadmap cleanup after Phase 52 | About 79% complete after moving edge pointer-down routing into `canvasEdgePointerInteractionModel.ts`. |
+| P2 `EditorCanvas.vue` cleanup after Phase 52 | About 80% complete after extracting locked edge, flow/route confirm, data confirm, and selected-edge toggle policy while preserving actual side effects in the component. |
+| Current continuation gate after Phase 52 | Total roadmap progress is below 100%, so Phase 53 is automatically opened for the next safe P2 Canvas pending creation-menu boundary. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -658,6 +670,7 @@ Phase 52 in progress
 - Phase 44 moves empty-canvas double-click creation routing into `canvasConnectionInteractionModel.ts`; `EditorCanvas.vue` is 3,259 lines because the decision switch is explicit, and it still keeps DOM target inspection, canvas coordinate conversion, and the actual `open-node-creation-menu` emit in the component.
 - Phase 50 moves locked-node pointer capture decisions into `canvasLockedInteractionModel.ts`; `EditorCanvas.vue` keeps DOM target classification, actual event prevention/propagation, focus, transient cleanup, selected-edge cleanup, pending connection cleanup, node selection, and emits in the component.
 - Phase 51 moves generic locked-interaction guard decisions into `canvasLockedInteractionModel.ts`; `EditorCanvas.vue` keeps actual cleanup calls, selected-edge mutation, and locked-attempt emit execution in the component.
+- Phase 52 moves edge pointer-down routing into `canvasEdgePointerInteractionModel.ts`; `EditorCanvas.vue` keeps actual focus, cleanup, confirm composable calls, selected-edge mutation, pending connection point mutation, selection clearing, and locked-attempt emit execution.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

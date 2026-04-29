@@ -464,6 +464,7 @@ import {
   resolveLockedCanvasInteractionGuardAction,
   resolveLockedNodePointerCaptureAction,
 } from "./canvasLockedInteractionModel";
+import { resolveCanvasEdgePointerDownAction } from "./canvasEdgePointerInteractionModel";
 import { resolveSelectedEdgeKeyboardDeleteAction } from "./flowEdgeDeleteModel";
 import {
   buildMinimapNodeModel,
@@ -1706,34 +1707,77 @@ function handleWheel(event: WheelEvent) {
 }
 
 function handleEdgePointerDown(edge: ProjectedCanvasEdge, event: PointerEvent) {
-  if (isGraphEditingLocked()) {
-    event.preventDefault();
-    emit("locked-edit-attempt");
-    return;
+  const edgePointerDownAction = resolveCanvasEdgePointerDownAction({
+    interactionLocked: isGraphEditingLocked(),
+    edge,
+    selectedEdgeId: selectedEdgeId.value,
+  });
+  switch (edgePointerDownAction.type) {
+    case "locked-edit-attempt":
+      if (edgePointerDownAction.preventDefault) {
+        event.preventDefault();
+      }
+      emit("locked-edit-attempt");
+      return;
+    case "start-flow-edge-delete-confirm":
+      applyEdgePointerDownBaseAction(edgePointerDownAction);
+      if (edgePointerDownAction.clearSelectedEdge) {
+        selectedEdgeId.value = null;
+      }
+      if (edgePointerDownAction.clearSelection) {
+        selection.clearSelection();
+      }
+      startFlowEdgeDeleteConfirm(edge, event);
+      return;
+    case "start-data-edge-state-confirm":
+      applyEdgePointerDownBaseAction(edgePointerDownAction);
+      if (edgePointerDownAction.clearSelectedEdge) {
+        selectedEdgeId.value = null;
+      }
+      if (edgePointerDownAction.clearSelection) {
+        selection.clearSelection();
+      }
+      startDataEdgeStateConfirm(edge, event);
+      return;
+    case "clear-selected-edge":
+      applyEdgePointerDownBaseAction(edgePointerDownAction);
+      if (edgePointerDownAction.clearSelectedEdge) {
+        selectedEdgeId.value = null;
+      }
+      if (edgePointerDownAction.clearPendingConnectionPoint) {
+        setPendingConnectionPoint(null);
+      }
+      if (edgePointerDownAction.clearSelection) {
+        selection.clearSelection();
+      }
+      return;
+    case "select-edge":
+      applyEdgePointerDownBaseAction(edgePointerDownAction);
+      selectedEdgeId.value = edgePointerDownAction.selectEdgeId;
+      if (edgePointerDownAction.updatePendingConnectionPoint) {
+        setPendingConnectionPoint(resolveEdgeTargetPoint(edge));
+      }
+      if (edgePointerDownAction.clearSelection) {
+        selection.clearSelection();
+      }
+      return;
   }
-  canvasRef.value?.focus();
-  clearCanvasTransientState();
-  clearPendingConnection();
-  if (edge.kind === "flow" || edge.kind === "route") {
-    selectedEdgeId.value = null;
-    selection.clearSelection();
-    startFlowEdgeDeleteConfirm(edge, event);
-    return;
+}
+
+function applyEdgePointerDownBaseAction(action: {
+  focusCanvas?: true;
+  clearCanvasTransientState?: true;
+  clearPendingConnection?: true;
+}) {
+  if (action.focusCanvas) {
+    canvasRef.value?.focus();
   }
-  if (edge.kind === "data") {
-    selectedEdgeId.value = null;
-    selection.clearSelection();
-    startDataEdgeStateConfirm(edge, event);
-    return;
+  if (action.clearCanvasTransientState) {
+    clearCanvasTransientState();
   }
-  if (selectedEdgeId.value === edge.id) {
-    selectedEdgeId.value = null;
-    setPendingConnectionPoint(null);
-  } else {
-    selectedEdgeId.value = edge.id;
-    setPendingConnectionPoint(resolveEdgeTargetPoint(edge));
+  if (action.clearPendingConnection) {
+    clearPendingConnection();
   }
-  selection.clearSelection();
 }
 
 function handleAnchorPointerDown(anchor: ProjectedCanvasAnchor) {

@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 44 in progress
+Phase 45 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -414,12 +414,21 @@ Phase 44 in progress
 - **Status:** completed
 
 ### Phase 44: EditorCanvas Empty Canvas Double-Click Creation Gate
-- [ ] Re-read the formal roadmap, Phase 43 findings, and current empty-canvas double-click creation flow before changing code.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a creation request model around locked edit, ignored interactive targets, and empty-canvas menu opening.
-- [ ] Add focused red tests for the selected double-click creation boundary before production changes.
-- [ ] Keep actual DOM target inspection, canvas coordinate conversion, `open-node-creation-menu` emit, dropped-file creation, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [x] Re-read the formal roadmap, Phase 43 findings, and current empty-canvas double-click creation flow before changing code.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is a creation request model around locked edit, ignored interactive targets, and empty-canvas menu opening.
+- [x] Add focused red tests for the selected double-click creation boundary before production changes.
+- [x] Keep actual DOM target inspection, canvas coordinate conversion, `open-node-creation-menu` emit, dropped-file creation, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [x] Run focused Canvas creation/structure and connection tests, TypeScript checks, full frontend tests, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 44.
+- **Status:** completed
+
+### Phase 45: EditorCanvas File Drop Creation Gate
+- [ ] Re-read the formal roadmap, Phase 44 findings, and current file-drop creation flow before changing code.
+- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a drop creation request model around locked edit, node/card target ignore, missing file ignore, and create-from-file payload.
+- [ ] Add focused red tests for the selected file-drop creation boundary before production changes.
+- [ ] Keep actual DOM target inspection, `dataTransfer` file lookup/dropEffect mutation, canvas coordinate conversion, `create-node-from-file` emit, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
 - [ ] Run focused Canvas creation/structure and connection tests, TypeScript checks, full frontend tests, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 44.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 45.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -515,6 +524,9 @@ Phase 44 in progress
 | Overall roadmap cleanup after Phase 43 | About 70% complete after moving wheel zoom request projection into `canvasViewportInteractionModel.ts`. |
 | P2 `EditorCanvas.vue` cleanup after Phase 43 | About 71% complete after extracting zero-delta ignore, scale delta, pointer-centered zoom request, and no-rect set-scale fallback while preserving actual viewport mutation in the component. |
 | Current continuation gate after Phase 43 | Total roadmap progress is below 100%, so Phase 44 is automatically opened for the next safe P2 Canvas empty-canvas double-click creation boundary. |
+| Overall roadmap cleanup after Phase 44 | About 71% complete after moving empty-canvas double-click creation routing into `canvasConnectionInteractionModel.ts`. |
+| P2 `EditorCanvas.vue` cleanup after Phase 44 | About 72% complete after extracting locked-edit, ignored-target, and open-menu decisions while preserving DOM target inspection, canvas coordinate conversion, and actual emit execution in the component. |
+| Current continuation gate after Phase 44 | Total roadmap progress is below 100%, so Phase 45 is automatically opened for the next safe P2 Canvas file-drop creation boundary. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -559,6 +571,7 @@ Phase 44 in progress
 - Phase 41 moves node pointer-down drag setup routing into `canvasNodeDragResizeModel.ts`; `EditorCanvas.vue` is 3,233 lines because active-connection completion remains explicitly interleaved, and it still keeps DOM focus, pointer capture, selected-edge cleanup, pending connection cleanup, selection, and `startNodeDrag` execution in the component.
 - Phase 42 moves canvas pointer-down pan/pinch setup routing into `canvasPinchZoomModel.ts`; `EditorCanvas.vue` is 3,255 lines because setup policy wiring is explicit, and it still keeps pointer snapshot storage, pinch startup, DOM focus/preventDefault, pointer capture, transient cleanup, selection clearing, and viewport pan execution in the component.
 - Phase 43 moves wheel zoom request projection into `canvasViewportInteractionModel.ts`; `EditorCanvas.vue` is 3,252 lines and keeps canvas DOM rect lookup, actual `viewport.setViewport` / `viewport.zoomAt` execution, wheel event binding, and viewport draft emits in the component.
+- Phase 44 moves empty-canvas double-click creation routing into `canvasConnectionInteractionModel.ts`; `EditorCanvas.vue` is 3,259 lines because the decision switch is explicit, and it still keeps DOM target inspection, canvas coordinate conversion, and the actual `open-node-creation-menu` emit in the component.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 
@@ -576,6 +589,7 @@ Phase 44 in progress
 | `vue-tsc` flagged an unused `nodeDrag` destructure after the Phase 31 composable extraction | Phase 31 TypeScript verification | Stopped destructuring `nodeDrag` in `EditorCanvas.vue` and updated the structure test to assert that the drag ref stays owned by the composable. |
 | Vue `emit` overloads rejected a union event name from `CanvasConnectionCompletionAction` | Phase 33 TypeScript verification | Kept action projection pure, but emitted through an explicit `switch` in `EditorCanvas.vue` so each overload stays type-safe. |
 | Unescaped backticks in an `rg` shell command triggered `/bin/bash: line 1: emit: command not found` | Phase 33 planning verification | Re-ran the search with single-quoted shell text; no files were changed by the failed read-only command. |
+| Unescaped backticks in an `rg` shell command triggered `/bin/bash: line 1: EditorCanvas.vue: command not found` | Phase 44 progress/status inspection | The command was read-only, produced enough usable output, and no files were changed by the failed shell interpolation. |
 | Structure tests still expected local `EditorCanvas.vue` auto-snap helper names after the resolver extraction | Phase 34 focused green run | Updated the assertions to lock the new `canvasConnectionInteractionModel.ts` resolver boundary instead of the previous local helper layout. |
 | First Phase 38 browser screenshot captured only the app background | Phase 38 browser smoke | Re-ran headless Chrome with `--virtual-time-budget=7000`; the second screenshot rendered the workspace normally. |
 | Playwright package was unavailable for the Phase 38 screenshot helper | Phase 38 browser smoke | Used the installed `google-chrome` headless screenshot command instead. |

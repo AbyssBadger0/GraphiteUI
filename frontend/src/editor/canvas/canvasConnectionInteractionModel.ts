@@ -45,6 +45,11 @@ export type CanvasPendingConnectionCreationMenuRequest = {
   clearSelectedEdge: true;
 };
 
+export type CanvasDoubleClickCreationAction =
+  | { type: "locked-edit-attempt" }
+  | { type: "ignore-target" }
+  | { type: "open-creation-menu"; payload: CanvasNodeCreationMenuPayload };
+
 export type CanvasConnectionPointerUpAction =
   | { type: "clear-connection-interaction" }
   | { type: "complete-connection"; targetAnchor: ProjectedCanvasAnchor }
@@ -159,6 +164,31 @@ export function resolveCanvasPendingConnectionCreationMenuRequest(
     payload,
     clearConnectionInteraction: true,
     clearSelectedEdge: true,
+  };
+}
+
+export function resolveCanvasDoubleClickCreationAction(input: {
+  interactionLocked: boolean;
+  isIgnoredTarget: boolean;
+  position: GraphPosition;
+  clientX: number;
+  clientY: number;
+}): CanvasDoubleClickCreationAction {
+  if (input.interactionLocked) {
+    return { type: "locked-edit-attempt" };
+  }
+
+  if (input.isIgnoredTarget) {
+    return { type: "ignore-target" };
+  }
+
+  return {
+    type: "open-creation-menu",
+    payload: {
+      position: input.position,
+      clientX: input.clientX,
+      clientY: input.clientY,
+    },
   };
 }
 

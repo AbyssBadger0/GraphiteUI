@@ -479,6 +479,7 @@ import {
   resolveCanvasAnchorPointerDownAction,
   resolveCanvasConnectionPointerMoveRequest,
   resolveCanvasConnectionPointerUpAction,
+  resolveCanvasDoubleClickCreationAction,
   resolveCanvasNodePointerDownConnectionAction,
   resolveCanvasPendingConnectionCreationMenuRequest,
   type CanvasAnchorPointerDownAction,
@@ -1253,25 +1254,31 @@ function handleCanvasPointerUp(event: PointerEvent) {
 }
 
 function handleCanvasDoubleClick(event: MouseEvent) {
-  if (isGraphEditingLocked()) {
-    emit("locked-edit-attempt");
-    return;
-  }
   const target = event.target as HTMLElement | null;
-  if (
-    target?.closest(
-      ".editor-canvas__node, .node-card, button, input, textarea, select, .el-input, .el-select, .el-switch",
-    )
-  ) {
-    return;
-  }
-
-  const position = resolveCanvasPoint(event);
-  emit("open-node-creation-menu", {
-    position,
+  const doubleClickCreationAction = resolveCanvasDoubleClickCreationAction({
+    interactionLocked: isGraphEditingLocked(),
+    isIgnoredTarget: isIgnoredCanvasDoubleClickTarget(target),
+    position: resolveCanvasPoint(event),
     clientX: event.clientX,
     clientY: event.clientY,
   });
+  switch (doubleClickCreationAction.type) {
+    case "locked-edit-attempt":
+      emit("locked-edit-attempt");
+      return;
+    case "ignore-target":
+      return;
+    case "open-creation-menu":
+      emit("open-node-creation-menu", doubleClickCreationAction.payload);
+  }
+}
+
+function isIgnoredCanvasDoubleClickTarget(target: HTMLElement | null) {
+  return Boolean(
+    target?.closest(
+      ".editor-canvas__node, .node-card, button, input, textarea, select, .el-input, .el-select, .el-switch",
+    ),
+  );
 }
 
 function resolveNodeIdAtPointer(event: PointerEvent) {

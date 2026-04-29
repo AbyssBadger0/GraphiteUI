@@ -2,11 +2,67 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  resolveNodeResizePointerDownAction,
   resolveNodeDragMove,
   resolveNodeResizeDragMove,
   type CanvasNodeDragState,
   type CanvasNodeResizeDragState,
 } from "./canvasNodeDragResizeModel.ts";
+
+test("resolveNodeResizePointerDownAction resolves resize pointer-down routing", () => {
+  const setupPolicy = {
+    focusCanvas: true,
+    setPointerCapture: true,
+    clearCanvasTransientState: true,
+    clearPendingConnection: true,
+    cancelScheduledDragFrame: true,
+    clearSelectedEdge: true,
+    selectNodeId: "node-a",
+  } as const;
+
+  assert.deepEqual(
+    resolveNodeResizePointerDownAction({
+      nodeId: "node-a",
+      nodeExists: false,
+      interactionLocked: false,
+      hasActiveConnection: false,
+    }),
+    { type: "ignore-missing-node" },
+  );
+  assert.deepEqual(
+    resolveNodeResizePointerDownAction({
+      nodeId: "node-a",
+      nodeExists: true,
+      interactionLocked: true,
+      hasActiveConnection: false,
+    }),
+    {
+      type: "locked-edit-attempt",
+      preventDefault: true,
+    },
+  );
+  assert.deepEqual(
+    resolveNodeResizePointerDownAction({
+      nodeId: "node-a",
+      nodeExists: true,
+      interactionLocked: false,
+      hasActiveConnection: true,
+    }),
+    { type: "ignore-active-connection" },
+  );
+  assert.deepEqual(
+    resolveNodeResizePointerDownAction({
+      nodeId: "node-a",
+      nodeExists: true,
+      interactionLocked: false,
+      hasActiveConnection: false,
+    }),
+    {
+      type: "start-resize",
+      ...setupPolicy,
+    },
+  );
+});
 
 test("resolveNodeDragMove waits for the drag activation threshold", () => {
   const drag: CanvasNodeDragState = {

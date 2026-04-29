@@ -207,10 +207,16 @@ test("EditorCanvas exposes invisible corner hotzones for real node resizing", ()
   assert.match(componentSource, /aria-hidden="true"/);
   assert.match(componentSource, /@pointerdown\.stop\.prevent="handleNodeResizePointerDown\(nodeId, handle, \$event\)"/);
   assert.match(componentSource, /function handleNodeResizePointerDown\(nodeId: string, handle: NodeResizeHandle, event: PointerEvent\)/);
+  assert.match(componentSource, /const nodeResizePointerDownAction = resolveNodeResizePointerDownAction\(\{[\s\S]*nodeId,[\s\S]*nodeExists: Boolean\(node\),[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*hasActiveConnection: Boolean\(activeConnection\.value\),[\s\S]*\}\);/);
+  assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*event\.preventDefault\(\);[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);
+  assert.match(componentSource, /case "ignore-active-connection":[\s\S]*return;/);
+  assert.match(componentSource, /case "start-resize":[\s\S]*startNodeResizeDrag\(\{/);
   assert.match(componentSource, /function isNodeResizeHotzoneEnabled\(\) \{[\s\S]*return !isGraphEditingLocked\(\) && !activeConnection\.value;/);
   assert.match(componentSource, /if \(handleNodeDragResizePointerMove\(event\)\) \{[\s\S]*return;/);
   assert.match(canvasNodeDragResizeSource, /const resizeResult = resolveNodeResizeDragMove\(\{[\s\S]*drag: nodeResizeDrag\.value,[\s\S]*viewportScale: input\.viewportScale\(\),/);
   assert.match(canvasNodeDragResizeSource, /const dragResult = resolveNodeDragMove\(\{[\s\S]*drag: nodeDrag\.value,[\s\S]*viewportScale: input\.viewportScale\(\),/);
+  assert.match(canvasNodeDragResizeModelSource, /export type CanvasNodeResizePointerDownAction/);
+  assert.match(canvasNodeDragResizeModelSource, /export function resolveNodeResizePointerDownAction/);
   assert.match(canvasNodeDragResizeModelSource, /export function resolveNodeDragMove/);
   assert.match(canvasNodeDragResizeModelSource, /export function resolveNodeResizeDragMove/);
   assert.doesNotMatch(componentSource, /function isNodeResizeHotzoneEnabled\(nodeId: string\)/);

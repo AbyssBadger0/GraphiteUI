@@ -404,6 +404,10 @@ import {
 } from "./nodeResize.ts";
 import { useCanvasNodeDragResize } from "./useCanvasNodeDragResize.ts";
 import {
+  resolveNodeResizePointerDownAction,
+  type CanvasNodeResizePointerDownAction,
+} from "./canvasNodeDragResizeModel.ts";
+import {
   buildEdgeVisibilityModeOptions,
   buildForceVisibleProjectedEdgeIds,
   filterProjectedEdgesForVisibilityMode,
@@ -1408,45 +1412,74 @@ function handleNodePointerDown(nodeId: string, event: PointerEvent) {
 
 function handleNodeResizePointerDown(nodeId: string, handle: NodeResizeHandle, event: PointerEvent) {
   const node = props.document.nodes[nodeId];
-  if (!node) {
-    return;
+  const nodeResizePointerDownAction = resolveNodeResizePointerDownAction({
+    nodeId,
+    nodeExists: Boolean(node),
+    interactionLocked: isGraphEditingLocked(),
+    hasActiveConnection: Boolean(activeConnection.value),
+  });
+  switch (nodeResizePointerDownAction.type) {
+    case "ignore-missing-node":
+      return;
+    case "locked-edit-attempt":
+      if (nodeResizePointerDownAction.preventDefault) {
+        event.preventDefault();
+      }
+      emit("locked-edit-attempt");
+      return;
+    case "ignore-active-connection":
+      return;
+    case "start-resize": {
+      if (!node) {
+        return;
+      }
+      const captureElement = applyNodeResizePointerDownSetup(nodeResizePointerDownAction, event);
+      startNodeResizeDrag({
+        nodeId,
+        pointerId: event.pointerId,
+        handle,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        originPosition: { ...node.ui.position },
+        originSize: resolveNodeRenderedSize({
+          nodeId,
+          node,
+          measuredNodeSizes: measuredNodeSizes.value,
+        }),
+        captureElement,
+        moved: false,
+      });
+      return;
+    }
   }
-  if (isGraphEditingLocked()) {
-    event.preventDefault();
-    emit("locked-edit-attempt");
-    return;
-  }
-  if (activeConnection.value) {
-    return;
-  }
+}
 
-  canvasRef.value?.focus();
+function applyNodeResizePointerDownSetup(
+  action: Extract<CanvasNodeResizePointerDownAction, { type: "start-resize" }>,
+  event: PointerEvent,
+) {
+  if (action.focusCanvas) {
+    canvasRef.value?.focus();
+  }
   let captureElement: HTMLElement | null = null;
-  if (event.currentTarget instanceof HTMLElement) {
+  if (action.setPointerCapture && event.currentTarget instanceof HTMLElement) {
     captureElement = event.currentTarget;
     event.currentTarget.setPointerCapture(event.pointerId);
   }
-
-  clearCanvasTransientState();
-  clearPendingConnection();
-  cancelScheduledDragFrame();
-  selectedEdgeId.value = null;
-  selection.selectNode(nodeId);
-  startNodeResizeDrag({
-    nodeId,
-    pointerId: event.pointerId,
-    handle,
-    startClientX: event.clientX,
-    startClientY: event.clientY,
-    originPosition: { ...node.ui.position },
-    originSize: resolveNodeRenderedSize({
-      nodeId,
-      node,
-      measuredNodeSizes: measuredNodeSizes.value,
-    }),
-    captureElement,
-    moved: false,
-  });
+  if (action.clearCanvasTransientState) {
+    clearCanvasTransientState();
+  }
+  if (action.clearPendingConnection) {
+    clearPendingConnection();
+  }
+  if (action.cancelScheduledDragFrame) {
+    cancelScheduledDragFrame();
+  }
+  if (action.clearSelectedEdge) {
+    selectedEdgeId.value = null;
+  }
+  selection.selectNode(action.selectNodeId);
+  return captureElement;
 }
 
 function isNodeResizeHotzoneEnabled() {

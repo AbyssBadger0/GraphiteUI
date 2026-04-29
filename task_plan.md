@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 48 in progress
+Phase 49 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -450,12 +450,21 @@ Phase 48 in progress
 - **Status:** completed
 
 ### Phase 48: EditorCanvas Edge Visibility Mode Click Gate
-- [ ] Re-read the formal roadmap, Phase 47 findings, and current edge visibility toolbar flow before changing code.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is an edge-visibility click action model around locked edit, same-mode no-op, and mode-change cleanup policy.
-- [ ] Add focused red tests for the selected edge visibility boundary before production changes.
-- [ ] Keep actual toolbar event binding, locked-interaction guard side effects, edge mode ref mutation, selected-edge clearing, pending connection clearing, transient canvas cleanup, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
-- [ ] Run focused edge visibility/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 48.
+- [x] Re-read the formal roadmap, Phase 47 findings, and current edge visibility toolbar flow before changing code.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is an edge-visibility click action model around locked edit, same-mode no-op, and mode-change cleanup policy.
+- [x] Add focused red tests for the selected edge visibility boundary before production changes.
+- [x] Keep actual toolbar event binding, locked-interaction guard side effects, edge mode ref mutation, selected-edge clearing, pending connection clearing, transient canvas cleanup, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [x] Run focused edge visibility/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 48.
+- **Status:** completed
+
+### Phase 49: EditorCanvas Lock Banner Click Gate
+- [ ] Re-read the formal roadmap, Phase 48 findings, and current lock-banner click flow before changing code.
+- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a lock-banner action model around missing current run node versus opening human review for the current run node.
+- [ ] Add focused red tests for the selected lock-banner boundary before production changes.
+- [ ] Keep actual button event binding, `locked-edit-attempt` emit, `open-human-review` emit, lock styling, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [ ] Run focused run-presentation/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 49.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -563,6 +572,9 @@ Phase 48 in progress
 | Overall roadmap cleanup after Phase 47 | About 74% complete after moving selected-edge keyboard delete routing into `flowEdgeDeleteModel.ts`. |
 | P2 `EditorCanvas.vue` cleanup after Phase 47 | About 75% complete after extracting editable-target, locked-edit, missing-edge, non-deletable-edge, and flow/route keyboard delete decisions while preserving actual `preventDefault`, emits, and state cleanup in the component. |
 | Current continuation gate after Phase 47 | Total roadmap progress is below 100%, so Phase 48 is automatically opened for the next safe P2 Canvas edge visibility toolbar click boundary. |
+| Overall roadmap cleanup after Phase 48 | About 75% complete after moving edge visibility toolbar click routing into `edgeVisibilityModel.ts`. |
+| P2 `EditorCanvas.vue` cleanup after Phase 48 | About 76% complete after extracting locked-edit, same-mode no-op, and mode-change cleanup policy while preserving actual toolbar event binding and cleanup side effects in the component. |
+| Current continuation gate after Phase 48 | Total roadmap progress is below 100%, so Phase 49 is automatically opened for the next safe P2 Canvas lock-banner click boundary. |
 
 ## Decisions Made
 | Decision | Rationale |

@@ -413,6 +413,7 @@ import {
   buildEdgeVisibilityModeOptions,
   buildForceVisibleProjectedEdgeIds,
   filterProjectedEdgesForVisibilityMode,
+  resolveEdgeVisibilityModeClickAction,
   shouldShowOutputFlowHandle,
   type EdgeVisibilityMode,
 } from "./edgeVisibilityModel";
@@ -903,22 +904,30 @@ function isProjectedEdgeVisible(edge: ProjectedCanvasEdge) {
   return visibleProjectedEdgeIds.value.has(edge.id);
 }
 
-function setEdgeVisibilityMode(mode: EdgeVisibilityMode) {
-  if (edgeVisibilityMode.value === mode) {
-    return;
-  }
-
-  edgeVisibilityMode.value = mode;
-  selectedEdgeId.value = null;
-  clearPendingConnection();
-  clearCanvasTransientState();
-}
-
 function handleEdgeVisibilityModeClick(mode: EdgeVisibilityMode) {
-  if (guardLockedCanvasInteraction()) {
-    return;
+  const edgeVisibilityModeClickAction = resolveEdgeVisibilityModeClickAction({
+    interactionLocked: isGraphEditingLocked(),
+    currentMode: edgeVisibilityMode.value,
+    requestedMode: mode,
+  });
+  switch (edgeVisibilityModeClickAction.type) {
+    case "locked-edit-attempt":
+      guardLockedCanvasInteraction();
+      return;
+    case "ignore-same-mode":
+      return;
+    case "change-mode":
+      edgeVisibilityMode.value = edgeVisibilityModeClickAction.mode;
+      if (edgeVisibilityModeClickAction.clearSelectedEdge) {
+        selectedEdgeId.value = null;
+      }
+      if (edgeVisibilityModeClickAction.clearPendingConnection) {
+        clearPendingConnection();
+      }
+      if (edgeVisibilityModeClickAction.clearCanvasTransientState) {
+        clearCanvasTransientState();
+      }
   }
-  setEdgeVisibilityMode(mode);
 }
 
 watch(projectedEdges, (edges) => {

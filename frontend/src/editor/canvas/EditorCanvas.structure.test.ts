@@ -450,6 +450,7 @@ test("EditorCanvas treats awaiting-human current node as a persistent review nod
 test("EditorCanvas keeps paused human-review graphs viewable but read-only", () => {
   const canvasConnectionInteractionModelSource = readCanvasConnectionInteractionModelSource();
   const canvasEdgeInteractionsSource = readCanvasEdgeInteractionsSource();
+  const edgeVisibilityModelSource = readEdgeVisibilityModelSource();
   const flowEdgeDeleteModelSource = readFlowEdgeDeleteModelSource();
 
   assert.match(componentSource, /interactionLocked\?: boolean;/);
@@ -484,7 +485,9 @@ test("EditorCanvas keeps paused human-review graphs viewable but read-only", () 
   assert.match(componentSource, /function isLockedNodeEditTarget\(target: EventTarget \| null\)/);
   assert.match(componentSource, /function guardLockedCanvasInteraction\(\)/);
   assert.match(componentSource, /@click\.stop="handleEdgeVisibilityModeClick\(option\.mode\)"/);
-  assert.match(componentSource, /function handleEdgeVisibilityModeClick\(mode: EdgeVisibilityMode\)[\s\S]*if \(guardLockedCanvasInteraction\(\)\) \{[\s\S]*return;/);
+  assert.match(edgeVisibilityModelSource, /export function resolveEdgeVisibilityModeClickAction/);
+  assert.match(componentSource, /const edgeVisibilityModeClickAction = resolveEdgeVisibilityModeClickAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*currentMode: edgeVisibilityMode\.value,[\s\S]*requestedMode: mode,[\s\S]*\}\);/);
+  assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*guardLockedCanvasInteraction\(\);[\s\S]*return;/);
   assert.match(componentSource, /watch\(\s*\(\) => props\.interactionLocked,[\s\S]*clearCanvasTransientState\(\);/);
   assert.match(componentSource, /\[data-state-editor-trigger='true'\]/);
   assert.match(componentSource, /isLockedNodeEditTarget\(target\)[\s\S]*emit\("locked-edit-attempt"\);/);
@@ -663,7 +666,7 @@ test("EditorCanvas renders output flow hotspots only for allowed modes and inter
 test("EditorCanvas exposes a top-left capsule toolbar for edge visibility modes", () => {
   const edgeVisibilityModelSource = readEdgeVisibilityModelSource();
 
-  assert.match(componentSource, /import \{[\s\S]*buildEdgeVisibilityModeOptions,[\s\S]*buildForceVisibleProjectedEdgeIds,[\s\S]*filterProjectedEdgesForVisibilityMode,[\s\S]*shouldShowOutputFlowHandle,[\s\S]*type EdgeVisibilityMode[\s\S]*\} from "\.\/edgeVisibilityModel";/);
+  assert.match(componentSource, /import \{[\s\S]*buildEdgeVisibilityModeOptions,[\s\S]*buildForceVisibleProjectedEdgeIds,[\s\S]*filterProjectedEdgesForVisibilityMode,[\s\S]*resolveEdgeVisibilityModeClickAction,[\s\S]*shouldShowOutputFlowHandle,[\s\S]*type EdgeVisibilityMode[\s\S]*\} from "\.\/edgeVisibilityModel";/);
   assert.match(componentSource, /const edgeVisibilityModeOptions = computed\(\(\) => \{[\s\S]*return buildEdgeVisibilityModeOptions\(\);/);
   assert.match(componentSource, /const edgeVisibilityMode = ref<EdgeVisibilityMode>\("smart"\);/);
   assert.doesNotMatch(componentSource, /const edgeVisibilityRelatedNodeIds = computed\(\(\) =>/);
@@ -677,6 +680,8 @@ test("EditorCanvas exposes a top-left capsule toolbar for edge visibility modes"
   assert.match(componentSource, /class="editor-canvas__edge-view-toolbar"/);
   assert.match(componentSource, /v-for="option in edgeVisibilityModeOptions"/);
   assert.match(componentSource, /handleEdgeVisibilityModeClick\(option\.mode\)/);
+  assert.match(componentSource, /case "change-mode":[\s\S]*edgeVisibilityMode\.value = edgeVisibilityModeClickAction\.mode;[\s\S]*selectedEdgeId\.value = null;[\s\S]*clearPendingConnection\(\);[\s\S]*clearCanvasTransientState\(\);/);
+  assert.doesNotMatch(componentSource, /function setEdgeVisibilityMode\(mode: EdgeVisibilityMode\)/);
   assert.match(componentSource, /\{\{ option\.label \}\}/);
   assert.match(componentSource, /v-show="isProjectedEdgeVisible\(edge\)"/);
   assert.match(

@@ -1246,10 +1246,14 @@ test("EditorCanvas supports two-finger pinch zoom on mobile without changing sin
 });
 
 test("EditorCanvas captures node drags and batches drag writes with animation frames", () => {
+  const canvasNodeDragResizeModelSource = readCanvasNodeDragResizeModelSource();
   const canvasNodeDragResizeSource = readCanvasNodeDragResizeSource();
 
-  assert.match(componentSource, /if \(!preserveInlineEditorFocus\) \{[\s\S]*event\.preventDefault\(\);[\s\S]*\}/);
-  assert.match(componentSource, /if \(!preserveInlineEditorFocus\) \{[\s\S]*event\.currentTarget\.setPointerCapture\(event\.pointerId\);[\s\S]*\}/);
+  assert.match(canvasNodeDragResizeModelSource, /export type CanvasNodePointerDownAction/);
+  assert.match(canvasNodeDragResizeModelSource, /export function resolveNodePointerDownAction/);
+  assert.match(componentSource, /const nodePointerDownAction = resolveNodePointerDownAction\(\{[\s\S]*nodeId,[\s\S]*nodeExists: Boolean\(node\),[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*preserveInlineEditorFocus,[\s\S]*\}\);/);
+  assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*event\.preventDefault\(\);[\s\S]*canvasRef\.value\?\.focus\(\);[\s\S]*clearCanvasTransientState\(\);[\s\S]*selection\.selectNode\(nodePointerDownAction\.selectNodeId\);[\s\S]*return;/);
+  assert.match(componentSource, /function applyNodePointerDownDragSetup[\s\S]*if \(action\.preventDefault\) \{[\s\S]*event\.preventDefault\(\);[\s\S]*if \(action\.setPointerCapture && event\.currentTarget instanceof HTMLElement\) \{[\s\S]*event\.currentTarget\.setPointerCapture\(event\.pointerId\);/);
   assert.match(componentSource, /let scheduledDragFrame: number \| null = null;/);
   assert.match(componentSource, /function scheduleDragFrame/);
   assert.match(componentSource, /window\.requestAnimationFrame\(\(\) => \{/);
@@ -1293,6 +1297,7 @@ test("EditorCanvas suppresses the residual click after a node drag so inline edi
   assert.match(canvasNodeDragResizeSource, /event\.preventDefault\(\);/);
   assert.match(canvasNodeDragResizeSource, /event\.stopPropagation\(\);/);
   assert.match(componentSource, /const preserveInlineEditorFocus =[\s\S]*target\.closest\("\[data-text-editor-trigger='true'\]"\)/);
-  assert.match(componentSource, /if \(!preserveInlineEditorFocus\) \{\s*canvasRef\.value\?\.focus\(\);\s*event\.preventDefault\(\);\s*\}/);
+  assert.match(componentSource, /resolveNodePointerDownAction\(\{[\s\S]*preserveInlineEditorFocus,[\s\S]*\}\);/);
+  assert.match(componentSource, /function applyNodePointerDownDragSetup[\s\S]*if \(action\.focusCanvas\) \{[\s\S]*canvasRef\.value\?\.focus\(\);[\s\S]*if \(action\.preventDefault\) \{[\s\S]*event\.preventDefault\(\);/);
   assert.match(canvasNodeDragResizeSource, /if \(nodeDrag\.value\.captureElement && !nodeDrag\.value\.captureElement\.hasPointerCapture\(pointer\.pointerId\)\) \{[\s\S]*nodeDrag\.value\.captureElement\.setPointerCapture\(pointer\.pointerId\);[\s\S]*\}/);
 });

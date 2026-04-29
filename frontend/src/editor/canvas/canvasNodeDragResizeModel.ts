@@ -31,6 +31,17 @@ export type CanvasNodeResizeDragState = {
   moved: boolean;
 };
 
+type CanvasNodePointerDownDragSetupPolicy = {
+  focusCanvas: boolean;
+  preventDefault: boolean;
+  setPointerCapture: boolean;
+  clearCanvasTransientState: true;
+  clearPendingConnection: true;
+  cancelScheduledDragFrame: true;
+  clearSelectedEdge: true;
+  selectNodeId: string;
+};
+
 type CanvasNodeResizePointerDownSetupPolicy = {
   focusCanvas: true;
   setPointerCapture: true;
@@ -40,6 +51,17 @@ type CanvasNodeResizePointerDownSetupPolicy = {
   clearSelectedEdge: true;
   selectNodeId: string;
 };
+
+export type CanvasNodePointerDownAction =
+  | { type: "ignore-missing-node" }
+  | {
+      type: "locked-edit-attempt";
+      preventDefault: true;
+      focusCanvas: true;
+      clearCanvasTransientState: true;
+      selectNodeId: string;
+    }
+  | ({ type: "start-drag" } & CanvasNodePointerDownDragSetupPolicy);
 
 export type CanvasNodeResizePointerDownAction =
   | { type: "ignore-missing-node" }
@@ -58,6 +80,39 @@ export type CanvasNodeResizeDragMoveResult = {
   update: { nodeId: string; position: GraphPosition; size: GraphNodeSize } | null;
   activated: boolean;
 };
+
+export function resolveNodePointerDownAction(input: {
+  nodeId: string;
+  nodeExists: boolean;
+  interactionLocked: boolean;
+  preserveInlineEditorFocus: boolean;
+}): CanvasNodePointerDownAction {
+  if (!input.nodeExists) {
+    return { type: "ignore-missing-node" };
+  }
+
+  if (input.interactionLocked) {
+    return {
+      type: "locked-edit-attempt",
+      preventDefault: true,
+      focusCanvas: true,
+      clearCanvasTransientState: true,
+      selectNodeId: input.nodeId,
+    };
+  }
+
+  return {
+    type: "start-drag",
+    focusCanvas: !input.preserveInlineEditorFocus,
+    preventDefault: !input.preserveInlineEditorFocus,
+    setPointerCapture: !input.preserveInlineEditorFocus,
+    clearCanvasTransientState: true,
+    clearPendingConnection: true,
+    cancelScheduledDragFrame: true,
+    clearSelectedEdge: true,
+    selectNodeId: input.nodeId,
+  };
+}
 
 export function resolveNodeResizePointerDownAction(input: {
   nodeId: string;

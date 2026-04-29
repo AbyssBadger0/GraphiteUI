@@ -404,7 +404,9 @@ import {
 } from "./nodeResize.ts";
 import { useCanvasNodeDragResize } from "./useCanvasNodeDragResize.ts";
 import {
+  resolveNodePointerDownAction,
   resolveNodeResizePointerDownAction,
+  type CanvasNodePointerDownAction,
   type CanvasNodeResizePointerDownAction,
 } from "./canvasNodeDragResizeModel.ts";
 import {
@@ -1349,19 +1351,33 @@ function handleCanvasDrop(event: DragEvent) {
 
 function handleNodePointerDown(nodeId: string, event: PointerEvent) {
   const node = props.document.nodes[nodeId];
-  if (!node) {
-    return;
-  }
-  if (isGraphEditingLocked()) {
-    event.preventDefault();
-    canvasRef.value?.focus();
-    clearCanvasTransientState();
-    selection.selectNode(nodeId);
-    return;
-  }
   const target = event.target;
   const preserveInlineEditorFocus =
     target instanceof HTMLElement && Boolean(target.closest("[data-text-editor-trigger='true']"));
+  const nodePointerDownAction = resolveNodePointerDownAction({
+    nodeId,
+    nodeExists: Boolean(node),
+    interactionLocked: isGraphEditingLocked(),
+    preserveInlineEditorFocus,
+  });
+  switch (nodePointerDownAction.type) {
+    case "ignore-missing-node":
+      return;
+    case "locked-edit-attempt":
+      if (nodePointerDownAction.preventDefault) {
+        event.preventDefault();
+      }
+      if (nodePointerDownAction.focusCanvas) {
+        canvasRef.value?.focus();
+      }
+      if (nodePointerDownAction.clearCanvasTransientState) {
+        clearCanvasTransientState();
+      }
+      selection.selectNode(nodePointerDownAction.selectNodeId);
+      return;
+    case "start-drag":
+      break;
+  }
   if (activeConnection.value) {
     const connectionNodePointerDownAction = resolveCanvasNodePointerDownConnectionAction({
       connection: activeConnection.value,
@@ -1382,22 +1398,10 @@ function handleNodePointerDown(nodeId: string, event: PointerEvent) {
         break;
     }
   }
-  if (!preserveInlineEditorFocus) {
-    canvasRef.value?.focus();
-    event.preventDefault();
+  if (!node) {
+    return;
   }
-  let captureElement: HTMLElement | null = null;
-  if (event.currentTarget instanceof HTMLElement) {
-    captureElement = event.currentTarget;
-    if (!preserveInlineEditorFocus) {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    }
-  }
-  clearCanvasTransientState();
-  clearPendingConnection();
-  cancelScheduledDragFrame();
-  selectedEdgeId.value = null;
-  selection.selectNode(nodeId);
+  const captureElement = applyNodePointerDownDragSetup(nodePointerDownAction, event);
   startNodeDrag({
     nodeId,
     pointerId: event.pointerId,
@@ -1408,6 +1412,37 @@ function handleNodePointerDown(nodeId: string, event: PointerEvent) {
     captureElement,
     moved: false,
   });
+}
+
+function applyNodePointerDownDragSetup(
+  action: Extract<CanvasNodePointerDownAction, { type: "start-drag" }>,
+  event: PointerEvent,
+) {
+  if (action.focusCanvas) {
+    canvasRef.value?.focus();
+  }
+  if (action.preventDefault) {
+    event.preventDefault();
+  }
+  let captureElement: HTMLElement | null = null;
+  if (action.setPointerCapture && event.currentTarget instanceof HTMLElement) {
+    captureElement = event.currentTarget;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  if (action.clearCanvasTransientState) {
+    clearCanvasTransientState();
+  }
+  if (action.clearPendingConnection) {
+    clearPendingConnection();
+  }
+  if (action.cancelScheduledDragFrame) {
+    cancelScheduledDragFrame();
+  }
+  if (action.clearSelectedEdge) {
+    selectedEdgeId.value = null;
+  }
+  selection.selectNode(action.selectNodeId);
+  return captureElement;
 }
 
 function handleNodeResizePointerDown(nodeId: string, handle: NodeResizeHandle, event: PointerEvent) {

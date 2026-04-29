@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 41 in progress
+Phase 42 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -387,12 +387,21 @@ Phase 41 in progress
 - **Status:** completed
 
 ### Phase 41: EditorCanvas Node Pointer-Down Drag Setup Gate
-- [ ] Re-read the formal roadmap, Phase 40 findings, and current node pointer-down drag setup flow before changing code.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a node pointer-down action model around missing node, locked edit, active connection continuation/completion, inline-editor focus preservation, and start-drag setup.
-- [ ] Add focused red tests for the selected node pointer-down boundary before production changes.
-- [ ] Keep actual DOM focus/preventDefault, pointer capture, capture element storage, selection, pending connection cleanup, scheduled-frame cancellation, drag composable execution, and graph mutation emits behaviorally stable.
-- [ ] Run focused Canvas drag/resize and connection tests, TypeScript checks, full frontend tests, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 41.
+- [x] Re-read the formal roadmap, Phase 40 findings, and current node pointer-down drag setup flow before changing code.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is a node pointer-down action model around missing node, locked edit, active connection continuation/completion, inline-editor focus preservation, and start-drag setup.
+- [x] Add focused red tests for the selected node pointer-down boundary before production changes.
+- [x] Keep actual DOM focus/preventDefault, pointer capture, capture element storage, selection, pending connection cleanup, scheduled-frame cancellation, drag composable execution, and graph mutation emits behaviorally stable.
+- [x] Run focused Canvas drag/resize and connection tests, TypeScript checks, full frontend tests, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 41.
+- **Status:** completed
+
+### Phase 42: EditorCanvas Canvas Pointer-Down Pan Setup Gate
+- [ ] Re-read the formal roadmap, Phase 41 findings, and current canvas pointer-down pan/pinch setup flow before changing code.
+- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a canvas pointer-down action model around touch pinch start versus pan start setup policy.
+- [ ] Add focused red tests for the selected canvas pointer-down boundary before production changes.
+- [ ] Keep actual DOM focus/preventDefault, pointer capture, pointer snapshot storage, selection clearing, pending connection cleanup, pinch zoom startup, viewport pan execution, and graph mutation emits behaviorally stable.
+- [ ] Run focused Canvas viewport/pinch/drag/connection tests, TypeScript checks, full frontend tests, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 42.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -479,6 +488,9 @@ Phase 41 in progress
 | Overall roadmap cleanup after Phase 40 | About 67% complete after moving node-resize pointer-down routing into `canvasNodeDragResizeModel.ts`. |
 | P2 `EditorCanvas.vue` cleanup after Phase 40 | About 66% complete after extracting missing-node, locked-edit, active-connection, and start-resize decisions while preserving pointer capture and resize drag creation in the component. |
 | Current continuation gate after Phase 40 | Total roadmap progress is below 100%, so Phase 41 is automatically opened for the next safe P2 Canvas node pointer-down drag setup boundary. |
+| Overall roadmap cleanup after Phase 41 | About 68% complete after moving node pointer-down drag setup routing into `canvasNodeDragResizeModel.ts`. |
+| P2 `EditorCanvas.vue` cleanup after Phase 41 | About 68% complete after extracting missing-node, locked-edit, inline-editor focus preservation, and start-drag setup policy while preserving active-connection completion and drag execution in the component. |
+| Current continuation gate after Phase 41 | Total roadmap progress is below 100%, so Phase 42 is automatically opened for the next safe P2 Canvas canvas pointer-down pan/pinch setup boundary. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -520,6 +532,7 @@ Phase 41 in progress
 - Phase 38 moves active-connection pointer-move preview requests into `canvasConnectionInteractionModel.ts`; `EditorCanvas.vue` stays at 3,144 lines and keeps DOM hit-testing, pointer-to-canvas conversion, auto-snap resolution inputs, RAF scheduling, and graph mutation emits in the component.
 - Phase 39 moves anchor pointer-down routing into `canvasConnectionInteractionModel.ts`; `EditorCanvas.vue` is 3,165 lines because explicit setup policy wiring is more verbose, and it still keeps DOM focus, selection, transient cleanup, text-selection clearing, start/toggle execution, and completion emits in the component.
 - Phase 40 moves node-resize pointer-down routing into `canvasNodeDragResizeModel.ts`; `EditorCanvas.vue` is 3,198 lines because setup policy wiring is explicit, and it still keeps DOM focus, pointer capture, selected-edge cleanup, selection, rendered-size lookup, and resize drag creation in the component.
+- Phase 41 moves node pointer-down drag setup routing into `canvasNodeDragResizeModel.ts`; `EditorCanvas.vue` is 3,233 lines because active-connection completion remains explicitly interleaved, and it still keeps DOM focus, pointer capture, selected-edge cleanup, pending connection cleanup, selection, and `startNodeDrag` execution in the component.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

@@ -2,12 +2,78 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  resolveNodePointerDownAction,
   resolveNodeResizePointerDownAction,
   resolveNodeDragMove,
   resolveNodeResizeDragMove,
   type CanvasNodeDragState,
   type CanvasNodeResizeDragState,
 } from "./canvasNodeDragResizeModel.ts";
+
+test("resolveNodePointerDownAction resolves node drag pointer-down routing", () => {
+  const setupPolicy = {
+    focusCanvas: true,
+    preventDefault: true,
+    setPointerCapture: true,
+    clearCanvasTransientState: true,
+    clearPendingConnection: true,
+    cancelScheduledDragFrame: true,
+    clearSelectedEdge: true,
+    selectNodeId: "node-a",
+  } as const;
+
+  assert.deepEqual(
+    resolveNodePointerDownAction({
+      nodeId: "node-a",
+      nodeExists: false,
+      interactionLocked: false,
+      preserveInlineEditorFocus: false,
+    }),
+    { type: "ignore-missing-node" },
+  );
+  assert.deepEqual(
+    resolveNodePointerDownAction({
+      nodeId: "node-a",
+      nodeExists: true,
+      interactionLocked: true,
+      preserveInlineEditorFocus: false,
+    }),
+    {
+      type: "locked-edit-attempt",
+      preventDefault: true,
+      focusCanvas: true,
+      clearCanvasTransientState: true,
+      selectNodeId: "node-a",
+    },
+  );
+  assert.deepEqual(
+    resolveNodePointerDownAction({
+      nodeId: "node-a",
+      nodeExists: true,
+      interactionLocked: false,
+      preserveInlineEditorFocus: false,
+    }),
+    {
+      type: "start-drag",
+      ...setupPolicy,
+    },
+  );
+  assert.deepEqual(
+    resolveNodePointerDownAction({
+      nodeId: "node-a",
+      nodeExists: true,
+      interactionLocked: false,
+      preserveInlineEditorFocus: true,
+    }),
+    {
+      type: "start-drag",
+      ...setupPolicy,
+      focusCanvas: false,
+      preventDefault: false,
+      setPointerCapture: false,
+    },
+  );
+});
 
 test("resolveNodeResizePointerDownAction resolves resize pointer-down routing", () => {
   const setupPolicy = {

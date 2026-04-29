@@ -22,6 +22,7 @@ import {
   resolveCanvasConnectionPointerMoveRequest,
   resolveCanvasAnchorPointerDownAction,
   resolveCanvasDoubleClickCreationAction,
+  resolveCanvasDropCreationAction,
   resolveCanvasNodePointerDownConnectionAction,
 } from "./canvasConnectionInteractionModel.ts";
 
@@ -96,6 +97,53 @@ test("canvas connection interaction model resolves empty-canvas double-click cre
     }),
     {
       type: "open-creation-menu",
+      payload,
+    },
+  );
+});
+
+test("canvas connection interaction model resolves file-drop creation actions", () => {
+  const file = { name: "workflow.md" } as File;
+  const payload = {
+    file,
+    position: { x: 160, y: 90 },
+    clientX: 260,
+    clientY: 190,
+  };
+
+  assert.deepEqual(
+    resolveCanvasDropCreationAction({
+      interactionLocked: true,
+      isIgnoredTarget: false,
+      ...payload,
+    }),
+    { type: "locked-edit-attempt" },
+  );
+  assert.deepEqual(
+    resolveCanvasDropCreationAction({
+      interactionLocked: false,
+      isIgnoredTarget: true,
+      ...payload,
+    }),
+    { type: "ignore-target" },
+  );
+  assert.deepEqual(
+    resolveCanvasDropCreationAction({
+      interactionLocked: false,
+      isIgnoredTarget: false,
+      ...payload,
+      file: null,
+    }),
+    { type: "ignore-missing-file" },
+  );
+  assert.deepEqual(
+    resolveCanvasDropCreationAction({
+      interactionLocked: false,
+      isIgnoredTarget: false,
+      ...payload,
+    }),
+    {
+      type: "create-from-file",
       payload,
     },
   );

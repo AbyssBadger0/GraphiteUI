@@ -899,8 +899,11 @@ test("EditorCanvas emits node-creation intents for empty-canvas double click and
   assert.match(componentSource, /\(event: "open-node-creation-menu", payload:/);
   assert.match(componentSource, /\(event: "create-node-from-file", payload:/);
   assert.match(componentSource, /@dblclick="handleCanvasDoubleClick"/);
+  assert.match(componentSource, /@drop\.prevent="handleCanvasDrop"/);
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasDoubleClickCreationAction/);
+  assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasDropCreationAction/);
   assert.match(componentSource, /import \{[\s\S]*resolveCanvasDoubleClickCreationAction,[\s\S]*\} from "\.\/canvasConnectionInteractionModel";/);
+  assert.match(componentSource, /import \{[\s\S]*resolveCanvasDropCreationAction,[\s\S]*\} from "\.\/canvasConnectionInteractionModel";/);
   assert.match(componentSource, /function handleCanvasDoubleClick\(event: MouseEvent\)/);
   assert.match(componentSource, /const doubleClickCreationAction = resolveCanvasDoubleClickCreationAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*isIgnoredTarget: isIgnoredCanvasDoubleClickTarget\(target\),[\s\S]*position: resolveCanvasPoint\(event\),[\s\S]*clientX: event\.clientX,[\s\S]*clientY: event\.clientY,[\s\S]*\}\);/);
   assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);
@@ -908,7 +911,9 @@ test("EditorCanvas emits node-creation intents for empty-canvas double click and
   assert.match(componentSource, /case "open-creation-menu":[\s\S]*emit\("open-node-creation-menu", doubleClickCreationAction\.payload\);/);
   assert.match(componentSource, /function isIgnoredCanvasDoubleClickTarget\(target: HTMLElement \| null\)/);
   assert.doesNotMatch(componentSource, /if \(\s*target\?\.closest\([\s\S]*\)\s*\) \{\s*return;\s*\}\s*const position = resolveCanvasPoint\(event\);/);
-  assert.match(componentSource, /emit\("create-node-from-file",/);
+  assert.match(componentSource, /const dropCreationAction = resolveCanvasDropCreationAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*isIgnoredTarget: isIgnoredCanvasDropTarget\(target\),[\s\S]*file: event\.dataTransfer\?\.files\?\.\[0\] \?\? null,[\s\S]*position: resolveCanvasPoint\(event\),[\s\S]*clientX: event\.clientX,[\s\S]*clientY: event\.clientY,[\s\S]*\}\);/);
+  assert.match(componentSource, /case "create-from-file":[\s\S]*emit\("create-node-from-file", dropCreationAction\.payload\);/);
+  assert.match(componentSource, /function isIgnoredCanvasDropTarget\(target: HTMLElement \| null\)/);
 });
 
 test("EditorCanvas forwards node-card state editing and top-action events", () => {

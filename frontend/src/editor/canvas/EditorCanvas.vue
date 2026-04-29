@@ -480,6 +480,7 @@ import {
   resolveCanvasConnectionPointerMoveRequest,
   resolveCanvasConnectionPointerUpAction,
   resolveCanvasDoubleClickCreationAction,
+  resolveCanvasDropCreationAction,
   resolveCanvasNodePointerDownConnectionAction,
   resolveCanvasPendingConnectionCreationMenuRequest,
   type CanvasAnchorPointerDownAction,
@@ -1357,26 +1358,29 @@ function handleCanvasDragOver(event: DragEvent) {
 }
 
 function handleCanvasDrop(event: DragEvent) {
-  if (isGraphEditingLocked()) {
-    emit("locked-edit-attempt");
-    return;
-  }
   const target = event.target as HTMLElement | null;
-  if (target?.closest(".editor-canvas__node, .node-card")) {
-    return;
-  }
-
-  const file = event.dataTransfer?.files?.[0] ?? null;
-  if (!file) {
-    return;
-  }
-
-  emit("create-node-from-file", {
-    file,
+  const dropCreationAction = resolveCanvasDropCreationAction({
+    interactionLocked: isGraphEditingLocked(),
+    isIgnoredTarget: isIgnoredCanvasDropTarget(target),
+    file: event.dataTransfer?.files?.[0] ?? null,
     position: resolveCanvasPoint(event),
     clientX: event.clientX,
     clientY: event.clientY,
   });
+  switch (dropCreationAction.type) {
+    case "locked-edit-attempt":
+      emit("locked-edit-attempt");
+      return;
+    case "ignore-target":
+    case "ignore-missing-file":
+      return;
+    case "create-from-file":
+      emit("create-node-from-file", dropCreationAction.payload);
+  }
+}
+
+function isIgnoredCanvasDropTarget(target: HTMLElement | null) {
+  return Boolean(target?.closest(".editor-canvas__node, .node-card"));
 }
 
 function handleNodePointerDown(nodeId: string, event: PointerEvent) {

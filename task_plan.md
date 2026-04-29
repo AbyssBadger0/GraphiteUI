@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 45 in progress
+Phase 46 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -423,12 +423,21 @@ Phase 45 in progress
 - **Status:** completed
 
 ### Phase 45: EditorCanvas File Drop Creation Gate
-- [ ] Re-read the formal roadmap, Phase 44 findings, and current file-drop creation flow before changing code.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a drop creation request model around locked edit, node/card target ignore, missing file ignore, and create-from-file payload.
-- [ ] Add focused red tests for the selected file-drop creation boundary before production changes.
-- [ ] Keep actual DOM target inspection, `dataTransfer` file lookup/dropEffect mutation, canvas coordinate conversion, `create-node-from-file` emit, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
-- [ ] Run focused Canvas creation/structure and connection tests, TypeScript checks, full frontend tests, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 45.
+- [x] Re-read the formal roadmap, Phase 44 findings, and current file-drop creation flow before changing code.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is a drop creation request model around locked edit, node/card target ignore, missing file ignore, and create-from-file payload.
+- [x] Add focused red tests for the selected file-drop creation boundary before production changes.
+- [x] Keep actual DOM target inspection, `dataTransfer` file lookup/dropEffect mutation, canvas coordinate conversion, `create-node-from-file` emit, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [x] Run focused Canvas creation/structure and connection tests, TypeScript checks, full frontend tests, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 45.
+- **Status:** completed
+
+### Phase 46: EditorCanvas Drag-Over Drop Effect Gate
+- [ ] Re-read the formal roadmap, Phase 45 findings, and current drag-over/drop flow before changing code.
+- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a drag-over drop-effect request model around locked edit, dragged-file availability, and copy/none effect selection.
+- [ ] Add focused red tests for the selected drag-over boundary before production changes.
+- [ ] Keep actual `event.dataTransfer.dropEffect` mutation, preventDefault behavior, file-drop creation, panning, connection, node drag/resize, and graph mutation emits behaviorally stable.
+- [ ] Run focused Canvas creation/structure and connection tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 46.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -527,6 +536,9 @@ Phase 45 in progress
 | Overall roadmap cleanup after Phase 44 | About 71% complete after moving empty-canvas double-click creation routing into `canvasConnectionInteractionModel.ts`. |
 | P2 `EditorCanvas.vue` cleanup after Phase 44 | About 72% complete after extracting locked-edit, ignored-target, and open-menu decisions while preserving DOM target inspection, canvas coordinate conversion, and actual emit execution in the component. |
 | Current continuation gate after Phase 44 | Total roadmap progress is below 100%, so Phase 45 is automatically opened for the next safe P2 Canvas file-drop creation boundary. |
+| Overall roadmap cleanup after Phase 45 | About 72% complete after moving file-drop creation routing into `canvasConnectionInteractionModel.ts`. |
+| P2 `EditorCanvas.vue` cleanup after Phase 45 | About 73% complete after extracting locked-edit, ignored target, missing-file, and create-from-file payload decisions while preserving DOM target inspection, `dataTransfer` lookup, canvas coordinate conversion, and actual emit execution in the component. |
+| Current continuation gate after Phase 45 | Total roadmap progress is below 100%, so Phase 46 is automatically opened for the next safe P2 Canvas drag-over drop-effect boundary. |
 
 ## Decisions Made
 | Decision | Rationale |

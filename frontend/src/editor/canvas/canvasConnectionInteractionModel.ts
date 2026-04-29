@@ -50,6 +50,19 @@ export type CanvasDoubleClickCreationAction =
   | { type: "ignore-target" }
   | { type: "open-creation-menu"; payload: CanvasNodeCreationMenuPayload };
 
+export type CanvasFileDropCreationPayload = {
+  file: File;
+  position: GraphPosition;
+  clientX: number;
+  clientY: number;
+};
+
+export type CanvasDropCreationAction =
+  | { type: "locked-edit-attempt" }
+  | { type: "ignore-target" }
+  | { type: "ignore-missing-file" }
+  | { type: "create-from-file"; payload: CanvasFileDropCreationPayload };
+
 export type CanvasConnectionPointerUpAction =
   | { type: "clear-connection-interaction" }
   | { type: "complete-connection"; targetAnchor: ProjectedCanvasAnchor }
@@ -185,6 +198,37 @@ export function resolveCanvasDoubleClickCreationAction(input: {
   return {
     type: "open-creation-menu",
     payload: {
+      position: input.position,
+      clientX: input.clientX,
+      clientY: input.clientY,
+    },
+  };
+}
+
+export function resolveCanvasDropCreationAction(input: {
+  interactionLocked: boolean;
+  isIgnoredTarget: boolean;
+  file: File | null;
+  position: GraphPosition;
+  clientX: number;
+  clientY: number;
+}): CanvasDropCreationAction {
+  if (input.interactionLocked) {
+    return { type: "locked-edit-attempt" };
+  }
+
+  if (input.isIgnoredTarget) {
+    return { type: "ignore-target" };
+  }
+
+  if (!input.file) {
+    return { type: "ignore-missing-file" };
+  }
+
+  return {
+    type: "create-from-file",
+    payload: {
+      file: input.file,
       position: input.position,
       clientX: input.clientX,
       clientY: input.clientY,

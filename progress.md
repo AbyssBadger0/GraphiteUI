@@ -109,6 +109,47 @@
 |-----------|-------|---------|------------|
 | 2026-04-29 | Root `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` printed TypeScript help instead of checking the Vue project. | First Phase 26 TypeScript verification attempt from the repository root. | Re-ran `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` from `frontend`, which passed with exit 0 and no diagnostics. |
 
+## Session: 2026-04-29 Phase 27 Output Node Body Component
+
+### Phase 27: Output Node Body Component
+- **Status:** completed
+- Actions taken:
+  - Re-read `task_plan.md`, `findings.md`, `progress.md`, and `docs/future/2026-04-28-architecture-refactor-roadmap.md`.
+  - Added `OutputNodeBody.structure.test.ts` and updated `NodeCard.structure.test.ts` before production code.
+  - Verified the red test failed because `OutputNodeBody.vue` did not exist yet.
+  - Added `OutputNodeBody.vue` for the output primary-input slot host, persist card, preview metadata, rendered markdown/text preview, and local output scoped styles.
+  - Updated `NodeCard.vue` to delegate output body presentation through `OutputNodeBody` while keeping output preview/config derivation, persist lock guards, state pill popovers, and graph/state mutation emits in the parent.
+  - Removed output preview/persist scoped styles and the direct `DocumentChecked` icon import from `NodeCard.vue`.
+  - `NodeCard.vue` line count moved from 3,562 after Phase 26 to 3,373 after Phase 27.
+  - Recalculated total roadmap cleanup as about 51% complete and P1 NodeCard extraction as about 82% complete; because total cleanup remains below 100%, opened Phase 28 for the condition-node body slice.
+
+### Verification
+- **Status:** completed
+- Results:
+  - Red test: `node --test frontend/src/editor/nodes/OutputNodeBody.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts` failed with `ENOENT` for `OutputNodeBody.vue` before implementation.
+  - Focused structure tests: `node --test frontend/src/editor/nodes/OutputNodeBody.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts` passed, 36 tests.
+  - Focused output tests: `node --test frontend/src/editor/nodes/OutputNodeBody.structure.test.ts frontend/src/editor/nodes/NodeCard.structure.test.ts frontend/src/editor/nodes/outputPreviewContentModel.test.ts frontend/src/editor/nodes/outputConfigModel.test.ts` passed, 45 tests.
+  - Unused-symbol check: `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` passed with exit 0 and no diagnostics.
+  - Full frontend tests: `node --test $(rg --files frontend/src -g '*.test.ts') frontend/vite.config.structure.test.ts` passed, 766 tests.
+  - Frontend production build: `npm run build` in `frontend` passed; the build completed without a Vite large chunk warning.
+  - Dev restart: root `npm run dev` started services on frontend `http://127.0.0.1:3477` and backend `http://127.0.0.1:8765`.
+  - Health checks: frontend `/` returned HTTP 200 and backend `/health` returned HTTP 200 with `{"status":"ok"}`.
+  - Visual check: captured `/tmp/graphiteui-editor-phase27.png` from `http://127.0.0.1:3477/editor/new`; the editor renders the input, agent, and output flow with the output preview surface visible at the right edge of the wide viewport.
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 27 implementation, verification, dev restart, and visual check are complete; commit and push are the remaining closeout steps. |
+| Where am I going? | Phase 28 is open for the `ConditionNodeBody.vue` extraction because total cleanup is still below 100%. |
+| What's the goal? | Keep reducing `NodeCard.vue` presentation concentration without changing output preview, persistence, or state-port behavior. |
+| What have I learned? | Output presentation can move safely when preview/config derivation, persist guards, and the primary input state pill stay parent-owned. |
+| What have I done? | Added `OutputNodeBody.vue`, moved output-specific scoped styles with it, updated structure tests, and verified focused/full frontend checks. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-29 | `OutputNodeBody.vue` was missing during the Phase 27 red test. | First focused test run before implementation. | Added `OutputNodeBody.vue` and reran focused structure/output tests successfully. |
+
 ## Session: 2026-04-28 Phase 16
 
 ### Phase 1: Re-orientation and Safety Scope

@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 27 in progress
+Phase 28 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -246,12 +246,25 @@ Phase 27 in progress
 - **Status:** completed
 
 ### Phase 27: Output Node Body Component
-- [ ] Continue P1 node body component extraction with the output-body presentation wrapper.
-- [ ] Add failing structure coverage for `OutputNodeBody.vue` and `NodeCard.vue` delegation.
-- [ ] Move output persistence controls, preview surface metadata, and rendered output preview presentation into `OutputNodeBody.vue`.
-- [ ] Keep output preview content derivation, display/persist option derivation, lock guards, output config handlers, and graph/state mutation emits in `NodeCard.vue`.
-- [ ] Preserve the output input state pill popover in a parent-owned slot unless tests prove moving it is low risk.
-- [ ] Run focused OutputNodeBody/NodeCard structure tests plus output preview and output config model tests.
+- [x] Continue P1 node body component extraction with the output-body presentation wrapper.
+- [x] Add failing structure coverage for `OutputNodeBody.vue` and `NodeCard.vue` delegation.
+- [x] Move output persistence controls, preview surface metadata, and rendered output preview presentation into `OutputNodeBody.vue`.
+- [x] Keep output preview content derivation, display/persist option derivation, lock guards, output config handlers, and graph/state mutation emits in `NodeCard.vue`.
+- [x] Preserve the output input state pill popover in a parent-owned slot unless tests prove moving it is low risk.
+- [x] Run focused OutputNodeBody/NodeCard structure tests plus output preview and output config model tests.
+- [x] Run TypeScript unused-symbol verification, full frontend tests, and production build.
+- [x] Restart the dev environment with `npm run dev` and verify frontend/backend health.
+- [x] Recalculate total roadmap progress; because it is still below 100%, automatically open the next phase.
+- [x] Commit and push the cleanup and planning updates.
+- **Status:** completed
+
+### Phase 28: Condition Node Body Component
+- [ ] Continue P1 node body component extraction with the condition-body presentation wrapper.
+- [ ] Add failing structure coverage for `ConditionNodeBody.vue` and `NodeCard.vue` delegation.
+- [ ] Move condition source row surface, operator/value/loop controls, route branch display, and local condition body styles into `ConditionNodeBody.vue`.
+- [ ] Keep condition rule draft synchronization, loop-limit draft commits, branch mutation handlers, lock guards, state editor popovers, and graph/state mutation emits in `NodeCard.vue`.
+- [ ] Preserve condition source state pill popover and route output state/flow popovers in parent-owned slots unless tests prove moving them is low risk.
+- [ ] Run focused ConditionNodeBody/NodeCard structure tests plus condition rule and loop-limit model tests.
 - [ ] Run TypeScript unused-symbol verification, full frontend tests, and production build.
 - [ ] Restart the dev environment with `npm run dev` and verify frontend/backend health.
 - [ ] Recalculate total roadmap progress; if below 100%, automatically open the next phase.
@@ -298,6 +311,9 @@ Phase 27 in progress
 | Overall roadmap cleanup after Phase 26 | About 50% complete after moving input body presentation into `InputNodeBody.vue`. |
 | P1 `NodeCard.vue` cleanup after Phase 26 | About 79% complete after removing the input body controls, upload/dropzone preview, and textarea styling from `NodeCard.vue`. |
 | Current continuation gate after Phase 26 | Total roadmap progress is below 100%, so Phase 27 is automatically opened for the `OutputNodeBody.vue` slice. |
+| Overall roadmap cleanup after Phase 27 | About 51% complete after moving output body presentation into `OutputNodeBody.vue`. |
+| P1 `NodeCard.vue` cleanup after Phase 27 | About 82% complete after removing output persistence, preview surface, and output preview styles from `NodeCard.vue`. |
+| Current continuation gate after Phase 27 | Total roadmap progress is below 100%, so Phase 28 is automatically opened for the `ConditionNodeBody.vue` slice. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -325,6 +341,7 @@ Phase 27 in progress
 - Phase 24 continues the roadmap node-body component step with `AgentRuntimeControls.vue`; `NodeCard.vue` drops to 3,954 lines before final verification while keeping model derivation, refresh-model emit, lock guards, and agent config mutation behavior in the parent.
 - Phase 25 wraps the agent node body presentation in `AgentNodeBody.vue`; `NodeCard.vue` drops to 3,895 lines before final verification while keeping state derivation, draft mutation, lock guards, skill patch creation, and graph emits in the parent.
 - Phase 26 moves the input node body presentation into `InputNodeBody.vue`; `NodeCard.vue` drops to 3,562 lines while keeping input value derivation, uploaded asset parsing, knowledge-base options, lock guards, file/drop handlers, and state/config emits in the parent.
+- Phase 27 moves the output node body presentation into `OutputNodeBody.vue`; `NodeCard.vue` drops to 3,373 lines while keeping output preview derivation, output config handlers, lock guards, and state/config emits in the parent.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

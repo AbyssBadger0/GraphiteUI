@@ -14,6 +14,7 @@ const floatingPanelsComposableSource = readFileSync(resolve(currentDirectory, "u
 const portReorderComposableSource = readFileSync(resolve(currentDirectory, "usePortReorder.ts"), "utf8").replace(/\r\n/g, "\n");
 const agentNodeBodySource = readFileSync(resolve(currentDirectory, "AgentNodeBody.vue"), "utf8").replace(/\r\n/g, "\n");
 const inputNodeBodySource = readFileSync(resolve(currentDirectory, "InputNodeBody.vue"), "utf8").replace(/\r\n/g, "\n");
+const outputNodeBodySource = readFileSync(resolve(currentDirectory, "OutputNodeBody.vue"), "utf8").replace(/\r\n/g, "\n");
 const agentSkillPickerSource = readFileSync(resolve(currentDirectory, "AgentSkillPicker.vue"), "utf8").replace(/\r\n/g, "\n");
 const agentRuntimeControlsSource = readFileSync(resolve(currentDirectory, "AgentRuntimeControls.vue"), "utf8").replace(/\r\n/g, "\n");
 const statePortListSource = readFileSync(resolve(currentDirectory, "StatePortList.vue"), "utf8").replace(/\r\n/g, "\n");
@@ -80,8 +81,9 @@ test("NodeCard stretches primary editable surfaces when the canvas resizes the n
   assert.match(inputNodeBodySource, /\.node-card__input-body \{[\s\S]*display:\s*flex;[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);
   assert.match(inputNodeBodySource, /\.node-card__surface-textarea \{[\s\S]*flex:\s*1 1 auto;[\s\S]*width:\s*100%;[\s\S]*height:\s*100%;[\s\S]*resize:\s*none;/);
   assert.match(agentNodeBodySource, /\.node-card__surface-textarea \{[\s\S]*flex:\s*1 1 auto;[\s\S]*resize:\s*none;/);
-  assert.match(componentSource, /\.node-card__surface--output \{[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);
-  assert.match(componentSource, /\.node-card__preview \{[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);
+  assert.match(outputNodeBodySource, /\.node-card__output-body \{[\s\S]*display:\s*flex;[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);
+  assert.match(outputNodeBodySource, /\.node-card__surface--output \{[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);
+  assert.match(outputNodeBodySource, /\.node-card__preview \{[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);
 });
 
 test("NodeCard keeps state pill geometry but hides the pill chrome visually", () => {
@@ -978,7 +980,7 @@ test("NodeCard lets real agent state pills drag-reorder within their own side", 
   assert.doesNotMatch(createRow, /data-port-reorder-state-key/);
 });
 
-test("NodeCard renders output previews through a rich content presenter while keeping Advanced in the top popover", () => {
+test("NodeCard delegates output preview presentation while keeping Advanced in the top popover", () => {
   const outputSectionMatch = componentSource.match(
     /<section v-else-if="view\.body\.kind === 'output'"[\s\S]*?<\/section>/,
   );
@@ -993,12 +995,17 @@ test("NodeCard renders output previews through a rich content presenter while ke
   assert.match(componentSource, /resolveOutputDisplayModeActive\(view\.value\.body\.kind === "output" \? view\.value\.body\.displayMode : null, displayMode\)/);
   assert.match(componentSource, /resolveOutputPersistFormatActive\(props\.node\.kind === "output" \? props\.node\.config\.persistFormat : null, persistFormat\)/);
   assert.match(componentSource, /resolveOutputFileNameTemplatePatch\(value\)/);
-  assert.match(outputSection, /node-card__preview--markdown/);
-  assert.match(outputSection, /v-html="outputPreviewContent\.html"/);
-  assert.match(outputSection, /node-card__preview--json/);
-  assert.match(outputSection, /<pre v-else class="node-card__preview-text">\{\{ outputPreviewContent\.text \}\}<\/pre>/);
-  assert.match(outputSection, /node-card__preview--empty/);
+  assert.match(componentSource, /import OutputNodeBody from "\.\/OutputNodeBody\.vue";/);
+  assert.match(outputSection, /<OutputNodeBody[\s\S]*:body="view\.body"[\s\S]*:output-preview-content="outputPreviewContent"[\s\S]*@update:persist-enabled="handleOutputPersistToggle"/);
+  assert.match(outputSection, /<template #primary-input>/);
+  assert.match(outputNodeBodySource, /<slot name="primary-input" \/>/);
+  assert.match(outputNodeBodySource, /node-card__preview--markdown/);
+  assert.match(outputNodeBodySource, /v-html="outputPreviewContent\.html"/);
+  assert.match(outputNodeBodySource, /node-card__preview--json/);
+  assert.match(outputNodeBodySource, /<pre v-else class="node-card__preview-text">\{\{ outputPreviewContent\.text \}\}<\/pre>/);
+  assert.match(outputNodeBodySource, /node-card__preview--empty/);
   assert.doesNotMatch(outputSection, /Connected to \$\{view\.body\.connectedStateLabel/);
+  assert.doesNotMatch(outputSection, /<pre v-else class="node-card__preview-text">/);
   assert.match(componentSource, /view\.body\.kind === 'output' \? 340 : 280/);
 });
 
@@ -1009,27 +1016,28 @@ test("NodeCard uses an Element Plus switch card for output persistence like the 
   assert.ok(outputSectionMatch, "expected to find the output node section");
   const outputSection = outputSectionMatch[0];
 
-  assert.match(componentSource, /import \{[\s\S]*DocumentChecked[\s\S]*\} from "@element-plus\/icons-vue";/);
+  assert.doesNotMatch(componentSource, /DocumentChecked/);
+  assert.match(outputNodeBodySource, /import \{ DocumentChecked \} from "@element-plus\/icons-vue";/);
   assert.match(agentRuntimeControlsSource, /import \{ Flag, Opportunity \} from "@element-plus\/icons-vue";/);
-  assert.match(outputSection, /class="node-card__output-persist-card"/);
-  assert.match(outputSection, /class="node-card__output-persist-icon"/);
-  assert.match(outputSection, /<DocumentChecked \/>/);
-  assert.match(outputSection, /<ElSwitch/);
-  assert.match(outputSection, /class="node-card__output-persist-switch"/);
-  assert.match(outputSection, /:model-value="view\.body\.persistEnabled"/);
-  assert.match(outputSection, /:width="56"/);
-  assert.match(outputSection, /inline-prompt/);
-  assert.match(outputSection, /active-text="ON"/);
-  assert.match(outputSection, /inactive-text="OFF"/);
-  assert.match(outputSection, /@update:model-value="handleOutputPersistToggle"/);
+  assert.match(outputNodeBodySource, /class="node-card__output-persist-card"/);
+  assert.match(outputNodeBodySource, /class="node-card__output-persist-icon"/);
+  assert.match(outputNodeBodySource, /<DocumentChecked \/>/);
+  assert.match(outputNodeBodySource, /<ElSwitch/);
+  assert.match(outputNodeBodySource, /class="node-card__output-persist-switch"/);
+  assert.match(outputNodeBodySource, /:model-value="body\.persistEnabled"/);
+  assert.match(outputNodeBodySource, /:width="56"/);
+  assert.match(outputNodeBodySource, /inline-prompt/);
+  assert.match(outputNodeBodySource, /active-text="ON"/);
+  assert.match(outputNodeBodySource, /inactive-text="OFF"/);
+  assert.match(outputNodeBodySource, /@update:model-value="emit\('update:persist-enabled', \$event\)"/);
   assert.doesNotMatch(outputSection, /node-card__persist-button/);
   assert.doesNotMatch(outputSection, /node-card__toggle/);
   assert.match(componentSource, /function handleOutputPersistToggle\(value: string \| number \| boolean\)/);
-  assert.match(componentSource, /\.node-card__output-persist-card \{[\s\S]*grid-template-columns:\s*auto 56px;/);
-  assert.match(componentSource, /\.node-card__output-persist-card \{[\s\S]*min-height:\s*48px;/);
-  assert.match(componentSource, /\.node-card__output-persist-card \{[\s\S]*border-radius:\s*16px;/);
-  assert.match(componentSource, /\.node-card__output-persist-card \{[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.88\);/);
-  assert.match(componentSource, /\.node-card__output-persist-switch \{[\s\S]*--el-switch-on-color:\s*#c96b1f;/);
+  assert.match(outputNodeBodySource, /\.node-card__output-persist-card \{[\s\S]*grid-template-columns:\s*auto 56px;/);
+  assert.match(outputNodeBodySource, /\.node-card__output-persist-card \{[\s\S]*min-height:\s*48px;/);
+  assert.match(outputNodeBodySource, /\.node-card__output-persist-card \{[\s\S]*border-radius:\s*16px;/);
+  assert.match(outputNodeBodySource, /\.node-card__output-persist-card \{[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.88\);/);
+  assert.match(outputNodeBodySource, /\.node-card__output-persist-switch \{[\s\S]*--el-switch-on-color:\s*#c96b1f;/);
 });
 
 test("NodeCard closes floating panels on focus loss and keeps popup surfaces on the warm theme", () => {

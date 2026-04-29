@@ -443,124 +443,87 @@
     </section>
 
     <section v-else-if="view.body.kind === 'output'" class="node-card__body node-card__body--output">
-      <div class="node-card__output-toolbar">
-        <ElPopover
-          v-if="view.body.primaryInput"
-          :visible="
-            view.body.primaryInput.virtual
-              ? isPortCreateOpen('input')
-              : isStateEditorOpen(`output-input:${view.body.primaryInput.key}`) || isStateEditorConfirmOpen(`output-input:${view.body.primaryInput.key}`)
-          "
-          :placement="view.body.primaryInput.virtual || isStateEditorOpen(`output-input:${view.body.primaryInput.key}`) ? 'bottom-start' : 'top-start'"
-          :width="view.body.primaryInput.virtual ? 376 : isStateEditorOpen(`output-input:${view.body.primaryInput.key}`) ? 320 : undefined"
-          :show-arrow="false"
-          :popper-style="view.body.primaryInput.virtual ? agentAddPopoverStyle : stateEditorPopoverStyle"
-          :popper-class="view.body.primaryInput.virtual ? 'node-card__agent-add-popover-popper' : 'node-card__state-editor-popper'"
-        >
-          <template #reference>
-            <span
-              class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start"
-              :class="{
-                'node-card__port-pill--create': view.body.primaryInput.virtual,
-                'node-card__port-pill--revealed': !view.body.primaryInput.virtual && isStateEditorPillRevealed(`output-input:${view.body.primaryInput.key}`),
-                'node-card__port-pill--confirm': !view.body.primaryInput.virtual && isStateEditorConfirmOpen(`output-input:${view.body.primaryInput.key}`),
-              }"
-              :style="{ '--node-card-port-accent': view.body.primaryInput.stateColor }"
-              data-state-editor-trigger="true"
-              data-anchor-hitarea="true"
-              @pointerenter="handleStateEditorPillPointerEnter(`output-input:${view.body.primaryInput.key}`)"
-              @pointerleave="handleStateEditorPillPointerLeave(`output-input:${view.body.primaryInput.key}`)"
-              @pointerdown.stop
-              @click.stop="view.body.primaryInput.virtual ? openPortStateCreate('input') : handleStateEditorActionClick(`output-input:${view.body.primaryInput.key}`, view.body.primaryInput.key)"
-            >
-              <span
-                class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"
-                :data-anchor-slot-id="`${nodeId}:state-in:${view.body.primaryInput.key}`"
-                aria-hidden="true"
-              />
-              <span
-                class="node-card__port-pill-label"
-                :class="{ 'node-card__port-pill-label--confirm': isStateEditorConfirmOpen(`output-input:${view.body.primaryInput.key}`) }"
-              >
-                <span class="node-card__port-pill-label-text">{{ view.body.primaryInput.label }}</span>
-                <ElIcon class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
-              </span>
-            </span>
-          </template>
-          <StatePortCreatePopover
-            v-if="view.body.primaryInput.virtual && isPortCreateOpen('input') && portStateDraft"
-            :draft="portStateDraft"
-            :title="portPickerTitle"
-            :error="portStateError"
-            :hint="t('nodeCard.createStateBindHint')"
-            :type-options="stateTypeOptions"
-            @update:name="handlePortDraftNameValue"
-            @update:type="handlePortDraftTypeSelect"
-            @update:color="handlePortDraftColorSelect"
-            @update:description="handlePortDraftDescriptionValue"
-            @update:value="updatePortDraftValue"
-            @cancel="closePortPicker"
-            @create="commitPortStateCreate"
-          />
-          <div v-else-if="isStateEditorConfirmOpen(`output-input:${view.body.primaryInput.key}`)" class="node-card__confirm-hint node-card__confirm-hint--state">{{ t("nodeCard.editStateQuestion") }}</div>
-          <StateEditorPopover
-            v-else-if="stateEditorDraft"
-            class="node-card__state-editor"
-            :draft="stateEditorDraft"
-            :error="stateEditorError"
-            :type-options="stateTypeOptions"
-            :color-options="stateColorOptions"
-            @update:name="handleStateEditorNameInput"
-            @update:type="handleStateEditorTypeValue"
-            @update:color="handleStateEditorColorInput"
-            @update:description="handleStateEditorDescriptionInput"
-          />
-        </ElPopover>
-        <span v-else class="node-card__port-label">{{ t("nodeCard.unbound") }}</span>
-        <div class="node-card__output-persist-card">
-          <span
-            class="node-card__output-persist-icon"
-            :class="{ 'node-card__output-persist-icon--enabled': view.body.persistEnabled }"
-            aria-hidden="true"
+      <OutputNodeBody
+        :body="view.body"
+        :output-preview-content="outputPreviewContent"
+        @update:persist-enabled="handleOutputPersistToggle"
+      >
+        <template #primary-input>
+          <ElPopover
+            v-if="view.body.primaryInput"
+            :visible="
+              view.body.primaryInput.virtual
+                ? isPortCreateOpen('input')
+                : isStateEditorOpen(`output-input:${view.body.primaryInput.key}`) || isStateEditorConfirmOpen(`output-input:${view.body.primaryInput.key}`)
+            "
+            :placement="view.body.primaryInput.virtual || isStateEditorOpen(`output-input:${view.body.primaryInput.key}`) ? 'bottom-start' : 'top-start'"
+            :width="view.body.primaryInput.virtual ? 376 : isStateEditorOpen(`output-input:${view.body.primaryInput.key}`) ? 320 : undefined"
+            :show-arrow="false"
+            :popper-style="view.body.primaryInput.virtual ? agentAddPopoverStyle : stateEditorPopoverStyle"
+            :popper-class="view.body.primaryInput.virtual ? 'node-card__agent-add-popover-popper' : 'node-card__state-editor-popper'"
           >
-            <DocumentChecked />
-          </span>
-          <ElSwitch
-            class="node-card__output-persist-switch"
-            :model-value="view.body.persistEnabled"
-            :width="56"
-            inline-prompt
-            active-text="ON"
-            inactive-text="OFF"
-            :aria-label="t('nodeCard.toggleOutputPersistence')"
-            @pointerdown.stop
-            @click.stop
-            @update:model-value="handleOutputPersistToggle"
-          />
-        </div>
-      </div>
-      <div class="node-card__surface node-card__surface--output">
-        <div class="node-card__surface-meta">
-          <span>{{ view.body.previewTitle.toUpperCase() }}</span>
-          <span>{{ view.body.displayModeLabel }}</span>
-        </div>
-        <div
-          class="node-card__preview"
-          :class="{
-            'node-card__preview--plain': outputPreviewContent.kind === 'plain',
-            'node-card__preview--markdown': outputPreviewContent.kind === 'markdown',
-            'node-card__preview--json': outputPreviewContent.kind === 'json',
-            'node-card__preview--empty': outputPreviewContent.isEmpty,
-          }"
-        >
-          <div
-            v-if="outputPreviewContent.kind === 'markdown'"
-            class="node-card__preview-markdown"
-            v-html="outputPreviewContent.html"
-          />
-          <pre v-else class="node-card__preview-text">{{ outputPreviewContent.text }}</pre>
-        </div>
-      </div>
+            <template #reference>
+              <span
+                class="node-card__port-pill node-card__port-pill--input node-card__port-pill--dock-start"
+                :class="{
+                  'node-card__port-pill--create': view.body.primaryInput.virtual,
+                  'node-card__port-pill--revealed': !view.body.primaryInput.virtual && isStateEditorPillRevealed(`output-input:${view.body.primaryInput.key}`),
+                  'node-card__port-pill--confirm': !view.body.primaryInput.virtual && isStateEditorConfirmOpen(`output-input:${view.body.primaryInput.key}`),
+                }"
+                :style="{ '--node-card-port-accent': view.body.primaryInput.stateColor }"
+                data-state-editor-trigger="true"
+                data-anchor-hitarea="true"
+                @pointerenter="handleStateEditorPillPointerEnter(`output-input:${view.body.primaryInput.key}`)"
+                @pointerleave="handleStateEditorPillPointerLeave(`output-input:${view.body.primaryInput.key}`)"
+                @pointerdown.stop
+                @click.stop="view.body.primaryInput.virtual ? openPortStateCreate('input') : handleStateEditorActionClick(`output-input:${view.body.primaryInput.key}`, view.body.primaryInput.key)"
+              >
+                <span
+                  class="node-card__port-pill-anchor-slot node-card__port-pill-anchor-slot--leading"
+                  :data-anchor-slot-id="`${nodeId}:state-in:${view.body.primaryInput.key}`"
+                  aria-hidden="true"
+                />
+                <span
+                  class="node-card__port-pill-label"
+                  :class="{ 'node-card__port-pill-label--confirm': isStateEditorConfirmOpen(`output-input:${view.body.primaryInput.key}`) }"
+                >
+                  <span class="node-card__port-pill-label-text">{{ view.body.primaryInput.label }}</span>
+                  <ElIcon class="node-card__port-pill-confirm-icon"><Check /></ElIcon>
+                </span>
+              </span>
+            </template>
+            <StatePortCreatePopover
+              v-if="view.body.primaryInput.virtual && isPortCreateOpen('input') && portStateDraft"
+              :draft="portStateDraft"
+              :title="portPickerTitle"
+              :error="portStateError"
+              :hint="t('nodeCard.createStateBindHint')"
+              :type-options="stateTypeOptions"
+              @update:name="handlePortDraftNameValue"
+              @update:type="handlePortDraftTypeSelect"
+              @update:color="handlePortDraftColorSelect"
+              @update:description="handlePortDraftDescriptionValue"
+              @update:value="updatePortDraftValue"
+              @cancel="closePortPicker"
+              @create="commitPortStateCreate"
+            />
+            <div v-else-if="isStateEditorConfirmOpen(`output-input:${view.body.primaryInput.key}`)" class="node-card__confirm-hint node-card__confirm-hint--state">{{ t("nodeCard.editStateQuestion") }}</div>
+            <StateEditorPopover
+              v-else-if="stateEditorDraft"
+              class="node-card__state-editor"
+              :draft="stateEditorDraft"
+              :error="stateEditorError"
+              :type-options="stateTypeOptions"
+              :color-options="stateColorOptions"
+              @update:name="handleStateEditorNameInput"
+              @update:type="handleStateEditorTypeValue"
+              @update:color="handleStateEditorColorInput"
+              @update:description="handleStateEditorDescriptionInput"
+            />
+          </ElPopover>
+          <span v-else class="node-card__port-label">{{ t("nodeCard.unbound") }}</span>
+        </template>
+      </OutputNodeBody>
     </section>
 
     <section v-else-if="view.body.kind === 'condition'" class="node-card__body node-card__body--condition">
@@ -751,11 +714,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ElButton, ElIcon, ElInput, ElOption, ElPopover, ElSelect } from "element-plus";
-import { Check, Collection, CollectionTag, Delete, Document, DocumentChecked, FolderOpened, Operation } from "@element-plus/icons-vue";
+import { Check, Collection, CollectionTag, Delete, Document, FolderOpened, Operation } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 
 import AgentNodeBody from "./AgentNodeBody.vue";
 import InputNodeBody from "./InputNodeBody.vue";
+import OutputNodeBody from "./OutputNodeBody.vue";
 import StateEditorPopover from "./StateEditorPopover.vue";
 import StatePortCreatePopover from "./StatePortCreatePopover.vue";
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
@@ -2757,7 +2721,6 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
 }
 
 .node-card__chip-row,
-.node-card__output-toolbar,
 .node-card__condition-topline {
   display: flex;
   align-items: center;
@@ -3007,100 +2970,6 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
   white-space: pre-wrap;
 }
 
-.node-card__surface--output {
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.node-card__surface-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  font-size: 0.88rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(154, 52, 18, 0.82);
-}
-
-.node-card__preview {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: block;
-  overflow: auto;
-  border-radius: 20px;
-  background: rgba(248, 242, 234, 0.84);
-  padding: 18px;
-  text-align: left;
-  font-size: 0.95rem;
-  line-height: 1.62;
-  color: #1f2937;
-}
-
-.node-card__preview--empty {
-  display: grid;
-  place-items: center;
-  text-align: center;
-  color: rgba(31, 41, 55, 0.82);
-}
-
-.node-card__preview-text {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font: inherit;
-}
-
-.node-card__preview--json .node-card__preview-text {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.84rem;
-  line-height: 1.55;
-}
-
-.node-card__preview-markdown {
-  display: grid;
-  gap: 0.65rem;
-}
-
-.node-card__preview-markdown :deep(h1),
-.node-card__preview-markdown :deep(h2),
-.node-card__preview-markdown :deep(h3),
-.node-card__preview-markdown :deep(p),
-.node-card__preview-markdown :deep(ul) {
-  margin: 0;
-}
-
-.node-card__preview-markdown :deep(h1) {
-  font-size: 1.22rem;
-  line-height: 1.25;
-}
-
-.node-card__preview-markdown :deep(h2) {
-  font-size: 1.08rem;
-  line-height: 1.3;
-}
-
-.node-card__preview-markdown :deep(h3) {
-  font-size: 1rem;
-  line-height: 1.35;
-}
-
-.node-card__preview-markdown :deep(ul) {
-  display: grid;
-  gap: 0.35rem;
-  padding-left: 1.1rem;
-}
-
-.node-card__preview-markdown :deep(code) {
-  border-radius: 6px;
-  background: rgba(154, 52, 18, 0.08);
-  padding: 0.08rem 0.28rem;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.88em;
-}
-
 .node-card__runtime-note {
   margin-top: 0.85rem;
   border-radius: 14px;
@@ -3126,64 +2995,6 @@ function handleConditionRuleValueEnter(event: KeyboardEvent) {
   margin-top: 0.35rem;
   white-space: pre-wrap;
   line-height: 1.55;
-}
-
-.node-card__output-persist-card {
-  display: grid;
-  grid-template-columns: auto 56px;
-  align-items: center;
-  justify-self: end;
-  min-height: 48px;
-  gap: 10px;
-  border: 1px solid rgba(154, 52, 18, 0.14);
-  border-radius: 16px;
-  padding: 0 14px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
-}
-
-.node-card__output-persist-card:hover {
-  border-color: rgba(154, 52, 18, 0.22);
-  background: rgba(255, 252, 247, 0.94);
-}
-
-.node-card__output-persist-card:focus-within {
-  border-color: rgba(201, 107, 31, 0.32);
-  box-shadow:
-    0 0 0 3px rgba(201, 107, 31, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45);
-}
-
-.node-card__output-persist-icon {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: max-content;
-  color: rgba(111, 67, 30, 0.72);
-  font-size: 0.84rem;
-  font-weight: 600;
-  transition: color 140ms ease;
-}
-
-.node-card__output-persist-icon::after {
-  content: "Save";
-  margin-left: 7px;
-}
-
-.node-card__output-persist-icon :deep(svg) {
-  width: 18px;
-  height: 18px;
-}
-
-.node-card__output-persist-icon--enabled {
-  color: #b45309;
-}
-
-.node-card__output-persist-switch {
-  justify-self: end;
-  --el-switch-on-color: #c96b1f;
-  --el-switch-off-color: rgba(154, 52, 18, 0.24);
 }
 
 .node-card__advanced {

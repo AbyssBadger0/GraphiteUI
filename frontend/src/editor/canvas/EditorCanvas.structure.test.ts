@@ -552,12 +552,16 @@ test("EditorCanvas keeps paused human-review graphs viewable but read-only", () 
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasDropCreationAction/);
   assert.match(componentSource, /function handleCanvasDrop\(event: DragEvent\)[\s\S]*const dropCreationAction = resolveCanvasDropCreationAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*\}\);/);
   assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);
+  assert.match(componentSource, /import \{ resolveCanvasEdgePointerDownAction, resolveCanvasEdgeTargetPoint \} from "\.\/canvasEdgePointerInteractionModel";/);
   assert.match(canvasEdgePointerInteractionModelSource, /export function resolveCanvasEdgePointerDownAction/);
+  assert.match(canvasEdgePointerInteractionModelSource, /export function resolveCanvasEdgeTargetPoint/);
   assert.match(componentSource, /const edgePointerDownAction = resolveCanvasEdgePointerDownAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*edge,[\s\S]*selectedEdgeId: selectedEdgeId\.value,[\s\S]*\}\);/);
   assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*event\.preventDefault\(\);[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);
   assert.match(componentSource, /case "start-flow-edge-delete-confirm":[\s\S]*startFlowEdgeDeleteConfirm\(edge, event\);[\s\S]*return;/);
   assert.match(componentSource, /case "start-data-edge-state-confirm":[\s\S]*startDataEdgeStateConfirm\(edge, event\);[\s\S]*return;/);
-  assert.match(componentSource, /case "select-edge":[\s\S]*selectedEdgeId\.value = edgePointerDownAction\.selectEdgeId;[\s\S]*setPendingConnectionPoint\(resolveEdgeTargetPoint\(edge\)\);/);
+  assert.match(componentSource, /case "select-edge":[\s\S]*selectedEdgeId\.value = edgePointerDownAction\.selectEdgeId;[\s\S]*setPendingConnectionPoint\(\s*resolveCanvasEdgeTargetPoint\(\{[\s\S]*edge,[\s\S]*anchors: projectedAnchors\.value,[\s\S]*\}\),?\s*\);/);
+  assert.doesNotMatch(componentSource, /function resolveEdgeTargetPoint\(edge: ProjectedCanvasEdge\)/);
+  assert.doesNotMatch(componentSource, /edge\.kind === "data" && edge\.state[\s\S]*projectedAnchors\.value\.find/);
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasAnchorPointerDownAction/);
   assert.match(componentSource, /const anchorPointerDownAction = resolveCanvasAnchorPointerDownAction\(\{[\s\S]*interactionLocked: isGraphEditingLocked\(\),[\s\S]*anchor,[\s\S]*canComplete: canCompleteCanvasConnection\(anchor\),[\s\S]*canStart: canStartGraphConnection\(anchor\.kind\),[\s\S]*\}\);/);
   assert.match(componentSource, /case "locked-edit-attempt":[\s\S]*emit\("locked-edit-attempt"\);[\s\S]*return;/);

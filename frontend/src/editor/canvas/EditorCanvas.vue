@@ -464,7 +464,7 @@ import {
   resolveLockedCanvasInteractionGuardAction,
   resolveLockedNodePointerCaptureAction,
 } from "./canvasLockedInteractionModel";
-import { resolveCanvasEdgePointerDownAction } from "./canvasEdgePointerInteractionModel";
+import { resolveCanvasEdgePointerDownAction, resolveCanvasEdgeTargetPoint } from "./canvasEdgePointerInteractionModel";
 import { resolveSelectedEdgeKeyboardDeleteAction } from "./flowEdgeDeleteModel";
 import {
   buildMinimapNodeModel,
@@ -1804,7 +1804,12 @@ function handleEdgePointerDown(edge: ProjectedCanvasEdge, event: PointerEvent) {
       applyEdgePointerDownBaseAction(edgePointerDownAction);
       selectedEdgeId.value = edgePointerDownAction.selectEdgeId;
       if (edgePointerDownAction.updatePendingConnectionPoint) {
-        setPendingConnectionPoint(resolveEdgeTargetPoint(edge));
+        setPendingConnectionPoint(
+          resolveCanvasEdgeTargetPoint({
+            edge,
+            anchors: projectedAnchors.value,
+          }),
+        );
       }
       if (edgePointerDownAction.clearSelection) {
         selection.clearSelection();
@@ -2032,16 +2037,6 @@ function resolveCanvasPoint(event: { clientX: number; clientY: number }) {
     viewport: viewport.viewport,
     fallbackPoint: pendingConnectionPoint.value,
   });
-}
-
-function resolveEdgeTargetPoint(edge: ProjectedCanvasEdge) {
-  const targetAnchor =
-    edge.kind === "data" && edge.state
-      ? projectedAnchors.value.find(
-          (anchor) => anchor.nodeId === edge.target && anchor.kind === "state-in" && anchor.stateKey === edge.state,
-        )
-      : projectedAnchors.value.find((anchor) => anchor.nodeId === edge.target && anchor.kind === "flow-in");
-  return targetAnchor ? { x: targetAnchor.x, y: targetAnchor.y } : null;
 }
 
 function resolveRunNodePresentationForNode(nodeId: string) {

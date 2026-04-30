@@ -1,0 +1,138 @@
+from __future__ import annotations
+
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app.core.runtime.node_handlers import execute_agent_node, execute_condition_node, execute_input_node
+from app.core.schemas.node_system import NodeSystemAgentNode, NodeSystemConditionNode, NodeSystemInputNode, NodeSystemStateDefinition
+
+
+class NodeHandlersRuntimeTests(unittest.TestCase):
+    def test_execute_input_node_coerces_outputs_and_final_result(self) -> None:
+        state_schema = {
+            "payload": NodeSystemStateDefinition.model_validate({"type": "json", "value": '{"ok": true}'}),
+            "title": NodeSystemStateDefinition.model_validate({"type": "text", "value": "Hello"}),
+        }
+        node = NodeSystemInputNode.model_validate(
+            {
+                "kind": "input",
+                "ui": {"position": {"x": 0, "y": 0}},
+                "writes": [{"state": "payload"}, {"state": "title"}],
+            }
+        )
+
+        result = execute_input_node(
+            state_schema,
+            node,
+            {},
+            coerce_input_boundary_value_func=lambda value, value_type: {"coerced": value_type.value}
+            if value_type.value == "json"
+            else value,
+            first_truthy_func=lambda values: next((value for value in values if value), None),
+        )
+
+        self.assertEqual(result["outputs"], {"payload": {"coerced": "json"}, "title": "Hello"})
+        self.assertEqual(result["final_result"], "{'coerced': 'json'}")
+
+    def test_execute_condition_node_resolves_branch_or_raises(self) -> None:
+        node = NodeSystemConditionNode.model_validate(
+            {
+                "kind": "condition",
+                "ui": {"position": {"x": 0, "y": 0}},
+                "config": {
+                    "branches": ["yes"],
+                    "rule": {"source": "$state.answer", "operator": "==", "value": "ok"},
+                },
+            }
+        )
+
+        result = execute_condition_node(
+            node,
+            {"answer": "input"},
+            {"state": {"answer": "ok"}},
+            resolve_condition_source_func=lambda source, *, inputs, graph, state_values: state_values["answer"],
+            evaluate_condition_rule_func=lambda actual, operator, expected: actual == expected,
+            resolve_branch_key_func=lambda branches, branch_mapping, condition_result: branches[0]
+            if condition_result
+            else None,
+        )
+
+        self.assertEqual(result, {"outputs": {"yes": True}, "selected_branch": "yes", "final_result": "yes"})
+
+        with self.assertRaisesRegex(ValueError, "could not resolve"):
+            execute_condition_node(
+                node,
+                {},
+                {"state": {}},
+                resolve_condition_source_func=lambda source, *, inputs, graph, state_values: None,
+                evaluate_condition_rule_func=lambda actual, operator, expected: False,
+                resolve_branch_key_func=lambda branches, branch_mapping, condition_result: None,
+            )
+
+    def test_execute_agent_node_invokes_skills_streaming_and_generation(self) -> None:
+        state_schema = {
+            "kb": NodeSystemStateDefinition.model_validate({"type": "knowledge_base"}),
+            "question": NodeSystemStateDefinition.model_validate({"type": "text"}),
+            "answer": NodeSystemStateDefinition.model_validate({"type": "text"}),
+        }
+        node = NodeSystemAgentNode.model_validate(
+            {
+                "kind": "agent",
+                "name": "writer",
+                "ui": {"position": {"x": 0, "y": 0}},
+                "reads": [{"state": "kb"}, {"state": "question"}],
+                "writes": [{"state": "answer"}],
+                "config": {"skills": ["search_knowledge_base", "custom"]},
+            }
+        )
+        finalized: dict[str, object] = {}
+
+        result = execute_agent_node(
+            state_schema,
+            node,
+            {"kb": "docs", "question": "q"},
+            {"state": {}},
+            node_name="writer",
+            state={"run_id": "run-1"},
+            knowledge_base_skill_key="search_knowledge_base",
+            get_skill_registry_func=lambda *, include_disabled: {
+                "search_knowledge_base": object(),
+                "custom": object(),
+            },
+            retrieve_knowledge_base_context_func=lambda *, knowledge_base, query, limit: {
+                "knowledge_base": knowledge_base,
+                "query": query,
+                "limit": limit,
+            },
+            invoke_skill_func=lambda skill_func, skill_inputs: {"echo": skill_inputs["question"]},
+            resolve_agent_runtime_config_func=lambda agent_node: {"runtime": "initial"},
+            build_agent_stream_delta_callback_func=lambda *, state, node_name, output_keys: "delta",
+            callable_accepts_keyword_func=lambda func, keyword: keyword in {"on_delta", "state_schema"},
+            generate_agent_response_func=lambda agent_node, input_values, skill_context, runtime_config, **kwargs: (
+                {"answer": "value", "summary": "summary"},
+                "reason",
+                ["warn", "warn"],
+                {"runtime": "updated", "kwargs": kwargs},
+            ),
+            finalize_agent_stream_delta_func=lambda *, state, node_name, output_values: finalized.update(output_values),
+            first_truthy_func=lambda values: next((value for value in values if value), None),
+        )
+
+        self.assertEqual(result["outputs"], {"answer": "value"})
+        self.assertEqual(result["reasoning"], "reason")
+        self.assertEqual(result["selected_skills"], ["search_knowledge_base", "custom"])
+        self.assertEqual(result["skill_outputs"][0]["inputs"], {"knowledge_base": "docs", "query": "q"})
+        self.assertEqual(result["skill_outputs"][1]["outputs"], {"echo": "q"})
+        self.assertEqual(result["runtime_config"]["runtime"], "updated")
+        self.assertEqual(result["runtime_config"]["kwargs"]["on_delta"], "delta")
+        self.assertEqual(result["runtime_config"]["kwargs"]["state_schema"], state_schema)
+        self.assertEqual(result["warnings"], ["warn"])
+        self.assertEqual(result["final_result"], "value")
+        self.assertEqual(finalized, {"answer": "value"})
+
+
+if __name__ == "__main__":
+    unittest.main()

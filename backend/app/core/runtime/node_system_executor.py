@@ -39,6 +39,11 @@ from app.core.runtime.llm_output_parser import (
     parse_llm_json_response as _parse_llm_json_response,
     read_parsed_output_value as _read_parsed_output_value,
 )
+from app.core.runtime.node_handlers import (
+    execute_agent_node as _execute_agent_node_impl,
+    execute_condition_node as _execute_condition_node_impl,
+    execute_input_node as _execute_input_node_impl,
+)
 from app.core.runtime.output_artifacts import (
     apply_loop_limit_exhausted_output_message as _apply_loop_limit_exhausted_output_message,
     format_loop_limit_exhausted_output_value as _format_loop_limit_exhausted_output_value,
@@ -77,7 +82,6 @@ from app.core.schemas.node_system import (
     NodeSystemInputNode,
     NodeSystemOutputNode,
     NodeSystemStateDefinition,
-    NodeSystemStateType,
 )
 from app.core.storage.run_store import save_run
 from app.skills.registry import get_skill_registry
@@ -143,18 +147,13 @@ def _execute_input_node(
     node: NodeSystemInputNode,
     state: dict[str, Any],
 ) -> dict[str, Any]:
-    outputs: dict[str, Any] = {}
-    for binding in node.writes:
-        definition = state_schema[binding.state]
-        raw_value = definition.value
-        value = _coerce_input_boundary_value(raw_value, definition.type)
-        outputs[binding.state] = value
-
-    final_result = _first_truthy(outputs.values())
-    return {
-        "outputs": outputs,
-        "final_result": "" if final_result is None else str(final_result),
-    }
+    return _execute_input_node_impl(
+        state_schema,
+        node,
+        state,
+        coerce_input_boundary_value_func=_coerce_input_boundary_value,
+        first_truthy_func=_first_truthy,
+    )
 
 
 def _execute_agent_node(
@@ -166,102 +165,24 @@ def _execute_agent_node(
     node_name: str,
     state: dict[str, Any],
 ) -> dict[str, Any]:
-    selected_skills: list[str] = []
-    skill_outputs: list[dict[str, Any]] = []
-    skill_context: dict[str, Any] = {}
-    registry = get_skill_registry(include_disabled=False)
-    response_payload: dict[str, Any] = {}
-    response_reasoning = ""
-    warnings: list[str] = []
-    runtime_config = _resolve_agent_runtime_config(node)
-
-    knowledge_read = next(
-        (
-            binding.state
-            for binding in node.reads
-            if state_schema[binding.state].type == NodeSystemStateType.KNOWLEDGE_BASE
-        ),
-        None,
-    )
-    query_read = next(
-        (
-            binding.state
-            for binding in node.reads
-            if binding.state != knowledge_read and state_schema[binding.state].type in {NodeSystemStateType.TEXT, NodeSystemStateType.MARKDOWN}
-        ),
-        None,
-    )
-
-    for skill_key in node.config.skills:
-        skill_func = registry.get(skill_key)
-        if skill_func is None:
-            raise ValueError(f"Skill '{skill_key}' is not registered.")
-
-        if skill_key == KNOWLEDGE_BASE_SKILL_KEY:
-            skill_inputs = {
-                "knowledge_base": input_values.get(knowledge_read) if knowledge_read else None,
-                "query": input_values.get(query_read) if query_read else None,
-            }
-            skill_result = retrieve_knowledge_base_context(
-                knowledge_base=skill_inputs.get("knowledge_base"),
-                query=skill_inputs.get("query"),
-                limit=3,
-            )
-        else:
-            skill_inputs = dict(input_values)
-            skill_result = _invoke_skill(skill_func, skill_inputs)
-        selected_skills.append(skill_key)
-        skill_context[skill_key] = skill_result
-        skill_outputs.append(
-            {
-                "skill_name": skill_key,
-                "skill_key": skill_key,
-                "inputs": skill_inputs,
-                "outputs": skill_result,
-            }
-        )
-
-    output_keys = [binding.state for binding in node.writes]
-    stream_delta_callback = _build_agent_stream_delta_callback(
-        state=state,
-        node_name=node_name,
-        output_keys=output_keys,
-    )
-
-    generate_kwargs: dict[str, Any] = {}
-    if _callable_accepts_keyword(_generate_agent_response, "on_delta"):
-        generate_kwargs["on_delta"] = stream_delta_callback
-    if _callable_accepts_keyword(_generate_agent_response, "state_schema"):
-        generate_kwargs["state_schema"] = state_schema
-    response_payload, response_reasoning, response_warnings, runtime_config = _generate_agent_response(
+    return _execute_agent_node_impl(
+        state_schema,
         node,
         input_values,
-        skill_context,
-        runtime_config,
-        **generate_kwargs,
-    )
-    warnings.extend(response_warnings)
-
-    output_values = {
-        state_name: response_payload.get(state_name)
-        for state_name in output_keys
-    }
-    _finalize_agent_stream_delta(
-        state=state,
+        graph_context,
         node_name=node_name,
-        output_values=output_values,
+        state=state,
+        knowledge_base_skill_key=KNOWLEDGE_BASE_SKILL_KEY,
+        get_skill_registry_func=get_skill_registry,
+        retrieve_knowledge_base_context_func=retrieve_knowledge_base_context,
+        invoke_skill_func=_invoke_skill,
+        resolve_agent_runtime_config_func=_resolve_agent_runtime_config,
+        build_agent_stream_delta_callback_func=_build_agent_stream_delta_callback,
+        callable_accepts_keyword_func=_callable_accepts_keyword,
+        generate_agent_response_func=_generate_agent_response,
+        finalize_agent_stream_delta_func=_finalize_agent_stream_delta,
+        first_truthy_func=_first_truthy,
     )
-
-    return {
-        "outputs": output_values,
-        "response": response_payload,
-        "reasoning": response_reasoning,
-        "selected_skills": selected_skills,
-        "skill_outputs": skill_outputs,
-        "runtime_config": runtime_config,
-        "warnings": list(dict.fromkeys(warnings)),
-        "final_result": _first_truthy(output_values.values()) or response_payload.get("summary") or "",
-    }
 
 
 def _execute_condition_node(
@@ -269,22 +190,14 @@ def _execute_condition_node(
     input_values: dict[str, Any],
     graph_context: dict[str, Any],
 ) -> dict[str, Any]:
-    rule_value = _resolve_condition_source(
-        node.config.rule.source,
-        inputs=input_values,
-        graph=graph_context,
-        state_values=graph_context.get("state", {}),
+    return _execute_condition_node_impl(
+        node,
+        input_values,
+        graph_context,
+        resolve_condition_source_func=_resolve_condition_source,
+        evaluate_condition_rule_func=_evaluate_condition_rule,
+        resolve_branch_key_func=_resolve_branch_key,
     )
-    condition_result = _evaluate_condition_rule(rule_value, node.config.rule.operator.value, node.config.rule.value)
-    branch_key = _resolve_branch_key(node.config.branches, node.config.branch_mapping, condition_result)
-    if branch_key is None:
-        raise ValueError("Condition node could not resolve a target branch.")
-
-    return {
-        "outputs": {branch_key: True},
-        "selected_branch": branch_key,
-        "final_result": branch_key,
-    }
 
 
 def _generate_agent_response(

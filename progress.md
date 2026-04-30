@@ -1,5 +1,56 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 126
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `d906d0c` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 125 findings, and remaining high-line-count files.
+  - Chose the `EditorWorkspaceShell.vue` Python import slice because it is independent of canvas auto-snapping and keeps dropped-file node creation fallback behavior explicit.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspacePythonImportController.test.ts` covering GraphiteUI Python export import into a dirty new tab, input value reset, route sync/signature update, success feedback, non-export warning, and fallback-to-file-node behavior.
+  - Verified the expected red failure because `useWorkspacePythonImportController.ts` did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspacePythonImportController.ts`.
+  - Updated `EditorWorkspaceShell.vue` to consume the Python import controller for `openPythonGraphImportDialog`, `handlePythonGraphImportSelection`, and `importPythonGraphFile`.
+  - Kept dropped-file node creation fallback, node creation execution, graph mutation, route sync dependency, and API imports injected from the shell.
+  - Updated structure tests to lock the new Python import controller boundary.
+  - Reduced `EditorWorkspaceShell.vue` from 1,553 to 1,498 lines.
+
+### Phase 4: Verification and Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Ran focused Python import controller and workspace-shell structure tests.
+  - Ran TypeScript unused-symbol verification.
+  - Ran the full frontend test suite and production build.
+  - Confirmed the production build still has no Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Confirmed the previous dev session exited after the restart.
+  - Recalculated the full roadmap at about 98.0%, frontend-focused progress at about 92-93%, and P3 `EditorWorkspaceShell.vue` progress at about 96%.
+  - Opened Phase 127 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red controller test | `node --test src/editor/workspace/useWorkspacePythonImportController.test.ts` before implementation | Fails because the Python import controller module is missing | Failed with missing module import | Passed |
+| Focused frontend tests | `node --test src/editor/workspace/useWorkspacePythonImportController.test.ts src/editor/workspace/EditorWorkspaceShell.structure.test.ts` | Focused Python import controller and structure tests pass | 39 passed | Passed |
+| TypeScript check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | No type or unused-symbol errors | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src -g '*.test.ts' \| sort) vite.config.structure.test.ts` | Full frontend suite passes | 908 passed | Passed |
+| Production build | `npm run build` in `frontend` | Build succeeds with no large chunk warning | Exit 0; Vite build completed | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+
 ## Session: 2026-04-30 Phase 125
 
 ### Phase 1: Re-orientation

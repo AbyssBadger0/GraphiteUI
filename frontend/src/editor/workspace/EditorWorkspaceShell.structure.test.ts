@@ -21,6 +21,7 @@ const tabLifecycleControllerSource = readWorkspaceSource("useWorkspaceTabLifecyc
 const routeControllerSource = readWorkspaceSource("useWorkspaceRouteController.ts");
 const runControllerSource = readWorkspaceSource("useWorkspaceRunController.ts");
 const graphPersistenceControllerSource = readWorkspaceSource("useWorkspaceGraphPersistenceController.ts");
+const pythonImportControllerSource = readWorkspaceSource("useWorkspacePythonImportController.ts");
 
 test("EditorWorkspaceShell renders workspace panes without reka-ui tab primitives", () => {
   assert.doesNotMatch(componentSource, /from "reka-ui"/);
@@ -253,9 +254,16 @@ test("EditorWorkspaceShell keeps canvas viewport state in local editor drafts", 
 test("EditorWorkspaceShell imports marked GraphiteUI Python files as new graph tabs", () => {
   assert.match(componentSource, /@import-python-graph="openPythonGraphImportDialog"/);
   assert.match(componentSource, /ref="pythonGraphImportInput"/);
-  assert.match(componentSource, /async function importPythonGraphFile\(/);
-  assert.match(componentSource, /isGraphiteUiPythonExportSource\(source\)/);
-  assert.match(componentSource, /openImportedGraphTab\(importedGraph, file\.name\)/);
+  assert.match(componentSource, /import \{ useWorkspacePythonImportController \} from "\.\/useWorkspacePythonImportController\.ts";/);
+  assert.match(
+    componentSource,
+    /const \{[\s\S]*handlePythonGraphImportSelection,[\s\S]*importPythonGraphFile,[\s\S]*openPythonGraphImportDialog,[\s\S]*\} = useWorkspacePythonImportController\(\{/,
+  );
+  assert.match(pythonImportControllerSource, /async function importPythonGraphFile\(/);
+  assert.match(pythonImportControllerSource, /input\.isGraphiteUiPythonExportSource\(source\)/);
+  assert.match(pythonImportControllerSource, /openImportedGraphTab\(importedGraph, file\.name\)/);
+  assert.doesNotMatch(componentSource, /function openImportedGraphTab\(/);
+  assert.doesNotMatch(componentSource, /async function importPythonGraphFile\(/);
 });
 
 test("EditorWorkspaceShell opens the right sidebar in Human Review mode for awaiting-human runs", () => {

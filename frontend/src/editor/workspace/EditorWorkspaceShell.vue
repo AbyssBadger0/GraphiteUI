@@ -286,6 +286,7 @@ import { isGraphiteUiPythonExportFile, isGraphiteUiPythonExportSource } from "./
 import { buildPresetPayloadForNode } from "./presetPersistence.ts";
 import { useWorkspaceDocumentState } from "./useWorkspaceDocumentState.ts";
 import { useWorkspaceGraphPersistenceController } from "./useWorkspaceGraphPersistenceController.ts";
+import { useWorkspacePythonImportController } from "./useWorkspacePythonImportController.ts";
 import { useWorkspaceRouteController } from "./useWorkspaceRouteController.ts";
 import { useWorkspaceRunController } from "./useWorkspaceRunController.ts";
 import { useWorkspaceRunVisualState, type WorkspaceRunFeedback } from "./useWorkspaceRunVisualState.ts";
@@ -485,6 +486,24 @@ const {
   validateGraph,
   exportLangGraphPython,
   downloadPythonSource,
+  setMessageFeedbackForTab,
+});
+const {
+  handlePythonGraphImportSelection,
+  importPythonGraphFile,
+  openPythonGraphImportDialog,
+} = useWorkspacePythonImportController({
+  activeTab,
+  workspace,
+  handledRouteSignature,
+  clickPythonGraphImportInput: () => {
+    pythonGraphImportInput.value?.click();
+  },
+  registerDocumentForTab,
+  updateWorkspace,
+  syncRouteToTab,
+  importGraphFromPythonSource,
+  isGraphiteUiPythonExportSource,
   setMessageFeedbackForTab,
 });
 const {
@@ -755,33 +774,6 @@ async function openRestoredRunTab(runId: string, snapshotId: string | null = pro
   }
 }
 
-function openImportedGraphTab(graph: GraphPayload, fileName: string) {
-  const importedGraph = cloneGraphDocument({
-    ...graph,
-    graph_id: null,
-    name: graph.name?.trim() || fileName.replace(/\.py$/i, "") || "Imported Graph",
-  });
-  const tab = {
-    ...createUnsavedWorkspaceTab({
-      kind: "new",
-      title: importedGraph.name,
-    }),
-    dirty: true,
-  };
-
-  registerDocumentForTab(tab.tabId, importedGraph);
-  updateWorkspace({
-    activeTabId: tab.tabId,
-    tabs: [...workspace.value.tabs, tab],
-  });
-  syncRouteToTab(tab);
-  handledRouteSignature.value = "new:";
-  setMessageFeedbackForTab(tab.tabId, {
-    tone: "success",
-    message: `Imported graph from ${fileName}.`,
-  });
-}
-
 async function loadExistingGraphIntoTab(tabId: string, graphId: string) {
   if (!shouldHydrateExistingGraphDocument({ hasDocument: Boolean(documentsByTabId.value[tabId]), isLoading: Boolean(loadingByTabId.value[tabId]) })) {
     return;
@@ -983,53 +975,6 @@ async function createNodeFromFileForTab(tabId: string, _payload: { file: File; p
     });
   }
   closeNodeCreationMenu(tabId);
-}
-
-function openPythonGraphImportDialog() {
-  pythonGraphImportInput.value?.click();
-}
-
-async function handlePythonGraphImportSelection(event: Event) {
-  const input = event.currentTarget instanceof HTMLInputElement ? event.currentTarget : null;
-  const file = input?.files?.[0] ?? null;
-  if (input) {
-    input.value = "";
-  }
-  if (!file) {
-    return;
-  }
-  await importPythonGraphFile(file, { fallbackToFileNode: false });
-}
-
-async function importPythonGraphFile(file: File, options: { fallbackToFileNode: boolean }) {
-  const source = await file.text();
-  if (!isGraphiteUiPythonExportSource(source)) {
-    if (!options.fallbackToFileNode) {
-      const tab = activeTab.value;
-      if (tab) {
-        setMessageFeedbackForTab(tab.tabId, {
-          tone: "warning",
-          message: `${file.name} is not a GraphiteUI Python export.`,
-        });
-      }
-    }
-    return false;
-  }
-
-  try {
-    const importedGraph = await importGraphFromPythonSource(source);
-    openImportedGraphTab(importedGraph, file.name);
-    return true;
-  } catch (error) {
-    const tab = activeTab.value;
-    if (tab) {
-      setMessageFeedbackForTab(tab.tabId, {
-        tone: "warning",
-        message: error instanceof Error ? error.message : "Failed to import GraphiteUI Python export.",
-      });
-    }
-    return true;
-  }
 }
 
 function handleNodePositionUpdate(tabId: string, payload: { nodeId: string; position: GraphPosition }) {

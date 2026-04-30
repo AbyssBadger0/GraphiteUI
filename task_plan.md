@@ -6,10 +6,10 @@ Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure pr
 ## Progress Accuracy Note
 - The earlier `99.x%` values are no longer treated as the true total optimization progress. They reflected the active frontend cleanup batch getting close to its own tail, not the whole architecture roadmap.
 - The honest full-roadmap progress must include P0 cleanup, P1 `NodeCard.vue`, P2 `EditorCanvas.vue`, P3 `EditorWorkspaceShell.vue`, and P4 backend runtime/provider cleanup.
-- Current conservative estimate after Phase 115: full roadmap is about 95.5% complete; frontend-focused roadmap is about 83-85% complete; P3 `EditorWorkspaceShell.vue` is about 82% complete; backend P4 is about 88-90% started.
+- Current conservative estimate after Phase 116: full roadmap is about 96.5% complete; frontend-focused roadmap is about 83-85% complete; P3 `EditorWorkspaceShell.vue` is about 82% complete; backend P4 is about 90-92% started.
 
 ## Current Phase
-Phase 116 in progress
+Phase 117 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -1059,12 +1059,21 @@ Phase 116 in progress
 - **Status:** completed
 
 ### Phase 116: LangGraph Waiting State Boundary
-- [ ] Re-read the formal roadmap, Phase 115 findings, and remaining `core/langgraph/runtime.py` waiting-state/cycle/runtime clusters.
-- [ ] Choose the next safest P4 boundary from pending interrupt serialization, waiting-state application, or cycle tracker helpers.
+- [x] Re-read the formal roadmap, Phase 115 findings, and remaining `core/langgraph/runtime.py` waiting-state/cycle/runtime clusters.
+- [x] Choose the next safest P4 boundary from pending interrupt serialization, waiting-state application, or cycle tracker helpers.
+- [x] Add focused red tests before production changes.
+- [x] Preserve checkpoint IDs, resume behavior, waiting-state behavior, cycle summaries, provider behavior, output boundary behavior, frontend graph interactions, and visual layout.
+- [x] Run focused backend tests, full backend verification when needed, dev restart, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 116 and re-judge total progress.
+- **Status:** completed
+
+### Phase 117: LangGraph Cycle Tracker Boundary
+- [ ] Re-read the formal roadmap, Phase 116 findings, and remaining `core/langgraph/runtime.py` cycle tracker/runtime clusters.
+- [ ] Choose the next safest P4 boundary from cycle tracker construction, loop-limit tracking, route activity recording, or final cycle summary.
 - [ ] Add focused red tests before production changes.
-- [ ] Preserve checkpoint IDs, resume behavior, waiting-state behavior, cycle summaries, provider behavior, output boundary behavior, frontend graph interactions, and visual layout.
+- [ ] Preserve cycle summaries, loop-limit behavior, no-state-change detection, checkpoint IDs, resume behavior, provider behavior, output boundary behavior, frontend graph interactions, and visual layout.
 - [ ] Run focused backend tests, full backend verification when needed, dev restart, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 116 and re-judge total progress.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 117 and re-judge total progress.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -1475,6 +1484,12 @@ Phase 116 in progress
 | P4 backend cleanup after Phase 115 | About 88-90% complete. `core/langgraph/runtime.py` is now 974 lines, with checkpoint runtime config construction and checkpoint metadata sync isolated in `checkpoint_runtime.py`. |
 | Current continuation gate after Phase 115 | Total roadmap progress is still below 100%, so Phase 116 is automatically opened for LangGraph waiting-state or cycle helper cleanup. |
 | P4 cleanup target for Phase 116 | About 90-92% P4 if waiting-state interrupt helpers move out with focused runtime tests. |
+| Full roadmap cleanup after Phase 116 | About 96.5% complete after extracting LangGraph waiting-state interrupt helpers. |
+| Frontend roadmap cleanup after Phase 116 | Still about 83-85%; this phase was backend-only and did not touch graph editing UI. |
+| P3 `EditorWorkspaceShell.vue` cleanup after Phase 116 | Still about 82%; no workspace shell changes in this phase. |
+| P4 backend cleanup after Phase 116 | About 90-92% complete. `core/langgraph/runtime.py` is now 856 lines, with breakpoint naming, interrupt config normalization, pending interrupt serialization, waiting-state application, metadata cleanup, and snapshot id helper isolated in `interrupts.py`. |
+| Current continuation gate after Phase 116 | Total roadmap progress is still below 100%, so Phase 117 is automatically opened for LangGraph cycle tracker cleanup. |
+| P4 cleanup target for Phase 117 | About 92-95% P4 if cycle tracker helpers move out with focused runtime tests. |
 
 ## Decisions Made
 | Decision | Rationale |

@@ -490,7 +490,7 @@ import {
   type CanvasZoomButtonControl,
 } from "./canvasViewportInteractionModel";
 import {
-  isCanvasStateTargetAnchorAllowedForConnection,
+  canCompleteCanvasAnchorConnection,
   resolveCanvasAutoSnappedTargetAnchor as resolveCanvasAutoSnappedTargetAnchorModel,
   resolveCanvasEligibleTargetAnchorForNodeBody,
   resolveCanvasAnchorPointerDownAction,
@@ -1382,19 +1382,12 @@ function resolveEligibleTargetAnchorForNodeBody(nodeId: string) {
   });
 }
 
-function isStateTargetAnchorAllowedForActiveConnection(anchor: ProjectedCanvasAnchor) {
-  return isCanvasStateTargetAnchorAllowedForConnection(activeConnection.value, anchor);
-}
-
 function canCompleteCanvasConnection(anchor: ProjectedCanvasAnchor) {
-  if (activeConnection.value?.sourceKind === "state-out" && !isStateTargetAnchorAllowedForActiveConnection(anchor)) {
-    return false;
-  }
-
-  return canCompleteGraphConnection(props.document, activeConnection.value, {
-    nodeId: anchor.nodeId,
-    kind: anchor.kind,
-    stateKey: anchor.stateKey,
+  return canCompleteCanvasAnchorConnection({
+    connection: activeConnection.value,
+    anchor,
+    canCompleteGraphConnection: (targetAnchor) =>
+      canCompleteGraphConnection(props.document, activeConnection.value, targetAnchor),
   });
 }
 

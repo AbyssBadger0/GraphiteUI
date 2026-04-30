@@ -175,6 +175,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - 2026-04-30：`edgeVisibilityModel.ts` 已继续承担 canvas flow/route hotspot visibility projection，`EditorCanvas.vue` 仍保留 selected/hovered refs、active connection source ref、eligible target ids 和 anchor overlay rendering。
 - 2026-04-30：`edgeVisibilityModel.ts` 已继续承担 projected-edge visibility membership，`EditorCanvas.vue` 仍保留 visible edge id computation、projected edge rendering、selected-edge state 和 hitarea handlers。
 - 2026-04-30：`canvasInteractionStyleModel.ts` 已继续承担 active-source 和 eligible-target anchor class-state checks，`EditorCanvas.vue` 仍保留 style context、overlay rendering 和 pointer handlers。
+- 2026-04-30：`canvasConnectionInteractionModel.ts` 已继续承担 connection completion eligibility routing，`EditorCanvas.vue` 仍保留 active connection refs、graph document input、auto-snap callers 和 completion emits。
 
 ## 优先级路线
 

@@ -1314,8 +1314,9 @@ test("EditorCanvas snaps state drags to transient or matching state inputs from 
   assert.match(canvasConnectionInteractionModelSource, /const directStateTargetAnchor = resolveCanvasConcreteStateTargetAnchorAtPointerY\(\{/);
   assert.match(canvasConnectionInteractionModelSource, /if \(directStateTargetAnchor\) \{[\s\S]*return directStateTargetAnchor;/);
   assert.match(canvasConnectionInteractionModelSource, /return resolveCanvasEligibleStateTargetAnchorForNodeBody\(\{/);
-  assert.match(componentSource, /function isStateTargetAnchorAllowedForActiveConnection\(anchor: ProjectedCanvasAnchor\)/);
-  assert.match(componentSource, /return isCanvasStateTargetAnchorAllowedForConnection\(activeConnection\.value, anchor\);/);
+  assert.match(canvasConnectionInteractionModelSource, /export function canCompleteCanvasAnchorConnection/);
+  assert.match(componentSource, /import \{[\s\S]*canCompleteCanvasAnchorConnection,[\s\S]*resolveCanvasAutoSnappedTargetAnchor as resolveCanvasAutoSnappedTargetAnchorModel,[\s\S]*\} from "\.\/canvasConnectionInteractionModel";/);
+  assert.doesNotMatch(componentSource, /function isStateTargetAnchorAllowedForActiveConnection\(anchor: ProjectedCanvasAnchor\)/);
   assert.match(canvasConnectionInteractionModelSource, /export type CanvasNodePointerDownConnectionAction/);
   assert.match(canvasConnectionInteractionModelSource, /export function resolveCanvasNodePointerDownConnectionAction/);
   assert.match(componentSource, /const connectionNodePointerDownAction = resolveCanvasNodePointerDownConnectionAction\(\{[\s\S]*connection: activeConnection\.value,[\s\S]*targetAnchor: resolveEligibleTargetAnchorForNodeBody\(nodeId\),[\s\S]*preserveInlineEditorFocus,[\s\S]*\}\);/);
@@ -1329,7 +1330,8 @@ test("EditorCanvas snaps state drags to transient or matching state inputs from 
   assert.match(canvasConnectionInteractionModelSource, /const fallbackInputAnchor = input\.baseProjectedAnchors\.find[\s\S]*anchor\.stateKey === VIRTUAL_ANY_INPUT_STATE_KEY/);
   assert.match(componentSource, /function isPointerWithinNodeElement\(nodeElement: HTMLElement, event: PointerEvent\)/);
   assert.match(componentSource, /return resolveCanvasEligibleTargetAnchorForNodeBody\(\{[\s\S]*connection: activeConnection\.value,[\s\S]*nodeId,[\s\S]*canComplete: canCompleteCanvasConnection,[\s\S]*\}\);/);
-  assert.match(componentSource, /if \(activeConnection\.value\?\.sourceKind === "state-out" && !isStateTargetAnchorAllowedForActiveConnection\(anchor\)\) \{[\s\S]*return false;/);
+  assert.match(componentSource, /return canCompleteCanvasAnchorConnection\(\{[\s\S]*connection: activeConnection\.value,[\s\S]*anchor,[\s\S]*canCompleteGraphConnection: \(targetAnchor\) =>[\s\S]*canCompleteGraphConnection\(props\.document, activeConnection\.value, targetAnchor\),[\s\S]*\}\);/);
+  assert.doesNotMatch(componentSource, /if \(activeConnection\.value\?\.sourceKind === "state-out" && !isStateTargetAnchorAllowedForActiveConnection\(anchor\)\) \{[\s\S]*return false;/);
   assert.match(canvasConnectionCompletionModelSource, /connection\.sourceKind === "state-out"[\s\S]*type: "connect-state"[\s\S]*sourceNodeId: connection\.sourceNodeId,[\s\S]*sourceStateKey: connection\.sourceStateKey,[\s\S]*targetNodeId: targetAnchor\.nodeId,[\s\S]*targetStateKey: targetAnchor\.stateKey,[\s\S]*position: \{ x: targetAnchor\.x, y: targetAnchor\.y \},/);
   assert.doesNotMatch(componentSource, /function isPointerWithinAnchorHitElement/);
   assert.doesNotMatch(componentSource, /STATE_INPUT_HIT_PADDING/);

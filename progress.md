@@ -1,5 +1,76 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 79
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Confirmed Phase 78 was committed and pushed as `fda908b`.
+  - Re-read the formal roadmap and latest P3 run-event findings.
+  - Inspected duplicated local Event-to-payload wrappers in `EditorWorkspaceShell.vue` and `RunDetailPage.vue`.
+  - Selected the final low-risk run-event slice: shared `MessageEvent` payload parsing wrapper.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `parseRunEventPayload` coverage to `run-event-stream.test.ts`.
+  - Updated workspace and run detail structure tests to require the shared helper and reject local wrapper functions.
+  - Verified the expected red failure before implementation because the shared helper did not exist and the components still owned the wrapper.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `parseRunEventPayload` to `frontend/src/lib/run-event-stream.ts`.
+  - Updated `EditorWorkspaceShell.vue` and `RunDetailPage.vue` to import the shared helper.
+  - Removed both local duplicate `MessageEvent` wrapper functions.
+  - Kept EventSource lifecycle, listener registration, polling timers, graph mutation, preview ref assignment, restore behavior, human-review opening, and UI state writes in the components.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused shared model and structure tests.
+  - Ran related run API, run event stream, run node artifact, run feedback, workspace structure, and run detail structure regression tests.
+  - Ran TypeScript unused-symbol verification from `frontend`.
+  - Ran the full frontend `node --test` suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed backend `/health` returned `{"status":"ok"}` and the frontend entry returned HTTP 200.
+  - Captured a headless Chrome screenshot and confirmed the workspace rendered normally.
+
+### Phase 5: Continuation Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated overall roadmap cleanup at about 99.8%.
+  - Recalculated P3 `EditorWorkspaceShell.vue` cleanup at about 38%.
+  - Opened Phase 80 automatically because total roadmap progress is still below 100%.
+  - Selected the next action as re-orienting around draft persistence rather than forcing EventSource lifecycle extraction.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red focused tests | `node --test frontend/src/lib/run-event-stream.test.ts frontend/src/editor/workspace/EditorWorkspaceShell.structure.test.ts frontend/src/pages/RunDetailPage.structure.test.ts` before implementation | Fails because shared Event-to-payload parsing does not exist | Failed on missing export and structure assertions | Passed |
+| Focused model/structure tests | Same focused files after implementation | All focused tests pass | 45 passed | Passed |
+| Focused run/workspace regression | `node --test` over run-event stream, run node artifacts, run feedback, workspace structure, run detail structure, and run API tests | Related run streaming and preview tests pass | 55 passed | Passed |
+| Unused symbol check | `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No diagnostics | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src vite.config.structure.test.ts | rg '\.test\.ts$')` in `frontend` | All frontend tests pass | 846 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without a large chunk warning | Exit 0, no Vite chunk warning | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+| Browser smoke | Headless Chrome screenshot with virtual-time wait | Workspace renders normally | Workspace UI rendered | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 79 implementation, verification, docs update, and dev restart are complete. |
+| Where am I going? | Phase 80 is open for draft persistence boundary re-orientation. |
+| What's the goal? | Continue P3 shell cleanup while avoiding unsafe EventSource lifecycle extraction and preserving route sync, drafts, run streams, restore, and graph behavior. |
+| What have I learned? | The final low-risk run-event duplication was the Event-to-payload wrapper; remaining run-event lifecycle code is side-effect heavy and should not be forced without stronger coverage. |
+| What have I done? | Extracted the shared Event-to-payload helper, added focused tests, verified the full frontend suite, built, restarted, and visually smoked the app. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | Unescaped backticks in an `rg` command triggered `/bin/bash: line 1: EditorWorkspaceShell.vue: command not found` | Phase 79 documentation inspection | The command was read-only and no files changed; re-read the needed document sections with safer quoting. |
+
 ## Session: 2026-04-30 Phase 78
 
 ### Phase 1: Re-orientation

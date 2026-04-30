@@ -250,7 +250,7 @@ import { fetchRun } from "@/api/runs";
 import {
   buildLiveStreamingOutput,
   buildRunEventStreamUrl,
-  parseRunEventPayloadData,
+  parseRunEventPayload,
   resolveRunEventNodeId,
   shouldPollRunStatus,
   type LiveStreamingOutput,
@@ -353,10 +353,6 @@ function clearPendingRunRequest() {
 function closeRunEventStream() {
   runEventSource?.close();
   runEventSource = null;
-}
-
-function parseRunEventPayload(event: Event) {
-  return event instanceof MessageEvent ? parseRunEventPayloadData(event.data) : null;
 }
 
 function updateLiveStreamingOutput(payload: Record<string, unknown>, completed = false) {

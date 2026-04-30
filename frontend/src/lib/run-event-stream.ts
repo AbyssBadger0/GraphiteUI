@@ -36,6 +36,10 @@ export function parseRunEventPayloadData(data: unknown): RunEventPayload | null 
   }
 }
 
+export function parseRunEventPayload(event: Event) {
+  return event instanceof MessageEvent ? parseRunEventPayloadData(event.data) : null;
+}
+
 export function resolveRunEventNodeId(payload: RunEventPayload) {
   return String(payload.node_id ?? "").trim();
 }

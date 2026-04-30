@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 79 in progress
+Phase 80 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -729,12 +729,21 @@ Phase 79 in progress
 - **Status:** completed
 
 ### Phase 79: Run Event Boundary Re-evaluation
-- [ ] Re-read the formal roadmap, Phase 78 findings, and remaining run event stream code in workspace/run detail.
-- [ ] Inspect whether another safe P3 run-event slice remains, or whether the next safer boundary should move to draft persistence.
+- [x] Re-read the formal roadmap, Phase 78 findings, and remaining run event stream code in workspace/run detail.
+- [x] Inspect whether another safe P3 run-event slice remains, or whether the next safer boundary should move to draft persistence.
+- [x] Add focused red tests before production changes if a code slice is selected.
+- [x] Keep EventSource lifecycle, polling timers, graph mutation, preview ref assignment, restore behavior, human-review opening, and live display semantics stable.
+- [x] Run focused workspace/run tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 79.
+- **Status:** completed
+
+### Phase 80: Draft Persistence Boundary Re-orientation
+- [ ] Re-read the formal roadmap, Phase 79 findings, and remaining P3 shell orchestration code.
+- [ ] Inspect whether run-event lifecycle extraction should stop for now and whether the next safest P3 boundary is draft persistence.
 - [ ] Add focused red tests before production changes if a code slice is selected.
-- [ ] Keep EventSource lifecycle, polling timers, graph mutation, preview ref assignment, restore behavior, human-review opening, and live display semantics stable.
-- [ ] Run focused workspace/run tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 79.
+- [ ] Keep route sync, tab registration, localStorage writes, graph mutation, restore behavior, human-review opening, and run-event stream behavior stable.
+- [ ] Run focused workspace/persistence tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 80 and re-judge total progress.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -960,6 +969,10 @@ Phase 79 in progress
 | P3 `EditorWorkspaceShell.vue` cleanup after Phase 78 | About 35% complete after extracting the complete preview update request while preserving shell ref assignment and stream lifecycle. |
 | Current continuation gate after Phase 78 | Total roadmap progress is still below 100%, so Phase 79 is automatically opened to re-evaluate the remaining run-event boundary before choosing the next slice. |
 | P3 `EditorWorkspaceShell.vue` cleanup target for Phase 79 | About 38-40% of P3 if another low-risk run-event slice remains; otherwise the next safe boundary should move to draft persistence rather than forcing EventSource lifecycle extraction. |
+| Overall roadmap cleanup after Phase 79 | About 99.8% complete after moving the shared Event-to-payload parsing wrapper into `run-event-stream.ts`. |
+| P3 `EditorWorkspaceShell.vue` cleanup after Phase 79 | About 38% complete after removing the duplicated local `MessageEvent` payload wrappers from workspace and run detail without changing EventSource lifecycle. |
+| Current continuation gate after Phase 79 | Total roadmap progress is still below 100%, so Phase 80 is automatically opened to re-orient around draft persistence instead of forcing a high-risk EventSource lifecycle extraction. |
+| P3 `EditorWorkspaceShell.vue` cleanup target for Phase 80 | About 42% of P3 if the first draft persistence helper can move out without changing route sync, tab registration, localStorage writes, graph mutation, restore, or run stream behavior. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -1034,6 +1047,8 @@ Phase 79 in progress
 - Phase 76 moves workspace output-key-to-preview-node resolution into `run-event-stream.ts`; `EditorWorkspaceShell.vue` keeps EventSource lifecycle, preview ref assignment, graph mutation, polling timers, fallback-node input, and live display state.
 - Phase 77 moves streaming output preview-by-node-id patch construction into `run-event-stream.ts`; `EditorWorkspaceShell.vue` keeps EventSource lifecycle, run output preview ref assignment, graph mutation, polling timers, fallback-node input, and live display state.
 - Phase 78 moves full streaming preview payload/document/current-preview projection into `run-event-stream.ts`; `EditorWorkspaceShell.vue` keeps EventSource lifecycle, run output preview ref assignment, graph mutation, polling timers, restore behavior, human-review opening, and live display state.
+- Phase 79 moves the shared Event-to-payload wrapper into `run-event-stream.ts`; `EditorWorkspaceShell.vue` and `RunDetailPage.vue` keep EventSource lifecycle, listener registration, polling timers, restore/human-review behavior, and UI state writes.
+- Phase 80 should re-evaluate the draft persistence boundary because the remaining run-event lifecycle code is side-effect heavy and riskier than another pure projection slice.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 
@@ -1058,3 +1073,4 @@ Phase 79 in progress
 | First browser screenshot after Phase 35 dev restart captured only the app background | Phase 35 browser smoke | Re-ran headless Chrome with a virtual-time budget; the second screenshot rendered the workspace normally. |
 | Structure test still expected a direct `if (isGraphEditingLocked())` guard after lock handling had moved into action models | Phase 54 focused green run | Updated the assertion to verify delegated locked action routing for double-click/drop and connection-completion execution instead of relying on a broad inline guard substring. |
 | Unescaped backticks in an `rg` shell command triggered `/bin/bash: -c: line 1: unexpected EOF while looking for matching ``` | Phase 55 documentation inspection | Re-ran the read-only search with single-quoted shell text; no files were changed by the failed command. |
+| Unescaped backticks in an `rg` shell command triggered `/bin/bash: line 1: EditorWorkspaceShell.vue: command not found` | Phase 79 documentation inspection | The command was read-only and no files were changed; re-read the needed document sections with safer quoting before updating the plan. |

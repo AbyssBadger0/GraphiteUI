@@ -268,7 +268,7 @@ import type { CanvasViewport } from "@/editor/canvas/canvasViewport";
 import {
   buildRunEventOutputPreviewUpdate,
   buildRunEventStreamUrl,
-  parseRunEventPayloadData,
+  parseRunEventPayload,
   shouldPollRunStatus,
 } from "@/lib/run-event-stream";
 import { buildRestoredGraphFromRun, buildSnapshotScopedRun, canRestoreRunDetail, resolveRestoredRunTabTitle } from "@/lib/run-restore";
@@ -534,10 +534,6 @@ function cancelRunPolling(tabId: string) {
 function cancelRunEventStreamForTab(tabId: string) {
   runEventSourceByTabId.get(tabId)?.close();
   runEventSourceByTabId.delete(tabId);
-}
-
-function parseRunEventPayload(event: Event) {
-  return event instanceof MessageEvent ? parseRunEventPayloadData(event.data) : null;
 }
 
 function applyStreamingOutputPreviewToTab(tabId: string, payload: Record<string, unknown>) {

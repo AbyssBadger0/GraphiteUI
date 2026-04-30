@@ -212,10 +212,11 @@ test("EditorWorkspaceShell opens the right sidebar in Human Review mode for awai
 });
 
 test("EditorWorkspaceShell delegates run event stream parsing and URL projection to the shared model", () => {
-  assert.match(componentSource, /import \{[\s\S]*buildRunEventOutputPreviewUpdate,[\s\S]*buildRunEventStreamUrl,[\s\S]*parseRunEventPayloadData,[\s\S]*shouldPollRunStatus[\s\S]*\} from "@\/lib\/run-event-stream";/);
+  assert.match(componentSource, /import \{[\s\S]*buildRunEventOutputPreviewUpdate,[\s\S]*buildRunEventStreamUrl,[\s\S]*parseRunEventPayload,[\s\S]*shouldPollRunStatus[\s\S]*\} from "@\/lib\/run-event-stream";/);
   assert.match(componentSource, /const streamUrl = buildRunEventStreamUrl\(runId\);/);
   assert.match(componentSource, /new EventSource\(streamUrl\)/);
-  assert.match(componentSource, /return event instanceof MessageEvent \? parseRunEventPayloadData\(event\.data\) : null;/);
+  assert.doesNotMatch(componentSource, /function parseRunEventPayload\(event: Event\)/);
+  assert.doesNotMatch(componentSource, /parseRunEventPayloadData\(event\.data\)/);
   assert.match(componentSource, /const nextPreview = buildRunEventOutputPreviewUpdate\(documentsByTabId\.value\[tabId\], currentPreview, payload\);/);
   assert.match(componentSource, /preserveMissing: shouldPollRunStatus\(run\.status\)/);
   assert.match(componentSource, /if \(shouldPollRunStatus\(run\.status\)\) \{/);

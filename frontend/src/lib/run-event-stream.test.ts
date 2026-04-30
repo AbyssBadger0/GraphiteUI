@@ -6,6 +6,7 @@ import {
   buildRunEventOutputPreviewByNodeId,
   buildRunEventOutputPreviewUpdate,
   buildRunEventStreamUrl,
+  parseRunEventPayload,
   listRunEventOutputKeys,
   parseRunEventPayloadData,
   resolveRunEventNodeId,
@@ -35,6 +36,15 @@ test("parseRunEventPayloadData returns object payloads and ignores invalid event
   });
   assert.equal(parseRunEventPayloadData("not json"), null);
   assert.equal(parseRunEventPayloadData('"string"'), null);
+});
+
+test("parseRunEventPayload reads MessageEvent payloads and ignores other events", () => {
+  assert.deepEqual(parseRunEventPayload(new MessageEvent("message", { data: '{"node_id":"output","text":"done"}' })), {
+    node_id: "output",
+    text: "done",
+  });
+  assert.equal(parseRunEventPayload(new MessageEvent("message", { data: "not json" })), null);
+  assert.equal(parseRunEventPayload(new Event("open")), null);
 });
 
 test("resolveRunEventNodeId trims node ids and skips missing ids", () => {

@@ -15,6 +15,7 @@ function readWorkspaceSource(fileName: string) {
 const componentSource = readWorkspaceSource("EditorWorkspaceShell.vue");
 const graphMutationActionsSource = readWorkspaceSource("useWorkspaceGraphMutationActions.ts");
 const sidePanelControllerSource = readWorkspaceSource("useWorkspaceSidePanelController.ts");
+const runVisualStateSource = readWorkspaceSource("useWorkspaceRunVisualState.ts");
 
 test("EditorWorkspaceShell renders workspace panes without reka-ui tab primitives", () => {
   assert.doesNotMatch(componentSource, /from "reka-ui"/);
@@ -429,8 +430,7 @@ test("EditorWorkspaceShell delegates tab runtime record cleanup to the runtime m
 });
 
 test("EditorWorkspaceShell delegates tab runtime feedback and preview writes to the runtime model", () => {
-  const setFeedbackSource =
-    componentSource.match(/function setFeedbackForTab\([\s\S]*?\n\}\n\nfunction setMessageFeedbackForTab/)?.[0] ?? "";
+  const setFeedbackSource = runVisualStateSource;
   const applyPreviewSource =
     componentSource.match(/function applyStreamingOutputPreviewToTab\([\s\S]*?\n\}\n\nfunction startRunEventStreamForTab/)?.[0] ?? "";
 
@@ -438,47 +438,50 @@ test("EditorWorkspaceShell delegates tab runtime feedback and preview writes to 
     componentSource,
     /import \{ omitTabScopedRecordEntry, setTabScopedRecordEntry \} from "\.\/editorTabRuntimeModel\.ts";/,
   );
-  assert.match(setFeedbackSource, /feedbackByTabId\.value = setTabScopedRecordEntry\(feedbackByTabId\.value, tabId, feedback\);/);
+  assert.match(componentSource, /import \{ useWorkspaceRunVisualState, type WorkspaceRunFeedback \} from "\.\/useWorkspaceRunVisualState\.ts";/);
+  assert.match(setFeedbackSource, /input\.feedbackByTabId\.value = setTabScopedRecordEntry\(input\.feedbackByTabId\.value, tabId, feedback\);/);
   assert.match(applyPreviewSource, /runOutputPreviewByTabId\.value = setTabScopedRecordEntry\(runOutputPreviewByTabId\.value, tabId, nextPreview\);/);
   assert.match(
-    applyPreviewSource,
-    /runOutputPreviewByTabId\.value = setTabScopedRecordEntry\(\s*runOutputPreviewByTabId\.value,\s*tabId,\s*mergeRunOutputPreviewByNodeId/,
+    runVisualStateSource,
+    /input\.runOutputPreviewByTabId\.value = setTabScopedRecordEntry\(\s*input\.runOutputPreviewByTabId\.value,\s*tabId,\s*mergeRunOutputPreviewByNodeId/,
   );
-  assert.doesNotMatch(setFeedbackSource, /feedbackByTabId\.value = \{/);
+  assert.doesNotMatch(setFeedbackSource, /input\.feedbackByTabId\.value = \{/);
   assert.doesNotMatch(applyPreviewSource, /runOutputPreviewByTabId\.value = \{/);
 });
 
 test("EditorWorkspaceShell delegates run visual tab-state writes to the runtime model", () => {
-  const applyRunVisualSource =
-    componentSource.match(/function applyRunVisualStateToTab\([\s\S]*?\n\}\n\nfunction setFeedbackForTab/)?.[0] ?? "";
+  const applyRunVisualSource = runVisualStateSource;
   const pollRunSource = componentSource.match(/async function pollRunForTab\([\s\S]*?\n\}\n\nfunction ensureTabViewportDrafts/)?.[0] ?? "";
 
   assert.match(
     applyRunVisualSource,
-    /latestRunDetailByTabId\.value = setTabScopedRecordEntry\(latestRunDetailByTabId\.value, tabId, visualRun\);/,
+    /input\.latestRunDetailByTabId\.value = setTabScopedRecordEntry\(input\.latestRunDetailByTabId\.value, tabId, visualRun\);/,
   );
   assert.match(
     applyRunVisualSource,
-    /runNodeStatusByTabId\.value = setTabScopedRecordEntry\(runNodeStatusByTabId\.value, tabId, visualRun\.node_status_map \?\? \{\}\);/,
+    /input\.runNodeStatusByTabId\.value = setTabScopedRecordEntry\(input\.runNodeStatusByTabId\.value, tabId, visualRun\.node_status_map \?\? \{\}\);/,
   );
   assert.match(
     applyRunVisualSource,
-    /currentRunNodeIdByTabId\.value = setTabScopedRecordEntry\(currentRunNodeIdByTabId\.value, tabId, visualRun\.current_node_id \?\? null\);/,
+    /input\.currentRunNodeIdByTabId\.value = setTabScopedRecordEntry\(input\.currentRunNodeIdByTabId\.value, tabId, visualRun\.current_node_id \?\? null\);/,
   );
   assert.match(
     applyRunVisualSource,
-    /runFailureMessageByTabId\.value = setTabScopedRecordEntry\(runFailureMessageByTabId\.value, tabId, runArtifactsModel\.failedMessageByNodeId\);/,
+    /input\.runFailureMessageByTabId\.value = setTabScopedRecordEntry\(\s*input\.runFailureMessageByTabId\.value,\s*tabId,\s*runArtifactsModel\.failedMessageByNodeId,/,
   );
   assert.match(
     applyRunVisualSource,
-    /activeRunEdgeIdsByTabId\.value = setTabScopedRecordEntry\(activeRunEdgeIdsByTabId\.value, tabId, runArtifactsModel\.activeEdgeIds\);/,
+    /input\.activeRunEdgeIdsByTabId\.value = setTabScopedRecordEntry\(input\.activeRunEdgeIdsByTabId\.value, tabId, runArtifactsModel\.activeEdgeIds\);/,
   );
-  assert.match(pollRunSource, /latestRunDetailByTabId\.value = setTabScopedRecordEntry\(latestRunDetailByTabId\.value, tabId, run\);/);
+  assert.match(
+    pollRunSource,
+    /applyRunVisualStateToTab\(tabId, run, documentsByTabId\.value\[tabId\], run, \{ preserveMissing: shouldPollRunStatus\(run\.status\) \}\);/,
+  );
   assert.match(
     pollRunSource,
     /restoredRunSnapshotIdByTabId\.value = setTabScopedRecordEntry\(restoredRunSnapshotIdByTabId\.value, tabId, null\);/,
   );
-  assert.doesNotMatch(applyRunVisualSource, /\[tabId\]: visualRun/);
+  assert.doesNotMatch(componentSource, /function applyRunVisualStateToTab\(/);
   assert.doesNotMatch(pollRunSource, /\[tabId\]: run,/);
 });
 

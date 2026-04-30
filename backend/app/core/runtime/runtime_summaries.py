@@ -15,3 +15,12 @@ def summarize_outputs(output_values: dict[str, Any], final_result: Any) -> str:
     if output_values:
         return str({key: str(value)[:80] for key, value in output_values.items()})[:160]
     return "no outputs"
+
+
+def summarize_first_value(values: dict[str, Any], final_result: Any | None = None) -> str:
+    if final_result not in (None, "", [], {}):
+        return str(final_result)
+    for value in values.values():
+        if value not in (None, "", [], {}):
+            return str(value)
+    return ""

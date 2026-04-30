@@ -20,6 +20,7 @@ from app.core.runtime.execution_graph import (
 from app.core.runtime.output_boundaries import collect_output_boundaries
 from app.core.runtime.run_artifacts import append_run_snapshot, refresh_run_artifacts
 from app.core.runtime.run_events import publish_run_event
+from app.core.runtime.runtime_summaries import summarize_first_value as _summarize_values
 from app.core.runtime.state_io import apply_state_writes, collect_node_inputs, initialize_graph_state
 from app.core.runtime.node_system_executor import (
     _execute_node,
@@ -487,15 +488,6 @@ def _mark_input_boundaries_success(graph: NodeSystemGraphDocument, state: dict[s
     for node_name, node in graph.nodes.items():
         if node.kind == "input":
             node_status_map[node_name] = "success"
-
-
-def _summarize_values(values: dict[str, Any], final_result: Any | None = None) -> str:
-    if final_result not in (None, "", [], {}):
-        return str(final_result)
-    for value in values.values():
-        if value not in (None, "", [], {}):
-            return str(value)
-    return ""
 
 
 def _build_langgraph_state_schema(graph: NodeSystemGraphDocument):

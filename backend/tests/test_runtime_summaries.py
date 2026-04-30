@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.core.runtime.runtime_summaries import summarize_inputs, summarize_outputs
+from app.core.runtime.runtime_summaries import summarize_first_value, summarize_inputs, summarize_outputs
 
 
 class RuntimeSummariesTests(unittest.TestCase):
@@ -25,6 +25,11 @@ class RuntimeSummariesTests(unittest.TestCase):
 
         self.assertIn("answer", summary)
         self.assertLessEqual(len(summary), 160)
+
+    def test_summarize_first_value_matches_langgraph_empty_value_semantics(self) -> None:
+        self.assertEqual(summarize_first_value({"first": "", "second": "value"}), "value")
+        self.assertEqual(summarize_first_value({"first": "ignored"}, final_result="final"), "final")
+        self.assertEqual(summarize_first_value({"empty": [], "blank": {}}), "")
 
 
 if __name__ == "__main__":

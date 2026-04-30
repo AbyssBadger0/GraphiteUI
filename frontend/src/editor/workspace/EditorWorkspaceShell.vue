@@ -265,7 +265,7 @@ import {
   type PersistedEditorWorkspace,
 } from "@/lib/editor-workspace";
 import type { CanvasViewport } from "@/editor/canvas/canvasViewport";
-import { buildRunEventStreamUrl, parseRunEventPayloadData } from "@/lib/run-event-stream";
+import { buildRunEventStreamUrl, parseRunEventPayloadData, shouldPollRunStatus } from "@/lib/run-event-stream";
 import { buildRestoredGraphFromRun, buildSnapshotScopedRun, canRestoreRunDetail, resolveRestoredRunTabTitle } from "@/lib/run-restore";
 import { useGraphDocumentStore } from "@/stores/graphDocument";
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
@@ -585,10 +585,6 @@ function applyRunOutputPreviewForTab(
   };
 }
 
-function isActiveRunStatus(status: string | null | undefined) {
-  return status === "queued" || status === "running" || status === "resuming";
-}
-
 function startRunEventStreamForTab(tabId: string, runId: string) {
   cancelRunEventStreamForTab(tabId);
   const streamUrl = buildRunEventStreamUrl(runId);
@@ -668,7 +664,7 @@ async function pollRunForTab(tabId: string, runId: string, generation = runPollG
       ...currentRunNodeIdByTabId.value,
       [tabId]: run.current_node_id ?? null,
     };
-    applyRunOutputPreviewForTab(tabId, runArtifactsModel.outputPreviewByNodeId, { preserveMissing: isActiveRunStatus(run.status) });
+    applyRunOutputPreviewForTab(tabId, runArtifactsModel.outputPreviewByNodeId, { preserveMissing: shouldPollRunStatus(run.status) });
     runFailureMessageByTabId.value = {
       ...runFailureMessageByTabId.value,
       [tabId]: runArtifactsModel.failedMessageByNodeId,
@@ -687,7 +683,7 @@ async function pollRunForTab(tabId: string, runId: string, generation = runPollG
       openHumanReviewPanelForTab(tabId, run.current_node_id);
     }
 
-    if (run.status === "queued" || run.status === "running" || run.status === "resuming") {
+    if (shouldPollRunStatus(run.status)) {
       scheduleRunPoll(tabId, runId, 500, generation);
       return;
     }

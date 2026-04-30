@@ -5,11 +5,21 @@ import {
   buildLiveStreamingOutput,
   buildRunEventStreamUrl,
   parseRunEventPayloadData,
+  shouldPollRunStatus,
 } from "./run-event-stream.ts";
 
 test("buildRunEventStreamUrl trims run ids and skips empty streams", () => {
   assert.equal(buildRunEventStreamUrl(" run_1 "), "/api/runs/run_1/events");
   assert.equal(buildRunEventStreamUrl(" "), null);
+});
+
+test("shouldPollRunStatus follows queued, running, and resuming semantics", () => {
+  assert.equal(shouldPollRunStatus("queued"), true);
+  assert.equal(shouldPollRunStatus("running"), true);
+  assert.equal(shouldPollRunStatus("resuming"), true);
+  assert.equal(shouldPollRunStatus("completed"), false);
+  assert.equal(shouldPollRunStatus("failed"), false);
+  assert.equal(shouldPollRunStatus(null), false);
 });
 
 test("parseRunEventPayloadData returns object payloads and ignores invalid event data", () => {

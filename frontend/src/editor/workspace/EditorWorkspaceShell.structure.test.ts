@@ -212,10 +212,13 @@ test("EditorWorkspaceShell opens the right sidebar in Human Review mode for awai
 });
 
 test("EditorWorkspaceShell delegates run event stream parsing and URL projection to the shared model", () => {
-  assert.match(componentSource, /import \{[\s\S]*buildRunEventStreamUrl,[\s\S]*parseRunEventPayloadData[\s\S]*\} from "@\/lib\/run-event-stream";/);
+  assert.match(componentSource, /import \{[\s\S]*buildRunEventStreamUrl,[\s\S]*parseRunEventPayloadData,[\s\S]*shouldPollRunStatus[\s\S]*\} from "@\/lib\/run-event-stream";/);
   assert.match(componentSource, /const streamUrl = buildRunEventStreamUrl\(runId\);/);
   assert.match(componentSource, /new EventSource\(streamUrl\)/);
   assert.match(componentSource, /return event instanceof MessageEvent \? parseRunEventPayloadData\(event\.data\) : null;/);
+  assert.match(componentSource, /preserveMissing: shouldPollRunStatus\(run\.status\)/);
+  assert.match(componentSource, /if \(shouldPollRunStatus\(run\.status\)\) \{/);
+  assert.doesNotMatch(componentSource, /function isActiveRunStatus\(status: string \| null \| undefined\)/);
   assert.doesNotMatch(componentSource, /JSON\.parse\(String\(event\.data \?\? ""\)\)/);
   assert.doesNotMatch(componentSource, /new EventSource\(`\/api\/runs\/\$\{runId\}\/events`\)/);
 });

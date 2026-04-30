@@ -1,5 +1,76 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 74
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Confirmed Phase 73 was committed and pushed as `af71182`.
+  - Re-read the formal roadmap and latest findings for the P3 shell cleanup.
+  - Inspected duplicated queued/running/resuming polling checks in `EditorWorkspaceShell.vue`, `RunDetailPage.vue`, and `runDetailModel.ts`.
+  - Selected the next P3 shell boundary: shared run polling status semantics.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `shouldPollRunStatus` coverage to `run-event-stream.test.ts`.
+  - Updated workspace/run-detail structure tests to require shared polling status semantics from `run-event-stream.ts`.
+  - Verified the expected red failure before implementation because the shared helper did not exist and status checks still lived in component/model code.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `shouldPollRunStatus` to `frontend/src/lib/run-event-stream.ts`.
+  - Updated `EditorWorkspaceShell.vue` to delegate active run polling status checks to the shared helper.
+  - Updated `RunDetailPage.vue` to delegate detail polling status checks to the shared helper.
+  - Removed the duplicate polling helper from `runDetailModel.ts`.
+  - Kept polling intervals, abort handling, EventSource closure, human-review opening, terminal run persistence, and UI state mutation in the owning components.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused shared model, workspace structure, run detail structure, and run detail model tests.
+  - Ran related run API, run event stream, run detail model, run node artifact, run feedback, workspace structure, and run detail structure regression tests.
+  - Ran TypeScript unused-symbol verification from `frontend`.
+  - Ran the full frontend `node --test` suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed backend `/health` returned `{"status":"ok"}` and the frontend entry returned HTTP 200.
+  - Captured a headless Chrome screenshot and confirmed the workspace rendered normally.
+
+### Phase 5: Continuation Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated overall roadmap cleanup at about 99.3%.
+  - Recalculated P3 `EditorWorkspaceShell.vue` cleanup at about 15%.
+  - Opened Phase 75 automatically because total roadmap progress is still below 100%.
+  - Selected the next candidate boundary as run event output payload projection helpers.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red focused tests | `node --test frontend/src/lib/run-event-stream.test.ts frontend/src/editor/workspace/EditorWorkspaceShell.structure.test.ts frontend/src/pages/RunDetailPage.structure.test.ts frontend/src/pages/runDetailModel.test.ts` before implementation | Fails because shared polling status helper and component delegation do not exist | Failed on missing export and structure assertions | Passed |
+| Focused model/structure tests | Same focused files after implementation | All focused tests pass | 41 passed | Passed |
+| Focused run/workspace regression | `node --test` over run-event stream, run detail, run node artifacts, run feedback, workspace structure, run detail structure, and run API tests | Related run streaming and polling tests pass | 51 passed | Passed |
+| Unused symbol check | `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No diagnostics | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src vite.config.structure.test.ts | rg '\.test\.ts$')` in `frontend` | All frontend tests pass | 839 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without a large chunk warning | Exit 0, no Vite chunk warning | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+| Browser smoke | Headless Chrome screenshot with virtual-time wait | Workspace renders normally | Workspace UI rendered | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 74 implementation, verification, docs update, and dev restart are complete. |
+| Where am I going? | Phase 75 is open for run event output payload projection helpers. |
+| What's the goal? | Continue P3 shell cleanup while keeping stream lifecycle, polling, restore, human review, and graph/UI mutations stable. |
+| What have I learned? | The shared run event model can safely own pure status semantics; timer cadence and side effects should remain component-owned. |
+| What have I done? | Extracted polling status semantics, added focused tests, verified the full frontend suite, built, restarted, and visually smoked the app. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+
 ## Session: 2026-04-30 Phase 73
 
 ### Phase 1: Re-orientation

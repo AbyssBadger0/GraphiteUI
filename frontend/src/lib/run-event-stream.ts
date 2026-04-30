@@ -14,6 +14,10 @@ export function buildRunEventStreamUrl(runId: string) {
   return normalizedRunId ? `/api/runs/${normalizedRunId}/events` : null;
 }
 
+export function shouldPollRunStatus(status: string | null | undefined) {
+  return status === "queued" || status === "running" || status === "resuming";
+}
+
 export function parseRunEventPayloadData(data: unknown): RunEventPayload | null {
   try {
     const payload = JSON.parse(String(data ?? ""));

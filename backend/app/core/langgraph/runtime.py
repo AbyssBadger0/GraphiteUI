@@ -12,17 +12,19 @@ from typing_extensions import TypedDict
 
 from app.core.langgraph.checkpoints import JsonCheckpointSaver
 from app.core.langgraph.compiler import compile_graph_to_langgraph_plan
+from app.core.runtime.execution_graph import (
+    CycleDetector,
+    build_execution_edges,
+    select_active_outgoing_edges,
+)
 from app.core.runtime.run_events import publish_run_event
 from app.core.runtime.node_system_executor import (
-    CycleDetector,
     _apply_state_writes,
     _collect_node_inputs,
     _execute_node,
     _initialize_graph_state,
     _persist_run_progress,
     _refresh_run_artifacts,
-    _select_active_outgoing_edges,
-    _build_execution_edges,
     append_run_snapshot,
     collect_output_boundaries,
 )
@@ -90,7 +92,7 @@ def execute_node_system_graph_langgraph(
     _mark_input_boundaries_success(graph, state)
     checkpoint_saver, runtime_config, checkpoint_lookup_config = _build_checkpoint_runtime(graph=graph, state=state)
 
-    execution_edges = _build_execution_edges(graph)
+    execution_edges = build_execution_edges(graph)
     outgoing_edges_by_source: dict[str, list[Any]] = defaultdict(list)
     conditional_edge_ids: dict[tuple[str, str | None, str], str] = {}
     for edge in execution_edges:
@@ -295,7 +297,7 @@ def _build_langgraph_node_callable(
                 input_values, state_reads = _collect_node_inputs(node, state)
                 body = _execute_node(graph, node_name, node, input_values, state)
                 outputs = dict(body.get("outputs", {}))
-                selected_edge_ids = _select_active_outgoing_edges(outgoing_edges, body)
+                selected_edge_ids = select_active_outgoing_edges(outgoing_edges, body)
                 duration_ms = int((time.perf_counter() - node_started_perf) * 1000)
                 node_outputs[node_name] = outputs
                 state_writes = _apply_state_writes(node_name, node.writes, outputs, state)

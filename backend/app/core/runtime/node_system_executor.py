@@ -4,8 +4,6 @@ import copy
 import inspect
 import json
 import time
-from collections import defaultdict
-from dataclasses import dataclass
 from typing import Any
 
 from app.core.model_catalog import get_default_text_model_ref, normalize_model_ref, resolve_runtime_model_name
@@ -21,6 +19,14 @@ from app.core.runtime.condition_eval import (
     normalize_condition_operands as _normalize_condition_operands,
     parse_condition_number as _parse_condition_number,
     resolve_branch_key as _resolve_branch_key,
+)
+from app.core.runtime.execution_graph import (
+    CycleDetector,
+    ExecutionEdge,
+    build_conditional_edge_id as _build_conditional_edge_id,
+    build_execution_edges as _build_execution_edges,
+    build_regular_edge_id as _build_regular_edge_id,
+    select_active_outgoing_edges as _select_active_outgoing_edges,
 )
 from app.core.runtime.llm_output_parser import (
     build_output_key_aliases as _build_output_key_aliases,
@@ -52,54 +58,6 @@ from app.core.thinking_levels import normalize_thinking_level, resolve_effective
 from app.tools.model_provider_client import chat_with_model_ref_with_meta
 
 KNOWLEDGE_BASE_SKILL_KEY = "search_knowledge_base"
-
-
-@dataclass(frozen=True)
-class ExecutionEdge:
-    id: str
-    source: str
-    target: str
-    kind: str
-    state: str | None = None
-    branch: str | None = None
-
-
-class CycleDetector:
-    def __init__(self, edges: list[ExecutionEdge]) -> None:
-        self.edges = edges
-        self.graph: dict[str, list[ExecutionEdge]] = defaultdict(list)
-        for edge in edges:
-            self.graph[edge.source].append(edge)
-
-    def detect(self) -> tuple[bool, list[ExecutionEdge]]:
-        WHITE, GRAY, BLACK = 0, 1, 2
-        color: dict[str, int] = defaultdict(lambda: WHITE)
-        back_edges: list[ExecutionEdge] = []
-
-        def dfs(node_name: str) -> None:
-            color[node_name] = GRAY
-            for edge in self.graph.get(node_name, []):
-                neighbor = edge.target
-                if color[neighbor] == GRAY:
-                    back_edges.append(edge)
-                elif color[neighbor] == WHITE:
-                    dfs(neighbor)
-            color[node_name] = BLACK
-
-        ordered_nodes: list[str] = []
-        seen_nodes: set[str] = set()
-        for edge in self.edges:
-            for node_name in (edge.source, edge.target):
-                if node_name in seen_nodes:
-                    continue
-                seen_nodes.add(node_name)
-                ordered_nodes.append(node_name)
-
-        for node_name in ordered_nodes:
-            if color[node_name] == WHITE:
-                dfs(node_name)
-
-        return len(back_edges) > 0, back_edges
 
 
 def _persist_run_progress(
@@ -279,33 +237,6 @@ def _apply_state_writes(
             }
         )
     return write_records
-
-
-def _build_execution_edges(graph: NodeSystemGraphDocument) -> list[ExecutionEdge]:
-    execution_edges: list[ExecutionEdge] = []
-    for edge in graph.edges:
-        execution_edges.append(
-            ExecutionEdge(
-                id=_build_regular_edge_id(edge.source, edge.target),
-                source=edge.source,
-                target=edge.target,
-                kind="edge",
-                state=None,
-            )
-        )
-
-    for conditional_edge in graph.conditional_edges:
-        for branch, target in conditional_edge.branches.items():
-            execution_edges.append(
-                ExecutionEdge(
-                    id=_build_conditional_edge_id(conditional_edge.source, branch, target),
-                    source=conditional_edge.source,
-                    target=target,
-                    kind="conditional",
-                    branch=branch,
-                )
-            )
-    return execution_edges
 
 
 def _execute_node(
@@ -876,26 +807,6 @@ def _resolve_reference(
     if reference.startswith("$graph."):
         return _read_path(graph, reference[len("$graph."):])
     return reference
-
-
-def _select_active_outgoing_edges(outgoing_edges: list[ExecutionEdge], body: dict[str, Any]) -> set[str]:
-    selected_branch = body.get("selected_branch")
-    active_edges: set[str] = set()
-    for edge in outgoing_edges:
-        if edge.kind == "conditional":
-            if selected_branch and edge.branch == selected_branch:
-                active_edges.add(edge.id)
-            continue
-        active_edges.add(edge.id)
-    return active_edges
-
-
-def _build_regular_edge_id(source: str, target: str) -> str:
-    return f"edge:{source}:{target}"
-
-
-def _build_conditional_edge_id(source: str, branch: str, target: str) -> str:
-    return f"conditional:{source}:{branch}->{target}"
 
 
 def _build_knowledge_summary(skill_outputs: list[dict[str, Any]]) -> str:

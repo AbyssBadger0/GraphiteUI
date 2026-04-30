@@ -1,5 +1,59 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 101
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `e312c12` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 100 findings, and remaining executor helper clusters.
+  - Chose execution-graph helpers because edge id construction, cycle detection, and active outgoing edge selection are pure and already exercised by LangGraph runtime coverage.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `backend/tests/test_execution_graph_runtime.py` covering regular/conditional execution edge construction, deterministic cycle back-edge detection, and conditional active-edge filtering.
+  - Verified the expected red failure because `app.core.runtime.execution_graph` did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `backend/app/core/runtime/execution_graph.py`.
+  - Moved `ExecutionEdge`, `CycleDetector`, execution edge construction, edge id formatting, and active outgoing edge selection out of `node_system_executor.py`.
+  - Updated `backend/app/core/langgraph/runtime.py` to import the execution-graph helpers directly.
+  - Kept legacy private-helper names available from `node_system_executor.py` through compatibility imports.
+  - Reduced `node_system_executor.py` from 969 lines to 882 lines.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran the focused execution-graph and LangGraph migration tests.
+  - Ran the full backend test suite.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+
+### Phase 5: Honest Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated the full roadmap at about 83-84%.
+  - Recalculated the frontend-focused roadmap at about 83-85%; unchanged because Phase 101 was backend-only.
+  - Recalculated P3 `EditorWorkspaceShell.vue` cleanup at about 82%; unchanged.
+  - Recalculated P4 backend cleanup at about 44-48% after isolating executor execution-graph helpers.
+  - Opened Phase 102 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red structure/import test | `PYTHONPATH=backend pytest backend/tests/test_execution_graph_runtime.py -q` before implementation | Fails because `execution_graph` is missing | Failed with missing module import | Passed |
+| Focused execution tests | `PYTHONPATH=backend pytest backend/tests/test_execution_graph_runtime.py backend/tests/test_langgraph_migration.py -q` | Execution graph helpers and LangGraph runtime behavior stay unchanged | 42 passed | Passed |
+| Full backend tests | `PYTHONPATH=backend pytest backend/tests -q` | All backend tests pass | 148 passed, 2 existing warnings | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | None | Phase 101 | No implementation errors beyond the expected red module-import failure. |
+
 ## Session: 2026-04-30 Phase 100
 
 ### Phase 1: Re-orientation

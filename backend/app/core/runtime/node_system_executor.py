@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 from typing import Any
 
 from app.core.model_catalog import get_default_text_model_ref, normalize_model_ref, resolve_runtime_model_name
@@ -48,6 +47,11 @@ from app.core.runtime.output_boundaries import (
     execute_output_node as _execute_output_node,
 )
 from app.core.runtime.knowledge_retrieval import retrieve_knowledge_base_context
+from app.core.runtime.reference_resolution import (
+    read_path as _read_path,
+    resolve_condition_source as _resolve_condition_source,
+    resolve_reference as _resolve_reference,
+)
 from app.core.runtime.run_artifacts import (
     append_run_snapshot,
     build_knowledge_summary as _build_knowledge_summary,
@@ -58,6 +62,10 @@ from app.core.runtime.state_io import (
     apply_state_writes as _apply_state_writes,
     collect_node_inputs as _collect_node_inputs,
     initialize_graph_state as _initialize_graph_state,
+)
+from app.core.runtime.skill_invocation import (
+    callable_accepts_keyword as _callable_accepts_keyword,
+    invoke_skill as _invoke_skill,
 )
 from app.core.runtime.state import touch_run_lifecycle
 from app.core.schemas.node_system import (
@@ -254,14 +262,6 @@ def _execute_agent_node(
     }
 
 
-def _callable_accepts_keyword(func: Any, keyword: str) -> bool:
-    try:
-        parameters = inspect.signature(func).parameters
-    except (TypeError, ValueError):
-        return True
-    return keyword in parameters or any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters.values())
-
-
 def _execute_condition_node(
     node: NodeSystemConditionNode,
     input_values: dict[str, Any],
@@ -283,30 +283,6 @@ def _execute_condition_node(
         "selected_branch": branch_key,
         "final_result": branch_key,
     }
-
-
-def _resolve_condition_source(
-    source: str,
-    *,
-    inputs: dict[str, Any],
-    graph: dict[str, Any],
-    state_values: dict[str, Any],
-) -> Any:
-    if source.startswith("$"):
-        return _resolve_reference(
-            source,
-            inputs=inputs,
-            response={},
-            skills={},
-            context={},
-            graph=graph,
-            state_values=state_values,
-        )
-    if source in inputs:
-        return inputs[source]
-    if source in state_values:
-        return state_values[source]
-    return source
 
 
 def _generate_agent_response(
@@ -425,51 +401,6 @@ def _resolve_agent_runtime_config(node: NodeSystemAgentNode) -> dict[str, Any]:
         "request_return_progress": resolved_thinking and resolved_provider_id == "local",
         "request_reasoning_format": "auto" if resolved_thinking and resolved_provider_id == "local" else None,
     }
-
-
-def _invoke_skill(skill_func: Any, skill_inputs: dict[str, Any]) -> dict[str, Any]:
-    signature = inspect.signature(skill_func)
-    parameters = list(signature.parameters.values())
-    if len(parameters) >= 2:
-        return skill_func({}, skill_inputs)
-    return skill_func(**skill_inputs)
-
-
-def _resolve_reference(
-    reference: str,
-    *,
-    inputs: dict[str, Any],
-    response: dict[str, Any],
-    skills: dict[str, Any],
-    context: dict[str, Any],
-    graph: dict[str, Any],
-    state_values: dict[str, Any],
-) -> Any:
-    if not isinstance(reference, str) or not reference.startswith("$"):
-        return reference
-    if reference.startswith("$inputs."):
-        return _read_path(inputs, reference[len("$inputs."):])
-    if reference.startswith("$response."):
-        return _read_path(response, reference[len("$response."):])
-    if reference.startswith("$skills."):
-        return _read_path(skills, reference[len("$skills."):])
-    if reference.startswith("$context."):
-        return _read_path(context, reference[len("$context."):])
-    if reference.startswith("$state."):
-        return _read_path(state_values, reference[len("$state."):])
-    if reference.startswith("$graph."):
-        return _read_path(graph, reference[len("$graph."):])
-    return reference
-
-
-def _read_path(payload: Any, path: str) -> Any:
-    current = payload
-    for part in path.split("."):
-        if isinstance(current, dict):
-            current = current.get(part)
-        else:
-            return None
-    return current
 
 
 def _summarize_inputs(input_values: dict[str, Any]) -> str:

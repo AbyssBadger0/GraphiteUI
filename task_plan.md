@@ -6,10 +6,10 @@ Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure pr
 ## Progress Accuracy Note
 - The earlier `99.x%` values are no longer treated as the true total optimization progress. They reflected the active frontend cleanup batch getting close to its own tail, not the whole architecture roadmap.
 - The honest full-roadmap progress must include P0 cleanup, P1 `NodeCard.vue`, P2 `EditorCanvas.vue`, P3 `EditorWorkspaceShell.vue`, and P4 backend runtime/provider cleanup.
-- Current conservative estimate after Phase 107: full roadmap is about 89% complete; frontend-focused roadmap is about 83-85% complete; P3 `EditorWorkspaceShell.vue` is about 82% complete; backend P4 is about 66-70% started.
+- Current conservative estimate after Phase 108: full roadmap is about 90% complete; frontend-focused roadmap is about 83-85% complete; P3 `EditorWorkspaceShell.vue` is about 82% complete; backend P4 is about 70-73% started.
 
 ## Current Phase
-Phase 108 in progress
+Phase 109 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -987,12 +987,21 @@ Phase 108 in progress
 - **Status:** completed
 
 ### Phase 108: Executor Reference and Skill Helpers
-- [ ] Re-read the formal roadmap, Phase 107 findings, and remaining `node_system_executor.py` reference/skill/node-handler clusters.
-- [ ] Choose the next safest P4 boundary from reference path resolution, skill invocation, callable signature inspection, condition source resolution, or node-handler extraction.
+- [x] Re-read the formal roadmap, Phase 107 findings, and remaining `node_system_executor.py` reference/skill/node-handler clusters.
+- [x] Choose the next safest P4 boundary from reference path resolution, skill invocation, callable signature inspection, condition source resolution, or node-handler extraction.
+- [x] Add focused red tests before production changes.
+- [x] Preserve reference path semantics, skill invocation calling conventions, condition source fallback behavior, provider behavior, output boundary behavior, frontend graph interactions, and visual layout.
+- [x] Run focused backend tests, full backend verification when needed, dev restart, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 108 and re-judge total progress.
+- **Status:** completed
+
+### Phase 109: Executor Agent Runtime Config Boundary
+- [ ] Re-read the formal roadmap, Phase 108 findings, and remaining `node_system_executor.py` agent runtime/node-handler clusters.
+- [ ] Choose the next safest P4 boundary from agent runtime config resolution, agent response generation, or node-handler extraction.
 - [ ] Add focused red tests before production changes.
-- [ ] Preserve reference path semantics, skill invocation calling conventions, condition source fallback behavior, provider behavior, output boundary behavior, frontend graph interactions, and visual layout.
+- [ ] Preserve model/provider resolution semantics, thinking-level fallback behavior, provider behavior, output boundary behavior, frontend graph interactions, and visual layout.
 - [ ] Run focused backend tests, full backend verification when needed, dev restart, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 108 and re-judge total progress.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 109 and re-judge total progress.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -1355,6 +1364,12 @@ Phase 108 in progress
 | P4 backend cleanup after Phase 107 | About 66-70% complete. `node_system_executor.py` is now 486 lines, with streaming delta callback construction and completion event publishing isolated in `agent_streaming.py`. |
 | Current continuation gate after Phase 107 | Total roadmap progress is still below 100%, so Phase 108 is automatically opened for reference/skill helper or node-handler cleanup. |
 | P4 cleanup target for Phase 108 | About 70-73% P4 if reference path resolution, skill invocation, or condition source helpers move out with focused runtime tests. |
+| Full roadmap cleanup after Phase 108 | About 90% complete after extracting executor reference resolution and skill invocation helpers. |
+| Frontend roadmap cleanup after Phase 108 | Still about 83-85%; this phase was backend-only and did not touch graph editing UI. |
+| P3 `EditorWorkspaceShell.vue` cleanup after Phase 108 | Still about 82%; no workspace shell changes in this phase. |
+| P4 backend cleanup after Phase 108 | About 70-73% complete. `node_system_executor.py` is now 417 lines, with reference path resolution, condition source fallback, callable signature inspection, and skill invocation isolated in focused runtime modules. |
+| Current continuation gate after Phase 108 | Total roadmap progress is still below 100%, so Phase 109 is automatically opened for agent runtime config or node-handler cleanup. |
+| P4 cleanup target for Phase 109 | About 73-76% P4 if agent runtime config resolution or agent response generation moves out with focused runtime tests. |
 
 ## Decisions Made
 | Decision | Rationale |

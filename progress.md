@@ -1,5 +1,62 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 108
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `c8875f4` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 107 findings, and remaining executor reference/skill/node-handler clusters.
+  - Chose reference resolution, condition source fallback, callable signature inspection, and skill invocation as the safest next backend P4 slice.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `backend/tests/test_runtime_reference_resolution.py` covering dotted path lookup, runtime namespace reference resolution, and condition source fallback priority.
+  - Added `backend/tests/test_runtime_skill_invocation.py` covering keyword acceptance detection and supported skill invocation signatures.
+  - Verified the expected red failure because `app.core.runtime.reference_resolution` and `app.core.runtime.skill_invocation` did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `backend/app/core/runtime/reference_resolution.py`.
+  - Added `backend/app/core/runtime/skill_invocation.py`.
+  - Moved reference path lookup, reference namespace resolution, condition source fallback, callable signature inspection, and skill invocation calling conventions out of `node_system_executor.py`.
+  - Kept legacy private helper names available from `node_system_executor.py` through compatibility imports.
+  - Reduced `node_system_executor.py` from 486 lines to 417 lines.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused reference/skill helper and LangGraph migration tests.
+  - Ran `git diff --check`.
+  - Ran the full backend test suite.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+
+### Phase 5: Honest Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated the full roadmap at about 90%.
+  - Recalculated the frontend-focused roadmap at about 83-85%; unchanged because Phase 108 was backend-only.
+  - Recalculated P3 `EditorWorkspaceShell.vue` cleanup at about 82%; unchanged.
+  - Recalculated P4 backend cleanup at about 70-73% after isolating reference and skill helpers.
+  - Opened Phase 109 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red structure/import test | `PYTHONPATH=backend pytest backend/tests/test_runtime_reference_resolution.py backend/tests/test_runtime_skill_invocation.py -q` before implementation | Fails because the reference and skill helper modules are missing | Failed with missing module imports | Passed |
+| Focused runtime tests | `PYTHONPATH=backend pytest backend/tests/test_runtime_reference_resolution.py backend/tests/test_runtime_skill_invocation.py backend/tests/test_langgraph_migration.py -q` | Reference/skill helpers and LangGraph behavior stay unchanged | 45 passed | Passed |
+| Whitespace check | `git diff --check` | No whitespace errors | Exit 0 | Passed |
+| Full backend tests | `PYTHONPATH=backend pytest backend/tests -q` | All backend tests pass | 172 passed, 2 existing warnings | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | None | Phase 108 | No implementation errors beyond the expected red module-import failures. |
+
 ## Session: 2026-04-30 Phase 107
 
 ### Phase 1: Re-orientation

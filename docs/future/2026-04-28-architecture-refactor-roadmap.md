@@ -92,7 +92,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 
 ### 3. `EditorWorkspaceShell.vue`
 
-现状：`EditorWorkspaceShell.vue` 约 2.0k 行，承担 workspace tab、草稿持久化、route sync、run polling/SSE、图 mutation 转发、创建菜单、import/export、human review 和反馈条。
+现状：`EditorWorkspaceShell.vue` 约 1.7k 行，承担 workspace tab、草稿持久化、route sync、run polling/SSE、图 mutation 转发、创建菜单、import/export、human review 和反馈条。
 
 建议第三优先级拆分，因为它是应用编排层，但不像 canvas 交互那样依赖像素细节。
 
@@ -127,6 +127,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - `useWorkspaceDocumentState.ts` 已承接 document synchronization、persisted document draft writes、viewport draft hydration/update、terminal run-written state persistence、dirty graph metadata commit 和 locked-edit guarded dirty writes；`EditorWorkspaceShell.vue` 仍保留 save/open routing、graph fetch、route sync、run lifecycle、Human Review routing、node creation execution 和 graph mutation action wiring。
 - `useWorkspaceTabLifecycleController.ts` 已承接 tab activation/reorder、clean/dirty close routing、dirty-close cancel/discard/save-and-close、active-tab close route fallback、persisted draft removal hooks 和 tab-scoped runtime cleanup；`EditorWorkspaceShell.vue` 仍保留 actual save logic、graph fetch/opening、run polling/SSE implementation、Human Review routing、node creation execution 和 graph mutation action wiring。
 - `useWorkspaceRouteController.ts` 已承接 route instruction dispatch、route URL push/replace 和 tab URL projection；`EditorWorkspaceShell.vue` 仍保留 actual open-new/open-existing/restore implementations、graph fetch/opening、run lifecycle、Human Review routing、node creation execution 和 graph mutation action wiring。
+- `useWorkspaceRunController.ts` 已承接 run invocation 与 Human Review resume controller：async model refresh 后启动 run、queued visual reset、feedback 构造、restored snapshot resume、busy/error state 和 polling startup；`EditorWorkspaceShell.vue` 仍保留 low-level polling/SSE implementation、streaming preview writes、save/open routing、graph fetch/opening、node creation execution、route sync 和 graph mutation action wiring。
 
 ## 后端重点
 
@@ -269,6 +270,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - 2026-04-30：`useWorkspaceDocumentState.ts` 已承接 document/viewport draft state controller，`EditorWorkspaceShell.vue` 从 1894 行降到 1831 行；save/open routing、graph fetch、route sync、run lifecycle、Human Review routing、node creation execution 和 graph mutation action wiring 仍保持 shell-owned。
 - 2026-04-30：`useWorkspaceTabLifecycleController.ts` 已承接 tab lifecycle/close cleanup controller，`EditorWorkspaceShell.vue` 从 1831 行降到 1762 行；actual save logic、graph fetch/opening、run polling/SSE implementation、Human Review routing、node creation execution 和 graph mutation action wiring 仍保持 shell-owned。
 - 2026-04-30：`useWorkspaceRouteController.ts` 已承接 route instruction/URL sync controller，`EditorWorkspaceShell.vue` 从 1762 行降到 1728 行；actual open-new/open-existing/restore implementations、graph fetch/opening、run lifecycle、Human Review routing、node creation execution 和 graph mutation action wiring 仍保持 shell-owned。
+- 2026-04-30：`useWorkspaceRunController.ts` 已承接 run invocation/Human Review resume controller，`EditorWorkspaceShell.vue` 从 1728 行降到 1659 行；low-level polling/SSE implementation、streaming preview writes、save/open routing、graph fetch/opening、node creation execution、route sync 和 graph mutation action wiring 仍保持 shell-owned。
 
 ## 优先级路线
 
@@ -301,7 +303,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 
 先拆 `model_provider_client.py`，再拆 `node_system_executor.py`，最后拆 LangGraph runtime。理由：provider client 的协议边界最清晰，executor 和 LangGraph runtime 对产品语义影响更大。
 
-当前 P4 进展：`model_provider_client.py` 的共享 HTTP/request 层、provider discovery 层、OpenAI-compatible chat transport、Anthropic messages transport、Gemini generate-content transport、Codex responses transport 和共享 response parsing 已完成抽取；`node_system_executor.py` 的 condition evaluation、agent prompt、LLM output parser、execution graph、state I/O、output artifact、run artifact、input boundary、output boundary、agent streaming、reference resolution、skill invocation、agent runtime config、agent response generation、node handler、run progress 和 runtime summary helper 已完成抽取；LangGraph runtime 已开始复用共享 summary helper，并已迁出 checkpoint/runtime metadata helper、waiting-state interrupt helper 和 cycle helper。Phase 123 后，后端 P4 约 95% 完成；全路线总进度约 97.2%，因为 frontend P3/P2/P1 仍有尾部大文件工作。
+当前 P4 进展：`model_provider_client.py` 的共享 HTTP/request 层、provider discovery 层、OpenAI-compatible chat transport、Anthropic messages transport、Gemini generate-content transport、Codex responses transport 和共享 response parsing 已完成抽取；`node_system_executor.py` 的 condition evaluation、agent prompt、LLM output parser、execution graph、state I/O、output artifact、run artifact、input boundary、output boundary、agent streaming、reference resolution、skill invocation、agent runtime config、agent response generation、node handler、run progress 和 runtime summary helper 已完成抽取；LangGraph runtime 已开始复用共享 summary helper，并已迁出 checkpoint/runtime metadata helper、waiting-state interrupt helper 和 cycle helper。Phase 124 后，后端 P4 约 95% 完成；全路线总进度约 97.5%，因为 frontend P3/P2/P1 仍有尾部大文件工作。
 
 ## 架构红线
 

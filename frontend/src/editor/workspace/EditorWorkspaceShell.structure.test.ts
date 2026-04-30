@@ -19,6 +19,7 @@ const runVisualStateSource = readWorkspaceSource("useWorkspaceRunVisualState.ts"
 const documentStateSource = readWorkspaceSource("useWorkspaceDocumentState.ts");
 const tabLifecycleControllerSource = readWorkspaceSource("useWorkspaceTabLifecycleController.ts");
 const routeControllerSource = readWorkspaceSource("useWorkspaceRouteController.ts");
+const runControllerSource = readWorkspaceSource("useWorkspaceRunController.ts");
 
 test("EditorWorkspaceShell renders workspace panes without reka-ui tab primitives", () => {
   assert.doesNotMatch(componentSource, /from "reka-ui"/);
@@ -317,10 +318,11 @@ test("EditorWorkspaceShell keeps Human Review locked open while awaiting human i
 });
 
 test("EditorWorkspaceShell resumes restored pause snapshots against their original snapshot checkpoint", () => {
-  assert.match(componentSource, /resumeRun\(run\.run_id, payload, restoredRunSnapshotIdByTabId\.value\[tabId\] \?\? null\)/);
+  assert.match(componentSource, /useWorkspaceRunController\(\{[\s\S]*restoredRunSnapshotIdByTabId,[\s\S]*resumeRun,[\s\S]*\}\);/);
+  assert.match(runControllerSource, /input\.resumeRun\(run\.run_id, payload, input\.restoredRunSnapshotIdByTabId\.value\[tabId\] \?\? null\)/);
   assert.match(
-    componentSource,
-    /restoredRunSnapshotIdByTabId\.value = setTabScopedRecordEntry\(restoredRunSnapshotIdByTabId\.value, tabId, null\);/,
+    runControllerSource,
+    /input\.restoredRunSnapshotIdByTabId\.value = setTabScopedRecordEntry\(input\.restoredRunSnapshotIdByTabId\.value, tabId, null\);/,
   );
 });
 
@@ -365,17 +367,18 @@ test("EditorWorkspaceShell subscribes to run events for live output previews", (
   assert.match(componentSource, /addEventListener\("node\.output\.delta"/);
   assert.match(componentSource, /function applyStreamingOutputPreviewToTab/);
   assert.match(componentSource, /buildRunEventOutputPreviewUpdate/);
-  assert.match(componentSource, /startRunEventStreamForTab\(tab\.tabId, response\.run_id\);/);
+  assert.match(componentSource, /useWorkspaceRunController\(\{[\s\S]*startRunEventStreamForTab,[\s\S]*\}\);/);
+  assert.match(runControllerSource, /input\.startRunEventStreamForTab\(tabId, runId\);/);
 });
 
 test("EditorWorkspaceShell runs the latest document after async model refresh", () => {
-  const runActiveGraphSource = componentSource.match(/async function runActiveGraph\(\) \{[\s\S]*?\n\}/)?.[0] ?? "";
-
-  assert.match(runActiveGraphSource, /await refreshAgentModels\(\);/);
-  assert.match(runActiveGraphSource, /const latestDocument = documentsByTabId\.value\[tab\.tabId\];/);
-  assert.match(runActiveGraphSource, /if \(!latestDocument\) \{[\s\S]*?return;[\s\S]*?\}/);
-  assert.match(runActiveGraphSource, /const response = await runGraph\(latestDocument\);/);
-  assert.doesNotMatch(runActiveGraphSource, /const response = await runGraph\(document\);/);
+  assert.match(componentSource, /import \{ useWorkspaceRunController \} from "\.\/useWorkspaceRunController\.ts";/);
+  assert.match(componentSource, /const \{ runActiveGraph, resumeHumanReviewRun \} = useWorkspaceRunController\(\{/);
+  assert.match(runControllerSource, /await input\.refreshAgentModels\(\);/);
+  assert.match(runControllerSource, /const latestDocument = input\.documentsByTabId\.value\[tab\.tabId\];/);
+  assert.match(runControllerSource, /if \(!latestDocument\) \{[\s\S]*?return;[\s\S]*?\}/);
+  assert.match(runControllerSource, /const response = await input\.runGraph\(latestDocument\);/);
+  assert.doesNotMatch(runControllerSource, /const response = await input\.runGraph\(document\);/);
 });
 
 test("EditorWorkspaceShell persists graph document drafts across route changes and app restarts", () => {
@@ -513,29 +516,56 @@ test("EditorWorkspaceShell delegates document load tab-state writes to the runti
 });
 
 test("EditorWorkspaceShell delegates run invocation tab-state writes to the runtime model", () => {
-  const runActiveGraphSource = componentSource.match(/async function runActiveGraph\(\) \{[\s\S]*?\n\}\n\nasync function resumeHumanReviewRun/)?.[0] ?? "";
-  const resumeHumanReviewSource =
-    componentSource.match(/async function resumeHumanReviewRun\(tabId: string, payload: Record<string, unknown>\) \{[\s\S]*?\n\}\n\nasync function loadKnowledgeBases/)?.[0] ?? "";
-
-  assert.match(runActiveGraphSource, /runNodeStatusByTabId\.value = setTabScopedRecordEntry\(runNodeStatusByTabId\.value, tab\.tabId, \{\}\);/);
-  assert.match(runActiveGraphSource, /currentRunNodeIdByTabId\.value = setTabScopedRecordEntry\(currentRunNodeIdByTabId\.value, tab\.tabId, null\);/);
-  assert.match(runActiveGraphSource, /runOutputPreviewByTabId\.value = setTabScopedRecordEntry\(runOutputPreviewByTabId\.value, tab\.tabId, \{\}\);/);
-  assert.match(runActiveGraphSource, /activeRunEdgeIdsByTabId\.value = setTabScopedRecordEntry\(activeRunEdgeIdsByTabId\.value, tab\.tabId, \[\]\);/);
-  assert.match(runActiveGraphSource, /humanReviewErrorByTabId\.value = setTabScopedRecordEntry\(humanReviewErrorByTabId\.value, tab\.tabId, null\);/);
-  assert.match(resumeHumanReviewSource, /humanReviewBusyByTabId\.value = setTabScopedRecordEntry\(humanReviewBusyByTabId\.value, tabId, true\);/);
-  assert.match(resumeHumanReviewSource, /humanReviewErrorByTabId\.value = setTabScopedRecordEntry\(humanReviewErrorByTabId\.value, tabId, null\);/);
+  assert.match(componentSource, /useWorkspaceRunController\(\{/);
+  assert.match(componentSource, /runNodeStatusByTabId,/);
+  assert.match(componentSource, /humanReviewBusyByTabId,/);
+  assert.doesNotMatch(componentSource, /async function runActiveGraph\(\)/);
+  assert.doesNotMatch(componentSource, /async function resumeHumanReviewRun\(tabId: string, payload: Record<string, unknown>\)/);
   assert.match(
-    resumeHumanReviewSource,
-    /latestRunDetailByTabId\.value = setTabScopedRecordEntry\(\s*latestRunDetailByTabId\.value,\s*tabId,\s*\{[\s\S]*\.\.\.run,[\s\S]*run_id: response\.run_id,[\s\S]*status: response\.status,[\s\S]*\},\s*\);/,
+    runControllerSource,
+    /input\.runNodeStatusByTabId\.value = setTabScopedRecordEntry\(input\.runNodeStatusByTabId\.value, tabId, \{\}\);/,
   );
-  assert.match(resumeHumanReviewSource, /restoredRunSnapshotIdByTabId\.value = setTabScopedRecordEntry\(restoredRunSnapshotIdByTabId\.value, tabId, null\);/);
   assert.match(
-    resumeHumanReviewSource,
-    /humanReviewErrorByTabId\.value = setTabScopedRecordEntry\(\s*humanReviewErrorByTabId\.value,\s*tabId,\s*error instanceof Error \? error\.message : t\("humanReview\.resumeFailed"\),\s*\);/,
+    runControllerSource,
+    /input\.currentRunNodeIdByTabId\.value = setTabScopedRecordEntry\(input\.currentRunNodeIdByTabId\.value, tabId, null\);/,
   );
-  assert.match(resumeHumanReviewSource, /humanReviewBusyByTabId\.value = setTabScopedRecordEntry\(humanReviewBusyByTabId\.value, tabId, false\);/);
-  assert.doesNotMatch(runActiveGraphSource, /\[tab\.tabId\]:/);
-  assert.doesNotMatch(resumeHumanReviewSource, /\[tabId\]:/);
+  assert.match(
+    runControllerSource,
+    /input\.runOutputPreviewByTabId\.value = setTabScopedRecordEntry\(input\.runOutputPreviewByTabId\.value, tabId, \{\}\);/,
+  );
+  assert.match(
+    runControllerSource,
+    /input\.activeRunEdgeIdsByTabId\.value = setTabScopedRecordEntry\(input\.activeRunEdgeIdsByTabId\.value, tabId, \[\]\);/,
+  );
+  assert.match(
+    runControllerSource,
+    /input\.humanReviewErrorByTabId\.value = setTabScopedRecordEntry\(input\.humanReviewErrorByTabId\.value, tabId, null\);/,
+  );
+  assert.match(
+    runControllerSource,
+    /input\.humanReviewBusyByTabId\.value = setTabScopedRecordEntry\(input\.humanReviewBusyByTabId\.value, tabId, true\);/,
+  );
+  assert.match(
+    runControllerSource,
+    /input\.humanReviewErrorByTabId\.value = setTabScopedRecordEntry\(input\.humanReviewErrorByTabId\.value, tabId, null\);/,
+  );
+  assert.match(
+    runControllerSource,
+    /input\.latestRunDetailByTabId\.value = setTabScopedRecordEntry\(input\.latestRunDetailByTabId\.value, tabId, \{[\s\S]*\.\.\.run,[\s\S]*run_id: response\.run_id,[\s\S]*status: response\.status,[\s\S]*\}\);/,
+  );
+  assert.match(
+    runControllerSource,
+    /input\.restoredRunSnapshotIdByTabId\.value = setTabScopedRecordEntry\(input\.restoredRunSnapshotIdByTabId\.value, tabId, null\);/,
+  );
+  assert.match(
+    runControllerSource,
+    /input\.humanReviewErrorByTabId\.value = setTabScopedRecordEntry\(\s*input\.humanReviewErrorByTabId\.value,\s*tabId,\s*error instanceof Error \? error\.message : input\.translate\("humanReview\.resumeFailed"\),\s*\);/,
+  );
+  assert.match(
+    runControllerSource,
+    /input\.humanReviewBusyByTabId\.value = setTabScopedRecordEntry\(input\.humanReviewBusyByTabId\.value, tabId, false\);/,
+  );
+  assert.doesNotMatch(runControllerSource, /value = \{[\s\S]*\[tabId\]:/);
 });
 
 test("EditorWorkspaceShell delegates panel and focus tab-state writes to the runtime model", () => {

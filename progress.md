@@ -1,5 +1,57 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 124
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `be9dbf0` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 123 findings, and remaining high-line-count files.
+  - Chose the `EditorWorkspaceShell.vue` run invocation/Human Review resume slice because it removes another run lifecycle cluster while avoiding canvas auto-snapping, node creation naming/context, graph mutation execution, and save/open routing.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceRunController.test.ts` covering run start after async model refresh, queued run visual reset, polling generation handoff, and Human Review resume with restored snapshot id.
+  - Verified the expected red failure because `useWorkspaceRunController.ts` did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceRunController.ts`.
+  - Updated `EditorWorkspaceShell.vue` to consume the run controller for `runActiveGraph` and `resumeHumanReviewRun`.
+  - Kept low-level polling timers, EventSource lifecycle, streaming preview writes, actual graph save/open, node creation execution, graph mutation actions, route sync, and draft persistence in the shell.
+  - Updated structure tests to lock the new controller boundary and preserve restored checkpoint resume behavior.
+  - Reduced `EditorWorkspaceShell.vue` from 1,728 to 1,659 lines.
+
+### Phase 4: Verification and Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Ran focused run controller and workspace-shell structure tests.
+  - Ran TypeScript unused-symbol verification.
+  - Ran the full frontend test suite and production build.
+  - Confirmed the production build still has no Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Confirmed the previous dev session exited after the restart.
+  - Recalculated the full roadmap at about 97.5%, frontend-focused progress at about 90-91%, and P3 `EditorWorkspaceShell.vue` progress at about 94%.
+  - Opened Phase 125 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red controller test | `node --test src/editor/workspace/useWorkspaceRunController.test.ts` before implementation | Fails because the run controller module is missing | Failed with missing module import | Passed |
+| Focused frontend tests | `node --test src/editor/workspace/useWorkspaceRunController.test.ts src/editor/workspace/EditorWorkspaceShell.structure.test.ts` | Focused run controller and structure tests pass | 38 passed | Passed |
+| TypeScript check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | No type or unused-symbol errors | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src -g '*.test.ts' \| sort) vite.config.structure.test.ts` | Full frontend suite passes | 902 passed | Passed |
+| Production build | `npm run build` in `frontend` | Build succeeds with no large chunk warning | Exit 0; Vite build completed | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | Structure tests still matched the old inline `runActiveGraph`/`resumeHumanReviewRun` bodies after extraction | First focused structure run after integrating the controller | Updated assertions to verify the new `useWorkspaceRunController.ts` boundary and preserved restored checkpoint resume behavior. |
+
 ## Session: 2026-04-30 Phase 123
 
 ### Phase 1: Re-orientation

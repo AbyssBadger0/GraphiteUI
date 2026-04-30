@@ -289,6 +289,7 @@ import { isGraphiteUiPythonExportFile, isGraphiteUiPythonExportSource } from "./
 import { buildPresetPayloadForNode } from "./presetPersistence.ts";
 import { useWorkspaceDocumentState } from "./useWorkspaceDocumentState.ts";
 import { useWorkspaceRouteController } from "./useWorkspaceRouteController.ts";
+import { useWorkspaceRunController } from "./useWorkspaceRunController.ts";
 import { useWorkspaceRunVisualState, type WorkspaceRunFeedback } from "./useWorkspaceRunVisualState.ts";
 import { useWorkspaceSidePanelController } from "./useWorkspaceSidePanelController.ts";
 import { useWorkspaceTabLifecycleController } from "./useWorkspaceTabLifecycleController.ts";
@@ -504,6 +505,29 @@ const {
   syncRouteToUrl,
   saveTab,
   closeSaveFailedMessage: () => t("closeDialog.saveFailed"),
+});
+const { runActiveGraph, resumeHumanReviewRun } = useWorkspaceRunController({
+  activeTab,
+  documentsByTabId,
+  latestRunDetailByTabId,
+  restoredRunSnapshotIdByTabId,
+  humanReviewBusyByTabId,
+  humanReviewErrorByTabId,
+  runNodeStatusByTabId,
+  currentRunNodeIdByTabId,
+  runOutputPreviewByTabId,
+  runFailureMessageByTabId,
+  activeRunEdgeIdsByTabId,
+  refreshAgentModels,
+  runGraph,
+  resumeRun,
+  cancelRunPolling,
+  getRunGeneration: (tabId) => runPollGenerationByTabId.get(tabId) ?? 0,
+  startRunEventStreamForTab,
+  pollRunForTab,
+  setFeedbackForTab,
+  setMessageFeedbackForTab,
+  translate: (key, params) => t(key, params ?? {}),
 });
 
 function cancelRunPolling(tabId: string) {
@@ -1242,99 +1266,6 @@ async function exportActiveGraph() {
       tone: "danger",
       message: error instanceof Error ? error.message : "Failed to export Python code.",
     });
-  }
-}
-
-async function runActiveGraph() {
-  const tab = activeTab.value;
-  if (!tab) {
-    return;
-  }
-  const document = documentsByTabId.value[tab.tabId];
-  if (!document) {
-    return;
-  }
-
-  try {
-    await refreshAgentModels();
-    const latestDocument = documentsByTabId.value[tab.tabId];
-    if (!latestDocument) {
-      return;
-    }
-
-    const response = await runGraph(latestDocument);
-    cancelRunPolling(tab.tabId);
-    const generation = runPollGenerationByTabId.get(tab.tabId) ?? 0;
-    runNodeStatusByTabId.value = setTabScopedRecordEntry(runNodeStatusByTabId.value, tab.tabId, {});
-    currentRunNodeIdByTabId.value = setTabScopedRecordEntry(currentRunNodeIdByTabId.value, tab.tabId, null);
-    runOutputPreviewByTabId.value = setTabScopedRecordEntry(runOutputPreviewByTabId.value, tab.tabId, {});
-    runFailureMessageByTabId.value = setTabScopedRecordEntry(runFailureMessageByTabId.value, tab.tabId, {});
-    activeRunEdgeIdsByTabId.value = setTabScopedRecordEntry(activeRunEdgeIdsByTabId.value, tab.tabId, []);
-    latestRunDetailByTabId.value = setTabScopedRecordEntry(latestRunDetailByTabId.value, tab.tabId, null);
-    humanReviewErrorByTabId.value = setTabScopedRecordEntry(humanReviewErrorByTabId.value, tab.tabId, null);
-    setFeedbackForTab(tab.tabId, {
-      tone: "warning",
-      message: t("feedback.runQueued", { runId: response.run_id, pending: Object.keys(latestDocument.nodes).length, cycle: "" }),
-      activeRunId: response.run_id,
-      activeRunStatus: response.status,
-      summary: {
-        idle: Object.keys(latestDocument.nodes).length,
-        running: 0,
-        paused: 0,
-        success: 0,
-        failed: 0,
-      },
-      currentNodeLabel: null,
-    });
-    startRunEventStreamForTab(tab.tabId, response.run_id);
-    void pollRunForTab(tab.tabId, response.run_id, generation);
-  } catch (error) {
-    setMessageFeedbackForTab(tab.tabId, {
-      tone: "danger",
-      message: error instanceof Error ? error.message : t("feedback.runFailed", { runId: "" }),
-    });
-  }
-}
-
-async function resumeHumanReviewRun(tabId: string, payload: Record<string, unknown>) {
-  const run = latestRunDetailByTabId.value[tabId];
-  if (!run) {
-    return;
-  }
-
-  humanReviewBusyByTabId.value = setTabScopedRecordEntry(humanReviewBusyByTabId.value, tabId, true);
-  humanReviewErrorByTabId.value = setTabScopedRecordEntry(humanReviewErrorByTabId.value, tabId, null);
-
-  try {
-    const response = await resumeRun(run.run_id, payload, restoredRunSnapshotIdByTabId.value[tabId] ?? null);
-    cancelRunPolling(tabId);
-    const generation = runPollGenerationByTabId.get(tabId) ?? 0;
-    latestRunDetailByTabId.value = setTabScopedRecordEntry(
-      latestRunDetailByTabId.value,
-      tabId,
-      {
-        ...run,
-        run_id: response.run_id,
-        status: response.status,
-      },
-    );
-    restoredRunSnapshotIdByTabId.value = setTabScopedRecordEntry(restoredRunSnapshotIdByTabId.value, tabId, null);
-    setMessageFeedbackForTab(tabId, {
-      tone: "warning",
-      message: t("feedback.runResuming", { runId: response.run_id }),
-      activeRunId: response.run_id,
-      activeRunStatus: response.status,
-    });
-    startRunEventStreamForTab(tabId, response.run_id);
-    void pollRunForTab(tabId, response.run_id, generation);
-  } catch (error) {
-    humanReviewErrorByTabId.value = setTabScopedRecordEntry(
-      humanReviewErrorByTabId.value,
-      tabId,
-      error instanceof Error ? error.message : t("humanReview.resumeFailed"),
-    );
-  } finally {
-    humanReviewBusyByTabId.value = setTabScopedRecordEntry(humanReviewBusyByTabId.value, tabId, false);
   }
 }
 

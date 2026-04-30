@@ -225,11 +225,9 @@ import { createNodeFromCreationEntry, createNodeFromDroppedFile } from "./nodeCr
 import {
   cloneGraphDocument,
   createEditorSeedDraftGraph,
-  pruneUnreferencedStateSchemaInDocument,
   resolveEditorSeedTemplate,
 } from "@/lib/graph-document";
 import {
-  applyDocumentMetaToWorkspaceTab,
   createUnsavedWorkspaceTab,
   ensureSavedGraphTab,
   prunePersistedEditorDocumentDrafts,
@@ -282,12 +280,12 @@ import {
   shouldRunWorkspaceDraftHydration,
 } from "./editorDraftPersistenceModel.ts";
 import { setTabScopedRecordEntry } from "./editorTabRuntimeModel.ts";
-import { formatValidationFeedback } from "./runFeedbackModel.ts";
 import type { WorkspaceSidePanelMode } from "./workspaceSidePanelModel.ts";
-import { buildPythonExportFileName, downloadPythonSource } from "./pythonExportModel.ts";
+import { downloadPythonSource } from "./pythonExportModel.ts";
 import { isGraphiteUiPythonExportFile, isGraphiteUiPythonExportSource } from "./pythonImportModel.ts";
 import { buildPresetPayloadForNode } from "./presetPersistence.ts";
 import { useWorkspaceDocumentState } from "./useWorkspaceDocumentState.ts";
+import { useWorkspaceGraphPersistenceController } from "./useWorkspaceGraphPersistenceController.ts";
 import { useWorkspaceRouteController } from "./useWorkspaceRouteController.ts";
 import { useWorkspaceRunController } from "./useWorkspaceRunController.ts";
 import { useWorkspaceRunVisualState, type WorkspaceRunFeedback } from "./useWorkspaceRunVisualState.ts";
@@ -464,6 +462,30 @@ const { applyCurrentRouteInstruction, syncRouteToUrl, syncRouteToTab } = useWork
   openRestoredRunTab,
   openNewTab,
   openExistingGraph,
+});
+const {
+  renameActiveGraph,
+  saveActiveGraph,
+  saveTab,
+  validateActiveGraph,
+  exportActiveGraph,
+} = useWorkspaceGraphPersistenceController({
+  activeTab,
+  workspace,
+  documentsByTabId,
+  guardGraphEditForTab,
+  commitDirtyDocumentForTab,
+  registerDocumentForTab,
+  updateWorkspace,
+  updateWorkspaceTab,
+  syncRouteToTab,
+  loadGraphs: () => graphStore.loadGraphs(),
+  saveGraph,
+  fetchGraph,
+  validateGraph,
+  exportLangGraphPython,
+  downloadPythonSource,
+  setMessageFeedbackForTab,
 });
 const {
   activateTab,
@@ -1139,134 +1161,6 @@ function showStateDeleteBlockedToast(message: string) {
     showClose: true,
     message,
   });
-}
-
-function renameActiveGraph(name: string) {
-  const tab = activeTab.value;
-  if (!tab) {
-    return;
-  }
-  if (guardGraphEditForTab(tab.tabId)) {
-    return;
-  }
-  const document = documentsByTabId.value[tab.tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = cloneGraphDocument(document);
-  nextDocument.name = name;
-  commitDirtyDocumentForTab(tab.tabId, nextDocument);
-}
-
-async function saveTab(tabId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return false;
-  }
-
-  try {
-    const documentToSave = pruneUnreferencedStateSchemaInDocument(document);
-    const response = await saveGraph(documentToSave);
-    const savedGraph = await fetchGraph(response.graph_id);
-    registerDocumentForTab(tabId, savedGraph);
-
-    updateWorkspaceTab(tabId, (tab) => ({
-      ...tab,
-      kind: "existing",
-      graphId: savedGraph.graph_id,
-      title: savedGraph.name,
-      dirty: false,
-      templateId: null,
-    }));
-    updateWorkspace(
-      applyDocumentMetaToWorkspaceTab(workspace.value, tabId, {
-        title: savedGraph.name,
-        dirty: false,
-        graphId: savedGraph.graph_id,
-      }),
-    );
-    await graphStore.loadGraphs();
-    if (workspace.value.activeTabId === tabId) {
-      syncRouteToTab(
-        {
-          graphId: savedGraph.graph_id,
-          kind: "existing",
-          templateId: null,
-          defaultTemplateId: null,
-        },
-        "replace",
-      );
-    }
-
-    setMessageFeedbackForTab(tabId, {
-      tone: "success",
-      message: `Saved graph ${savedGraph.graph_id}.`,
-    });
-    return response.saved;
-  } catch (error) {
-    setMessageFeedbackForTab(tabId, {
-      tone: "danger",
-      message: error instanceof Error ? error.message : "Failed to save graph.",
-    });
-    throw error;
-  }
-}
-
-async function saveActiveGraph() {
-  if (!activeTab.value) {
-    return;
-  }
-  await saveTab(activeTab.value.tabId);
-}
-
-async function validateActiveGraph() {
-  const tab = activeTab.value;
-  if (!tab) {
-    return;
-  }
-  const document = documentsByTabId.value[tab.tabId];
-  if (!document) {
-    return;
-  }
-
-  try {
-    const response = await validateGraph(document);
-    const feedback = formatValidationFeedback(response);
-    setMessageFeedbackForTab(tab.tabId, feedback);
-  } catch (error) {
-    setMessageFeedbackForTab(tab.tabId, {
-      tone: "danger",
-      message: error instanceof Error ? error.message : "Failed to validate graph.",
-    });
-  }
-}
-
-async function exportActiveGraph() {
-  const tab = activeTab.value;
-  if (!tab) {
-    return;
-  }
-  const document = documentsByTabId.value[tab.tabId];
-  if (!document) {
-    return;
-  }
-
-  try {
-    const exportDocument = cloneGraphDocument(document);
-    const source = await exportLangGraphPython(exportDocument);
-    const fileName = buildPythonExportFileName(exportDocument.name || tab.title);
-    downloadPythonSource(source, fileName);
-    setMessageFeedbackForTab(tab.tabId, {
-      tone: "success",
-      message: `Exported ${fileName}.`,
-    });
-  } catch (error) {
-    setMessageFeedbackForTab(tab.tabId, {
-      tone: "danger",
-      message: error instanceof Error ? error.message : "Failed to export Python code.",
-    });
-  }
 }
 
 async function loadKnowledgeBases() {

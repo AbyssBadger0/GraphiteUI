@@ -20,6 +20,7 @@ const documentStateSource = readWorkspaceSource("useWorkspaceDocumentState.ts");
 const tabLifecycleControllerSource = readWorkspaceSource("useWorkspaceTabLifecycleController.ts");
 const routeControllerSource = readWorkspaceSource("useWorkspaceRouteController.ts");
 const runControllerSource = readWorkspaceSource("useWorkspaceRunController.ts");
+const graphPersistenceControllerSource = readWorkspaceSource("useWorkspaceGraphPersistenceController.ts");
 
 test("EditorWorkspaceShell renders workspace panes without reka-ui tab primitives", () => {
   assert.doesNotMatch(componentSource, /from "reka-ui"/);
@@ -602,7 +603,8 @@ test("EditorWorkspaceShell centralizes dirty graph document commits", () => {
   const sizeSource =
     componentSource.match(/function handleNodeSizeUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition; size: GraphNodeSize \}\) \{[\s\S]*?\n\}\n\nconst \{/)?.[0] ??
     "";
-  const renameSource = componentSource.match(/function renameActiveGraph\(name: string\) \{[\s\S]*?\n\}\n\nasync function saveTab/)?.[0] ?? "";
+  const renameSource =
+    graphPersistenceControllerSource.match(/function renameActiveGraph\(name: string\) \{[\s\S]*?\n  \}\n\n  async function saveTab/)?.[0] ?? "";
 
   assert.match(commitSource, /setDocumentForTab\(tabId, nextDocument\);/);
   assert.match(commitSource, /applyDocumentMetaToWorkspaceTab\(input\.workspace\.value, tabId, \{/);
@@ -610,7 +612,7 @@ test("EditorWorkspaceShell centralizes dirty graph document commits", () => {
   assert.match(markDocumentDirtySource, /commitDirtyDocumentForTab\(tabId, nextDocument\);/);
   assert.match(positionSource, /commitDirtyDocumentForTab\(tabId, nextDocument\);/);
   assert.match(sizeSource, /commitDirtyDocumentForTab\(tabId, nextDocument\);/);
-  assert.match(renameSource, /commitDirtyDocumentForTab\(tab\.tabId, nextDocument\);/);
+  assert.match(renameSource, /input\.commitDirtyDocumentForTab\(tab\.tabId, nextDocument\);/);
   assert.doesNotMatch(positionSource, /updateWorkspace\(/);
   assert.doesNotMatch(sizeSource, /updateWorkspace\(/);
   assert.doesNotMatch(renameSource, /updateWorkspace\(/);
@@ -662,6 +664,25 @@ test("EditorWorkspaceShell persists terminal run state values into the graph dra
   assert.match(documentStateSource, /const nextDocument = applyRunWrittenStateValuesToDocument\(document, run\);/);
   assert.match(documentStateSource, /if \(nextDocument !== document\) \{[\s\S]*setDocumentForTab\(tabId, nextDocument\);[\s\S]*\}/);
   assert.match(componentSource, /persistRunStateValuesForTab\(tabId, run\);/);
+});
+
+test("EditorWorkspaceShell delegates graph persistence actions to a workspace controller", () => {
+  assert.match(componentSource, /import \{ useWorkspaceGraphPersistenceController \} from "\.\/useWorkspaceGraphPersistenceController\.ts";/);
+  assert.match(
+    componentSource,
+    /const \{[\s\S]*renameActiveGraph,[\s\S]*saveActiveGraph,[\s\S]*saveTab,[\s\S]*validateActiveGraph,[\s\S]*exportActiveGraph,[\s\S]*\} = useWorkspaceGraphPersistenceController\(\{/,
+  );
+  assert.match(graphPersistenceControllerSource, /async function saveTab\(tabId: string\)/);
+  assert.match(graphPersistenceControllerSource, /const response = await input\.saveGraph\(documentToSave\);/);
+  assert.match(graphPersistenceControllerSource, /const savedGraph = await input\.fetchGraph\(response\.graph_id\);/);
+  assert.match(graphPersistenceControllerSource, /input\.syncRouteToTab\(/);
+  assert.match(graphPersistenceControllerSource, /async function validateActiveGraph\(\)/);
+  assert.match(graphPersistenceControllerSource, /formatValidationFeedback\(response\);/);
+  assert.match(graphPersistenceControllerSource, /async function exportActiveGraph\(\)/);
+  assert.match(graphPersistenceControllerSource, /input\.downloadPythonSource\(source, fileName\);/);
+  assert.doesNotMatch(componentSource, /async function saveTab\(tabId: string\)/);
+  assert.doesNotMatch(componentSource, /async function validateActiveGraph\(\)/);
+  assert.doesNotMatch(componentSource, /async function exportActiveGraph\(\)/);
 });
 
 test("EditorWorkspaceShell renders the graph action controls as a detached capsule instead of passing them through EditorTabBar", () => {

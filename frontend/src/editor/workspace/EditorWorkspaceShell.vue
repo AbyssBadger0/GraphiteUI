@@ -301,7 +301,14 @@ import EditorNodeCreationMenu from "./EditorNodeCreationMenu.vue";
 import EditorStatePanel from "./EditorStatePanel.vue";
 import EditorTabBar from "./EditorTabBar.vue";
 import EditorWelcomeState from "./EditorWelcomeState.vue";
-import { buildNextCanvasViewportDrafts, listTabsMissingViewportDrafts } from "./editorDraftPersistenceModel.ts";
+import {
+  buildNextCanvasViewportDrafts,
+  listTabsMissingDocumentDrafts,
+  listTabsMissingViewportDrafts,
+  resolveExistingGraphDocumentHydrationSource,
+  resolveUnsavedGraphDocumentHydrationSource,
+  shouldHydrateExistingGraphDocument,
+} from "./editorDraftPersistenceModel.ts";
 import { formatRunFeedback, formatValidationFeedback, type RunFeedback, type WorkspaceFeedbackTone } from "./runFeedbackModel.ts";
 import { buildRunNodeArtifactsModel, mergeRunOutputPreviewByNodeId } from "./runNodeArtifactsModel.ts";
 import { applyRunWrittenStateValuesToDocument } from "./runStatePersistence.ts";
@@ -862,12 +869,10 @@ function createDraftForTab(tab: EditorWorkspaceTab): GraphPayload {
 }
 
 function ensureUnsavedTabDocuments() {
-  for (const tab of workspace.value.tabs) {
-    if (tab.graphId || documentsByTabId.value[tab.tabId]) {
-      continue;
-    }
+  for (const tab of listTabsMissingDocumentDrafts(workspace.value.tabs, documentsByTabId.value)) {
     const persistedDraft = readPersistedEditorDocumentDraft(tab.tabId);
-    registerDocumentForTab(tab.tabId, persistedDraft ?? createDraftForTab(tab));
+    const hydrationSource = resolveUnsavedGraphDocumentHydrationSource(persistedDraft);
+    registerDocumentForTab(tab.tabId, hydrationSource.type === "persisted" ? hydrationSource.document : createDraftForTab(tab));
   }
 }
 
@@ -965,7 +970,7 @@ function openImportedGraphTab(graph: GraphPayload, fileName: string) {
 }
 
 async function loadExistingGraphIntoTab(tabId: string, graphId: string) {
-  if (documentsByTabId.value[tabId] || loadingByTabId.value[tabId]) {
+  if (!shouldHydrateExistingGraphDocument({ hasDocument: Boolean(documentsByTabId.value[tabId]), isLoading: Boolean(loadingByTabId.value[tabId]) })) {
     return;
   }
 
@@ -980,8 +985,9 @@ async function loadExistingGraphIntoTab(tabId: string, graphId: string) {
 
   try {
     const persistedDraft = readPersistedEditorDocumentDraft(tabId);
-    if (persistedDraft) {
-      registerDocumentForTab(tabId, persistedDraft);
+    const hydrationSource = resolveExistingGraphDocumentHydrationSource({ persistedDraft, cachedGraph: null });
+    if (hydrationSource.type === "persisted") {
+      registerDocumentForTab(tabId, hydrationSource.document);
       return;
     }
     const graph = await fetchGraph(graphId);
@@ -1007,13 +1013,14 @@ function openExistingGraph(graphId: string, navigation: "push" | "replace" | "no
   updateWorkspace(nextWorkspace);
 
   const nextTabId = nextWorkspace.activeTabId;
-  if (nextTabId && !documentsByTabId.value[nextTabId]) {
+  if (nextTabId && shouldHydrateExistingGraphDocument({ hasDocument: Boolean(documentsByTabId.value[nextTabId]), isLoading: Boolean(loadingByTabId.value[nextTabId]) })) {
     const persistedDraft = readPersistedEditorDocumentDraft(nextTabId);
-    if (persistedDraft) {
-      registerDocumentForTab(nextTabId, persistedDraft);
-    } else if (graph) {
-      registerDocumentForTab(nextTabId, cloneGraphDocument(graph));
-    } else {
+    const hydrationSource = resolveExistingGraphDocumentHydrationSource({ persistedDraft, cachedGraph: graph });
+    if (hydrationSource.type === "persisted") {
+      registerDocumentForTab(nextTabId, hydrationSource.document);
+    } else if (hydrationSource.type === "cached-graph") {
+      registerDocumentForTab(nextTabId, cloneGraphDocument(hydrationSource.graph));
+    } else if (hydrationSource.type === "fetch") {
       void loadExistingGraphIntoTab(nextTabId, graphId);
     }
   }

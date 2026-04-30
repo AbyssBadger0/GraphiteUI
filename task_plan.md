@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 81 in progress
+Phase 82 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -747,12 +747,21 @@ Phase 81 in progress
 - **Status:** completed
 
 ### Phase 81: Document Draft Hydration Boundary
-- [ ] Re-read the formal roadmap, Phase 80 findings, and remaining draft persistence code paths.
-- [ ] Inspect whether unsaved/saved graph document draft hydration decisions can move out without changing actual storage reads or fetch behavior.
+- [x] Re-read the formal roadmap, Phase 80 findings, and remaining draft persistence code paths.
+- [x] Inspect whether unsaved/saved graph document draft hydration decisions can move out without changing actual storage reads or fetch behavior.
+- [x] Add focused red tests before production changes if a code slice is selected.
+- [x] Keep route sync, tab registration, localStorage reads/writes, graph fetches, save/open/close behavior, restore behavior, and run-event stream behavior stable.
+- [x] Run focused workspace/persistence tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 81 and re-judge total progress.
+- **Status:** completed
+
+### Phase 82: Draft Persistence Controller Boundary
+- [ ] Re-read the formal roadmap, Phase 81 findings, and remaining draft persistence/watch code paths.
+- [ ] Inspect whether workspace persistence watcher decisions and tab-id pruning inputs can move out without changing actual storage writes or route behavior.
 - [ ] Add focused red tests before production changes if a code slice is selected.
-- [ ] Keep route sync, tab registration, localStorage reads/writes, graph fetches, save/open/close behavior, restore behavior, and run-event stream behavior stable.
+- [ ] Keep route sync, tab registration, localStorage reads/writes, graph fetches, save/open/close behavior, restore behavior, visual layout, and run-event stream behavior stable.
 - [ ] Run focused workspace/persistence tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 81 and re-judge total progress.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 82 and re-judge total progress.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -986,6 +995,10 @@ Phase 81 in progress
 | P3 `EditorWorkspaceShell.vue` cleanup after Phase 80 | About 42% complete after extracting missing viewport draft tab selection and immutable viewport draft updates while preserving actual storage reads/writes in the shell. |
 | Current continuation gate after Phase 80 | Total roadmap progress is still below 100%, so Phase 81 is automatically opened for document draft hydration decisions. |
 | P3 `EditorWorkspaceShell.vue` cleanup target for Phase 81 | About 46% of P3 if document draft hydration decisions move out without changing route sync, tab registration, localStorage reads/writes, graph fetches, restore behavior, or run stream behavior. |
+| Overall roadmap cleanup after Phase 81 | About 99.9% complete after moving unsaved/saved document draft hydration decisions into `editorDraftPersistenceModel.ts`. |
+| P3 `EditorWorkspaceShell.vue` cleanup after Phase 81 | About 46% complete after extracting persisted-vs-seed and persisted-vs-cached-vs-fetch document hydration routing while preserving actual storage reads, fetches, and registration in the shell. |
+| Current continuation gate after Phase 81 | Total roadmap progress is still below 100%, so Phase 82 is automatically opened for draft persistence watcher/controller decisions. |
+| P3 `EditorWorkspaceShell.vue` cleanup target for Phase 82 | About 50% of P3 if workspace persistence watcher decisions and tab-id pruning inputs move out without changing actual storage writes, route sync, graph fetches, save/open/close behavior, restore behavior, visual layout, or run stream behavior. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -1062,7 +1075,8 @@ Phase 81 in progress
 - Phase 78 moves full streaming preview payload/document/current-preview projection into `run-event-stream.ts`; `EditorWorkspaceShell.vue` keeps EventSource lifecycle, run output preview ref assignment, graph mutation, polling timers, restore behavior, human-review opening, and live display state.
 - Phase 79 moves the shared Event-to-payload wrapper into `run-event-stream.ts`; `EditorWorkspaceShell.vue` and `RunDetailPage.vue` keep EventSource lifecycle, listener registration, polling timers, restore/human-review behavior, and UI state writes.
 - Phase 80 moves viewport draft tab selection and immutable viewport draft updates into `editorDraftPersistenceModel.ts`; `EditorWorkspaceShell.vue` keeps actual `readPersistedEditorViewportDraft` / `writePersistedEditorViewportDraft` calls and ref assignment.
-- Phase 81 should evaluate document draft hydration decisions because actual storage reads and graph fetches are side-effectful but their choose-persisted-versus-seed/fetch routing can be covered separately.
+- Phase 81 moves unsaved document persisted-vs-seed routing and existing graph persisted-vs-cached-vs-fetch routing into `editorDraftPersistenceModel.ts`; `EditorWorkspaceShell.vue` keeps actual localStorage reads, graph fetches, `registerDocumentForTab`, route sync, and UI loading/error state writes.
+- Phase 82 should evaluate workspace persistence watcher/controller decisions because actual storage writes remain side-effectful but tab-id pruning inputs and hydration gating are still modelable.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

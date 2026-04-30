@@ -113,6 +113,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - `run-event-stream.ts` 已继续承接 streaming output preview payload-to-map request projection：组合 text、output keys、fallback node id、target node selection 和 immutable preview patching；`EditorWorkspaceShell.vue` 仍保留 preview ref assignment、EventSource lifecycle、graph mutation、polling timers、restore/human-review behavior 和 live display state。
 - `run-event-stream.ts` 已继续承接 Event-to-payload parsing wrapper：统一 `MessageEvent` 判断和 JSON payload 解析；`EditorWorkspaceShell.vue` 与 `RunDetailPage.vue` 仍保留 EventSource lifecycle、listener registration、polling timers、restore/human-review behavior 和 UI state mutation。
 - `editorDraftPersistenceModel.ts` 已开始承接 draft persistence 的 viewport draft 决策：缺失 viewport 的 tab id 选择、相同 viewport no-op、immutable viewport draft update；`EditorWorkspaceShell.vue` 仍保留实际 localStorage read/write、ref assignment、route sync、tab registration、graph mutation、restore behavior 和 run stream behavior。
+- `editorDraftPersistenceModel.ts` 已继续承接 document draft hydration 决策：未保存 tab 缺失文档筛选、persisted-vs-seed、已有图 tab hydrate gating、persisted-vs-cached-vs-fetch source selection；`EditorWorkspaceShell.vue` 仍保留实际 localStorage read、graph fetch、registerDocument、loading/error state、route sync、restore behavior 和 run stream behavior。
 
 ## 后端重点
 
@@ -203,6 +204,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - 2026-04-30：`run-event-stream.ts` 已继续承担 streaming output preview payload-to-map request projection；workspace shell 仍保留 preview ref assignment、stream lifecycle、graph mutation、polling、restore 和 human-review behavior。
 - 2026-04-30：`run-event-stream.ts` 已继续承担 Event-to-payload wrapper；workspace/run detail 仍保留 EventSource lifecycle、listener registration、polling、restore/human-review behavior 和 UI state mutation。
 - 2026-04-30：`editorDraftPersistenceModel.ts` 已开始承担 viewport draft hydration/update decisions；workspace shell 仍保留 actual localStorage read/write、viewport ref assignment、route sync、tab registration、graph mutation、restore 和 run stream behavior。
+- 2026-04-30：`editorDraftPersistenceModel.ts` 已继续承担 document draft hydration routing；workspace shell 仍保留 actual localStorage read、graph fetch、registerDocument、loading/error state writes、route sync、restore 和 run stream behavior。
 
 ## 优先级路线
 

@@ -318,13 +318,26 @@ test("EditorWorkspaceShell runs the latest document after async model refresh", 
 });
 
 test("EditorWorkspaceShell persists graph document drafts across route changes and app restarts", () => {
+  const ensureDocumentsSource =
+    componentSource.match(/function ensureUnsavedTabDocuments\(\) \{[\s\S]*?\n\}\n\nfunction openNewTab/)?.[0] ?? "";
+  const loadExistingSource =
+    componentSource.match(/async function loadExistingGraphIntoTab\(tabId: string, graphId: string\) \{[\s\S]*?\n\}\n\nfunction openExistingGraph/)?.[0] ?? "";
+  const openExistingSource =
+    componentSource.match(/function openExistingGraph\(graphId: string, navigation: "push" \| "replace" \| "none" = "push"\) \{[\s\S]*?\n\}\n\nfunction activateTab/)?.[0] ?? "";
+
+  assert.match(componentSource, /import \{[\s\S]*listTabsMissingDocumentDrafts,[\s\S]*resolveExistingGraphDocumentHydrationSource,[\s\S]*resolveUnsavedGraphDocumentHydrationSource,[\s\S]*shouldHydrateExistingGraphDocument[\s\S]*\} from "\.\/editorDraftPersistenceModel\.ts";/);
   assert.match(componentSource, /readPersistedEditorDocumentDraft/);
   assert.match(componentSource, /writePersistedEditorDocumentDraft/);
   assert.match(componentSource, /removePersistedEditorDocumentDraft/);
   assert.match(componentSource, /prunePersistedEditorDocumentDrafts/);
-  assert.match(componentSource, /const persistedDraft = readPersistedEditorDocumentDraft\(tab\.tabId\);/);
-  assert.match(componentSource, /registerDocumentForTab\(tab\.tabId, persistedDraft \?\? createDraftForTab\(tab\)\);/);
-  assert.match(componentSource, /const persistedDraft = readPersistedEditorDocumentDraft\(tabId\);[\s\S]*if \(persistedDraft\) \{[\s\S]*registerDocumentForTab\(tabId, persistedDraft\);[\s\S]*return;/);
+  assert.match(ensureDocumentsSource, /for \(const tab of listTabsMissingDocumentDrafts\(workspace\.value\.tabs, documentsByTabId\.value\)\)/);
+  assert.match(ensureDocumentsSource, /const hydrationSource = resolveUnsavedGraphDocumentHydrationSource\(persistedDraft\);/);
+  assert.match(ensureDocumentsSource, /hydrationSource\.type === "persisted" \? hydrationSource\.document : createDraftForTab\(tab\)/);
+  assert.doesNotMatch(ensureDocumentsSource, /persistedDraft \?\? createDraftForTab\(tab\)/);
+  assert.match(loadExistingSource, /if \(!shouldHydrateExistingGraphDocument\(\{ hasDocument: Boolean\(documentsByTabId\.value\[tabId\]\), isLoading: Boolean\(loadingByTabId\.value\[tabId\]\) \}\)\)/);
+  assert.match(loadExistingSource, /const hydrationSource = resolveExistingGraphDocumentHydrationSource\(\{ persistedDraft, cachedGraph: null \}\);/);
+  assert.match(openExistingSource, /if \(nextTabId && shouldHydrateExistingGraphDocument\(\{ hasDocument: Boolean\(documentsByTabId\.value\[nextTabId\]\), isLoading: Boolean\(loadingByTabId\.value\[nextTabId\]\) \}\)\)/);
+  assert.match(openExistingSource, /const hydrationSource = resolveExistingGraphDocumentHydrationSource\(\{ persistedDraft, cachedGraph: graph \}\);/);
   assert.match(componentSource, /writePersistedEditorDocumentDraft\(tabId, syncedDocument\);/);
   assert.match(componentSource, /removePersistedEditorDocumentDraft\(tabId\);/);
   assert.match(componentSource, /prunePersistedEditorDocumentDrafts\(nextWorkspace\.tabs\.map\(\(tab\) => tab\.tabId\)\);/);

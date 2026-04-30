@@ -11,6 +11,8 @@ from langgraph.graph import END, START
 
 from app.core.langgraph.runtime_setup import (
     build_after_breakpoint_passthrough_callable,
+    build_after_breakpoint_node_map,
+    build_compiled_interrupt_before,
     build_langgraph_execution_edge_indexes,
     build_langgraph_state_schema,
     mark_input_boundaries_success,
@@ -66,6 +68,29 @@ class LangGraphRuntimeSetupTest(unittest.TestCase):
 
     def test_build_after_breakpoint_passthrough_callable_returns_empty_update(self) -> None:
         self.assertEqual(build_after_breakpoint_passthrough_callable()({"answer": "hello"}), {})
+
+    def test_build_after_breakpoint_node_map_filters_to_runtime_nodes(self) -> None:
+        self.assertEqual(
+            build_after_breakpoint_node_map(
+                ["agent_answer", "input_answer", "missing"],
+                runtime_nodes={"agent_answer", "input_answer"},
+                after_breakpoint_node_name_func=lambda node_name: f"after::{node_name}",
+            ),
+            {
+                "agent_answer": "after::agent_answer",
+                "input_answer": "after::input_answer",
+            },
+        )
+
+    def test_build_compiled_interrupt_before_merges_before_and_after_nodes(self) -> None:
+        self.assertEqual(
+            build_compiled_interrupt_before(
+                ["agent_answer"],
+                {"input_answer": "after::input_answer"},
+            ),
+            ["after::input_answer", "agent_answer"],
+        )
+        self.assertIsNone(build_compiled_interrupt_before(None, {}))
 
     def test_build_langgraph_execution_edge_indexes_groups_edges_and_conditionals(self) -> None:
         regular_edge = SimpleNamespace(id="edge-1", source="input_answer", target="agent_answer", kind="regular", branch=None)

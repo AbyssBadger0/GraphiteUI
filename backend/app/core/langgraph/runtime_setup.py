@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Annotated, Any
+from typing import Annotated, Any, Callable
 
 from langgraph.graph import END, START
 from typing_extensions import TypedDict
@@ -18,6 +18,27 @@ def build_after_breakpoint_passthrough_callable():
         return {}
 
     return _call
+
+
+def build_after_breakpoint_node_map(
+    interrupt_after: list[str] | None,
+    *,
+    runtime_nodes: set[str],
+    after_breakpoint_node_name_func: Callable[[str], str],
+) -> dict[str, str]:
+    return {
+        node_name: after_breakpoint_node_name_func(node_name)
+        for node_name in (interrupt_after or [])
+        if node_name in runtime_nodes
+    }
+
+
+def build_compiled_interrupt_before(
+    interrupt_before: list[str] | None,
+    after_breakpoint_nodes: dict[str, str],
+) -> list[str] | None:
+    compiled_interrupt_before = sorted(set(interrupt_before or []) | set(after_breakpoint_nodes.values()))
+    return compiled_interrupt_before or None
 
 
 def build_langgraph_execution_edge_indexes(

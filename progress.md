@@ -1,5 +1,48 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 138
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `05a8b8e` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 137 findings, and remaining frontend/backend high-line-count files.
+  - Chose the LangGraph after-breakpoint setup helper slice because it is pure mapping/merging around already-resolved interrupt settings and does not change Human Review waiting behavior, checkpointing, node execution, or frontend interactions.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Extended `backend/tests/test_langgraph_runtime_setup.py` to cover after-breakpoint node map filtering and compiled interrupt-before merging.
+  - Verified the expected red failure because `build_after_breakpoint_node_map` and `build_compiled_interrupt_before` were not exported yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `build_after_breakpoint_node_map` and `build_compiled_interrupt_before` to `backend/app/core/langgraph/runtime_setup.py`.
+  - Updated `core/langgraph/runtime.py` to consume the extracted helpers while leaving interrupt resolution, graph compilation, and Human Review runtime behavior unchanged.
+  - `runtime.py` ended at 483 lines; this is a two-line increase from Phase 137 because explicit setup imports/calls cost more lines than the removed inline comprehensions, but the responsibility moved out of the runtime body.
+
+### Phase 4: Verification and Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Ran focused backend LangGraph/runtime regression tests.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Recalculated the full roadmap at about 99.7%, frontend-focused progress at about 98.2%, P2 `EditorCanvas.vue` residual cleanup at about 99%, and backend P4 at about 98%.
+  - Opened Phase 139 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red backend test | `python -m pytest backend/tests/test_langgraph_runtime_setup.py` before implementation | Fails because the after-breakpoint setup helpers are missing | Failed with `ImportError: cannot import name 'build_after_breakpoint_node_map'` | Passed |
+| Focused backend tests | `python -m pytest backend/tests/test_langgraph_runtime_setup.py backend/tests/test_langgraph_progress.py backend/tests/test_langgraph_migration.py backend/tests/test_langgraph_checkpoint_runtime.py backend/tests/test_langgraph_interrupts.py backend/tests/test_langgraph_cycle_tracker.py backend/tests/test_runtime_summaries.py` | Runtime setup, progress, migration, checkpoint, interrupt, cycle, and summary tests pass | 63 passed | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | Runtime setup test failed because the after-breakpoint setup helpers were not exported | Red test before implementation | Added the helpers, wired `runtime.py` to use them, and reran focused backend tests successfully. |
+
 ## Session: 2026-04-30 Phase 137
 
 ### Phase 1: Re-orientation

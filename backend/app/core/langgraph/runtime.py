@@ -42,7 +42,9 @@ from app.core.langgraph.interrupts import (
 )
 from app.core.langgraph.progress import persist_langgraph_progress as _persist_langgraph_progress
 from app.core.langgraph.runtime_setup import (
+    build_after_breakpoint_node_map as _build_after_breakpoint_node_map,
     build_after_breakpoint_passthrough_callable as _build_after_breakpoint_passthrough_callable,
+    build_compiled_interrupt_before as _build_compiled_interrupt_before,
     build_langgraph_execution_edge_indexes as _build_langgraph_execution_edge_indexes,
     build_langgraph_state_schema as _build_langgraph_state_schema,
     mark_input_boundaries_success as _mark_input_boundaries_success,
@@ -151,11 +153,11 @@ def execute_node_system_graph_langgraph(
         )
 
     interrupt_before, interrupt_after = _resolve_interrupt_configuration(graph, allowed_nodes=set(build_plan.runtime_nodes))
-    after_breakpoint_nodes = {
-        node_name: _after_breakpoint_node_name(node_name)
-        for node_name in (interrupt_after or [])
-        if node_name in build_plan.runtime_nodes
-    }
+    after_breakpoint_nodes = _build_after_breakpoint_node_map(
+        interrupt_after,
+        runtime_nodes=set(build_plan.runtime_nodes),
+        after_breakpoint_node_name_func=_after_breakpoint_node_name,
+    )
     for breakpoint_node_name in after_breakpoint_nodes.values():
         workflow.add_node(breakpoint_node_name, _build_after_breakpoint_passthrough_callable())
 
@@ -187,7 +189,7 @@ def execute_node_system_graph_langgraph(
     for node_name in build_plan.requirements.runtime_terminal_nodes:
         workflow.add_edge(after_breakpoint_nodes.get(node_name, node_name), END)
 
-    compiled_interrupt_before = sorted(set(interrupt_before or []) | set(after_breakpoint_nodes.values())) or None
+    compiled_interrupt_before = _build_compiled_interrupt_before(interrupt_before, after_breakpoint_nodes)
     compiled = workflow.compile(
         checkpointer=checkpoint_saver,
         interrupt_before=compiled_interrupt_before,

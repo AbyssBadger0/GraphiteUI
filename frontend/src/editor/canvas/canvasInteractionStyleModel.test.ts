@@ -5,12 +5,14 @@ import {
   buildConnectionPreviewClassState,
   buildConnectionPreviewStyle,
   buildFlowHotspotConnectStyle,
+  buildFlowHotspotClassState,
   buildFlowHotspotStyle,
   buildPointAnchorConnectStyle,
   buildPointAnchorStyle,
   buildProjectedEdgeClassState,
   buildProjectedEdgeHitareaClassState,
   buildProjectedEdgeStyle,
+  buildRouteHandleClassState,
   isCanvasConnectionSourceAnchor,
   isCanvasConnectionTargetAnchor,
   withAlpha,
@@ -94,6 +96,58 @@ test("buildFlowHotspotStyle preserves directional hotspot geometry", () => {
     width: "86px",
     height: "22px",
   });
+});
+
+test("buildFlowHotspotClassState preserves direction, visibility, connection, and side classes", () => {
+  const context = {
+    activeConnectionSourceAnchorId: "source",
+    eligibleTargetAnchorIds: new Set(["target"]),
+    activeConnectionSourceKind: "state-out" as const,
+    activeConnectionAccentColor: "#123456",
+  };
+
+  assert.deepEqual(
+    buildFlowHotspotClassState({
+      anchor: { id: "source", kind: "flow-out", side: "top" },
+      isVisible: true,
+      context,
+    }),
+    {
+      "editor-canvas__flow-hotspot--outbound": true,
+      "editor-canvas__flow-hotspot--inbound": false,
+      "editor-canvas__flow-hotspot--visible": true,
+      "editor-canvas__flow-hotspot--connect-source": true,
+      "editor-canvas__flow-hotspot--connect-target": false,
+      "editor-canvas__flow-hotspot--top": true,
+    },
+  );
+});
+
+test("buildRouteHandleClassState preserves visibility, tone, and connection classes", () => {
+  const context = {
+    activeConnectionSourceAnchorId: "route:true",
+    eligibleTargetAnchorIds: new Set<string>(),
+    activeConnectionSourceKind: "route-out" as const,
+    activeConnectionAccentColor: "#123456",
+  };
+
+  assert.deepEqual(
+    buildRouteHandleClassState({
+      anchor: { id: "route:true" },
+      isVisible: true,
+      tone: "success",
+      context,
+    }),
+    {
+      "editor-canvas__flow-hotspot--visible": true,
+      "editor-canvas__route-handle--success": true,
+      "editor-canvas__route-handle--danger": false,
+      "editor-canvas__route-handle--warning": false,
+      "editor-canvas__route-handle--neutral": false,
+      "editor-canvas__flow-hotspot--connect-source": true,
+      "editor-canvas__route-handle--connect-source": true,
+    },
+  );
 });
 
 test("anchor style helpers preserve state colors and state-out connection variables", () => {

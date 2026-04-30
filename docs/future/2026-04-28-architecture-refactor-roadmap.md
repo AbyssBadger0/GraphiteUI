@@ -88,6 +88,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - `edgeProjection.ts` 已继续承接 projected anchor 的 flow/route/point 分组；`EditorCanvas.vue` 仍保留 transient anchor construction、connection eligibility、overlay rendering 和 pointer handlers。
 - `edgeProjection.ts` 已继续承接 projected edge 的 flow/route 与 data 分层分组；`EditorCanvas.vue` 仍保留 SVG layer ordering、selected-edge state、hitarea handlers 和 edge class bindings。
 - `canvasInteractionStyleModel.ts` 已继续承接 connection preview、projected edge、selected/active-run edge 和 edge hitarea class projection；`EditorCanvas.vue` 仍保留 selected-edge state input、active-run edge lookup、SVG rendering 和 pointer handlers。
+- `canvasInteractionStyleModel.ts` 已继续承接 flow hotspot 与 route handle 的 outbound/visibility/tone/connect class projection；`EditorCanvas.vue` 仍保留 hotspot visibility 输入、route tone 输入、anchor overlay rendering 和 pointer handlers。
 
 ### 3. `EditorWorkspaceShell.vue`
 
@@ -182,6 +183,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - 2026-04-30：`edgeProjection.ts` 已继续承担 projected anchor grouping，`EditorCanvas.vue` 仍保留 transient anchor construction、connection eligibility、anchor overlay rendering 和 pointer handlers。
 - 2026-04-30：`edgeProjection.ts` 已继续承担 projected edge layer grouping，`EditorCanvas.vue` 仍保留 SVG layer ordering、selected-edge state、edge hitarea handlers 和 edge class bindings。
 - 2026-04-30：`canvasInteractionStyleModel.ts` 已继续承担 edge class projection，`EditorCanvas.vue` 仍保留 selected-edge state input、active-run lookup、SVG rendering 和 pointer handlers。
+- 2026-04-30：`canvasInteractionStyleModel.ts` 已继续承担 flow hotspot 和 route handle class projection，`EditorCanvas.vue` 仍保留 hotspot visibility/tone 输入、overlay rendering 和 pointer handlers。
 
 ## 优先级路线
 

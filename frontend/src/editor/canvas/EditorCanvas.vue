@@ -280,14 +280,7 @@
           :key="`flow-${anchor.id}`"
           class="editor-canvas__flow-hotspot"
           :style="[flowHotspotStyle(anchor), flowHotspotConnectStyle(anchor)]"
-          :class="{
-            'editor-canvas__flow-hotspot--outbound': anchor.kind === 'flow-out',
-            'editor-canvas__flow-hotspot--inbound': anchor.kind === 'flow-in',
-            'editor-canvas__flow-hotspot--visible': isFlowHotspotVisible(anchor),
-            'editor-canvas__flow-hotspot--connect-source': isCanvasConnectionSourceAnchor(anchor, canvasInteractionStyleContext),
-            'editor-canvas__flow-hotspot--connect-target': isCanvasConnectionTargetAnchor(anchor, canvasInteractionStyleContext),
-            'editor-canvas__flow-hotspot--top': anchor.side === 'top',
-          }"
+          :class="flowHotspotClassState(anchor)"
           @pointerenter="setHoveredFlowHandleNode(anchor.nodeId)"
           @pointerleave="clearHoveredFlowHandleNode(anchor.nodeId)"
           @pointerdown.prevent.stop="handleAnchorPointerDown(anchor)"
@@ -298,15 +291,7 @@
           v-for="anchor in routeHandles"
           :key="`route-${anchor.id}`"
           class="editor-canvas__flow-hotspot editor-canvas__flow-hotspot--outbound editor-canvas__route-handle"
-          :class="{
-            'editor-canvas__flow-hotspot--visible': isFlowHotspotVisible(anchor),
-            'editor-canvas__route-handle--success': resolveRouteHandleTone(anchor.branch) === 'success',
-            'editor-canvas__route-handle--danger': resolveRouteHandleTone(anchor.branch) === 'danger',
-            'editor-canvas__route-handle--warning': resolveRouteHandleTone(anchor.branch) === 'warning',
-            'editor-canvas__route-handle--neutral': resolveRouteHandleTone(anchor.branch) === 'neutral',
-            'editor-canvas__flow-hotspot--connect-source': isCanvasConnectionSourceAnchor(anchor, canvasInteractionStyleContext),
-            'editor-canvas__route-handle--connect-source': isCanvasConnectionSourceAnchor(anchor, canvasInteractionStyleContext),
-          }"
+          :class="routeHandleClassState(anchor)"
           :style="[routeHandleStyle(anchor), flowHotspotConnectStyle(anchor)]"
           @pointerenter="setHoveredFlowHandleNode(anchor.nodeId)"
           @pointerleave="clearHoveredFlowHandleNode(anchor.nodeId)"
@@ -413,11 +398,13 @@ import {
   buildConnectionPreviewStyle,
   buildFlowHotspotStyle,
   buildFlowHotspotConnectStyle,
+  buildFlowHotspotClassState,
   buildPointAnchorStyle,
   buildPointAnchorConnectStyle,
   buildProjectedEdgeClassState,
   buildProjectedEdgeHitareaClassState,
   buildProjectedEdgeStyle,
+  buildRouteHandleClassState,
   isCanvasConnectionSourceAnchor,
   isCanvasConnectionTargetAnchor,
 } from "./canvasInteractionStyleModel";
@@ -1066,6 +1053,19 @@ const anchorStyle = buildPointAnchorStyle;
 
 const flowHotspotConnectStyle = (anchor: ProjectedCanvasAnchor) =>
   buildFlowHotspotConnectStyle(anchor, canvasInteractionStyleContext.value);
+const flowHotspotClassState = (anchor: ProjectedCanvasAnchor) =>
+  buildFlowHotspotClassState({
+    anchor,
+    isVisible: isFlowHotspotVisible(anchor),
+    context: canvasInteractionStyleContext.value,
+  });
+const routeHandleClassState = (anchor: ProjectedCanvasAnchor) =>
+  buildRouteHandleClassState({
+    anchor,
+    isVisible: isFlowHotspotVisible(anchor),
+    tone: resolveRouteHandleTone(anchor.branch),
+    context: canvasInteractionStyleContext.value,
+  });
 const anchorConnectStyle = (anchor: ProjectedCanvasAnchor) =>
   buildPointAnchorConnectStyle(anchor, canvasInteractionStyleContext.value);
 

@@ -617,7 +617,7 @@ test("EditorCanvas renders condition route outputs as right-side floating branch
   assert.match(componentSource, /<div class="editor-canvas__route-handles" aria-hidden="true">/);
   assert.match(componentSource, /v-for="anchor in routeHandles"/);
   assert.match(componentSource, /class="editor-canvas__flow-hotspot editor-canvas__flow-hotspot--outbound editor-canvas__route-handle"/);
-  assert.match(componentSource, /'editor-canvas__flow-hotspot--visible': isFlowHotspotVisible\(anchor\)/);
+  assert.match(componentSource, /:class="routeHandleClassState\(anchor\)"/);
   assert.match(componentSource, /:style="\[routeHandleStyle\(anchor\), flowHotspotConnectStyle\(anchor\)\]"/);
   assert.match(componentSource, /class="editor-canvas__route-handle-label"/);
   assert.match(componentSource, /\{\{ anchor\.branch \}\}/);
@@ -644,9 +644,12 @@ test("EditorCanvas renders condition route outputs as right-side floating branch
 
 test("EditorCanvas renders exhausted route handles with warm gray neutral colors", () => {
   const routeHandleModelSource = readFileSync(resolve(currentDirectory, "routeHandleModel.ts"), "utf8").replace(/\r\n/g, "\n");
+  const canvasInteractionStyleModelSource = readCanvasInteractionStyleModelSource();
 
   assert.match(routeHandleModelSource, /if \(normalizedBranch === "exhausted" \|\| normalizedBranch === "exausted"\) \{[\s\S]*return "neutral";/);
-  assert.match(componentSource, /'editor-canvas__route-handle--neutral': resolveRouteHandleTone\(anchor\.branch\) === 'neutral'/);
+  assert.match(componentSource, /:class="routeHandleClassState\(anchor\)"/);
+  assert.match(canvasInteractionStyleModelSource, /"editor-canvas__route-handle--neutral": input\.tone === "neutral"/);
+  assert.doesNotMatch(componentSource, /'editor-canvas__route-handle--neutral': resolveRouteHandleTone\(anchor\.branch\) === 'neutral'/);
   assert.match(routeHandleModelSource, /if \(tone === "neutral"\) \{[\s\S]*accent: "#78716c"/);
   assert.doesNotMatch(componentSource, /function resolveRouteHandleTone\(branch: string \| undefined\)/);
   assert.doesNotMatch(componentSource, /function resolveRouteHandlePalette\(branch: string \| undefined\)/);
@@ -687,11 +690,12 @@ test("EditorCanvas renders output flow hotspots only for allowed modes and inter
   assert.doesNotMatch(componentSource, /const flowAnchors = computed\(\(\) =>\s*projectedAnchors\.value\.filter\(\(anchor\) => anchor\.kind === "flow-in" \|\| anchor\.kind === "flow-out"\),\s*\);/);
   assert.match(componentSource, /class="editor-canvas__flow-hotspot"/);
   assert.match(componentSource, /:style="\[flowHotspotStyle\(anchor\), flowHotspotConnectStyle\(anchor\)\]"/);
+  assert.match(componentSource, /:class="flowHotspotClassState\(anchor\)"/);
   assert.match(componentSource, /@pointerenter="setHoveredNode\(nodeId\)"/);
   assert.match(componentSource, /@pointerleave="clearHoveredNode\(nodeId\)"/);
   assert.match(componentSource, /const hoveredNodeId = ref<string \| null>\(null\);/);
-  assert.match(componentSource, /'editor-canvas__flow-hotspot--outbound': anchor\.kind === 'flow-out'/);
-  assert.match(componentSource, /'editor-canvas__flow-hotspot--visible': isFlowHotspotVisible\(anchor\)/);
+  assert.doesNotMatch(componentSource, /'editor-canvas__flow-hotspot--outbound': anchor\.kind === 'flow-out'/);
+  assert.doesNotMatch(componentSource, /'editor-canvas__flow-hotspot--visible': isFlowHotspotVisible\(anchor\)/);
   assert.match(edgeVisibilityModelSource, /input\.anchor\.kind === "flow-out" \|\| input\.anchor\.kind === "route-out"/);
   assert.match(componentSource, /return isCanvasFlowHotspotVisible\(\{[\s\S]*mode: edgeVisibilityMode\.value,[\s\S]*anchor,[\s\S]*selectedNodeId: selection\.selectedNodeId\.value,[\s\S]*hoveredNodeId: hoveredNodeId\.value,[\s\S]*hoveredFlowHandleNodeId: hoveredFlowHandleNodeId\.value,[\s\S]*activeConnectionSourceAnchorId: activeConnectionSourceAnchorId\.value,[\s\S]*eligibleTargetAnchorIds: eligibleTargetAnchorIds\.value,[\s\S]*\}\);/);
   const flowHotspotVisibleBlock = componentSource.match(/function isFlowHotspotVisible\(anchor: ProjectedCanvasAnchor\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
@@ -719,17 +723,19 @@ test("EditorCanvas renders output flow hotspots only for allowed modes and inter
   assert.match(componentSource, /import \{[\s\S]*buildConnectionPreviewModel,[\s\S]*resolveConnectionAccentColor,[\s\S]*resolveConnectionPreviewStateKey,[\s\S]*resolveConnectionSourceAnchorId,[\s\S]*resolveSelectedReconnectConnection,[\s\S]*\} from "\.\/canvasConnectionModel";/);
   assert.match(componentSource, /const connectionPreviewStateKey = computed\(\(\) =>\s*resolveConnectionPreviewStateKey\(\{/);
   assert.match(componentSource, /const activeConnectionAccentColor = computed\(\(\) =>\s*resolveConnectionAccentColor\(\{/);
-  assert.match(componentSource, /import \{[\s\S]*buildConnectionPreviewClassState,[\s\S]*buildConnectionPreviewStyle,[\s\S]*buildFlowHotspotStyle,[\s\S]*buildFlowHotspotConnectStyle,[\s\S]*buildProjectedEdgeClassState,[\s\S]*buildProjectedEdgeHitareaClassState,[\s\S]*isCanvasConnectionSourceAnchor,[\s\S]*isCanvasConnectionTargetAnchor,[\s\S]*\} from "\.\/canvasInteractionStyleModel";/);
+  assert.match(componentSource, /import \{[\s\S]*buildConnectionPreviewClassState,[\s\S]*buildConnectionPreviewStyle,[\s\S]*buildFlowHotspotStyle,[\s\S]*buildFlowHotspotConnectStyle,[\s\S]*buildFlowHotspotClassState,[\s\S]*buildProjectedEdgeClassState,[\s\S]*buildProjectedEdgeHitareaClassState,[\s\S]*buildRouteHandleClassState,[\s\S]*isCanvasConnectionSourceAnchor,[\s\S]*isCanvasConnectionTargetAnchor,[\s\S]*\} from "\.\/canvasInteractionStyleModel";/);
   assert.match(componentSource, /const flowHotspotStyle = buildFlowHotspotStyle;/);
   assert.match(componentSource, /const flowHotspotConnectStyle = \(anchor: ProjectedCanvasAnchor\) =>\s*buildFlowHotspotConnectStyle\(anchor, canvasInteractionStyleContext\.value\);/);
+  assert.match(componentSource, /const flowHotspotClassState = \(anchor: ProjectedCanvasAnchor\) =>\s*buildFlowHotspotClassState\(\{[\s\S]*anchor,[\s\S]*isVisible: isFlowHotspotVisible\(anchor\),[\s\S]*context: canvasInteractionStyleContext\.value,[\s\S]*\}\);/);
+  assert.match(componentSource, /const routeHandleClassState = \(anchor: ProjectedCanvasAnchor\) =>\s*buildRouteHandleClassState\(\{[\s\S]*anchor,[\s\S]*isVisible: isFlowHotspotVisible\(anchor\),[\s\S]*tone: resolveRouteHandleTone\(anchor\.branch\),[\s\S]*context: canvasInteractionStyleContext\.value,[\s\S]*\}\);/);
   assert.match(componentSource, /const connectionPreviewClassState = buildConnectionPreviewClassState;/);
   assert.match(componentSource, /const edgeClassState = \(edge: ProjectedCanvasEdge\) =>\s*buildProjectedEdgeClassState\(\{[\s\S]*edge,[\s\S]*selectedEdgeId: selectedEdgeId\.value,[\s\S]*activeRunEdgeClass: resolveRunEdgePresentationForEdge\(edge\.id\)\?\.edgeClass,[\s\S]*\}\);/);
   assert.match(componentSource, /const edgeHitareaClassState = buildProjectedEdgeHitareaClassState;/);
   assert.match(componentSource, /const connectionPreviewStyle = computed\(\(\) =>\s*buildConnectionPreviewStyle\(connectionPreview\.value\?\.kind \?\? null, activeConnectionAccentColor\.value\)/);
   assert.match(componentSource, /const activeConnectionSourceAnchorId = computed\(\(\) =>\s*resolveConnectionSourceAnchorId\(activeConnection\.value, projectedAnchors\.value\)/);
-  assert.match(componentSource, /'editor-canvas__flow-hotspot--connect-source': isCanvasConnectionSourceAnchor\(anchor, canvasInteractionStyleContext\)/);
-  assert.match(componentSource, /'editor-canvas__flow-hotspot--connect-target': isCanvasConnectionTargetAnchor\(anchor, canvasInteractionStyleContext\)/);
-  assert.match(componentSource, /'editor-canvas__route-handle--connect-source': isCanvasConnectionSourceAnchor\(anchor, canvasInteractionStyleContext\)/);
+  assert.match(canvasInteractionStyleModelSource, /"editor-canvas__flow-hotspot--connect-source": isCanvasConnectionSourceAnchor\(input\.anchor, input\.context\)/);
+  assert.match(canvasInteractionStyleModelSource, /"editor-canvas__flow-hotspot--connect-target": isCanvasConnectionTargetAnchor\(input\.anchor, input\.context\)/);
+  assert.match(canvasInteractionStyleModelSource, /"editor-canvas__route-handle--connect-source": isConnectSource/);
   assert.doesNotMatch(componentSource, /'editor-canvas__flow-hotspot--connect-source': activeConnectionSourceAnchorId === anchor\.id/);
   assert.doesNotMatch(componentSource, /'editor-canvas__flow-hotspot--connect-target': eligibleTargetAnchorIds\.has\(anchor\.id\)/);
   assert.doesNotMatch(componentSource, /'editor-canvas__route-handle--connect-source': activeConnectionSourceAnchorId === anchor\.id/);
@@ -742,6 +748,8 @@ test("EditorCanvas renders output flow hotspots only for allowed modes and inter
   assert.match(canvasInteractionStyleModelSource, /export function buildConnectionPreviewClassState/);
   assert.match(canvasInteractionStyleModelSource, /export function buildProjectedEdgeClassState/);
   assert.match(canvasInteractionStyleModelSource, /export function buildProjectedEdgeHitareaClassState/);
+  assert.match(canvasInteractionStyleModelSource, /export function buildFlowHotspotClassState/);
+  assert.match(canvasInteractionStyleModelSource, /export function buildRouteHandleClassState/);
   assert.match(canvasInteractionStyleModelSource, /export function withAlpha\(hexColor: string, alpha: number\)/);
   assert.doesNotMatch(componentSource, /function withAlpha\(hexColor: string, alpha: number\)/);
   assert.doesNotMatch(componentSource, /function flowHotspotStyle\(anchor: ProjectedCanvasAnchor\)/);

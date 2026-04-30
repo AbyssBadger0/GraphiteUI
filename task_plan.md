@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 72 in progress
+Phase 73 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -666,12 +666,21 @@ Phase 72 in progress
 - **Status:** completed
 
 ### Phase 72: EditorCanvas Flow Hotspot Class Projection
-- [ ] Re-read the formal roadmap, Phase 71 findings, and remaining flow hotspot class bindings in `EditorCanvas.vue`.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is flow hotspot outbound/visibility/connect class projection.
-- [ ] Add focused red tests for flow hotspot class projection before production changes.
-- [ ] Keep hotspot visibility, source/target connection styling, pointer enter/leave handlers, and flow/route anchor overlay behavior stable.
-- [ ] Run focused interaction-style/edge-visibility/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 72.
+- [x] Re-read the formal roadmap, Phase 71 findings, and remaining flow hotspot class bindings in `EditorCanvas.vue`.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is flow hotspot outbound/visibility/connect class projection.
+- [x] Add focused red tests for flow hotspot class projection before production changes.
+- [x] Keep hotspot visibility, source/target connection styling, pointer enter/leave handlers, and flow/route anchor overlay behavior stable.
+- [x] Run focused interaction-style/edge-visibility/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 72.
+- **Status:** completed
+
+### Phase 73: EditorWorkspaceShell Run Event Stream Re-orientation
+- [ ] Re-read the formal roadmap, Phase 72 findings, and current `EditorWorkspaceShell.vue` run polling/SSE code before changing code.
+- [ ] Inspect whether the next safest P3 boundary is a small run event stream or run polling projection helper shared with run detail behavior.
+- [ ] Add focused red tests for the selected workspace-shell boundary before production changes.
+- [ ] Keep route sync, draft persistence, graph mutation emits, restore behavior, human-review state, and run status feedback stable.
+- [ ] Run focused workspace/run tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 73.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -869,6 +878,10 @@ Phase 72 in progress
 | P2 `EditorCanvas.vue` cleanup after Phase 71 | About 99% complete after extracting preview, projected edge, selected, active-run, and hitarea class maps while preserving edge interaction behavior. |
 | Current continuation gate after Phase 71 | Total roadmap progress is below 100%, so Phase 72 is automatically opened for the next safe P2 Canvas flow hotspot class projection boundary. |
 | P2 `EditorCanvas.vue` cleanup target for Phase 72 | About 100% for the current low-risk P2 canvas projection pass if flow hotspot outbound/visibility/connect class projection moves into `canvasInteractionStyleModel.ts` without changing hotspot behavior. |
+| Overall roadmap cleanup after Phase 72 | About 99% complete after moving flow hotspot and route handle class projection into `canvasInteractionStyleModel.ts`. |
+| P2 `EditorCanvas.vue` cleanup after Phase 72 | About 100% complete for the current low-risk canvas projection pass after extracting flow hotspot and route handle class maps while preserving overlay pointer behavior. |
+| Current continuation gate after Phase 72 | Total roadmap progress is still below 100%, so Phase 73 is automatically opened for the next P3 `EditorWorkspaceShell.vue` run-event boundary. |
+| P3 `EditorWorkspaceShell.vue` cleanup target for Phase 73 | About 10% of P3 if a small run event stream or polling projection boundary can move out without changing route sync, draft persistence, restore behavior, or graph mutation emits. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -936,6 +949,7 @@ Phase 72 in progress
 - Phase 69 moves projected anchor grouping into `edgeProjection.ts`; `EditorCanvas.vue` keeps transient anchor construction, connection eligibility, overlay rendering, and pointer handlers.
 - Phase 70 moves projected edge layer grouping into `edgeProjection.ts`; `EditorCanvas.vue` keeps SVG layer ordering, selected-edge state, edge hitarea handlers, and edge class bindings.
 - Phase 71 moves projected edge class and hitarea class projection into `canvasInteractionStyleModel.ts`; `EditorCanvas.vue` keeps selected-edge state input, active-run lookup, SVG rendering, and pointer handlers.
+- Phase 72 moves flow hotspot and route handle class projection into `canvasInteractionStyleModel.ts`; `EditorCanvas.vue` keeps hotspot visibility inputs, route tone resolution, anchor overlay rendering, and pointer handlers.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

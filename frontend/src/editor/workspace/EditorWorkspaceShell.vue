@@ -212,7 +212,6 @@ import { resolveAgentRuntimeCatalog } from "@/editor/nodes/agentConfigModel";
 import EditorCanvas from "@/editor/canvas/EditorCanvas.vue";
 import type { NodeFocusRequest } from "@/editor/canvas/useNodeSelectionFocus";
 import type { CreatedStateEdgeEditorRequest, NodeCreationMenuState } from "@/editor/workspace/nodeCreationMenuModel";
-import { cloneGraphDocument } from "@/lib/graph-document";
 import {
   prunePersistedEditorDocumentDrafts,
   prunePersistedEditorViewportDrafts,
@@ -228,9 +227,7 @@ import { useGraphDocumentStore } from "@/stores/graphDocument";
 import type { RunDetail } from "@/types/run";
 import type {
   GraphDocument,
-  GraphNodeSize,
   GraphPayload,
-  GraphPosition,
   TemplateRecord,
 } from "@/types/node-system";
 
@@ -249,6 +246,7 @@ import type { WorkspaceSidePanelMode } from "./workspaceSidePanelModel.ts";
 import { downloadPythonSource } from "./pythonExportModel.ts";
 import { isGraphiteUiPythonExportFile, isGraphiteUiPythonExportSource } from "./pythonImportModel.ts";
 import { useWorkspaceDocumentState } from "./useWorkspaceDocumentState.ts";
+import { useWorkspaceEditGuardController } from "./useWorkspaceEditGuardController.ts";
 import { useWorkspaceGraphPersistenceController } from "./useWorkspaceGraphPersistenceController.ts";
 import { useWorkspaceNodeCreationController } from "./useWorkspaceNodeCreationController.ts";
 import { useWorkspaceOpenController } from "./useWorkspaceOpenController.ts";
@@ -348,6 +346,39 @@ let closeNodeCreationMenuFromController: ((tabId: string) => void) | null = null
 function closeNodeCreationMenu(tabId: string) {
   closeNodeCreationMenuFromController?.(tabId);
 }
+let guardGraphEditForTabFromController: (tabId: string) => boolean = () => {
+  throw new Error("Workspace edit guard controller is not initialized.");
+};
+let handleNodePositionUpdateFromController: (tabId: string, payload: { nodeId: string; position: { x: number; y: number } }) => void = () => {
+  throw new Error("Workspace edit guard controller is not initialized.");
+};
+let handleNodeSizeUpdateFromController: (tabId: string, payload: { nodeId: string; position: { x: number; y: number }; size: { width: number; height: number } }) => void = () => {
+  throw new Error("Workspace edit guard controller is not initialized.");
+};
+let isGraphInteractionLockedFromController: (tabId: string) => boolean = () => false;
+let showGraphLockedEditToastFromController: () => void = () => {
+  throw new Error("Workspace edit guard controller is not initialized.");
+};
+
+function isGraphInteractionLocked(tabId: string) {
+  return isGraphInteractionLockedFromController(tabId);
+}
+
+function showGraphLockedEditToast() {
+  showGraphLockedEditToastFromController();
+}
+
+function guardGraphEditForTab(tabId: string) {
+  return guardGraphEditForTabFromController(tabId);
+}
+
+function handleNodePositionUpdate(tabId: string, payload: { nodeId: string; position: { x: number; y: number } }) {
+  handleNodePositionUpdateFromController(tabId, payload);
+}
+
+function handleNodeSizeUpdate(tabId: string, payload: { nodeId: string; position: { x: number; y: number }; size: { width: number; height: number } }) {
+  handleNodeSizeUpdateFromController(tabId, payload);
+}
 const {
   activeStatePanelOpen,
   isStatePanelOpen,
@@ -401,6 +432,27 @@ const {
   setMessageFeedbackForTab,
   guardGraphEditForTab,
 });
+const workspaceEditGuardController = useWorkspaceEditGuardController({
+  documentsByTabId,
+  latestRunDetailByTabId,
+  commitDirtyDocumentForTab,
+  showLockedEditToast: () => {
+    ElMessage({
+      customClass: "editor-workspace-shell__locked-toast",
+      type: "warning",
+      duration: 4200,
+      grouping: true,
+      placement: "top",
+      showClose: false,
+      message: t("editor.lockedToast"),
+    });
+  },
+});
+guardGraphEditForTabFromController = workspaceEditGuardController.guardGraphEditForTab;
+handleNodePositionUpdateFromController = workspaceEditGuardController.handleNodePositionUpdate;
+handleNodeSizeUpdateFromController = workspaceEditGuardController.handleNodeSizeUpdate;
+isGraphInteractionLockedFromController = workspaceEditGuardController.isGraphInteractionLocked;
+showGraphLockedEditToastFromController = workspaceEditGuardController.showGraphLockedEditToast;
 const {
   cancelRunEventStreamForTab,
   cancelRunPolling,
@@ -668,59 +720,6 @@ function updateWorkspaceTab(tabId: string, updater: (tab: EditorWorkspaceTab) =>
     ...workspace.value,
     tabs: workspace.value.tabs.map((tab) => (tab.tabId === tabId ? updater(tab) : tab)),
   });
-}
-
-function isGraphInteractionLocked(tabId: string) {
-  return latestRunDetailByTabId.value[tabId]?.status === "awaiting_human";
-}
-
-function showGraphLockedEditToast() {
-  ElMessage({
-    customClass: "editor-workspace-shell__locked-toast",
-    type: "warning",
-    duration: 4200,
-    grouping: true,
-    placement: "top",
-    showClose: false,
-    message: t("editor.lockedToast"),
-  });
-}
-
-function guardGraphEditForTab(tabId: string) {
-  if (!isGraphInteractionLocked(tabId)) {
-    return false;
-  }
-  showGraphLockedEditToast();
-  return true;
-}
-
-function handleNodePositionUpdate(tabId: string, payload: { nodeId: string; position: GraphPosition }) {
-  if (guardGraphEditForTab(tabId)) {
-    return;
-  }
-  const document = documentsByTabId.value[tabId];
-  if (!document?.nodes[payload.nodeId]) {
-    return;
-  }
-
-  const nextDocument = cloneGraphDocument(document);
-  nextDocument.nodes[payload.nodeId].ui.position = payload.position;
-  commitDirtyDocumentForTab(tabId, nextDocument);
-}
-
-function handleNodeSizeUpdate(tabId: string, payload: { nodeId: string; position: GraphPosition; size: GraphNodeSize }) {
-  if (guardGraphEditForTab(tabId)) {
-    return;
-  }
-  const document = documentsByTabId.value[tabId];
-  if (!document?.nodes[payload.nodeId]) {
-    return;
-  }
-
-  const nextDocument = cloneGraphDocument(document);
-  nextDocument.nodes[payload.nodeId].ui.position = payload.position;
-  nextDocument.nodes[payload.nodeId].ui.size = payload.size;
-  commitDirtyDocumentForTab(tabId, nextDocument);
 }
 
 const {

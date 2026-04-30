@@ -27,6 +27,7 @@ const nodeCreationControllerSource = readWorkspaceSource("useWorkspaceNodeCreati
 const runLifecycleControllerSource = readWorkspaceSource("useWorkspaceRunLifecycleController.ts");
 const openControllerSource = readWorkspaceSource("useWorkspaceOpenController.ts");
 const resourceControllerSource = readWorkspaceSource("useWorkspaceResourceController.ts");
+const editGuardControllerSource = readWorkspaceSource("useWorkspaceEditGuardController.ts");
 
 test("EditorWorkspaceShell renders workspace panes without reka-ui tab primitives", () => {
   assert.doesNotMatch(componentSource, /from "reka-ui"/);
@@ -60,11 +61,12 @@ test("EditorWorkspaceShell refreshes settings when an agent model menu opens", (
 });
 
 test("EditorWorkspaceShell persists node resize updates into the graph draft", () => {
-  assert.match(componentSource, /import type \{[\s\S]*GraphNodeSize[\s\S]*\} from "@\/types\/node-system";/);
+  assert.match(componentSource, /import \{ useWorkspaceEditGuardController \} from "\.\/useWorkspaceEditGuardController\.ts";/);
+  assert.match(editGuardControllerSource, /import type \{[\s\S]*GraphNodeSize,[\s\S]*GraphPayload,[\s\S]*GraphPosition[\s\S]*\} from "\.\.\/\.\.\/types\/node-system\.ts";/);
   assert.match(componentSource, /@update:node-size="handleNodeSizeUpdate\(tab\.tabId, \$event\)"/);
-  assert.match(componentSource, /function handleNodeSizeUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition; size: GraphNodeSize \}\)/);
-  assert.match(componentSource, /nextDocument\.nodes\[payload\.nodeId\]\.ui\.position = payload\.position;/);
-  assert.match(componentSource, /nextDocument\.nodes\[payload\.nodeId\]\.ui\.size = payload\.size;/);
+  assert.match(editGuardControllerSource, /function handleNodeSizeUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition; size: GraphNodeSize \}\)/);
+  assert.match(editGuardControllerSource, /nextDocument\.nodes\[payload\.nodeId\]\.ui\.position = payload\.position;/);
+  assert.match(editGuardControllerSource, /nextDocument\.nodes\[payload\.nodeId\]\.ui\.size = payload\.size;/);
 });
 
 test("EditorWorkspaceShell loads persisted presets for the node creation menu", () => {
@@ -359,14 +361,15 @@ test("EditorWorkspaceShell resumes restored pause snapshots against their origin
 });
 
 test("EditorWorkspaceShell locks graph editing while a run is awaiting human review", () => {
-  const guardFunctionSource = componentSource.match(/function guardGraphEditForTab\(tabId: string\) \{[\s\S]*?\n\}/)?.[0] ?? "";
+  const guardFunctionSource = editGuardControllerSource.match(/function guardGraphEditForTab\(tabId: string\) \{[\s\S]*?\n  \}/)?.[0] ?? "";
 
   assert.match(componentSource, /import \{ ElMessage \} from "element-plus";/);
+  assert.match(componentSource, /import \{ useWorkspaceEditGuardController \} from "\.\/useWorkspaceEditGuardController\.ts";/);
   assert.match(componentSource, /:interaction-locked="isGraphInteractionLocked\(tab\.tabId\)"/);
-  assert.match(componentSource, /function isGraphInteractionLocked\(tabId: string\)/);
-  assert.match(componentSource, /return latestRunDetailByTabId\.value\[tabId\]\?\.status === "awaiting_human";/);
-  assert.match(componentSource, /function guardGraphEditForTab\(tabId: string\)/);
-  assert.match(componentSource, /function showGraphLockedEditToast\(\)/);
+  assert.match(editGuardControllerSource, /function isGraphInteractionLocked\(tabId: string\)/);
+  assert.match(editGuardControllerSource, /return input\.latestRunDetailByTabId\.value\[tabId\]\?\.status === "awaiting_human";/);
+  assert.match(editGuardControllerSource, /function guardGraphEditForTab\(tabId: string\)/);
+  assert.match(editGuardControllerSource, /function showGraphLockedEditToast\(\)/);
   assert.match(
     componentSource,
     /ElMessage\(\{[\s\S]*customClass:\s*"editor-workspace-shell__locked-toast",[\s\S]*type:\s*"warning",[\s\S]*duration:\s*4200,[\s\S]*grouping:\s*true,/,
@@ -380,7 +383,7 @@ test("EditorWorkspaceShell locks graph editing while a run is awaiting human rev
   assert.match(componentSource, /:global\(\.editor-workspace-shell__locked-toast\.el-message\) \{[\s\S]*animation:\s*editor-workspace-shell-locked-toast-float 4\.2s ease forwards;/);
   assert.match(componentSource, /76% \{[\s\S]*transform:\s*translate\(-50%, -50%\) scale\(1\);/);
   assert.match(componentSource, /@keyframes editor-workspace-shell-locked-toast-float/);
-  assert.match(componentSource, /if \(guardGraphEditForTab\(tabId\)\) \{/);
+  assert.match(editGuardControllerSource, /if \(guardGraphEditForTab\(tabId\)\) \{/);
   assert.match(guardFunctionSource, /showGraphLockedEditToast\(\);/);
   assert.doesNotMatch(guardFunctionSource, /setMessageFeedbackForTab/);
 });
@@ -631,10 +634,10 @@ test("EditorWorkspaceShell centralizes dirty graph document commits", () => {
   const commitSource = documentStateSource;
   const markDocumentDirtySource = documentStateSource;
   const positionSource =
-    componentSource.match(/function handleNodePositionUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition \}\) \{[\s\S]*?\n\}\n\nfunction handleNodeSizeUpdate/)?.[0] ??
+    editGuardControllerSource.match(/function handleNodePositionUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition \}\) \{[\s\S]*?\n  \}/)?.[0] ??
     "";
   const sizeSource =
-    componentSource.match(/function handleNodeSizeUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition; size: GraphNodeSize \}\) \{[\s\S]*?\n\}\n\nconst \{/)?.[0] ??
+    editGuardControllerSource.match(/function handleNodeSizeUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition; size: GraphNodeSize \}\) \{[\s\S]*?\n  \}/)?.[0] ??
     "";
   const renameSource =
     graphPersistenceControllerSource.match(/function renameActiveGraph\(name: string\) \{[\s\S]*?\n  \}\n\n  async function saveTab/)?.[0] ?? "";
@@ -643,8 +646,8 @@ test("EditorWorkspaceShell centralizes dirty graph document commits", () => {
   assert.match(commitSource, /applyDocumentMetaToWorkspaceTab\(input\.workspace\.value, tabId, \{/);
   assert.match(commitSource, /dirty: true,/);
   assert.match(markDocumentDirtySource, /commitDirtyDocumentForTab\(tabId, nextDocument\);/);
-  assert.match(positionSource, /commitDirtyDocumentForTab\(tabId, nextDocument\);/);
-  assert.match(sizeSource, /commitDirtyDocumentForTab\(tabId, nextDocument\);/);
+  assert.match(positionSource, /input\.commitDirtyDocumentForTab\(tabId, nextDocument\);/);
+  assert.match(sizeSource, /input\.commitDirtyDocumentForTab\(tabId, nextDocument\);/);
   assert.match(renameSource, /input\.commitDirtyDocumentForTab\(tab\.tabId, nextDocument\);/);
   assert.doesNotMatch(positionSource, /updateWorkspace\(/);
   assert.doesNotMatch(sizeSource, /updateWorkspace\(/);

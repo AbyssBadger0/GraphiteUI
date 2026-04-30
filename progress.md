@@ -1,5 +1,57 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 132
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `a4b0d40` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 131 findings, and remaining frontend high-line-count files.
+  - Chose the `EditorWorkspaceShell.vue` edit-guard slice because the shell still owned awaiting-human edit locks, locked edit feedback, and node position/size dirty graph commits.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceEditGuardController.test.ts` covering awaiting-human lock detection, locked edit toast triggering, guarded node position commits, guarded node size commits, and missing-document no-ops.
+  - Verified the expected red failure because `useWorkspaceEditGuardController.ts` did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceEditGuardController.ts`.
+  - Updated `EditorWorkspaceShell.vue` to delegate `isGraphInteractionLocked`, `guardGraphEditForTab`, `showGraphLockedEditToast`, `handleNodePositionUpdate`, and `handleNodeSizeUpdate` through the controller while keeping stable template-facing wrapper names.
+  - Kept the Element Plus toast rendering and i18n message in the shell through an injected callback.
+  - Updated structure tests to lock the edit guard controller boundary.
+  - Reduced the remaining shell-owned edit-guard and geometry commit logic while keeping `EditorWorkspaceShell.vue` at 1,134 lines.
+
+### Phase 4: Verification and Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Ran focused edit guard controller and workspace-shell structure tests.
+  - Ran TypeScript unused-symbol verification.
+  - Ran the full frontend test suite and production build.
+  - Confirmed the production build still has no Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Confirmed the previous dev session exited after the restart.
+  - Recalculated the full roadmap at about 99.1%, frontend-focused progress at about 97-98%, and P3 `EditorWorkspaceShell.vue` progress at about 99.8%.
+  - Opened Phase 133 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red controller test | `node --test src/editor/workspace/useWorkspaceEditGuardController.test.ts` before implementation | Fails because the edit guard controller module is missing | Failed with missing module import | Passed |
+| Focused frontend tests | `node --test src/editor/workspace/useWorkspaceEditGuardController.test.ts src/editor/workspace/EditorWorkspaceShell.structure.test.ts` | Edit guard controller and shell structure tests pass | 41 passed | Passed |
+| TypeScript check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | No type or unused-symbol errors | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src -g '*.test.ts' \| sort) vite.config.structure.test.ts` | Full frontend suite passes | 931 passed | Passed |
+| Production build | `npm run build` in `frontend` | Build succeeds with no large chunk warning | Exit 0; Vite build completed | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | New edit guard controller test failed with a missing module import | Red test before implementation | Added `useWorkspaceEditGuardController.ts` and reran focused tests successfully. |
+
 ## Session: 2026-04-30 Phase 131
 
 ### Phase 1: Re-orientation

@@ -6,10 +6,10 @@ Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure pr
 ## Progress Accuracy Note
 - The earlier `99.x%` values are no longer treated as the true total optimization progress. They reflected the active frontend cleanup batch getting close to its own tail, not the whole architecture roadmap.
 - The honest full-roadmap progress must include P0 cleanup, P1 `NodeCard.vue`, P2 `EditorCanvas.vue`, P3 `EditorWorkspaceShell.vue`, and P4 backend runtime/provider cleanup.
-- Current conservative estimate after Phase 94: full roadmap is about 74-75% complete; frontend-focused roadmap is about 83-85% complete; P3 `EditorWorkspaceShell.vue` is about 82% complete; backend P4 is about 6-8% started.
+- Current conservative estimate after Phase 95: full roadmap is about 75-76% complete; frontend-focused roadmap is about 83-85% complete; P3 `EditorWorkspaceShell.vue` is about 82% complete; backend P4 is about 10-12% started.
 
 ## Current Phase
-Phase 95 in progress
+Phase 96 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -870,12 +870,21 @@ Phase 95 in progress
 - **Status:** completed
 
 ### Phase 95: Next Backend Provider Boundary
-- [ ] Re-read the formal roadmap, Phase 94 findings, and remaining `model_provider_client.py` provider/discovery clusters.
-- [ ] Choose the next safest P4 boundary from model discovery, OpenAI-compatible transport, Anthropic transport, Gemini transport, or Codex responses adapter.
+- [x] Re-read the formal roadmap, Phase 94 findings, and remaining `model_provider_client.py` provider/discovery clusters.
+- [x] Choose the next safest P4 boundary: model discovery and provider model-id parsing.
+- [x] Add focused red tests before production changes.
+- [x] Preserve backend provider behavior, stream delta merging, Codex token refresh, discovery fallbacks, thinking/reasoning metadata, frontend graph interactions, and visual layout.
+- [x] Run focused backend tests, full backend verification when needed, dev restart, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 95 and re-judge total progress.
+- **Status:** completed
+
+### Phase 96: Next Provider Transport Boundary
+- [ ] Re-read the formal roadmap, Phase 95 findings, and remaining provider transport clusters in `model_provider_client.py`.
+- [ ] Choose the next safest P4 boundary from OpenAI-compatible chat transport, Anthropic messages transport, Gemini generate-content transport, or Codex responses adapter.
 - [ ] Add focused red tests before production changes.
-- [ ] Preserve backend provider behavior, stream delta merging, Codex token refresh, discovery fallbacks, thinking/reasoning metadata, frontend graph interactions, and visual layout.
+- [ ] Preserve backend provider behavior, stream delta merging, fallback retry behavior, Codex token refresh, thinking/reasoning metadata, frontend graph interactions, and visual layout.
 - [ ] Run focused backend tests, full backend verification when needed, dev restart, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 95 and re-judge total progress.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 96 and re-judge total progress.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -1160,6 +1169,12 @@ Phase 95 in progress
 | P4 backend cleanup after Phase 94 | About 6-8% complete. `model_provider_client.py` dropped from 1,380 to 1,152 lines, with request/log/auth/stream fallback helpers isolated in `model_provider_http.py`; provider transports and executor/runtime splits remain. |
 | Current continuation gate after Phase 94 | Total roadmap progress is still below 100%, so Phase 95 is automatically opened for the next P4 provider-client boundary. |
 | P4 cleanup target for Phase 95 | About 12-15% P4 if the next discovery or provider transport slice moves out with focused behavior tests. |
+| Full roadmap cleanup after Phase 95 | About 75-76% complete after moving provider model discovery and model-id parsing into `model_provider_discovery.py`. |
+| Frontend roadmap cleanup after Phase 95 | Still about 83-85%; this phase was backend-only and did not touch graph editing UI. |
+| P3 `EditorWorkspaceShell.vue` cleanup after Phase 95 | Still about 82%; no workspace shell changes in this phase. |
+| P4 backend cleanup after Phase 95 | About 10-12% complete. `model_provider_client.py` is now 1,039 lines; HTTP/request and model discovery are isolated, while chat transports, executor, and LangGraph runtime remain. |
+| Current continuation gate after Phase 95 | Total roadmap progress is still below 100%, so Phase 96 is automatically opened for the next provider transport boundary. |
+| P4 cleanup target for Phase 96 | About 15-18% P4 if one chat transport adapter moves out with stream/fallback/thinking metadata tests. |
 
 ## Decisions Made
 | Decision | Rationale |

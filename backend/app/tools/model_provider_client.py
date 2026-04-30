@@ -23,23 +23,21 @@ from app.core.thinking_levels import (
     normalize_thinking_level,
 )
 from app.tools.openai_codex_client import (
-    DEFAULT_CODEX_MODEL_IDS,
     codex_http_client_kwargs,
     refresh_codex_access_token,
     resolve_codex_access_token,
 )
+from app.tools import model_provider_discovery
 from app.tools.model_provider_http import (
     ANTHROPIC_VERSION,
     DEFAULT_REQUEST_TIMEOUT_SEC,
     append_model_request_log_safely,
     anthropic_headers as _anthropic_headers,
     build_auth_headers as _build_auth_headers,
-    dedupe_strings as _dedupe_strings,
     normalize_base_url as _normalize_base_url,
     parse_json_or_stream_text as _parse_json_or_stream_text,
     post_streaming_json_with_fallback,
     read_streaming_response_text as _read_streaming_response_text,
-    request_json as _request_json,
 )
 
 
@@ -113,63 +111,6 @@ def _extract_gemini_text(response_payload: dict[str, Any]) -> str:
     ).strip()
 
 
-def _parse_data_model_ids(payload: dict[str, Any]) -> list[str]:
-    data = payload.get("data")
-    if not isinstance(data, list):
-        raise RuntimeError("Model discovery returned an unexpected payload shape.")
-    return _dedupe_strings(
-        [
-            str(item.get("id") or item.get("name") or "").strip()
-            for item in data
-            if isinstance(item, dict) and str(item.get("id") or item.get("name") or "").strip()
-        ]
-    )
-
-
-def _parse_gemini_model_ids(payload: dict[str, Any]) -> list[str]:
-    models = payload.get("models")
-    if not isinstance(models, list):
-        raise RuntimeError("Model discovery returned an unexpected payload shape.")
-
-    model_ids: list[str] = []
-    for item in models:
-        if not isinstance(item, dict):
-            continue
-        methods = item.get("supportedGenerationMethods")
-        if isinstance(methods, list) and "generateContent" not in methods:
-            continue
-        name = str(item.get("name") or item.get("baseModelId") or "").strip()
-        if not name:
-            continue
-        model_ids.append(name.removeprefix("models/"))
-    return _dedupe_strings(model_ids)
-
-
-def _parse_codex_model_ids(payload: dict[str, Any]) -> list[str]:
-    models = payload.get("models")
-    if not isinstance(models, list):
-        raise RuntimeError("Model discovery returned an unexpected payload shape.")
-
-    sortable: list[tuple[int, str]] = []
-    for item in models:
-        if not isinstance(item, dict):
-            continue
-        if item.get("supported_in_api") is False:
-            continue
-        visibility = item.get("visibility")
-        if isinstance(visibility, str) and visibility.strip().lower() in {"hide", "hidden"}:
-            continue
-        slug = str(item.get("slug") or item.get("id") or item.get("name") or "").strip()
-        if not slug:
-            continue
-        priority = item.get("priority")
-        rank = int(priority) if isinstance(priority, (int, float)) else 10_000
-        sortable.append((rank, slug))
-
-    sortable.sort(key=lambda entry: (entry[0], entry[1]))
-    return _dedupe_strings([slug for _rank, slug in sortable])
-
-
 def discover_provider_models(
     *,
     provider_id: str,
@@ -180,70 +121,17 @@ def discover_provider_models(
     auth_scheme: str = "Bearer",
     timeout_sec: float = 8.0,
 ) -> list[str]:
-    _ = provider_id
-    normalized_transport = normalize_transport(transport)
-    normalized_base_url = _normalize_base_url(base_url)
-
-    if normalized_transport == TRANSPORT_OPENAI_COMPATIBLE:
-        payload = _request_json(
-            method="GET",
-            url=f"{normalized_base_url}/models",
-            timeout_sec=timeout_sec,
-            headers=_build_auth_headers(api_key=api_key, auth_header=auth_header, auth_scheme=auth_scheme),
-            error_label="Model discovery failed",
-        )
-        return _parse_data_model_ids(payload)
-
-    if normalized_transport == TRANSPORT_ANTHROPIC_MESSAGES:
-        payload = _request_json(
-            method="GET",
-            url=f"{normalized_base_url}/models",
-            timeout_sec=timeout_sec,
-            headers=_anthropic_headers(api_key),
-            error_label="Model discovery failed",
-        )
-        return _parse_data_model_ids(payload)
-
-    if normalized_transport == TRANSPORT_GEMINI_GENERATE_CONTENT:
-        payload = _request_json(
-            method="GET",
-            url=f"{normalized_base_url}/models",
-            timeout_sec=timeout_sec,
-            params={"key": str(api_key or "").strip()} if str(api_key or "").strip() else None,
-            error_label="Model discovery failed",
-        )
-        return _parse_gemini_model_ids(payload)
-
-    if normalized_transport == TRANSPORT_CODEX_RESPONSES:
-        access_token = resolve_codex_access_token()
-        try:
-            payload = _request_json(
-                method="GET",
-                url=f"{normalized_base_url}/models",
-                timeout_sec=timeout_sec,
-                headers=_build_auth_headers(api_key=access_token),
-                params={"client_version": "1.0.0"},
-                error_label="Model discovery failed",
-                client_kwargs=codex_http_client_kwargs(timeout=timeout_sec),
-            )
-        except RuntimeError as exc:
-            if "HTTP 401" in str(exc):
-                access_token = refresh_codex_access_token()
-                payload = _request_json(
-                    method="GET",
-                    url=f"{normalized_base_url}/models",
-                    timeout_sec=timeout_sec,
-                    headers=_build_auth_headers(api_key=access_token),
-                    params={"client_version": "1.0.0"},
-                    error_label="Model discovery failed",
-                    client_kwargs=codex_http_client_kwargs(timeout=timeout_sec),
-                )
-            else:
-                return list(DEFAULT_CODEX_MODEL_IDS)
-        model_ids = _parse_codex_model_ids(payload)
-        return model_ids or list(DEFAULT_CODEX_MODEL_IDS)
-
-    raise RuntimeError(f"Unsupported provider transport: {normalized_transport}")  # pragma: no cover
+    return model_provider_discovery.discover_provider_models(
+        provider_id=provider_id,
+        transport=transport,
+        base_url=base_url,
+        api_key=api_key,
+        auth_header=auth_header,
+        auth_scheme=auth_scheme,
+        timeout_sec=timeout_sec,
+        resolve_codex_access_token_fn=resolve_codex_access_token,
+        refresh_codex_access_token_fn=refresh_codex_access_token,
+    )
 
 
 def _chat_openai_compatible(

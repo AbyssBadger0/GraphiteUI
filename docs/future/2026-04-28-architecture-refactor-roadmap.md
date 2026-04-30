@@ -149,7 +149,8 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 当前执行进展：
 
 - `model_provider_http.py` 已作为 P4 的第一步承接 provider client 共用的 base URL normalization、auth headers、Anthropic headers、string dedupe、request JSON、request-error formatting、request log safety、SSE event reading 和 streaming fallback。`model_provider_client.py` 仍保留现有公共 API、provider discovery/chat 编排、各 provider 协议解析、Codex refresh 语义和兼容 patch 接缝。
-- Phase 94 后 `model_provider_client.py` 从 1,380 行降到 1,152 行；下一步应继续拆 model discovery 或单个 provider transport，而不是同时移动 executor/runtime 语义。
+- `model_provider_discovery.py` 已承接 OpenAI/Anthropic data model id parsing、Gemini model id filtering、Codex model id sorting/filtering 和 provider model discovery 请求；`model_provider_client.discover_provider_models` 仍作为兼容门面，并注入 Codex token resolve/refresh callbacks 以保留现有 patch 接缝。
+- Phase 95 后 `model_provider_client.py` 从 1,380 行降到 1,039 行；下一步应继续拆单个 provider transport，而不是同时移动 executor/runtime 语义。
 
 ### 2. `node_system_executor.py`
 
@@ -257,7 +258,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 
 先拆 `model_provider_client.py`，再拆 `node_system_executor.py`，最后拆 LangGraph runtime。理由：provider client 的协议边界最清晰，executor 和 LangGraph runtime 对产品语义影响更大。
 
-当前 P4 进展：`model_provider_client.py` 的共享 HTTP/request 层已完成第一轮抽取；provider discovery、OpenAI/Anthropic/Gemini/Codex transport、executor 和 LangGraph runtime 仍待迁移。
+当前 P4 进展：`model_provider_client.py` 的共享 HTTP/request 层和 provider discovery 层已完成抽取；OpenAI/Anthropic/Gemini/Codex transport、executor 和 LangGraph runtime 仍待迁移。
 
 ## 架构红线
 

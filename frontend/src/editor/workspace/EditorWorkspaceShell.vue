@@ -266,13 +266,9 @@ import {
 } from "@/lib/editor-workspace";
 import type { CanvasViewport } from "@/editor/canvas/canvasViewport";
 import {
-  buildRunEventOutputPreviewByNodeId,
+  buildRunEventOutputPreviewUpdate,
   buildRunEventStreamUrl,
-  listRunEventOutputKeys,
   parseRunEventPayloadData,
-  resolveRunEventNodeId,
-  resolveRunEventPreviewNodeIds,
-  resolveRunEventText,
   shouldPollRunStatus,
 } from "@/lib/run-event-stream";
 import { buildRestoredGraphFromRun, buildSnapshotScopedRun, canRestoreRunDetail, resolveRestoredRunTabTitle } from "@/lib/run-restore";
@@ -545,18 +541,11 @@ function parseRunEventPayload(event: Event) {
 }
 
 function applyStreamingOutputPreviewToTab(tabId: string, payload: Record<string, unknown>) {
-  const text = resolveRunEventText(payload);
-  if (!text) {
-    return;
-  }
-  const outputKeys = listRunEventOutputKeys(payload);
-  const fallbackNodeId = resolveRunEventNodeId(payload);
-  const previewNodeIds = resolveRunEventPreviewNodeIds(documentsByTabId.value[tabId], outputKeys, fallbackNodeId);
-  if (previewNodeIds.length === 0) {
-    return;
-  }
   const currentPreview = runOutputPreviewByTabId.value[tabId] ?? {};
-  const nextPreview = buildRunEventOutputPreviewByNodeId(currentPreview, previewNodeIds, text);
+  const nextPreview = buildRunEventOutputPreviewUpdate(documentsByTabId.value[tabId], currentPreview, payload);
+  if (!nextPreview) {
+    return;
+  }
   runOutputPreviewByTabId.value = {
     ...runOutputPreviewByTabId.value,
     [tabId]: nextPreview,

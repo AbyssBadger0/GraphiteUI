@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildLiveStreamingOutput,
   buildRunEventOutputPreviewByNodeId,
+  buildRunEventOutputPreviewUpdate,
   buildRunEventStreamUrl,
   listRunEventOutputKeys,
   parseRunEventPayloadData,
@@ -109,6 +110,62 @@ test("buildRunEventOutputPreviewByNodeId writes plain previews without mutating 
       displayMode: "markdown",
     },
   });
+});
+
+test("buildRunEventOutputPreviewUpdate projects payloads into next preview maps or skips no-op payloads", () => {
+  const document = {
+    nodes: {
+      output_answer: {
+        kind: "output",
+        reads: [{ state: "answer" }],
+      },
+    },
+  };
+  const currentPreview = {
+    existing_output: {
+      text: "old",
+      displayMode: "markdown",
+    },
+  };
+
+  assert.deepEqual(
+    buildRunEventOutputPreviewUpdate(document, currentPreview, {
+      text: "new text",
+      output_keys: ["answer"],
+      node_id: "fallback_node",
+    }),
+    {
+      existing_output: {
+        text: "old",
+        displayMode: "markdown",
+      },
+      output_answer: {
+        text: "new text",
+        displayMode: "plain",
+      },
+    },
+  );
+
+  assert.deepEqual(
+    buildRunEventOutputPreviewUpdate(document, currentPreview, {
+      text: "fallback text",
+      output_keys: ["missing"],
+      node_id: " fallback_node ",
+    }),
+    {
+      existing_output: {
+        text: "old",
+        displayMode: "markdown",
+      },
+      fallback_node: {
+        text: "fallback text",
+        displayMode: "plain",
+      },
+    },
+  );
+
+  assert.equal(buildRunEventOutputPreviewUpdate(document, currentPreview, { delta: "ignored", output_keys: ["answer"] }), null);
+  assert.equal(buildRunEventOutputPreviewUpdate(document, currentPreview, { text: "missing target" }), null);
 });
 
 test("buildLiveStreamingOutput preserves live output merge semantics", () => {

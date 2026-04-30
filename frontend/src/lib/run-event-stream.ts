@@ -79,6 +79,26 @@ export function buildRunEventOutputPreviewByNodeId(
   return nextPreviewByNodeId;
 }
 
+export function buildRunEventOutputPreviewUpdate(
+  document: RunEventPreviewDocument | null | undefined,
+  currentPreviewByNodeId: Record<string, RunEventOutputPreviewEntry>,
+  payload: RunEventPayload,
+) {
+  const text = resolveRunEventText(payload);
+  if (!text) {
+    return null;
+  }
+
+  const outputKeys = listRunEventOutputKeys(payload);
+  const fallbackNodeId = resolveRunEventNodeId(payload);
+  const previewNodeIds = resolveRunEventPreviewNodeIds(document, outputKeys, fallbackNodeId);
+  if (previewNodeIds.length === 0) {
+    return null;
+  }
+
+  return buildRunEventOutputPreviewByNodeId(currentPreviewByNodeId, previewNodeIds, text);
+}
+
 export function buildLiveStreamingOutput(
   current: LiveStreamingOutput | null | undefined,
   payload: RunEventPayload,

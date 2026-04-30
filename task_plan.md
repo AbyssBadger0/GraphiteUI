@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 78 in progress
+Phase 79 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -720,12 +720,21 @@ Phase 78 in progress
 - **Status:** completed
 
 ### Phase 78: Streaming Output Preview Request Projection
-- [ ] Re-read the formal roadmap, Phase 77 findings, and current workspace streaming preview payload-to-map orchestration.
-- [ ] Inspect whether the next safest P3 boundary is moving the full payload/document/current-preview projection request into the shared run-event model.
-- [ ] Add focused red tests before production changes.
-- [ ] Keep EventSource lifecycle, polling timers, graph mutation, preview ref assignment, fallback node behavior, and live display semantics stable.
+- [x] Re-read the formal roadmap, Phase 77 findings, and current workspace streaming preview payload-to-map orchestration.
+- [x] Inspect whether the next safest P3 boundary is moving the full payload/document/current-preview projection request into the shared run-event model.
+- [x] Add focused red tests before production changes.
+- [x] Keep EventSource lifecycle, polling timers, graph mutation, preview ref assignment, fallback node behavior, and live display semantics stable.
+- [x] Run focused workspace/run tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 78.
+- **Status:** completed
+
+### Phase 79: Run Event Boundary Re-evaluation
+- [ ] Re-read the formal roadmap, Phase 78 findings, and remaining run event stream code in workspace/run detail.
+- [ ] Inspect whether another safe P3 run-event slice remains, or whether the next safer boundary should move to draft persistence.
+- [ ] Add focused red tests before production changes if a code slice is selected.
+- [ ] Keep EventSource lifecycle, polling timers, graph mutation, preview ref assignment, restore behavior, human-review opening, and live display semantics stable.
 - [ ] Run focused workspace/run tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 78.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 79.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -947,6 +956,10 @@ Phase 78 in progress
 | P3 `EditorWorkspaceShell.vue` cleanup after Phase 77 | About 30% complete after extracting shared preview map patching while preserving shell ref assignment. |
 | Current continuation gate after Phase 77 | Total roadmap progress is still below 100%, so Phase 78 is automatically opened for the next small streaming output preview request projection boundary. |
 | P3 `EditorWorkspaceShell.vue` cleanup target for Phase 78 | About 35% of P3 if payload/document/current-preview-to-next-preview projection moves into a tested run-event helper without changing stream lifecycle or displayed preview content. |
+| Overall roadmap cleanup after Phase 78 | About 99.7% complete after moving full streaming preview payload-to-map projection into `run-event-stream.ts`. |
+| P3 `EditorWorkspaceShell.vue` cleanup after Phase 78 | About 35% complete after extracting the complete preview update request while preserving shell ref assignment and stream lifecycle. |
+| Current continuation gate after Phase 78 | Total roadmap progress is still below 100%, so Phase 79 is automatically opened to re-evaluate the remaining run-event boundary before choosing the next slice. |
+| P3 `EditorWorkspaceShell.vue` cleanup target for Phase 79 | About 38-40% of P3 if another low-risk run-event slice remains; otherwise the next safe boundary should move to draft persistence rather than forcing EventSource lifecycle extraction. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -1020,6 +1033,7 @@ Phase 78 in progress
 - Phase 75 moves shared run event node id, text, and output-key projection helpers into `run-event-stream.ts`; workspace and run detail keep EventSource lifecycle, live preview state writes, graph mutation, polling timers, restore behavior, and human-review opening.
 - Phase 76 moves workspace output-key-to-preview-node resolution into `run-event-stream.ts`; `EditorWorkspaceShell.vue` keeps EventSource lifecycle, preview ref assignment, graph mutation, polling timers, fallback-node input, and live display state.
 - Phase 77 moves streaming output preview-by-node-id patch construction into `run-event-stream.ts`; `EditorWorkspaceShell.vue` keeps EventSource lifecycle, run output preview ref assignment, graph mutation, polling timers, fallback-node input, and live display state.
+- Phase 78 moves full streaming preview payload/document/current-preview projection into `run-event-stream.ts`; `EditorWorkspaceShell.vue` keeps EventSource lifecycle, run output preview ref assignment, graph mutation, polling timers, restore behavior, human-review opening, and live display state.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

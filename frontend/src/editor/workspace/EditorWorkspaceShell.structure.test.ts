@@ -212,19 +212,20 @@ test("EditorWorkspaceShell opens the right sidebar in Human Review mode for awai
 });
 
 test("EditorWorkspaceShell delegates run event stream parsing and URL projection to the shared model", () => {
-  assert.match(componentSource, /import \{[\s\S]*buildRunEventOutputPreviewByNodeId,[\s\S]*buildRunEventStreamUrl,[\s\S]*listRunEventOutputKeys,[\s\S]*parseRunEventPayloadData,[\s\S]*resolveRunEventNodeId,[\s\S]*resolveRunEventPreviewNodeIds,[\s\S]*resolveRunEventText,[\s\S]*shouldPollRunStatus[\s\S]*\} from "@\/lib\/run-event-stream";/);
+  assert.match(componentSource, /import \{[\s\S]*buildRunEventOutputPreviewUpdate,[\s\S]*buildRunEventStreamUrl,[\s\S]*parseRunEventPayloadData,[\s\S]*shouldPollRunStatus[\s\S]*\} from "@\/lib\/run-event-stream";/);
   assert.match(componentSource, /const streamUrl = buildRunEventStreamUrl\(runId\);/);
   assert.match(componentSource, /new EventSource\(streamUrl\)/);
   assert.match(componentSource, /return event instanceof MessageEvent \? parseRunEventPayloadData\(event\.data\) : null;/);
-  assert.match(componentSource, /const text = resolveRunEventText\(payload\);/);
-  assert.match(componentSource, /const outputKeys = listRunEventOutputKeys\(payload\);/);
-  assert.match(componentSource, /const fallbackNodeId = resolveRunEventNodeId\(payload\);/);
-  assert.match(componentSource, /const previewNodeIds = resolveRunEventPreviewNodeIds\(documentsByTabId\.value\[tabId\], outputKeys, fallbackNodeId\);/);
-  assert.match(componentSource, /const nextPreview = buildRunEventOutputPreviewByNodeId\(currentPreview, previewNodeIds, text\);/);
+  assert.match(componentSource, /const nextPreview = buildRunEventOutputPreviewUpdate\(documentsByTabId\.value\[tabId\], currentPreview, payload\);/);
   assert.match(componentSource, /preserveMissing: shouldPollRunStatus\(run\.status\)/);
   assert.match(componentSource, /if \(shouldPollRunStatus\(run\.status\)\) \{/);
   assert.doesNotMatch(componentSource, /function isActiveRunStatus\(status: string \| null \| undefined\)/);
   assert.doesNotMatch(componentSource, /function resolveStreamingOutputNodeIds/);
+  assert.doesNotMatch(componentSource, /resolveRunEventText\(payload\)/);
+  assert.doesNotMatch(componentSource, /listRunEventOutputKeys\(payload\)/);
+  assert.doesNotMatch(componentSource, /resolveRunEventNodeId\(payload\)/);
+  assert.doesNotMatch(componentSource, /resolveRunEventPreviewNodeIds\(documentsByTabId\.value\[tabId\]/);
+  assert.doesNotMatch(componentSource, /buildRunEventOutputPreviewByNodeId\(currentPreview/);
   assert.doesNotMatch(componentSource, /for \(const nodeId of previewNodeIds\)/);
   assert.doesNotMatch(componentSource, /Array\.isArray\(payload\.output_keys\)/);
   assert.doesNotMatch(componentSource, /String\(payload\.node_id \?\? ""\)\.trim\(\)/);
@@ -291,7 +292,7 @@ test("EditorWorkspaceShell subscribes to run events for live output previews", (
   assert.match(componentSource, /new EventSource\(streamUrl\)/);
   assert.match(componentSource, /addEventListener\("node\.output\.delta"/);
   assert.match(componentSource, /function applyStreamingOutputPreviewToTab/);
-  assert.match(componentSource, /resolveRunEventPreviewNodeIds/);
+  assert.match(componentSource, /buildRunEventOutputPreviewUpdate/);
   assert.match(componentSource, /startRunEventStreamForTab\(tab\.tabId, response\.run_id\);/);
 });
 

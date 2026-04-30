@@ -1,5 +1,74 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 78
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Confirmed Phase 77 was committed and pushed as `c6ed1cc`.
+  - Re-read the formal roadmap and latest P3 findings for the run event stream boundary.
+  - Inspected workspace streaming preview payload-to-map orchestration in `EditorWorkspaceShell.vue`.
+  - Selected the next P3 shell boundary: full streaming output preview request projection.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `buildRunEventOutputPreviewUpdate` coverage to `run-event-stream.test.ts`.
+  - Updated workspace structure tests to require one shared preview update helper and reject direct payload field projection in the shell.
+  - Verified the expected red failure before implementation because the shared update helper did not exist and the shell still orchestrated payload-to-map projection inline.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `buildRunEventOutputPreviewUpdate` to `frontend/src/lib/run-event-stream.ts`.
+  - Updated `EditorWorkspaceShell.vue` to delegate document/current-preview/payload projection to the shared run-event model.
+  - Kept EventSource lifecycle, polling timers, graph mutation, fallback node input, preview ref assignment, restore behavior, human-review opening, and live display state in the shell.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused shared model and workspace structure tests.
+  - Ran related run API, run event stream, run node artifact, run feedback, workspace structure, and run detail structure regression tests.
+  - Ran TypeScript unused-symbol verification from `frontend`.
+  - Ran the full frontend `node --test` suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed backend `/health` returned `{"status":"ok"}` and the frontend entry returned HTTP 200.
+  - Captured a headless Chrome screenshot and confirmed the workspace rendered normally.
+
+### Phase 5: Continuation Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated overall roadmap cleanup at about 99.7%.
+  - Recalculated P3 `EditorWorkspaceShell.vue` cleanup at about 35%.
+  - Opened Phase 79 automatically because total roadmap progress is still below 100%.
+  - Selected the next action as re-evaluating whether another safe run-event slice remains before moving to draft persistence.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red focused tests | `node --test frontend/src/lib/run-event-stream.test.ts frontend/src/editor/workspace/EditorWorkspaceShell.structure.test.ts` before implementation | Fails because shared preview update projection does not exist | Failed on missing export and structure assertions | Passed |
+| Focused model/structure tests | Same focused files after implementation | All focused tests pass | 36 passed | Passed |
+| Focused run/workspace regression | `node --test` over run-event stream, run node artifacts, run feedback, workspace structure, run detail structure, and run API tests | Related run streaming and preview tests pass | 54 passed | Passed |
+| Unused symbol check | `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No diagnostics | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src vite.config.structure.test.ts | rg '\.test\.ts$')` in `frontend` | All frontend tests pass | 845 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without a large chunk warning | Exit 0, no Vite chunk warning | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+| Browser smoke | Headless Chrome screenshot with virtual-time wait | Workspace renders normally | Workspace UI rendered | Passed |
+
+## 5-Question Reboot Check
+| Question | Answer |
+|----------|--------|
+| Where am I? | Phase 78 implementation, verification, docs update, and dev restart are complete. |
+| Where am I going? | Phase 79 is open for re-evaluating the remaining run-event boundary before selecting the next safe P3 slice. |
+| What's the goal? | Continue P3 shell cleanup while avoiding unsafe lifecycle extraction and keeping stream, polling, restore, human review, preview, and graph behavior stable. |
+| What have I learned? | Payload-to-preview-map projection can be fully model-owned; EventSource lifecycle remains component-owned for now. |
+| What have I done? | Extracted full preview update projection, added focused tests, verified the full frontend suite, built, restarted, and visually smoked the app. |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+
 ## Session: 2026-04-30 Phase 77
 
 ### Phase 1: Re-orientation

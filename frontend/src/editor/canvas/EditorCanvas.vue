@@ -70,11 +70,7 @@
           :d="connectionPreview.path"
           class="editor-canvas__edge editor-canvas__edge--preview"
           :style="connectionPreviewStyle"
-          :class="{
-            'editor-canvas__edge--flow': connectionPreview.kind === 'flow',
-            'editor-canvas__edge--route': connectionPreview.kind === 'route',
-            'editor-canvas__edge--data': connectionPreview.kind === 'data',
-          }"
+          :class="connectionPreviewClassState(connectionPreview.kind)"
         />
         <path
           v-for="edge in flowRouteEdges"
@@ -101,13 +97,7 @@
           :d="edge.path"
           class="editor-canvas__edge"
           :style="edgeStyle(edge)"
-          :class="{
-            'editor-canvas__edge--flow': edge.kind === 'flow',
-            'editor-canvas__edge--route': edge.kind === 'route',
-            'editor-canvas__edge--data': edge.kind === 'data',
-            'editor-canvas__edge--selected': selectedEdgeId === edge.id,
-            'editor-canvas__edge--active-run': resolveRunEdgePresentationForEdge(edge.id)?.edgeClass === 'editor-canvas__edge--active-run',
-          }"
+          :class="edgeClassState(edge)"
         />
         <path
           v-for="edge in projectedEdges"
@@ -115,11 +105,7 @@
           v-show="isProjectedCanvasEdgeVisible(edge, visibleProjectedEdgeIds)"
           :d="edge.path"
           class="editor-canvas__edge-hitarea"
-          :class="{
-            'editor-canvas__edge-hitarea--flow': edge.kind === 'flow',
-            'editor-canvas__edge-hitarea--route': edge.kind === 'route',
-            'editor-canvas__edge-hitarea--data': edge.kind === 'data',
-          }"
+          :class="edgeHitareaClassState(edge)"
           @pointerdown.stop="handleEdgePointerDown(edge, $event)"
         />
       </svg>
@@ -423,11 +409,14 @@ import {
   resolveRouteHandleTone,
 } from "./routeHandleModel";
 import {
+  buildConnectionPreviewClassState,
   buildConnectionPreviewStyle,
   buildFlowHotspotStyle,
   buildFlowHotspotConnectStyle,
   buildPointAnchorStyle,
   buildPointAnchorConnectStyle,
+  buildProjectedEdgeClassState,
+  buildProjectedEdgeHitareaClassState,
   buildProjectedEdgeStyle,
   isCanvasConnectionSourceAnchor,
   isCanvasConnectionTargetAnchor,
@@ -897,6 +886,7 @@ const connectionPreview = computed(() =>
 const connectionPreviewStyle = computed(() =>
   buildConnectionPreviewStyle(connectionPreview.value?.kind ?? null, activeConnectionAccentColor.value),
 );
+const connectionPreviewClassState = buildConnectionPreviewClassState;
 const canvasSurfaceStyle = computed(() => resolveCanvasSurfaceStyle(viewport.viewport));
 const viewportStyle = computed(() => buildCanvasViewportStyle(viewport.viewport));
 const zoomPercentLabel = computed(() => buildZoomPercentLabel(viewport.viewport.scale));
@@ -1063,6 +1053,13 @@ const canvasInteractionStyleContext = computed(() => ({
   activeConnectionAccentColor: activeConnectionAccentColor.value,
 }));
 const edgeStyle = buildProjectedEdgeStyle;
+const edgeClassState = (edge: ProjectedCanvasEdge) =>
+  buildProjectedEdgeClassState({
+    edge,
+    selectedEdgeId: selectedEdgeId.value,
+    activeRunEdgeClass: resolveRunEdgePresentationForEdge(edge.id)?.edgeClass,
+  });
+const edgeHitareaClassState = buildProjectedEdgeHitareaClassState;
 const flowHotspotStyle = buildFlowHotspotStyle;
 const routeHandleStyle = buildRouteHandleStyle;
 const anchorStyle = buildPointAnchorStyle;

@@ -46,6 +46,36 @@ export function buildConnectionPreviewStyle(kind: ConnectionPreviewKind | null |
   };
 }
 
+export function buildConnectionPreviewClassState(kind: ConnectionPreviewKind) {
+  return {
+    "editor-canvas__edge--flow": kind === "flow",
+    "editor-canvas__edge--route": kind === "route",
+    "editor-canvas__edge--data": kind === "data",
+  };
+}
+
+export function buildProjectedEdgeClassState(input: {
+  edge: Pick<ProjectedCanvasEdge, "id" | "kind">;
+  selectedEdgeId: string | null | undefined;
+  activeRunEdgeClass?: string | null;
+}) {
+  return {
+    "editor-canvas__edge--flow": input.edge.kind === "flow",
+    "editor-canvas__edge--route": input.edge.kind === "route",
+    "editor-canvas__edge--data": input.edge.kind === "data",
+    "editor-canvas__edge--selected": input.selectedEdgeId === input.edge.id,
+    "editor-canvas__edge--active-run": input.activeRunEdgeClass === "editor-canvas__edge--active-run",
+  };
+}
+
+export function buildProjectedEdgeHitareaClassState(edge: Pick<ProjectedCanvasEdge, "kind">) {
+  return {
+    "editor-canvas__edge-hitarea--flow": edge.kind === "flow",
+    "editor-canvas__edge-hitarea--route": edge.kind === "route",
+    "editor-canvas__edge-hitarea--data": edge.kind === "data",
+  };
+}
+
 export function buildProjectedEdgeStyle(edge: Pick<ProjectedCanvasEdge, "kind" | "branch" | "color">) {
   if (edge.kind === "route" && edge.branch) {
     const accent = resolveRouteHandlePalette(edge.branch).accent;

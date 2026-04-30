@@ -2,11 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildConnectionPreviewClassState,
   buildConnectionPreviewStyle,
   buildFlowHotspotConnectStyle,
   buildFlowHotspotStyle,
   buildPointAnchorConnectStyle,
   buildPointAnchorStyle,
+  buildProjectedEdgeClassState,
+  buildProjectedEdgeHitareaClassState,
   buildProjectedEdgeStyle,
   isCanvasConnectionSourceAnchor,
   isCanvasConnectionTargetAnchor,
@@ -30,6 +33,33 @@ test("buildConnectionPreviewStyle keeps per-connection preview opacity", () => {
     "--editor-connection-preview-stroke": "rgba(18, 52, 86, 0.76)",
   });
   assert.equal(buildConnectionPreviewStyle(null, "#123456"), undefined);
+});
+
+test("edge class helpers preserve preview, projected edge, and hitarea kind classes", () => {
+  assert.deepEqual(buildConnectionPreviewClassState("route"), {
+    "editor-canvas__edge--flow": false,
+    "editor-canvas__edge--route": true,
+    "editor-canvas__edge--data": false,
+  });
+  assert.deepEqual(
+    buildProjectedEdgeClassState({
+      edge: { id: "data:agent:answer->output", kind: "data" },
+      selectedEdgeId: "data:agent:answer->output",
+      activeRunEdgeClass: "editor-canvas__edge--active-run",
+    }),
+    {
+      "editor-canvas__edge--flow": false,
+      "editor-canvas__edge--route": false,
+      "editor-canvas__edge--data": true,
+      "editor-canvas__edge--selected": true,
+      "editor-canvas__edge--active-run": true,
+    },
+  );
+  assert.deepEqual(buildProjectedEdgeHitareaClassState({ kind: "flow" }), {
+    "editor-canvas__edge-hitarea--flow": true,
+    "editor-canvas__edge-hitarea--route": false,
+    "editor-canvas__edge-hitarea--data": false,
+  });
 });
 
 test("buildProjectedEdgeStyle preserves route and data edge variables", () => {

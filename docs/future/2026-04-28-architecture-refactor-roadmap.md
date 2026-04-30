@@ -114,6 +114,8 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - `run-event-stream.ts` 已继续承接 Event-to-payload parsing wrapper：统一 `MessageEvent` 判断和 JSON payload 解析；`EditorWorkspaceShell.vue` 与 `RunDetailPage.vue` 仍保留 EventSource lifecycle、listener registration、polling timers、restore/human-review behavior 和 UI state mutation。
 - `editorDraftPersistenceModel.ts` 已开始承接 draft persistence 的 viewport draft 决策：缺失 viewport 的 tab id 选择、相同 viewport no-op、immutable viewport draft update；`EditorWorkspaceShell.vue` 仍保留实际 localStorage read/write、ref assignment、route sync、tab registration、graph mutation、restore behavior 和 run stream behavior。
 - `editorDraftPersistenceModel.ts` 已继续承接 document draft hydration 决策：未保存 tab 缺失文档筛选、persisted-vs-seed、已有图 tab hydrate gating、persisted-vs-cached-vs-fetch source selection；`EditorWorkspaceShell.vue` 仍保留实际 localStorage read、graph fetch、registerDocument、loading/error state、route sync、restore behavior 和 run stream behavior。
+- `editorDraftPersistenceModel.ts` 已继续承接 workspace draft watcher 决策：hydrated/no-op gating、workspace persistence request 和 document/viewport draft pruning tab ids；`EditorWorkspaceShell.vue` 仍保留实际 workspace localStorage write、document/viewport pruning side effects、route sync 和 draft hydration calls。
+- `editorTabRuntimeModel.ts` 已开始承接 tab-scoped runtime record operations：关闭 tab 时的 clone/delete cleanup，以及 feedback、run output preview、run visual state、polling state、document registration、existing graph loading 的 immutable set writes；`EditorWorkspaceShell.vue` 仍保留 close-tab transition、persisted draft removal、run polling/EventSource cancellation、stream payload handling、graph fetches、human-review opening、route sync 和 visual layout。
 
 ## 后端重点
 

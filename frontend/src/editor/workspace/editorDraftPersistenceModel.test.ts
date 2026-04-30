@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { CanvasViewport } from "../canvas/canvasViewport.ts";
-import type { EditorWorkspaceTab } from "../../lib/editor-workspace.ts";
+import type { EditorWorkspaceTab, PersistedEditorWorkspace } from "../../lib/editor-workspace.ts";
 import type { GraphDocument, GraphPayload } from "../../types/node-system.ts";
 
 import {
@@ -11,7 +11,9 @@ import {
   listTabsMissingViewportDrafts,
   resolveExistingGraphDocumentHydrationSource,
   resolveUnsavedGraphDocumentHydrationSource,
+  resolveWorkspaceDraftPersistenceRequest,
   shouldHydrateExistingGraphDocument,
+  shouldRunWorkspaceDraftHydration,
 } from "./editorDraftPersistenceModel.ts";
 
 const viewportA: CanvasViewport = { x: 10, y: 20, scale: 1.25 };
@@ -119,4 +121,22 @@ test("resolveExistingGraphDocumentHydrationSource chooses persisted, cached, the
   assert.deepEqual(resolveExistingGraphDocumentHydrationSource({ persistedDraft: null, cachedGraph: null }), {
     type: "fetch",
   });
+});
+
+test("resolveWorkspaceDraftPersistenceRequest waits for hydration before writing workspace drafts", () => {
+  const workspace: PersistedEditorWorkspace = {
+    activeTabId: "tab_b",
+    tabs: [createTab("tab_a"), createTab("tab_b")],
+  };
+
+  assert.equal(resolveWorkspaceDraftPersistenceRequest({ hydrated: false, workspace }), null);
+  assert.deepEqual(resolveWorkspaceDraftPersistenceRequest({ hydrated: true, workspace }), {
+    workspace,
+    tabIds: ["tab_a", "tab_b"],
+  });
+});
+
+test("shouldRunWorkspaceDraftHydration follows the shell hydration gate", () => {
+  assert.equal(shouldRunWorkspaceDraftHydration(false), false);
+  assert.equal(shouldRunWorkspaceDraftHydration(true), true);
 });

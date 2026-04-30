@@ -1,5 +1,5 @@
 import type { CanvasViewport } from "../canvas/canvasViewport.ts";
-import type { EditorWorkspaceTab } from "../../lib/editor-workspace.ts";
+import type { EditorWorkspaceTab, PersistedEditorWorkspace } from "../../lib/editor-workspace.ts";
 import type { GraphDocument, GraphPayload } from "../../types/node-system.ts";
 
 type GraphDraft = GraphPayload | GraphDocument;
@@ -64,4 +64,22 @@ export function resolveExistingGraphDocumentHydrationSource(params: {
   }
 
   return { type: "fetch" as const };
+}
+
+export function resolveWorkspaceDraftPersistenceRequest(params: {
+  hydrated: boolean;
+  workspace: PersistedEditorWorkspace;
+}) {
+  if (!params.hydrated) {
+    return null;
+  }
+
+  return {
+    workspace: params.workspace,
+    tabIds: params.workspace.tabs.map((tab) => tab.tabId),
+  };
+}
+
+export function shouldRunWorkspaceDraftHydration(hydrated: boolean) {
+  return hydrated;
 }

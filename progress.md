@@ -1,5 +1,57 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 123
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `4991f02` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 122 findings, and remaining high-line-count files.
+  - Chose the `EditorWorkspaceShell.vue` route instruction/URL sync slice because it avoids canvas auto-snapping and node creation execution while removing another shell orchestration cluster.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceRouteController.test.ts` covering route URL push/replace behavior and route instruction dispatch for open-new, open-existing, and restore-run flows.
+  - Verified the expected red failure because `useWorkspaceRouteController.ts` did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceRouteController.ts`.
+  - Updated `EditorWorkspaceShell.vue` to consume the route controller for `applyCurrentRouteInstruction`, `syncRouteToUrl`, and `syncRouteToTab`.
+  - Kept actual open-new/open-existing/restore implementations, graph fetching, run lifecycle, Human Review routing, node creation execution, and graph mutation action wiring in the shell.
+  - Updated structure tests to lock the new route controller boundary.
+  - Reduced `EditorWorkspaceShell.vue` from 1,762 to 1,728 lines.
+
+### Phase 4: Verification and Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Ran focused route controller and workspace-shell structure tests.
+  - Ran TypeScript unused-symbol verification; first pass caught controller initialization order, then the check passed after moving tab lifecycle initialization after route controller initialization.
+  - Ran the full frontend test suite and production build.
+  - Confirmed the production build still has no Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Confirmed the previous dev session exited after the restart.
+  - Recalculated the full roadmap at about 97.2%, frontend-focused progress at about 90%, and P3 `EditorWorkspaceShell.vue` progress at about 92-93%.
+  - Opened Phase 124 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red controller test | `node --test src/editor/workspace/useWorkspaceRouteController.test.ts` before implementation | Fails because the route controller module is missing | Failed with missing module import | Passed |
+| Focused frontend tests | `node --test src/editor/workspace/useWorkspaceRouteController.test.ts src/editor/workspace/EditorWorkspaceShell.structure.test.ts` | Focused route controller and structure tests pass | 38 passed | Passed |
+| TypeScript check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | No type or unused-symbol errors | Exit 0 after fixing controller initialization order | Passed |
+| Full frontend tests | `node --test $(rg --files src -g '*.test.ts' \| sort) vite.config.structure.test.ts` | Full frontend suite passes | 900 passed | Passed |
+| Production build | `npm run build` in `frontend` | Build succeeds with no large chunk warning | Exit 0; Vite build completed | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | `vue-tsc` reported `syncRouteToTab`/`syncRouteToUrl` used before declaration because tab lifecycle initialization injected them before route controller initialization | First TypeScript verification after extraction | Moved `useWorkspaceTabLifecycleController` initialization after `useWorkspaceRouteController`. |
+
 ## Session: 2026-04-30 Phase 122
 
 ### Phase 1: Re-orientation

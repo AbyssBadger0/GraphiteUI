@@ -18,6 +18,7 @@ const sidePanelControllerSource = readWorkspaceSource("useWorkspaceSidePanelCont
 const runVisualStateSource = readWorkspaceSource("useWorkspaceRunVisualState.ts");
 const documentStateSource = readWorkspaceSource("useWorkspaceDocumentState.ts");
 const tabLifecycleControllerSource = readWorkspaceSource("useWorkspaceTabLifecycleController.ts");
+const routeControllerSource = readWorkspaceSource("useWorkspaceRouteController.ts");
 
 test("EditorWorkspaceShell renders workspace panes without reka-ui tab primitives", () => {
   assert.doesNotMatch(componentSource, /from "reka-ui"/);
@@ -81,9 +82,10 @@ test("EditorWorkspaceShell can restore a past run into a new unsaved tab", () =>
   assert.match(componentSource, /const restoredGraph = buildRestoredGraphFromRun\(run, snapshotId\);/);
   assert.match(componentSource, /title: resolveRestoredRunTabTitle\(run\),/);
   assert.match(componentSource, /restoredRunSnapshotIdByTabId\.value = \{[\s\S]*\[tab\.tabId\]: snapshotId,/);
-  assert.match(componentSource, /if \(instruction\.type === "restore-run"\) \{/);
-  assert.match(componentSource, /openRestoredRunTab\(instruction\.runId, instruction\.snapshotId \?\? null, instruction\.navigation\);/);
-  assert.match(componentSource, /restoreSnapshotId: props\.restoreSnapshotId \?\? null,/);
+  assert.match(componentSource, /import \{ useWorkspaceRouteController \} from "\.\/useWorkspaceRouteController\.ts";/);
+  assert.match(routeControllerSource, /if \(instruction\.type === "restore-run"\) \{/);
+  assert.match(routeControllerSource, /input\.openRestoredRunTab\(instruction\.runId, instruction\.snapshotId \?\? null, instruction\.navigation\);/);
+  assert.match(componentSource, /restoreSnapshotId: \(\) => props\.restoreSnapshotId \?\? null,/);
   assert.match(componentSource, /return `restore:\$\{props\.restoreRunId \?\? ""\}:\$\{props\.restoreSnapshotId \?\? ""\}`;/);
 });
 

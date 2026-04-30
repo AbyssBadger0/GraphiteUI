@@ -222,7 +222,6 @@ import {
   type NodeCreationMenuState,
 } from "@/editor/workspace/nodeCreationMenuModel";
 import { createNodeFromCreationEntry, createNodeFromDroppedFile } from "./nodeCreationExecution.ts";
-import { resolveEditorRouteInstruction } from "@/lib/editor-route-sync";
 import {
   cloneGraphDocument,
   createEditorSeedDraftGraph,
@@ -239,7 +238,6 @@ import {
   readPersistedEditorWorkspace,
   removePersistedEditorDocumentDraft,
   removePersistedEditorViewportDraft,
-  resolveWorkspaceTabUrl,
   writePersistedEditorWorkspace,
   type EditorWorkspaceTab,
   type PersistedEditorWorkspace,
@@ -290,6 +288,7 @@ import { buildPythonExportFileName, downloadPythonSource } from "./pythonExportM
 import { isGraphiteUiPythonExportFile, isGraphiteUiPythonExportSource } from "./pythonImportModel.ts";
 import { buildPresetPayloadForNode } from "./presetPersistence.ts";
 import { useWorkspaceDocumentState } from "./useWorkspaceDocumentState.ts";
+import { useWorkspaceRouteController } from "./useWorkspaceRouteController.ts";
 import { useWorkspaceRunVisualState, type WorkspaceRunFeedback } from "./useWorkspaceRunVisualState.ts";
 import { useWorkspaceSidePanelController } from "./useWorkspaceSidePanelController.ts";
 import { useWorkspaceTabLifecycleController } from "./useWorkspaceTabLifecycleController.ts";
@@ -424,6 +423,47 @@ const {
   setMessageFeedbackForTab,
   guardGraphEditForTab,
 });
+const activeTabRouteSignature = computed(() => {
+  const tab = activeTab.value;
+  if (!tab) {
+    return null;
+  }
+
+  if (tab.graphId) {
+    return `existing:${tab.graphId}`;
+  }
+
+  return `new:${tab.templateId ?? tab.defaultTemplateId ?? ""}`;
+});
+const routeSignature = computed(() => {
+  if (props.routeMode === "existing") {
+    return `existing:${props.routeGraphId ?? ""}`;
+  }
+  if (props.routeMode === "new") {
+    if (props.restoreRunId) {
+      return `restore:${props.restoreRunId ?? ""}:${props.restoreSnapshotId ?? ""}`;
+    }
+    return `new:${props.defaultTemplateId ?? ""}`;
+  }
+  return "root";
+});
+const { applyCurrentRouteInstruction, syncRouteToUrl, syncRouteToTab } = useWorkspaceRouteController({
+  routeMode: () => props.routeMode,
+  routeGraphId: () => props.routeGraphId ?? null,
+  defaultTemplateId: () => props.defaultTemplateId ?? null,
+  restoreRunId: () => props.restoreRunId ?? null,
+  restoreSnapshotId: () => props.restoreSnapshotId ?? null,
+  activeTabRouteSignature,
+  routeSignature,
+  handledRouteSignature,
+  routeRestoreError,
+  currentRouteFullPath: () => route.fullPath,
+  pushRoute: (targetUrl) => router.push(targetUrl),
+  replaceRoute: (targetUrl) => router.replace(targetUrl),
+  openRestoredRunTab,
+  openNewTab,
+  openExistingGraph,
+});
 const {
   activateTab,
   reorderTab,
@@ -464,30 +504,6 @@ const {
   syncRouteToUrl,
   saveTab,
   closeSaveFailedMessage: () => t("closeDialog.saveFailed"),
-});
-const activeTabRouteSignature = computed(() => {
-  const tab = activeTab.value;
-  if (!tab) {
-    return null;
-  }
-
-  if (tab.graphId) {
-    return `existing:${tab.graphId}`;
-  }
-
-  return `new:${tab.templateId ?? tab.defaultTemplateId ?? ""}`;
-});
-const routeSignature = computed(() => {
-  if (props.routeMode === "existing") {
-    return `existing:${props.routeGraphId ?? ""}`;
-  }
-  if (props.routeMode === "new") {
-    if (props.restoreRunId) {
-      return `restore:${props.restoreRunId ?? ""}:${props.restoreSnapshotId ?? ""}`;
-    }
-    return `new:${props.defaultTemplateId ?? ""}`;
-  }
-  return "root";
 });
 
 function cancelRunPolling(tabId: string) {
@@ -594,56 +610,6 @@ async function pollRunForTab(tabId: string, runId: string, generation = runPollG
     });
     scheduleRunPoll(tabId, runId, 1000, generation);
   }
-}
-
-function applyCurrentRouteInstruction() {
-  const instruction = resolveEditorRouteInstruction({
-    routeMode: props.routeMode,
-    routeGraphId: props.routeGraphId ?? null,
-    defaultTemplateId: props.defaultTemplateId ?? null,
-    restoreRunId: props.restoreRunId ?? null,
-    restoreSnapshotId: props.restoreSnapshotId ?? null,
-    activeTabRouteSignature: activeTabRouteSignature.value,
-    routeSignature: routeSignature.value,
-    handledRouteSignature: handledRouteSignature.value,
-  });
-
-  if (instruction.type === "restore-run") {
-    void openRestoredRunTab(instruction.runId, instruction.snapshotId ?? null, instruction.navigation);
-    return;
-  }
-
-  if (instruction.type === "open-new") {
-    routeRestoreError.value = null;
-    openNewTab(instruction.templateId, instruction.navigation);
-    return;
-  }
-
-  if (instruction.type === "open-existing") {
-    routeRestoreError.value = null;
-    openExistingGraph(instruction.graphId, instruction.navigation);
-    return;
-  }
-
-  handledRouteSignature.value = routeSignature.value;
-}
-
-function syncRouteToUrl(targetUrl: string, mode: "push" | "replace" = "push") {
-  if (route.fullPath === targetUrl) {
-    return;
-  }
-  if (mode === "replace") {
-    void router.replace(targetUrl);
-    return;
-  }
-  void router.push(targetUrl);
-}
-
-function syncRouteToTab(
-  tab: Pick<EditorWorkspaceTab, "graphId" | "kind" | "templateId" | "defaultTemplateId">,
-  mode: "push" | "replace" = "push",
-) {
-  syncRouteToUrl(resolveWorkspaceTabUrl(tab), mode);
 }
 
 function updateWorkspace(nextWorkspace: PersistedEditorWorkspace) {

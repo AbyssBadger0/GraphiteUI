@@ -1354,105 +1354,81 @@ function markDocumentDirty(tabId: string, nextDocument: GraphPayload | GraphDocu
   commitDirtyDocumentForTab(tabId, nextDocument);
 }
 
-function addStateReaderBinding(tabId: string, stateKey: string, nodeId: string) {
+function commitDocumentMutationForTab(
+  tabId: string,
+  mutate: (document: GraphPayload | GraphDocument) => GraphPayload | GraphDocument,
+  options: { focusNodeId?: string | null } = {},
+) {
   const document = documentsByTabId.value[tabId];
   if (!document) {
-    return;
+    return null;
   }
-  const nextDocument = addStateBindingToDocument(document, stateKey, nodeId, "read");
+
+  const nextDocument = mutate(document);
   if (nextDocument === document) {
-    return;
+    return null;
   }
+
   markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  if ("focusNodeId" in options) {
+    focusNodeForTab(tabId, options.focusNodeId ?? null);
+  }
+  return nextDocument;
+}
+
+function addStateReaderBinding(tabId: string, stateKey: string, nodeId: string) {
+  commitDocumentMutationForTab(tabId, (document) => addStateBindingToDocument(document, stateKey, nodeId, "read"), {
+    focusNodeId: nodeId,
+  });
 }
 
 function removeStateReaderBinding(tabId: string, stateKey: string, nodeId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-  const nextDocument = removeStateBindingFromDocument(document, stateKey, nodeId, "read");
-  if (nextDocument === document) {
-    return;
-  }
-  markDocumentDirty(tabId, nextDocument);
+  commitDocumentMutationForTab(tabId, (document) => removeStateBindingFromDocument(document, stateKey, nodeId, "read"));
 }
 
 function addStateWriterBinding(tabId: string, stateKey: string, nodeId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-  const nextDocument = addStateBindingToDocument(document, stateKey, nodeId, "write");
-  if (nextDocument === document) {
-    return;
-  }
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(tabId, (document) => addStateBindingToDocument(document, stateKey, nodeId, "write"), {
+    focusNodeId: nodeId,
+  });
 }
 
 function bindNodePortStateForTab(tabId: string, nodeId: string, side: "input" | "output", stateKey: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = addStateBindingToDocument(document, stateKey, nodeId, side === "input" ? "read" : "write");
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(
+    tabId,
+    (document) => addStateBindingToDocument(document, stateKey, nodeId, side === "input" ? "read" : "write"),
+    {
+      focusNodeId: nodeId,
+    },
+  );
 }
 
 function removeNodePortStateForTab(tabId: string, nodeId: string, side: "input" | "output", stateKey: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = removeStateBindingFromDocument(document, stateKey, nodeId, side === "input" ? "read" : "write");
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(
+    tabId,
+    (document) => removeStateBindingFromDocument(document, stateKey, nodeId, side === "input" ? "read" : "write"),
+    {
+      focusNodeId: nodeId,
+    },
+  );
 }
 
 function reorderNodePortStateForTab(tabId: string, nodeId: string, side: "input" | "output", stateKey: string, targetIndex: number) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = reorderNodePortStateInDocument(document, nodeId, side, stateKey, targetIndex);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(tabId, (document) => reorderNodePortStateInDocument(document, nodeId, side, stateKey, targetIndex), {
+    focusNodeId: nodeId,
+  });
 }
 
 function disconnectDataEdgeForTab(tabId: string, sourceNodeId: string, targetNodeId: string, stateKey: string, mode: "state" | "flow") {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument =
-    mode === "flow"
-      ? removeFlowEdgeFromDocument(document, sourceNodeId, targetNodeId)
-      : removeStateBindingFromDocument(document, stateKey, targetNodeId, "read");
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, targetNodeId);
+  commitDocumentMutationForTab(
+    tabId,
+    (document) =>
+      mode === "flow"
+        ? removeFlowEdgeFromDocument(document, sourceNodeId, targetNodeId)
+        : removeStateBindingFromDocument(document, stateKey, targetNodeId, "read"),
+    {
+      focusNodeId: targetNodeId,
+    },
+  );
 }
 
 function createNodePortStateForTab(tabId: string, nodeId: string, side: "input" | "output", field: StateFieldDraft) {
@@ -1546,18 +1522,9 @@ function showPresetSaveToast(type: "success" | "error", message: string) {
 }
 
 function connectFlowNodesForTab(tabId: string, sourceNodeId: string, targetNodeId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = connectFlowNodesInDocument(document, sourceNodeId, targetNodeId);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, targetNodeId);
+  commitDocumentMutationForTab(tabId, (document) => connectFlowNodesInDocument(document, sourceNodeId, targetNodeId), {
+    focusNodeId: targetNodeId,
+  });
 }
 
 function connectStateBindingForTab(
@@ -1657,264 +1624,146 @@ function connectStateInputSourceForTab(
 }
 
 function connectConditionRouteForTab(tabId: string, sourceNodeId: string, branchKey: string, targetNodeId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = connectConditionRouteInDocument(document, sourceNodeId, branchKey, targetNodeId);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, targetNodeId);
+  commitDocumentMutationForTab(tabId, (document) => connectConditionRouteInDocument(document, sourceNodeId, branchKey, targetNodeId), {
+    focusNodeId: targetNodeId,
+  });
 }
 
 function removeFlowEdgeForTab(tabId: string, sourceNodeId: string, targetNodeId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = removeFlowEdgeFromDocument(document, sourceNodeId, targetNodeId);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
+  commitDocumentMutationForTab(tabId, (document) => removeFlowEdgeFromDocument(document, sourceNodeId, targetNodeId));
 }
 
 function reconnectFlowEdgeForTab(tabId: string, sourceNodeId: string, currentTargetNodeId: string, nextTargetNodeId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = reconnectFlowEdgeInDocument(document, sourceNodeId, currentTargetNodeId, nextTargetNodeId);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nextTargetNodeId);
+  commitDocumentMutationForTab(
+    tabId,
+    (document) => reconnectFlowEdgeInDocument(document, sourceNodeId, currentTargetNodeId, nextTargetNodeId),
+    {
+      focusNodeId: nextTargetNodeId,
+    },
+  );
 }
 
 function removeConditionRouteForTab(tabId: string, sourceNodeId: string, branchKey: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = removeConditionRouteFromDocument(document, sourceNodeId, branchKey);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
+  commitDocumentMutationForTab(tabId, (document) => removeConditionRouteFromDocument(document, sourceNodeId, branchKey));
 }
 
 function reconnectConditionRouteForTab(tabId: string, sourceNodeId: string, branchKey: string, nextTargetNodeId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = reconnectConditionRouteInDocument(document, sourceNodeId, branchKey, nextTargetNodeId);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nextTargetNodeId);
+  commitDocumentMutationForTab(tabId, (document) => reconnectConditionRouteInDocument(document, sourceNodeId, branchKey, nextTargetNodeId), {
+    focusNodeId: nextTargetNodeId,
+  });
 }
 
 function addStateField(tabId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-  markDocumentDirty(tabId, addStateFieldToDocument(document));
+  commitDocumentMutationForTab(tabId, (document) => addStateFieldToDocument(document));
 }
 
 function updateInputConfigForTab(tabId: string, nodeId: string, patch: Partial<InputNode["config"]>) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = updateInputNodeConfigInDocument(document, nodeId, (current) => ({
-    ...current,
-    ...patch,
-  }));
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(
+    tabId,
+    (document) =>
+      updateInputNodeConfigInDocument(document, nodeId, (current) => ({
+        ...current,
+        ...patch,
+      })),
+    {
+      focusNodeId: nodeId,
+    },
+  );
 }
 
 function updateNodeMetadataForTab(tabId: string, nodeId: string, patch: Partial<Pick<GraphNode, "name" | "description">>) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = updateNodeMetadataInDocument(document, nodeId, (current) => ({
-    ...current,
-    ...patch,
-  }));
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(
+    tabId,
+    (document) =>
+      updateNodeMetadataInDocument(document, nodeId, (current) => ({
+        ...current,
+        ...patch,
+      })),
+    {
+      focusNodeId: nodeId,
+    },
+  );
 }
 
 function updateAgentConfigForTab(tabId: string, nodeId: string, patch: Partial<AgentNode["config"]>) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = updateAgentNodeConfigInDocument(document, nodeId, (current) => ({
-    ...current,
-    ...patch,
-  }));
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(
+    tabId,
+    (document) =>
+      updateAgentNodeConfigInDocument(document, nodeId, (current) => ({
+        ...current,
+        ...patch,
+      })),
+    {
+      focusNodeId: nodeId,
+    },
+  );
 }
 
 function toggleAgentBreakpointForTab(tabId: string, nodeId: string, enabled: boolean) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = updateAgentBreakpointInDocument(document, nodeId, enabled);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(tabId, (document) => updateAgentBreakpointInDocument(document, nodeId, enabled), {
+    focusNodeId: nodeId,
+  });
 }
 
 function updateAgentBreakpointTimingForTab(tabId: string, nodeId: string, timing: "before" | "after") {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = updateAgentBreakpointTimingInDocument(document, nodeId, timing);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(tabId, (document) => updateAgentBreakpointTimingInDocument(document, nodeId, timing), {
+    focusNodeId: nodeId,
+  });
 }
 
 function updateConditionConfigForTab(tabId: string, nodeId: string, patch: Partial<ConditionNode["config"]>) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = updateConditionNodeConfigInDocument(document, nodeId, (current) => ({
-    ...current,
-    ...patch,
-  }));
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(
+    tabId,
+    (document) =>
+      updateConditionNodeConfigInDocument(document, nodeId, (current) => ({
+        ...current,
+        ...patch,
+      })),
+    {
+      focusNodeId: nodeId,
+    },
+  );
 }
 
 function updateConditionBranchForTab(tabId: string, nodeId: string, currentKey: string, nextKey: string, mappingKeys: string[]) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = updateConditionBranchInDocument(document, nodeId, currentKey, nextKey, mappingKeys);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(tabId, (document) => updateConditionBranchInDocument(document, nodeId, currentKey, nextKey, mappingKeys), {
+    focusNodeId: nodeId,
+  });
 }
 
 function addConditionBranchForTab(tabId: string, nodeId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = addConditionBranchToDocument(document, nodeId);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(tabId, (document) => addConditionBranchToDocument(document, nodeId), {
+    focusNodeId: nodeId,
+  });
 }
 
 function removeConditionBranchForTab(tabId: string, nodeId: string, branchKey: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = removeConditionBranchFromDocument(document, nodeId, branchKey);
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(tabId, (document) => removeConditionBranchFromDocument(document, nodeId, branchKey), {
+    focusNodeId: nodeId,
+  });
 }
 
 function updateOutputConfigForTab(tabId: string, nodeId: string, patch: Partial<OutputNode["config"]>) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = updateOutputNodeConfigInDocument(document, nodeId, (current) => ({
-    ...current,
-    ...patch,
-  }));
-  if (nextDocument === document) {
-    return;
-  }
-
-  markDocumentDirty(tabId, nextDocument);
-  focusNodeForTab(tabId, nodeId);
+  commitDocumentMutationForTab(
+    tabId,
+    (document) =>
+      updateOutputNodeConfigInDocument(document, nodeId, (current) => ({
+        ...current,
+        ...patch,
+      })),
+    {
+      focusNodeId: nodeId,
+    },
+  );
 }
 
 function updateStateField(tabId: string, stateKey: string, patch: Partial<StateDefinition>) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-  const nextDocument = updateStateFieldInDocument(document, stateKey, (current) => ({
-    ...current,
-    ...patch,
-  }));
-  if (nextDocument === document) {
-    return;
-  }
-  markDocumentDirty(tabId, nextDocument);
+  commitDocumentMutationForTab(tabId, (document) =>
+    updateStateFieldInDocument(document, stateKey, (current) => ({
+      ...current,
+      ...patch,
+    })),
+  );
 }
 
 function formatStateDefinitionLabel(document: GraphPayload | GraphDocument, stateKey: string) {
@@ -1975,15 +1824,7 @@ function deleteStateField(tabId: string, stateKey: string) {
 }
 
 function removeStateWriterBinding(tabId: string, stateKey: string, nodeId: string) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-  const nextDocument = removeStateBindingFromDocument(document, stateKey, nodeId, "write");
-  if (nextDocument === document) {
-    return;
-  }
-  markDocumentDirty(tabId, nextDocument);
+  commitDocumentMutationForTab(tabId, (document) => removeStateBindingFromDocument(document, stateKey, nodeId, "write"));
 }
 
 function renameActiveGraph(name: string) {

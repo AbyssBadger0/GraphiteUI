@@ -546,6 +546,46 @@ test("EditorWorkspaceShell centralizes dirty graph document commits", () => {
   assert.doesNotMatch(renameSource, /updateWorkspace\(/);
 });
 
+test("EditorWorkspaceShell centralizes simple graph mutation commits", () => {
+  const mutationHelperSource =
+    componentSource.match(
+      /function commitDocumentMutationForTab\(\s*tabId: string,[\s\S]*?\n\}\n\nfunction addStateReaderBinding/,
+    )?.[0] ?? "";
+  const addStateReaderSource =
+    componentSource.match(/function addStateReaderBinding\(tabId: string, stateKey: string, nodeId: string\) \{[\s\S]*?\n\}\n\nfunction removeStateReaderBinding/)?.[0] ??
+    "";
+  const bindPortSource =
+    componentSource.match(/function bindNodePortStateForTab\(tabId: string, nodeId: string, side: "input" \| "output", stateKey: string\) \{[\s\S]*?\n\}\n\nfunction removeNodePortStateForTab/)?.[0] ??
+    "";
+  const connectFlowSource =
+    componentSource.match(/function connectFlowNodesForTab\(tabId: string, sourceNodeId: string, targetNodeId: string\) \{[\s\S]*?\n\}\n\nfunction connectStateBindingForTab/)?.[0] ??
+    "";
+  const updateAgentSource =
+    componentSource.match(/function updateAgentConfigForTab\(tabId: string, nodeId: string, patch: Partial<AgentNode\["config"\]>\) \{[\s\S]*?\n\}\n\nfunction toggleAgentBreakpointForTab/)?.[0] ??
+    "";
+  const updateStateFieldSource =
+    componentSource.match(/function updateStateField\(tabId: string, stateKey: string, patch: Partial<StateDefinition>\) \{[\s\S]*?\n\}\n\nfunction formatStateDefinitionLabel/)?.[0] ??
+    "";
+
+  assert.match(mutationHelperSource, /const document = documentsByTabId\.value\[tabId\];/);
+  assert.match(mutationHelperSource, /const nextDocument = mutate\(document\);/);
+  assert.match(mutationHelperSource, /if \(nextDocument === document\) \{/);
+  assert.match(mutationHelperSource, /markDocumentDirty\(tabId, nextDocument\);/);
+  assert.match(mutationHelperSource, /if \("focusNodeId" in options\) \{/);
+  assert.match(mutationHelperSource, /return nextDocument;/);
+  assert.match(addStateReaderSource, /commitDocumentMutationForTab\(\s*tabId,[\s\S]*addStateBindingToDocument\(document, stateKey, nodeId, "read"\),[\s\S]*focusNodeId: nodeId,[\s\S]*\);/);
+  assert.match(bindPortSource, /commitDocumentMutationForTab\(\s*tabId,[\s\S]*addStateBindingToDocument\(document, stateKey, nodeId, side === "input" \? "read" : "write"\),[\s\S]*focusNodeId: nodeId,[\s\S]*\);/);
+  assert.match(
+    connectFlowSource,
+    /commitDocumentMutationForTab\(\s*tabId,\s*\(document\) => connectFlowNodesInDocument\(document, sourceNodeId, targetNodeId\),\s*\{\s*focusNodeId: targetNodeId,\s*\}\s*\);/,
+  );
+  assert.match(updateAgentSource, /commitDocumentMutationForTab\(\s*tabId,[\s\S]*updateAgentNodeConfigInDocument\(document, nodeId, \(current\) => \(\{[\s\S]*\.\.\.current,[\s\S]*\.\.\.patch,[\s\S]*\}\)\),[\s\S]*focusNodeId: nodeId,[\s\S]*\);/);
+  assert.match(updateStateFieldSource, /commitDocumentMutationForTab\(\s*tabId,[\s\S]*updateStateFieldInDocument\(document, stateKey, \(current\) => \(\{[\s\S]*\.\.\.current,[\s\S]*\.\.\.patch,[\s\S]*\}\)\),[\s\S]*\);/);
+  assert.doesNotMatch(addStateReaderSource, /const nextDocument = addStateBindingToDocument/);
+  assert.doesNotMatch(bindPortSource, /const nextDocument = addStateBindingToDocument/);
+  assert.doesNotMatch(updateAgentSource, /const nextDocument = updateAgentNodeConfigInDocument/);
+});
+
 test("EditorWorkspaceShell persists terminal run state values into the graph draft", () => {
   assert.match(componentSource, /import \{ applyRunWrittenStateValuesToDocument \} from "\.\/runStatePersistence\.ts";/);
   assert.match(componentSource, /function persistRunStateValuesForTab\(tabId: string, run: RunDetail\)/);

@@ -1,5 +1,81 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 92
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically because the recalibrated full-roadmap progress is below 100%.
+  - Re-read the roadmap and current shell findings after correcting the earlier optimistic `99.x%` progress interpretation.
+  - Chose simple graph mutation commit consolidation because it removes repeated shell boilerplate while leaving auto-snap, node creation, graph mutators, run streams, route sync, and visual layout untouched.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added structure coverage requiring a local `commitDocumentMutationForTab` helper to own document lookup, no-op detection, dirty commit, optional focus sequencing, and result return.
+  - Verified the expected red failure before implementation because the helper did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `commitDocumentMutationForTab` after `markDocumentDirty`.
+  - Refactored simple state binding, port binding/reorder, flow/route connect/reconnect/remove, node config, condition config/branch, output config, state field update, and state writer removal handlers onto the helper.
+  - Kept complex creation/delete/save/open/human-review flows bespoke because they still combine graph mutation with extra side effects or persistence routing.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused workspace structure and runtime helper tests.
+  - Ran related workspace, node-creation, graph-document, run-state, run-stream, and run-detail regression tests.
+  - Ran TypeScript unused-symbol verification from `frontend`.
+  - Ran the full frontend `node --test` suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed backend `/health` returned `{"status":"ok"}` and the frontend entry returned HTTP 200.
+  - Captured a headless Chrome screenshot and confirmed the home workspace rendered normally.
+
+### Phase 5: Honest Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated the full roadmap at about 71-72%, not `99.x%`, because backend P4 is still effectively unstarted.
+  - Recalculated the frontend-focused roadmap at about 81-83%.
+  - Recalculated P3 `EditorWorkspaceShell.vue` cleanup at about 74%.
+  - Opened Phase 93 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Focused runtime/structure tests | `node --test frontend/src/editor/workspace/EditorWorkspaceShell.structure.test.ts frontend/src/editor/workspace/editorTabRuntimeModel.test.ts` | All focused tests pass | 38 passed | Passed |
+| Related workspace regression | `node --test` over workspace structure, tab runtime, node creation, graph document, run state, run event stream, and run detail structure tests | Related workspace tests pass | 144 passed | Passed |
+| Unused symbol check | `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No diagnostics | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src vite.config.structure.test.ts \| rg '\.test\.ts$')` in `frontend` | All frontend tests pass | 877 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without a large chunk warning | Exit 0, no Vite chunk warning | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+| Browser smoke | Headless Chrome screenshot with virtual-time wait | App renders normally | Home workspace UI rendered | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | New graph mutation commit structure assertion initially expected a one-line flow connection helper shape | Phase 92 focused green run | Relaxed the regex to match the actual multiline helper call while still requiring `commitDocumentMutationForTab`. |
+| 2026-04-30 | The same assertion expected an unnecessary trailing comma after the focus options object | Phase 92 focused green run | Removed the trailing-comma requirement so the test verifies behavior boundary instead of formatting. |
+
+## Session: 2026-04-30 Progress Recalibration
+
+### Progress Accuracy Correction
+- **Status:** completed
+- Actions taken:
+  - Re-read the roadmap and current line-count evidence after the user questioned whether the total progress estimate was realistic.
+  - Reclassified the prior `99.x%` numbers as an active frontend-batch tail estimate, not a true full-roadmap estimate.
+  - Updated `task_plan.md` to use a more honest progress model that includes P4 backend work.
+
+### Current Honest Estimate
+| Scope | Estimate | Rationale |
+|------|----------|-----------|
+| Full architecture roadmap | About 70-72% | P0 is complete, P1 is mostly complete, P2 has many extracted models but a large canvas remains, P3 shell cleanup is active, and P4 backend refactor has not started. |
+| Frontend-focused roadmap | About 80-82% | NodeCard and Canvas have had major extraction passes, and WorkspaceShell is about 72% through its P3 cleanup. |
+| P3 `EditorWorkspaceShell.vue` | About 72% | Run stream, draft persistence, runtime record writes, node creation menu state, and panel/focus state writes are extracted or consolidated; graph mutation actions and save/open routing still remain. |
+| P4 backend cleanup | About 0% | `model_provider_client.py`, `node_system_executor.py`, and LangGraph runtime are still essentially untouched by this cleanup. |
+
 ## Session: 2026-04-30 Phase 91
 
 ### Phase 1: Re-orientation

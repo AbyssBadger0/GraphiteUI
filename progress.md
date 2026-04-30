@@ -1,5 +1,59 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 121
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `3ad7081` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap and Phase 120 findings.
+  - Chose the `EditorWorkspaceShell.vue` document/draft state slice because it avoids canvas auto-snapping and node creation naming/context while removing another shell-owned state cluster.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceDocumentState.test.ts` covering document registration feedback, existing-feedback preservation, dirty metadata commits, and locked-edit guarded dirty writes.
+  - Verified the expected red failure because `useWorkspaceDocumentState.ts` did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceDocumentState.ts`.
+  - Updated `EditorWorkspaceShell.vue` to consume the document state controller for document registration, viewport draft hydration/update, terminal run-written state persistence, dirty graph metadata commits, and locked-edit guarded dirty writes.
+  - Kept save/open routing, graph fetching, route sync, run lifecycle, Human Review routing, node creation execution, and graph mutation action wiring in the shell.
+  - Updated structure tests to lock the new document state boundary.
+  - Narrowed the controller public return surface after TypeScript and focused tests confirmed the shell did not need the internal `setDocumentForTab` helper.
+  - Reduced `EditorWorkspaceShell.vue` from 1,894 to 1,831 lines.
+
+### Phase 4: Verification and Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Ran focused document-state and workspace-shell structure tests.
+  - Ran TypeScript unused-symbol verification.
+  - Ran the full frontend test suite and production build.
+  - Confirmed the production build still has no Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Confirmed the previous dev session exited after the restart.
+  - Recalculated the full roadmap at about 96.5%, frontend-focused progress at about 88-89%, and P3 `EditorWorkspaceShell.vue` progress at about 90%.
+  - Opened Phase 122 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red controller test | `node --test src/editor/workspace/useWorkspaceDocumentState.test.ts` before implementation | Fails because the document state composable is missing | Failed with missing module import | Passed |
+| Focused frontend tests | `node --test src/editor/workspace/useWorkspaceDocumentState.test.ts src/editor/workspace/EditorWorkspaceShell.structure.test.ts` | Focused document state and structure tests pass | 40 passed | Passed |
+| TypeScript check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | No type or unused-symbol errors | Exit 0 after removing an unused shell destructure | Passed |
+| Full frontend tests | `node --test $(rg --files src -g '*.test.ts' \| sort) vite.config.structure.test.ts` | Full frontend suite passes | 896 passed | Passed |
+| Production build | `npm run build` in `frontend` | Build succeeds with no large chunk warning | Exit 0; Vite build completed | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | Structure test still expected `writePersistedEditorDocumentDraft` in `EditorWorkspaceShell.vue` after the write moved into the controller | First focused post-implementation run | Updated the structure test to assert the new `useWorkspaceDocumentState.ts` boundary. |
+| 2026-04-30 | `vue-tsc` reported unused `setDocumentForTab` destructuring in `EditorWorkspaceShell.vue` | First TypeScript verification after extraction | Removed the unused shell destructuring and then narrowed the controller return surface. |
+
 ## Session: 2026-04-30 Phase 120
 
 ### Phase 1: Re-orientation

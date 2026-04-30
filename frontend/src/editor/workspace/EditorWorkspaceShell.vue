@@ -228,7 +228,6 @@ import {
   createEditorSeedDraftGraph,
   pruneUnreferencedStateSchemaInDocument,
   resolveEditorSeedTemplate,
-  syncKnowledgeBaseSkillsInDocument,
 } from "@/lib/graph-document";
 import {
   applyDocumentMetaToWorkspaceTab,
@@ -238,15 +237,12 @@ import {
   prunePersistedEditorDocumentDrafts,
   prunePersistedEditorViewportDrafts,
   readPersistedEditorDocumentDraft,
-  readPersistedEditorViewportDraft,
   readPersistedEditorWorkspace,
   reorderWorkspaceTab,
   removePersistedEditorDocumentDraft,
   removePersistedEditorViewportDraft,
   resolveEditorUrl,
   resolveWorkspaceTabUrl,
-  writePersistedEditorDocumentDraft,
-  writePersistedEditorViewportDraft,
   writePersistedEditorWorkspace,
   type EditorWorkspaceTab,
   type PersistedEditorWorkspace,
@@ -283,9 +279,7 @@ import EditorStatePanel from "./EditorStatePanel.vue";
 import EditorTabBar from "./EditorTabBar.vue";
 import EditorWelcomeState from "./EditorWelcomeState.vue";
 import {
-  buildNextCanvasViewportDrafts,
   listTabsMissingDocumentDrafts,
-  listTabsMissingViewportDrafts,
   resolveExistingGraphDocumentHydrationSource,
   resolveUnsavedGraphDocumentHydrationSource,
   resolveWorkspaceDraftPersistenceRequest,
@@ -294,11 +288,11 @@ import {
 } from "./editorDraftPersistenceModel.ts";
 import { omitTabScopedRecordEntry, setTabScopedRecordEntry } from "./editorTabRuntimeModel.ts";
 import { formatValidationFeedback } from "./runFeedbackModel.ts";
-import { applyRunWrittenStateValuesToDocument } from "./runStatePersistence.ts";
 import type { WorkspaceSidePanelMode } from "./workspaceSidePanelModel.ts";
 import { buildPythonExportFileName, downloadPythonSource } from "./pythonExportModel.ts";
 import { isGraphiteUiPythonExportFile, isGraphiteUiPythonExportSource } from "./pythonImportModel.ts";
 import { buildPresetPayloadForNode } from "./presetPersistence.ts";
+import { useWorkspaceDocumentState } from "./useWorkspaceDocumentState.ts";
 import { useWorkspaceRunVisualState, type WorkspaceRunFeedback } from "./useWorkspaceRunVisualState.ts";
 import { useWorkspaceSidePanelController } from "./useWorkspaceSidePanelController.ts";
 import { useWorkspaceGraphMutationActions } from "./useWorkspaceGraphMutationActions.ts";
@@ -413,6 +407,24 @@ const {
   runFailureMessageByTabId,
   activeRunEdgeIdsByTabId,
   feedbackByTabId,
+});
+const {
+  registerDocumentForTab,
+  ensureTabViewportDrafts,
+  updateCanvasViewportForTab,
+  persistRunStateValuesForTab,
+  commitDirtyDocumentForTab,
+  markDocumentDirty,
+} = useWorkspaceDocumentState({
+  workspace,
+  documentsByTabId,
+  loadingByTabId,
+  errorByTabId,
+  feedbackByTabId,
+  viewportByTabId,
+  updateWorkspace,
+  setMessageFeedbackForTab,
+  guardGraphEditForTab,
 });
 const activeTabRouteSignature = computed(() => {
   const tab = activeTab.value;
@@ -604,45 +616,6 @@ function updateWorkspaceTab(tabId: string, updater: (tab: EditorWorkspaceTab) =>
     ...workspace.value,
     tabs: workspace.value.tabs.map((tab) => (tab.tabId === tabId ? updater(tab) : tab)),
   });
-}
-
-function registerDocumentForTab(tabId: string, graph: GraphPayload | GraphDocument) {
-  const syncedDocument = syncKnowledgeBaseSkillsInDocument(graph);
-  documentsByTabId.value = setTabScopedRecordEntry(documentsByTabId.value, tabId, syncedDocument);
-  writePersistedEditorDocumentDraft(tabId, syncedDocument);
-  loadingByTabId.value = setTabScopedRecordEntry(loadingByTabId.value, tabId, false);
-  errorByTabId.value = setTabScopedRecordEntry(errorByTabId.value, tabId, null);
-  if (!feedbackByTabId.value[tabId]) {
-    setMessageFeedbackForTab(tabId, {
-      tone: "neutral",
-      message: `Ready to edit ${syncedDocument.name}.`,
-    });
-  }
-}
-
-function ensureTabViewportDrafts() {
-  let nextViewports = viewportByTabId.value;
-  for (const tabId of listTabsMissingViewportDrafts(workspace.value.tabs, viewportByTabId.value)) {
-    const persistedViewport = readPersistedEditorViewportDraft(tabId);
-    if (!persistedViewport) {
-      continue;
-    }
-    nextViewports = buildNextCanvasViewportDrafts(nextViewports, tabId, persistedViewport) ?? nextViewports;
-  }
-
-  if (nextViewports !== viewportByTabId.value) {
-    viewportByTabId.value = nextViewports;
-  }
-}
-
-function updateCanvasViewportForTab(tabId: string, viewport: CanvasViewport) {
-  const nextViewports = buildNextCanvasViewportDrafts(viewportByTabId.value, tabId, viewport);
-  if (!nextViewports) {
-    return;
-  }
-
-  viewportByTabId.value = nextViewports;
-  writePersistedEditorViewportDraft(tabId, viewport);
 }
 
 function clearTabRuntime(tabId: string) {
@@ -900,24 +873,6 @@ function discardPendingClose() {
   closeError.value = null;
 }
 
-function setDocumentForTab(tabId: string, nextDocument: GraphPayload | GraphDocument) {
-  const syncedDocument = syncKnowledgeBaseSkillsInDocument(nextDocument);
-  documentsByTabId.value = setTabScopedRecordEntry(documentsByTabId.value, tabId, syncedDocument);
-  writePersistedEditorDocumentDraft(tabId, syncedDocument);
-}
-
-function persistRunStateValuesForTab(tabId: string, run: RunDetail) {
-  const document = documentsByTabId.value[tabId];
-  if (!document) {
-    return;
-  }
-
-  const nextDocument = applyRunWrittenStateValuesToDocument(document, run);
-  if (nextDocument !== document) {
-    setDocumentForTab(tabId, nextDocument);
-  }
-}
-
 function isGraphInteractionLocked(tabId: string) {
   return latestRunDetailByTabId.value[tabId]?.status === "awaiting_human";
 }
@@ -1136,24 +1091,6 @@ function handleNodeSizeUpdate(tabId: string, payload: { nodeId: string; position
   const nextDocument = cloneGraphDocument(document);
   nextDocument.nodes[payload.nodeId].ui.position = payload.position;
   nextDocument.nodes[payload.nodeId].ui.size = payload.size;
-  commitDirtyDocumentForTab(tabId, nextDocument);
-}
-
-function commitDirtyDocumentForTab(tabId: string, nextDocument: GraphPayload | GraphDocument) {
-  setDocumentForTab(tabId, nextDocument);
-  updateWorkspace(
-    applyDocumentMetaToWorkspaceTab(workspace.value, tabId, {
-      title: nextDocument.name,
-      dirty: true,
-      graphId: "graph_id" in nextDocument ? nextDocument.graph_id ?? null : null,
-    }),
-  );
-}
-
-function markDocumentDirty(tabId: string, nextDocument: GraphPayload | GraphDocument) {
-  if (guardGraphEditForTab(tabId)) {
-    return;
-  }
   commitDirtyDocumentForTab(tabId, nextDocument);
 }
 

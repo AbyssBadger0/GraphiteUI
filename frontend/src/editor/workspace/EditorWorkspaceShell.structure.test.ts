@@ -16,6 +16,7 @@ const componentSource = readWorkspaceSource("EditorWorkspaceShell.vue");
 const graphMutationActionsSource = readWorkspaceSource("useWorkspaceGraphMutationActions.ts");
 const sidePanelControllerSource = readWorkspaceSource("useWorkspaceSidePanelController.ts");
 const runVisualStateSource = readWorkspaceSource("useWorkspaceRunVisualState.ts");
+const documentStateSource = readWorkspaceSource("useWorkspaceDocumentState.ts");
 
 test("EditorWorkspaceShell renders workspace panes without reka-ui tab primitives", () => {
   assert.doesNotMatch(componentSource, /from "reka-ui"/);
@@ -222,25 +223,26 @@ test("EditorWorkspaceShell routes menu selections and dropped files through the 
 
 test("EditorWorkspaceShell keeps canvas viewport state in local editor drafts", () => {
   const ensureViewportSource =
-    componentSource.match(/function ensureTabViewportDrafts\(\) \{[\s\S]*?\n\}\n\nfunction updateCanvasViewportForTab/)?.[0] ?? "";
+    documentStateSource.match(/function ensureTabViewportDrafts\(\) \{[\s\S]*?\n  \}\n\n  function updateCanvasViewportForTab/)?.[0] ?? "";
   const updateViewportSource =
-    componentSource.match(/function updateCanvasViewportForTab\(tabId: string, viewport: CanvasViewport\) \{[\s\S]*?\n\}\n\nfunction clearTabRuntime/)?.[0] ?? "";
+    documentStateSource.match(/function updateCanvasViewportForTab\(tabId: string, viewport: CanvasViewport\) \{[\s\S]*?\n  \}\n\n  function persistRunStateValuesForTab/)?.[0] ?? "";
 
-  assert.match(componentSource, /import \{[\s\S]*buildNextCanvasViewportDrafts,[\s\S]*listTabsMissingViewportDrafts[\s\S]*\} from "\.\/editorDraftPersistenceModel\.ts";/);
-  assert.match(componentSource, /readPersistedEditorViewportDraft/);
-  assert.match(componentSource, /writePersistedEditorViewportDraft/);
+  assert.match(componentSource, /import \{ useWorkspaceDocumentState \} from "\.\/useWorkspaceDocumentState\.ts";/);
+  assert.match(documentStateSource, /import \{[\s\S]*buildNextCanvasViewportDrafts,[\s\S]*listTabsMissingViewportDrafts[\s\S]*\} from "\.\/editorDraftPersistenceModel\.ts";/);
+  assert.match(documentStateSource, /readPersistedEditorViewportDraft/);
+  assert.match(documentStateSource, /writePersistedEditorViewportDraft/);
   assert.match(componentSource, /prunePersistedEditorViewportDrafts/);
   assert.match(componentSource, /removePersistedEditorViewportDraft/);
   assert.match(componentSource, /const viewportByTabId = ref<Record<string, CanvasViewport>>\(\{\}\);/);
   assert.match(componentSource, /:initial-viewport="viewportByTabId\[tab\.tabId\] \?\? null"/);
   assert.match(componentSource, /@update:viewport="updateCanvasViewportForTab\(tab\.tabId, \$event\)"/);
-  assert.match(componentSource, /function ensureTabViewportDrafts\(\)/);
-  assert.match(componentSource, /function updateCanvasViewportForTab\(tabId: string, viewport: CanvasViewport\)/);
-  assert.match(ensureViewportSource, /for \(const tabId of listTabsMissingViewportDrafts\(workspace\.value\.tabs, viewportByTabId\.value\)\)/);
+  assert.match(componentSource, /ensureTabViewportDrafts,/);
+  assert.match(componentSource, /updateCanvasViewportForTab,/);
+  assert.match(ensureViewportSource, /for \(const tabId of listTabsMissingViewportDrafts\(input\.workspace\.value\.tabs, input\.viewportByTabId\.value\)\)/);
   assert.doesNotMatch(ensureViewportSource, /for \(const tab of workspace\.value\.tabs\)/);
-  assert.match(updateViewportSource, /const nextViewports = buildNextCanvasViewportDrafts\(viewportByTabId\.value, tabId, viewport\);/);
+  assert.match(updateViewportSource, /const nextViewports = buildNextCanvasViewportDrafts\(input\.viewportByTabId\.value, tabId, viewport\);/);
   assert.doesNotMatch(updateViewportSource, /previousViewport\.x === viewport\.x/);
-  assert.match(componentSource, /writePersistedEditorViewportDraft\(tabId, viewport\)/);
+  assert.match(documentStateSource, /writePersistedEditorViewportDraft\(tabId, viewport\)/);
 });
 
 test("EditorWorkspaceShell imports marked GraphiteUI Python files as new graph tabs", () => {
@@ -383,7 +385,7 @@ test("EditorWorkspaceShell persists graph document drafts across route changes a
 
   assert.match(componentSource, /import \{[\s\S]*listTabsMissingDocumentDrafts,[\s\S]*resolveExistingGraphDocumentHydrationSource,[\s\S]*resolveUnsavedGraphDocumentHydrationSource,[\s\S]*shouldHydrateExistingGraphDocument[\s\S]*\} from "\.\/editorDraftPersistenceModel\.ts";/);
   assert.match(componentSource, /readPersistedEditorDocumentDraft/);
-  assert.match(componentSource, /writePersistedEditorDocumentDraft/);
+  assert.match(documentStateSource, /writePersistedEditorDocumentDraft/);
   assert.match(componentSource, /removePersistedEditorDocumentDraft/);
   assert.match(componentSource, /prunePersistedEditorDocumentDrafts/);
   assert.match(ensureDocumentsSource, /for \(const tab of listTabsMissingDocumentDrafts\(workspace\.value\.tabs, documentsByTabId\.value\)\)/);
@@ -394,7 +396,7 @@ test("EditorWorkspaceShell persists graph document drafts across route changes a
   assert.match(loadExistingSource, /const hydrationSource = resolveExistingGraphDocumentHydrationSource\(\{ persistedDraft, cachedGraph: null \}\);/);
   assert.match(openExistingSource, /if \(nextTabId && shouldHydrateExistingGraphDocument\(\{ hasDocument: Boolean\(documentsByTabId\.value\[nextTabId\]\), isLoading: Boolean\(loadingByTabId\.value\[nextTabId\]\) \}\)\)/);
   assert.match(openExistingSource, /const hydrationSource = resolveExistingGraphDocumentHydrationSource\(\{ persistedDraft, cachedGraph: graph \}\);/);
-  assert.match(componentSource, /writePersistedEditorDocumentDraft\(tabId, syncedDocument\);/);
+  assert.match(documentStateSource, /writePersistedEditorDocumentDraft\(tabId, syncedDocument\);/);
   assert.match(componentSource, /removePersistedEditorDocumentDraft\(tabId\);/);
   assert.match(componentSource, /prunePersistedEditorDocumentDrafts\(persistenceRequest\.tabIds\);/);
 });
@@ -451,7 +453,7 @@ test("EditorWorkspaceShell delegates tab runtime feedback and preview writes to 
 
 test("EditorWorkspaceShell delegates run visual tab-state writes to the runtime model", () => {
   const applyRunVisualSource = runVisualStateSource;
-  const pollRunSource = componentSource.match(/async function pollRunForTab\([\s\S]*?\n\}\n\nfunction ensureTabViewportDrafts/)?.[0] ?? "";
+  const pollRunSource = componentSource.match(/async function pollRunForTab\([\s\S]*?\n\}\n\nfunction ensureUnsavedTabDocuments/)?.[0] ?? "";
 
   assert.match(
     applyRunVisualSource,
@@ -486,21 +488,20 @@ test("EditorWorkspaceShell delegates run visual tab-state writes to the runtime 
 });
 
 test("EditorWorkspaceShell delegates document load tab-state writes to the runtime model", () => {
-  const registerDocumentSource =
-    componentSource.match(/function registerDocumentForTab\([\s\S]*?\n\}\n\nfunction ensureTabViewportDrafts/)?.[0] ?? "";
+  const registerDocumentSource = documentStateSource;
   const loadExistingSource =
     componentSource.match(/async function loadExistingGraphIntoTab\(tabId: string, graphId: string\) \{[\s\S]*?\n\}\n\nfunction openExistingGraph/)?.[0] ?? "";
 
-  assert.match(registerDocumentSource, /documentsByTabId\.value = setTabScopedRecordEntry\(documentsByTabId\.value, tabId, syncedDocument\);/);
-  assert.match(registerDocumentSource, /loadingByTabId\.value = setTabScopedRecordEntry\(loadingByTabId\.value, tabId, false\);/);
-  assert.match(registerDocumentSource, /errorByTabId\.value = setTabScopedRecordEntry\(errorByTabId\.value, tabId, null\);/);
+  assert.match(registerDocumentSource, /input\.documentsByTabId\.value = setTabScopedRecordEntry\(input\.documentsByTabId\.value, tabId, syncedDocument\);/);
+  assert.match(registerDocumentSource, /input\.loadingByTabId\.value = setTabScopedRecordEntry\(input\.loadingByTabId\.value, tabId, false\);/);
+  assert.match(registerDocumentSource, /input\.errorByTabId\.value = setTabScopedRecordEntry\(input\.errorByTabId\.value, tabId, null\);/);
   assert.match(loadExistingSource, /loadingByTabId\.value = setTabScopedRecordEntry\(loadingByTabId\.value, tabId, true\);/);
   assert.match(loadExistingSource, /errorByTabId\.value = setTabScopedRecordEntry\(errorByTabId\.value, tabId, null\);/);
   assert.match(
     loadExistingSource,
     /errorByTabId\.value = setTabScopedRecordEntry\(errorByTabId\.value, tabId, error instanceof Error \? error\.message : "Failed to load graph\."\);/,
   );
-  assert.doesNotMatch(registerDocumentSource, /documentsByTabId\.value = \{/);
+  assert.doesNotMatch(registerDocumentSource, /input\.documentsByTabId\.value = \{/);
   assert.doesNotMatch(loadExistingSource, /loadingByTabId\.value = \{/);
 });
 
@@ -531,12 +532,10 @@ test("EditorWorkspaceShell delegates run invocation tab-state writes to the runt
 });
 
 test("EditorWorkspaceShell delegates panel and focus tab-state writes to the runtime model", () => {
-  const setDocumentSource =
-    componentSource.match(/function setDocumentForTab\(tabId: string, nextDocument: GraphPayload \| GraphDocument\) \{[\s\S]*?\n\}\n\nfunction persistRunStateValuesForTab/)?.[0] ??
-    "";
+  const setDocumentSource = documentStateSource;
   const panelFocusSource = sidePanelControllerSource;
 
-  assert.match(setDocumentSource, /documentsByTabId\.value = setTabScopedRecordEntry\(documentsByTabId\.value, tabId, syncedDocument\);/);
+  assert.match(setDocumentSource, /input\.documentsByTabId\.value = setTabScopedRecordEntry\(input\.documentsByTabId\.value, tabId, syncedDocument\);/);
   assert.match(
     panelFocusSource,
     /input\.statePanelOpenByTabId\.value = setTabScopedRecordEntry\(input\.statePanelOpenByTabId\.value, tabId, !isStatePanelOpen\(tabId\)\);/,
@@ -550,7 +549,7 @@ test("EditorWorkspaceShell delegates panel and focus tab-state writes to the run
     /input\.focusRequestByTabId\.value = setTabScopedRecordEntry\(\s*input\.focusRequestByTabId\.value,\s*tabId,\s*\{\s*nodeId,\s*sequence: previousSequence \+ 1,\s*\}\s*\);/,
   );
   assert.match(panelFocusSource, /input\.sidePanelModeByTabId\.value = setTabScopedRecordEntry\(input\.sidePanelModeByTabId\.value, tabId, "state"\);/);
-  assert.doesNotMatch(setDocumentSource, /documentsByTabId\.value = \{/);
+  assert.doesNotMatch(setDocumentSource, /input\.documentsByTabId\.value = \{/);
   assert.doesNotMatch(panelFocusSource, /input\.statePanelOpenByTabId\.value = \{/);
   assert.doesNotMatch(panelFocusSource, /input\.sidePanelModeByTabId\.value = \{/);
   assert.doesNotMatch(panelFocusSource, /input\.focusedNodeIdByTabId\.value = \{/);
@@ -558,22 +557,18 @@ test("EditorWorkspaceShell delegates panel and focus tab-state writes to the run
 });
 
 test("EditorWorkspaceShell centralizes dirty graph document commits", () => {
-  const commitSource =
-    componentSource.match(/function commitDirtyDocumentForTab\(tabId: string, nextDocument: GraphPayload \| GraphDocument\) \{[\s\S]*?\n\}\n\nfunction markDocumentDirty/)?.[0] ??
-    "";
-  const markDocumentDirtySource =
-    componentSource.match(/function markDocumentDirty\(tabId: string, nextDocument: GraphPayload \| GraphDocument\) \{[\s\S]*?\n\}\n\nconst \{/)?.[0] ??
-    "";
+  const commitSource = documentStateSource;
+  const markDocumentDirtySource = documentStateSource;
   const positionSource =
     componentSource.match(/function handleNodePositionUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition \}\) \{[\s\S]*?\n\}\n\nfunction handleNodeSizeUpdate/)?.[0] ??
     "";
   const sizeSource =
-    componentSource.match(/function handleNodeSizeUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition; size: GraphNodeSize \}\) \{[\s\S]*?\n\}\n\nfunction commitDirtyDocumentForTab/)?.[0] ??
+    componentSource.match(/function handleNodeSizeUpdate\(tabId: string, payload: \{ nodeId: string; position: GraphPosition; size: GraphNodeSize \}\) \{[\s\S]*?\n\}\n\nconst \{/)?.[0] ??
     "";
   const renameSource = componentSource.match(/function renameActiveGraph\(name: string\) \{[\s\S]*?\n\}\n\nasync function saveTab/)?.[0] ?? "";
 
   assert.match(commitSource, /setDocumentForTab\(tabId, nextDocument\);/);
-  assert.match(commitSource, /applyDocumentMetaToWorkspaceTab\(workspace\.value, tabId, \{/);
+  assert.match(commitSource, /applyDocumentMetaToWorkspaceTab\(input\.workspace\.value, tabId, \{/);
   assert.match(commitSource, /dirty: true,/);
   assert.match(markDocumentDirtySource, /commitDirtyDocumentForTab\(tabId, nextDocument\);/);
   assert.match(positionSource, /commitDirtyDocumentForTab\(tabId, nextDocument\);/);
@@ -625,10 +620,10 @@ test("EditorWorkspaceShell centralizes simple graph mutation commits", () => {
 });
 
 test("EditorWorkspaceShell persists terminal run state values into the graph draft", () => {
-  assert.match(componentSource, /import \{ applyRunWrittenStateValuesToDocument \} from "\.\/runStatePersistence\.ts";/);
-  assert.match(componentSource, /function persistRunStateValuesForTab\(tabId: string, run: RunDetail\)/);
-  assert.match(componentSource, /const nextDocument = applyRunWrittenStateValuesToDocument\(document, run\);/);
-  assert.match(componentSource, /if \(nextDocument !== document\) \{[\s\S]*setDocumentForTab\(tabId, nextDocument\);[\s\S]*\}/);
+  assert.match(documentStateSource, /import \{ applyRunWrittenStateValuesToDocument \} from "\.\/runStatePersistence\.ts";/);
+  assert.match(documentStateSource, /function persistRunStateValuesForTab\(tabId: string, run: RunDetail\)/);
+  assert.match(documentStateSource, /const nextDocument = applyRunWrittenStateValuesToDocument\(document, run\);/);
+  assert.match(documentStateSource, /if \(nextDocument !== document\) \{[\s\S]*setDocumentForTab\(tabId, nextDocument\);[\s\S]*\}/);
   assert.match(componentSource, /persistRunStateValuesForTab\(tabId, run\);/);
 });
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Annotated, Any
 
 from langgraph.graph import END, START
@@ -17,6 +18,18 @@ def build_after_breakpoint_passthrough_callable():
         return {}
 
     return _call
+
+
+def build_langgraph_execution_edge_indexes(
+    execution_edges: list[Any],
+) -> tuple[dict[str, list[Any]], dict[tuple[str, str | None, str], str]]:
+    outgoing_edges_by_source: defaultdict[str, list[Any]] = defaultdict(list)
+    conditional_edge_ids: dict[tuple[str, str | None, str], str] = {}
+    for edge in execution_edges:
+        outgoing_edges_by_source[edge.source].append(edge)
+        if edge.kind == "conditional":
+            conditional_edge_ids[(edge.source, edge.branch, edge.target)] = edge.id
+    return dict(outgoing_edges_by_source), conditional_edge_ids
 
 
 def runtime_graph_endpoint(node_name: str) -> str:

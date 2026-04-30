@@ -1,5 +1,48 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 137
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `3a2882a` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 136 findings, and remaining frontend/backend high-line-count files.
+  - Chose the LangGraph execution-edge index helper slice because it is pure data construction before graph compilation and does not change node execution, conditional route evaluation, checkpointing, or frontend interactions.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Extended `backend/tests/test_langgraph_runtime_setup.py` to cover outgoing edge grouping and conditional edge id indexing.
+  - Verified the expected red failure because `build_langgraph_execution_edge_indexes` was not exported yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `build_langgraph_execution_edge_indexes` to `backend/app/core/langgraph/runtime_setup.py`.
+  - Updated `core/langgraph/runtime.py` to consume the extracted index builder instead of constructing `defaultdict` indexes inline.
+  - Reduced `backend/app/core/langgraph/runtime.py` from 486 to 481 lines.
+
+### Phase 4: Verification and Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Ran focused backend LangGraph/runtime regression tests.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Recalculated the full roadmap at about 99.6%, frontend-focused progress at about 98.2%, P2 `EditorCanvas.vue` residual cleanup at about 99%, and backend P4 at about 97.5%.
+  - Opened Phase 138 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red backend test | `python -m pytest backend/tests/test_langgraph_runtime_setup.py` before implementation | Fails because the execution-edge index helper is missing | Failed with `ImportError: cannot import name 'build_langgraph_execution_edge_indexes'` | Passed |
+| Focused backend tests | `python -m pytest backend/tests/test_langgraph_runtime_setup.py backend/tests/test_langgraph_progress.py backend/tests/test_langgraph_migration.py backend/tests/test_langgraph_checkpoint_runtime.py backend/tests/test_langgraph_interrupts.py backend/tests/test_langgraph_cycle_tracker.py backend/tests/test_runtime_summaries.py` | Runtime setup, progress, migration, checkpoint, interrupt, cycle, and summary tests pass | 61 passed | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | Runtime setup test failed because the execution-edge index helper was not exported | Red test before implementation | Added `build_langgraph_execution_edge_indexes`, wired `runtime.py` to use it, and reran focused backend tests successfully. |
+
 ## Session: 2026-04-30 Phase 136
 
 ### Phase 1: Re-orientation

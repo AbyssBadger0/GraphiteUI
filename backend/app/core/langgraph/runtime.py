@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import time
 import threading
-from collections import defaultdict
 from typing import Any
 
 from langgraph.graph import END, START, StateGraph
@@ -44,6 +43,7 @@ from app.core.langgraph.interrupts import (
 from app.core.langgraph.progress import persist_langgraph_progress as _persist_langgraph_progress
 from app.core.langgraph.runtime_setup import (
     build_after_breakpoint_passthrough_callable as _build_after_breakpoint_passthrough_callable,
+    build_langgraph_execution_edge_indexes as _build_langgraph_execution_edge_indexes,
     build_langgraph_state_schema as _build_langgraph_state_schema,
     mark_input_boundaries_success as _mark_input_boundaries_success,
     runtime_graph_endpoint as _runtime_graph_endpoint,
@@ -102,12 +102,7 @@ def execute_node_system_graph_langgraph(
     checkpoint_saver, runtime_config, checkpoint_lookup_config = _build_checkpoint_runtime(graph=graph, state=state)
 
     execution_edges = build_execution_edges(graph)
-    outgoing_edges_by_source: dict[str, list[Any]] = defaultdict(list)
-    conditional_edge_ids: dict[tuple[str, str | None, str], str] = {}
-    for edge in execution_edges:
-        outgoing_edges_by_source[edge.source].append(edge)
-        if edge.kind == "conditional":
-            conditional_edge_ids[(edge.source, edge.branch, edge.target)] = edge.id
+    outgoing_edges_by_source, conditional_edge_ids = _build_langgraph_execution_edge_indexes(execution_edges)
     cycle_tracker = _build_langgraph_cycle_tracker(graph, execution_edges)
     active_edge_ids: set[str] = set()
     node_outputs: dict[str, dict[str, Any]] = {}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -10,6 +11,7 @@ from langgraph.graph import END, START
 
 from app.core.langgraph.runtime_setup import (
     build_after_breakpoint_passthrough_callable,
+    build_langgraph_execution_edge_indexes,
     build_langgraph_state_schema,
     mark_input_boundaries_success,
     runtime_graph_endpoint,
@@ -64,6 +66,22 @@ class LangGraphRuntimeSetupTest(unittest.TestCase):
 
     def test_build_after_breakpoint_passthrough_callable_returns_empty_update(self) -> None:
         self.assertEqual(build_after_breakpoint_passthrough_callable()({"answer": "hello"}), {})
+
+    def test_build_langgraph_execution_edge_indexes_groups_edges_and_conditionals(self) -> None:
+        regular_edge = SimpleNamespace(id="edge-1", source="input_answer", target="agent_answer", kind="regular", branch=None)
+        conditional_edge = SimpleNamespace(
+            id="edge-2",
+            source="agent_answer",
+            target="agent_answer",
+            kind="conditional",
+            branch="retry",
+        )
+
+        outgoing, conditional_ids = build_langgraph_execution_edge_indexes([regular_edge, conditional_edge])
+
+        self.assertEqual(outgoing["input_answer"], [regular_edge])
+        self.assertEqual(outgoing["agent_answer"], [conditional_edge])
+        self.assertEqual(conditional_ids[("agent_answer", "retry", "agent_answer")], "edge-2")
 
     def test_mark_input_boundaries_success_only_marks_input_nodes(self) -> None:
         state = {"node_status_map": {"input_answer": "idle", "agent_answer": "idle"}}

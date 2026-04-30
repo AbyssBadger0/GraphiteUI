@@ -66,6 +66,10 @@ from app.core.runtime.run_artifacts import (
 )
 from app.core.runtime.run_progress import persist_run_progress
 from app.core.runtime.run_events import publish_run_event
+from app.core.runtime.runtime_summaries import (
+    summarize_inputs as _summarize_inputs,
+    summarize_outputs as _summarize_outputs,
+)
 from app.core.runtime.state_io import (
     apply_state_writes as _apply_state_writes,
     collect_node_inputs as _collect_node_inputs,
@@ -234,17 +238,3 @@ def _resolve_agent_runtime_config(node: NodeSystemAgentNode) -> dict[str, Any]:
         normalize_thinking_level_func=normalize_thinking_level,
         resolve_effective_thinking_level_func=resolve_effective_thinking_level,
     )
-
-
-def _summarize_inputs(input_values: dict[str, Any]) -> str:
-    if not input_values:
-        return "no inputs"
-    return str({key: str(value)[:80] for key, value in input_values.items()})[:160]
-
-
-def _summarize_outputs(output_values: dict[str, Any], final_result: Any) -> str:
-    if final_result:
-        return str(final_result)[:160]
-    if output_values:
-        return str({key: str(value)[:80] for key, value in output_values.items()})[:160]
-    return "no outputs"

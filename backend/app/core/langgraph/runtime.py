@@ -17,13 +17,13 @@ from app.core.runtime.execution_graph import (
     build_execution_edges,
     select_active_outgoing_edges,
 )
+from app.core.runtime.output_boundaries import collect_output_boundaries
 from app.core.runtime.run_artifacts import append_run_snapshot, refresh_run_artifacts
 from app.core.runtime.run_events import publish_run_event
 from app.core.runtime.state_io import apply_state_writes, collect_node_inputs, initialize_graph_state
 from app.core.runtime.node_system_executor import (
     _execute_node,
     _persist_run_progress,
-    collect_output_boundaries,
 )
 from app.core.runtime.state import create_initial_run_state, set_run_status, touch_run_lifecycle, utc_now_iso
 from app.core.schemas.node_system import NodeSystemGraphDocument

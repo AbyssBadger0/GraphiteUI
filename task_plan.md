@@ -6,10 +6,10 @@ Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure pr
 ## Progress Accuracy Note
 - The earlier `99.x%` values are no longer treated as the true total optimization progress. They reflected the active frontend cleanup batch getting close to its own tail, not the whole architecture roadmap.
 - The honest full-roadmap progress must include P0 cleanup, P1 `NodeCard.vue`, P2 `EditorCanvas.vue`, P3 `EditorWorkspaceShell.vue`, and P4 backend runtime/provider cleanup.
-- Current conservative estimate after Phase 105: full roadmap is about 87% complete; frontend-focused roadmap is about 83-85% complete; P3 `EditorWorkspaceShell.vue` is about 82% complete; backend P4 is about 58-61% started.
+- Current conservative estimate after Phase 106: full roadmap is about 88% complete; frontend-focused roadmap is about 83-85% complete; P3 `EditorWorkspaceShell.vue` is about 82% complete; backend P4 is about 62-66% started.
 
 ## Current Phase
-Phase 106 in progress
+Phase 107 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -969,12 +969,21 @@ Phase 106 in progress
 - **Status:** completed
 
 ### Phase 106: Executor Output Boundary Collection
-- [ ] Re-read the formal roadmap, Phase 105 findings, and remaining `node_system_executor.py` output boundary/node handler clusters.
-- [ ] Choose the next safest P4 boundary from output boundary collection, output-node execution, agent streaming delta, or node-handler extraction.
+- [x] Re-read the formal roadmap, Phase 105 findings, and remaining `node_system_executor.py` output boundary/node handler clusters.
+- [x] Choose the next safest P4 boundary: output node execution and output boundary collection.
+- [x] Add focused red tests before production changes.
+- [x] Preserve output preview filtering, saved output filtering, output persistence calls, final result selection, streaming delta events, provider behavior, frontend graph interactions, and visual layout.
+- [x] Run focused backend tests, full backend verification when needed, dev restart, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 106 and re-judge total progress.
+- **Status:** completed
+
+### Phase 107: Executor Agent Streaming Boundary
+- [ ] Re-read the formal roadmap, Phase 106 findings, and remaining `node_system_executor.py` agent streaming/node-handler clusters.
+- [ ] Choose the next safest P4 boundary from agent streaming delta callbacks, skill invocation helpers, reference resolution, or node-handler extraction.
 - [ ] Add focused red tests before production changes.
-- [ ] Preserve output preview filtering, saved output filtering, output persistence calls, final result selection, streaming delta events, provider behavior, frontend graph interactions, and visual layout.
+- [ ] Preserve streaming delta records, completion events, output values, provider behavior, output boundary behavior, frontend graph interactions, and visual layout.
 - [ ] Run focused backend tests, full backend verification when needed, dev restart, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 106 and re-judge total progress.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 107 and re-judge total progress.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -1325,6 +1334,12 @@ Phase 106 in progress
 | P4 backend cleanup after Phase 105 | About 58-61% complete. `node_system_executor.py` is now 633 lines, with input boundary JSON coercion and first-truthy selection isolated in `input_boundary.py`. |
 | Current continuation gate after Phase 105 | Total roadmap progress is still below 100%, so Phase 106 is automatically opened for output boundary collection or node-handler cleanup. |
 | P4 cleanup target for Phase 106 | About 62-66% P4 if output boundary collection, output-node execution, or streaming delta helpers move out with focused runtime tests. |
+| Full roadmap cleanup after Phase 106 | About 88% complete after extracting output node execution and output boundary collection. |
+| Frontend roadmap cleanup after Phase 106 | Still about 83-85%; this phase was backend-only and did not touch graph editing UI. |
+| P3 `EditorWorkspaceShell.vue` cleanup after Phase 106 | Still about 82%; no workspace shell changes in this phase. |
+| P4 backend cleanup after Phase 106 | About 62-66% complete. `node_system_executor.py` is now 547 lines, with output node execution and output boundary collection isolated in `output_boundaries.py`; LangGraph runtime now depends on that module directly. |
+| Current continuation gate after Phase 106 | Total roadmap progress is still below 100%, so Phase 107 is automatically opened for agent streaming or node-handler cleanup. |
+| P4 cleanup target for Phase 107 | About 66-70% P4 if agent streaming delta callbacks or reference/skill helper boundaries move out with focused runtime tests. |
 
 ## Decisions Made
 | Decision | Rationale |

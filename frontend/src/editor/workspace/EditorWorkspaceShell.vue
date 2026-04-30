@@ -212,17 +212,10 @@ import { resolveAgentRuntimeCatalog } from "@/editor/nodes/agentConfigModel";
 import EditorCanvas from "@/editor/canvas/EditorCanvas.vue";
 import type { NodeFocusRequest } from "@/editor/canvas/useNodeSelectionFocus";
 import type { CreatedStateEdgeEditorRequest, NodeCreationMenuState } from "@/editor/workspace/nodeCreationMenuModel";
+import { cloneGraphDocument } from "@/lib/graph-document";
 import {
-  cloneGraphDocument,
-  createEditorSeedDraftGraph,
-  resolveEditorSeedTemplate,
-} from "@/lib/graph-document";
-import {
-  createUnsavedWorkspaceTab,
-  ensureSavedGraphTab,
   prunePersistedEditorDocumentDrafts,
   prunePersistedEditorViewportDrafts,
-  readPersistedEditorDocumentDraft,
   readPersistedEditorWorkspace,
   removePersistedEditorDocumentDraft,
   removePersistedEditorViewportDraft,
@@ -231,7 +224,6 @@ import {
   type PersistedEditorWorkspace,
 } from "@/lib/editor-workspace";
 import type { CanvasViewport } from "@/editor/canvas/canvasViewport";
-import { buildRestoredGraphFromRun, buildSnapshotScopedRun, canRestoreRunDetail, resolveRestoredRunTabTitle } from "@/lib/run-restore";
 import { useGraphDocumentStore } from "@/stores/graphDocument";
 import type { KnowledgeBaseRecord } from "@/types/knowledge";
 import type { RunDetail } from "@/types/run";
@@ -254,20 +246,16 @@ import EditorStatePanel from "./EditorStatePanel.vue";
 import EditorTabBar from "./EditorTabBar.vue";
 import EditorWelcomeState from "./EditorWelcomeState.vue";
 import {
-  listTabsMissingDocumentDrafts,
-  resolveExistingGraphDocumentHydrationSource,
-  resolveUnsavedGraphDocumentHydrationSource,
   resolveWorkspaceDraftPersistenceRequest,
-  shouldHydrateExistingGraphDocument,
   shouldRunWorkspaceDraftHydration,
 } from "./editorDraftPersistenceModel.ts";
-import { setTabScopedRecordEntry } from "./editorTabRuntimeModel.ts";
 import type { WorkspaceSidePanelMode } from "./workspaceSidePanelModel.ts";
 import { downloadPythonSource } from "./pythonExportModel.ts";
 import { isGraphiteUiPythonExportFile, isGraphiteUiPythonExportSource } from "./pythonImportModel.ts";
 import { useWorkspaceDocumentState } from "./useWorkspaceDocumentState.ts";
 import { useWorkspaceGraphPersistenceController } from "./useWorkspaceGraphPersistenceController.ts";
 import { useWorkspaceNodeCreationController } from "./useWorkspaceNodeCreationController.ts";
+import { useWorkspaceOpenController } from "./useWorkspaceOpenController.ts";
 import { useWorkspacePresetController } from "./useWorkspacePresetController.ts";
 import { useWorkspacePythonImportController } from "./useWorkspacePythonImportController.ts";
 import { useWorkspaceRouteController } from "./useWorkspaceRouteController.ts";
@@ -333,7 +321,6 @@ const skillDefinitionsError = ref<string | null>(null);
 const persistedPresets = ref<PresetDocument[]>([]);
 const nodeCreationMenuByTabId = ref<Record<string, NodeCreationMenuState>>({});
 
-const templateById = computed(() => new Map(props.templates.map((template) => [template.template_id, template])));
 const graphById = computed(() => new Map(props.graphs.map((graph) => [graph.graph_id, graph])));
 const agentRuntimeCatalog = computed(() => resolveAgentRuntimeCatalog(settings.value));
 const activeTab = computed(() => workspace.value.tabs.find((tab) => tab.tabId === workspace.value.activeTabId) ?? null);
@@ -449,6 +436,45 @@ const routeSignature = computed(() => {
   }
   return "root";
 });
+let ensureUnsavedTabDocumentsFromController: () => void = () => {
+  throw new Error("Workspace open controller is not initialized.");
+};
+let loadExistingGraphIntoTabFromController: (tabId: string, graphId: string) => Promise<void> = async () => {
+  throw new Error("Workspace open controller is not initialized.");
+};
+let openExistingGraphFromController: (graphId: string, navigation?: "push" | "replace" | "none") => void = () => {
+  throw new Error("Workspace open controller is not initialized.");
+};
+let openNewTabFromController: (templateId: string | null, navigation?: "push" | "replace" | "none") => void = () => {
+  throw new Error("Workspace open controller is not initialized.");
+};
+let openRestoredRunTabFromController: (
+  runId: string,
+  snapshotId: string | null,
+  navigation?: "push" | "replace" | "none",
+) => Promise<void> = async () => {
+  throw new Error("Workspace open controller is not initialized.");
+};
+
+function ensureUnsavedTabDocuments() {
+  ensureUnsavedTabDocumentsFromController();
+}
+
+function openNewTab(templateId: string | null, navigation: "push" | "replace" | "none" = "push") {
+  openNewTabFromController(templateId, navigation);
+}
+
+async function openRestoredRunTab(runId: string, snapshotId: string | null = props.restoreSnapshotId ?? null, navigation: "push" | "replace" | "none" = "push") {
+  await openRestoredRunTabFromController(runId, snapshotId, navigation);
+}
+
+async function loadExistingGraphIntoTab(tabId: string, graphId: string) {
+  await loadExistingGraphIntoTabFromController(tabId, graphId);
+}
+
+function openExistingGraph(graphId: string, navigation: "push" | "replace" | "none" = "push") {
+  openExistingGraphFromController(graphId, navigation);
+}
 const { applyCurrentRouteInstruction, syncRouteToUrl, syncRouteToTab } = useWorkspaceRouteController({
   routeMode: () => props.routeMode,
   routeGraphId: () => props.routeGraphId ?? null,
@@ -466,6 +492,30 @@ const { applyCurrentRouteInstruction, syncRouteToUrl, syncRouteToTab } = useWork
   openNewTab,
   openExistingGraph,
 });
+const workspaceOpenController = useWorkspaceOpenController({
+  workspace,
+  documentsByTabId,
+  loadingByTabId,
+  errorByTabId,
+  restoredRunSnapshotIdByTabId,
+  routeRestoreError,
+  handledRouteSignature,
+  routeSignature,
+  templates: () => props.templates,
+  graphById,
+  updateWorkspace,
+  registerDocumentForTab,
+  fetchGraph,
+  fetchRun,
+  applyRunVisualStateToTab,
+  openHumanReviewPanelForTab,
+  syncRouteToTab,
+});
+ensureUnsavedTabDocumentsFromController = workspaceOpenController.ensureUnsavedTabDocuments;
+loadExistingGraphIntoTabFromController = workspaceOpenController.loadExistingGraphIntoTab;
+openExistingGraphFromController = workspaceOpenController.openExistingGraph;
+openNewTabFromController = workspaceOpenController.openNewTab;
+openRestoredRunTabFromController = workspaceOpenController.openRestoredRunTab;
 const {
   renameActiveGraph,
   saveActiveGraph,
@@ -612,150 +662,6 @@ function updateWorkspaceTab(tabId: string, updater: (tab: EditorWorkspaceTab) =>
     ...workspace.value,
     tabs: workspace.value.tabs.map((tab) => (tab.tabId === tabId ? updater(tab) : tab)),
   });
-}
-
-function createDraftForTab(tab: EditorWorkspaceTab): GraphPayload {
-  if (tab.templateId) {
-    const template = templateById.value.get(tab.templateId);
-    if (template) {
-      const draft = createEditorSeedDraftGraph(props.templates, template.template_id, tab.title);
-      draft.name = tab.title;
-      return draft;
-    }
-  }
-  return createEditorSeedDraftGraph(props.templates, tab.defaultTemplateId ?? null, tab.title);
-}
-
-function ensureUnsavedTabDocuments() {
-  for (const tab of listTabsMissingDocumentDrafts(workspace.value.tabs, documentsByTabId.value)) {
-    const persistedDraft = readPersistedEditorDocumentDraft(tab.tabId);
-    const hydrationSource = resolveUnsavedGraphDocumentHydrationSource(persistedDraft);
-    registerDocumentForTab(tab.tabId, hydrationSource.type === "persisted" ? hydrationSource.document : createDraftForTab(tab));
-  }
-}
-
-function openNewTab(templateId: string | null, navigation: "push" | "replace" | "none" = "push") {
-  const template = templateId ? templateById.value.get(templateId) ?? null : null;
-  const seedTemplate = resolveEditorSeedTemplate(props.templates, template?.template_id ?? null);
-  const draft = createEditorSeedDraftGraph(props.templates, template?.template_id ?? null);
-  const tab = createUnsavedWorkspaceTab({
-    kind: template ? "template" : "new",
-    title: template?.label ?? seedTemplate?.default_graph_name ?? draft.name,
-    templateId: template?.template_id ?? null,
-    defaultTemplateId: template?.template_id ?? null,
-  });
-
-  registerDocumentForTab(tab.tabId, draft);
-  updateWorkspace({
-    activeTabId: tab.tabId,
-    tabs: [...workspace.value.tabs, tab],
-  });
-
-  if (navigation !== "none") {
-    syncRouteToTab(tab, navigation === "replace" ? "replace" : "push");
-  }
-  handledRouteSignature.value = templateId ? `new:${templateId}` : "new:";
-}
-
-async function openRestoredRunTab(runId: string, snapshotId: string | null = props.restoreSnapshotId ?? null, navigation: "push" | "replace" | "none" = "push") {
-  routeRestoreError.value = null;
-
-  try {
-    const run = await fetchRun(runId);
-    if (!canRestoreRunDetail(run)) {
-      throw new Error(`Run ${runId} cannot be restored into the editor.`);
-    }
-    const visualRun = buildSnapshotScopedRun(run, snapshotId);
-    const restoredGraph = buildRestoredGraphFromRun(run, snapshotId);
-    const tab = {
-      ...createUnsavedWorkspaceTab({
-        kind: "new",
-        title: resolveRestoredRunTabTitle(run),
-      }),
-      dirty: true,
-    };
-
-    registerDocumentForTab(tab.tabId, restoredGraph);
-    updateWorkspace({
-      activeTabId: tab.tabId,
-      tabs: [...workspace.value.tabs, tab],
-    });
-    restoredRunSnapshotIdByTabId.value = {
-      ...restoredRunSnapshotIdByTabId.value,
-      [tab.tabId]: snapshotId,
-    };
-    applyRunVisualStateToTab(tab.tabId, run, restoredGraph, visualRun);
-    handledRouteSignature.value = routeSignature.value;
-
-    if (visualRun.status === "awaiting_human" && visualRun.current_node_id) {
-      openHumanReviewPanelForTab(tab.tabId, visualRun.current_node_id);
-    }
-
-    if (navigation !== "none") {
-      syncRouteToTab(tab, navigation === "replace" ? "replace" : "push");
-    }
-  } catch (error) {
-    routeRestoreError.value = error instanceof Error ? error.message : `Failed to restore run ${runId}.`;
-    handledRouteSignature.value = routeSignature.value;
-  }
-}
-
-async function loadExistingGraphIntoTab(tabId: string, graphId: string) {
-  if (!shouldHydrateExistingGraphDocument({ hasDocument: Boolean(documentsByTabId.value[tabId]), isLoading: Boolean(loadingByTabId.value[tabId]) })) {
-    return;
-  }
-
-  loadingByTabId.value = setTabScopedRecordEntry(loadingByTabId.value, tabId, true);
-  errorByTabId.value = setTabScopedRecordEntry(errorByTabId.value, tabId, null);
-
-  try {
-    const persistedDraft = readPersistedEditorDocumentDraft(tabId);
-    const hydrationSource = resolveExistingGraphDocumentHydrationSource({ persistedDraft, cachedGraph: null });
-    if (hydrationSource.type === "persisted") {
-      registerDocumentForTab(tabId, hydrationSource.document);
-      return;
-    }
-    const graph = await fetchGraph(graphId);
-    registerDocumentForTab(tabId, graph);
-  } catch (error) {
-    loadingByTabId.value = setTabScopedRecordEntry(loadingByTabId.value, tabId, false);
-    errorByTabId.value = setTabScopedRecordEntry(errorByTabId.value, tabId, error instanceof Error ? error.message : "Failed to load graph.");
-  }
-}
-
-function openExistingGraph(graphId: string, navigation: "push" | "replace" | "none" = "push") {
-  const graph = graphById.value.get(graphId) ?? null;
-  const nextWorkspace = ensureSavedGraphTab(workspace.value, {
-    graphId,
-    title: graph?.name ?? graphId,
-  });
-  updateWorkspace(nextWorkspace);
-
-  const nextTabId = nextWorkspace.activeTabId;
-  if (nextTabId && shouldHydrateExistingGraphDocument({ hasDocument: Boolean(documentsByTabId.value[nextTabId]), isLoading: Boolean(loadingByTabId.value[nextTabId]) })) {
-    const persistedDraft = readPersistedEditorDocumentDraft(nextTabId);
-    const hydrationSource = resolveExistingGraphDocumentHydrationSource({ persistedDraft, cachedGraph: graph });
-    if (hydrationSource.type === "persisted") {
-      registerDocumentForTab(nextTabId, hydrationSource.document);
-    } else if (hydrationSource.type === "cached-graph") {
-      registerDocumentForTab(nextTabId, cloneGraphDocument(hydrationSource.graph));
-    } else if (hydrationSource.type === "fetch") {
-      void loadExistingGraphIntoTab(nextTabId, graphId);
-    }
-  }
-
-  if (navigation !== "none") {
-    syncRouteToTab(
-      {
-        graphId,
-        kind: "existing",
-        templateId: null,
-        defaultTemplateId: null,
-      },
-      navigation === "replace" ? "replace" : "push",
-    );
-  }
-  handledRouteSignature.value = `existing:${graphId}`;
 }
 
 function isGraphInteractionLocked(tabId: string) {

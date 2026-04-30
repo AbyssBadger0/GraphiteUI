@@ -1,5 +1,59 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 130
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `6ad2e49` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 129 findings, and remaining high-line-count files.
+  - Chose the `EditorWorkspaceShell.vue` open/restore slice because the shell still owned new-tab seeding, unsaved document hydration, existing graph load/open routing, run restore tab creation, and Human Review opening from restored runs.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceOpenController.test.ts` covering new template tab creation and route sync, cached existing graph opening without fetch, persisted draft preference for existing graph loading, and run restore into a dirty unsaved tab with Human Review opening.
+  - Verified the expected red failure because `useWorkspaceOpenController.ts` did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceOpenController.ts`.
+  - Updated `EditorWorkspaceShell.vue` to delegate `ensureUnsavedTabDocuments`, `openNewTab`, `openRestoredRunTab`, `loadExistingGraphIntoTab`, and `openExistingGraph` through the controller while keeping stable wrapper function names for template, route-controller, and watcher wiring.
+  - Kept route instruction dispatch in `useWorkspaceRouteController.ts`, document registration/persistence in `useWorkspaceDocumentState.ts`, run visual state in `useWorkspaceRunVisualState.ts`, and graph mutation/node creation semantics unchanged.
+  - Updated structure tests to lock the open controller boundary.
+  - Reduced `EditorWorkspaceShell.vue` from 1,263 to 1,169 lines.
+
+### Phase 4: Verification and Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Ran focused open controller, workspace-shell structure, route controller, editor route sync, and run restore tests.
+  - Ran TypeScript unused-symbol verification.
+  - Ran the full frontend test suite and production build.
+  - Confirmed the production build still has no Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Confirmed the previous dev session exited after the restart.
+  - Recalculated the full roadmap at about 98.9%, frontend-focused progress at about 96-97%, and P3 `EditorWorkspaceShell.vue` progress at about 99.5%.
+  - Opened Phase 131 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red controller test | `node --test src/editor/workspace/useWorkspaceOpenController.test.ts` before implementation | Fails because the open controller module is missing | Failed with missing module import | Passed |
+| Focused frontend tests | `node --test src/editor/workspace/useWorkspaceOpenController.test.ts src/editor/workspace/EditorWorkspaceShell.structure.test.ts src/editor/workspace/useWorkspaceRouteController.test.ts src/lib/run-restore.test.ts src/lib/editor-route-sync.test.ts` | Open/restore controller and existing route/restore semantics pass | 64 passed | Passed |
+| TypeScript check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | No type or unused-symbol errors | Exit 0 after test fixture type cleanup | Passed |
+| Full frontend tests | `node --test $(rg --files src -g '*.test.ts' \| sort) vite.config.structure.test.ts` | Full frontend suite passes | 924 passed | Passed |
+| Production build | `npm run build` in `frontend` | Build succeeds with no large chunk warning | Exit 0; Vite build completed | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | New controller test expected template-tab title to use `default_graph_name`, but the existing behavior uses the template `label` for the tab title and `default_graph_name` for the draft graph name | First green run after adding the controller | Corrected the test to preserve current behavior. |
+| 2026-04-30 | Structure tests still expected open/restore/draft hydration logic inline in `EditorWorkspaceShell.vue` | First focused structure run after shell integration | Updated assertions to verify `useWorkspaceOpenController.ts` owns new-tab seeding, existing graph hydration, and run restore behavior. |
+| 2026-04-30 | `vue-tsc` flagged test fixture mismatches for `graphById` and optional route sync mode | First TypeScript verification | Used a real `computed` for `graphById` and normalized the optional route mode in the test spy. |
+
 ## Session: 2026-04-30 Phase 129
 
 ### Phase 1: Re-orientation

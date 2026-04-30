@@ -25,6 +25,7 @@ const pythonImportControllerSource = readWorkspaceSource("useWorkspacePythonImpo
 const presetControllerSource = readWorkspaceSource("useWorkspacePresetController.ts");
 const nodeCreationControllerSource = readWorkspaceSource("useWorkspaceNodeCreationController.ts");
 const runLifecycleControllerSource = readWorkspaceSource("useWorkspaceRunLifecycleController.ts");
+const openControllerSource = readWorkspaceSource("useWorkspaceOpenController.ts");
 
 test("EditorWorkspaceShell renders workspace panes without reka-ui tab primitives", () => {
   assert.doesNotMatch(componentSource, /from "reka-ui"/);
@@ -70,11 +71,13 @@ test("EditorWorkspaceShell loads persisted presets for the node creation menu", 
 });
 
 test("EditorWorkspaceShell seeds plain new tabs from the baseline default template", () => {
-  assert.match(componentSource, /createEditorSeedDraftGraph/);
-  assert.match(componentSource, /resolveEditorSeedTemplate/);
-  assert.match(componentSource, /return createEditorSeedDraftGraph\(props\.templates, tab\.defaultTemplateId \?\? null, tab\.title\);/);
-  assert.match(componentSource, /const seedTemplate = resolveEditorSeedTemplate\(props\.templates, template\?\.template_id \?\? null\);/);
-  assert.match(componentSource, /const draft = createEditorSeedDraftGraph\(props\.templates, template\?\.template_id \?\? null\);/);
+  assert.match(componentSource, /import \{ useWorkspaceOpenController \} from "\.\/useWorkspaceOpenController\.ts";/);
+  assert.match(openControllerSource, /createEditorSeedDraftGraph/);
+  assert.match(openControllerSource, /resolveEditorSeedTemplate/);
+  assert.match(openControllerSource, /return createEditorSeedDraftGraph\(input\.templates\(\), tab\.defaultTemplateId \?\? null, tab\.title\);/);
+  assert.match(openControllerSource, /const seedTemplate = resolveEditorSeedTemplate\(input\.templates\(\), template\?\.template_id \?\? null\);/);
+  assert.match(openControllerSource, /const draft = createEditorSeedDraftGraph\(input\.templates\(\), template\?\.template_id \?\? null\);/);
+  assert.doesNotMatch(componentSource, /createEditorSeedDraftGraph/);
 });
 
 test("EditorWorkspaceShell can restore a past run into a new unsaved tab", () => {
@@ -83,11 +86,12 @@ test("EditorWorkspaceShell can restore a past run into a new unsaved tab", () =>
   assert.match(componentSource, /const routeRestoreError = ref<string \| null>\(null\);/);
   assert.match(componentSource, /const restoredRunSnapshotIdByTabId = ref<Record<string, string \| null>>\(\{\}\);/);
   assert.match(componentSource, /async function openRestoredRunTab\(runId: string, snapshotId: string \| null = props\.restoreSnapshotId \?\? null, navigation: "push" \| "replace" \| "none" = "push"\)/);
-  assert.match(componentSource, /const run = await fetchRun\(runId\);/);
-  assert.match(componentSource, /const visualRun = buildSnapshotScopedRun\(run, snapshotId\);/);
-  assert.match(componentSource, /const restoredGraph = buildRestoredGraphFromRun\(run, snapshotId\);/);
-  assert.match(componentSource, /title: resolveRestoredRunTabTitle\(run\),/);
-  assert.match(componentSource, /restoredRunSnapshotIdByTabId\.value = \{[\s\S]*\[tab\.tabId\]: snapshotId,/);
+  assert.match(componentSource, /await openRestoredRunTabFromController\(runId, snapshotId, navigation\);/);
+  assert.match(openControllerSource, /const run = await input\.fetchRun\(runId\);/);
+  assert.match(openControllerSource, /const visualRun = buildSnapshotScopedRun\(run, snapshotId\);/);
+  assert.match(openControllerSource, /const restoredGraph = buildRestoredGraphFromRun\(run, snapshotId\);/);
+  assert.match(openControllerSource, /title: resolveRestoredRunTabTitle\(run\),/);
+  assert.match(openControllerSource, /input\.restoredRunSnapshotIdByTabId\.value = setTabScopedRecordEntry\(input\.restoredRunSnapshotIdByTabId\.value, tab\.tabId, snapshotId\);/);
   assert.match(componentSource, /import \{ useWorkspaceRouteController \} from "\.\/useWorkspaceRouteController\.ts";/);
   assert.match(routeControllerSource, /if \(instruction\.type === "restore-run"\) \{/);
   assert.match(routeControllerSource, /input\.openRestoredRunTab\(instruction\.runId, instruction\.snapshotId \?\? null, instruction\.navigation\);/);
@@ -294,8 +298,8 @@ test("EditorWorkspaceShell opens the right sidebar in Human Review mode for awai
   assert.match(componentSource, /:run="latestRunDetailByTabId\[tab\.tabId\] \?\? null"/);
   assert.match(runLifecycleControllerSource, /if \(run\.status === "awaiting_human" && run\.current_node_id\) \{/);
   assert.match(runLifecycleControllerSource, /input\.openHumanReviewPanelForTab\(tabId, run\.current_node_id\);/);
-  assert.match(componentSource, /if \(visualRun\.status === "awaiting_human" && visualRun\.current_node_id\) \{/);
-  assert.match(componentSource, /openHumanReviewPanelForTab\(tab\.tabId, visualRun\.current_node_id\);/);
+  assert.match(openControllerSource, /if \(visualRun\.status === "awaiting_human" && visualRun\.current_node_id\) \{/);
+  assert.match(openControllerSource, /input\.openHumanReviewPanelForTab\(tab\.tabId, visualRun\.current_node_id\);/);
   assert.match(componentSource, /<EditorStatePanel[\s\S]*v-else[\s\S]*:run="latestRunDetailByTabId\[tab\.tabId\] \?\? null"/);
 });
 
@@ -408,24 +412,24 @@ test("EditorWorkspaceShell runs the latest document after async model refresh", 
 
 test("EditorWorkspaceShell persists graph document drafts across route changes and app restarts", () => {
   const ensureDocumentsSource =
-    componentSource.match(/function ensureUnsavedTabDocuments\(\) \{[\s\S]*?\n\}\n\nfunction openNewTab/)?.[0] ?? "";
+    openControllerSource.match(/function ensureUnsavedTabDocuments\(\) \{[\s\S]*?\n  \}/)?.[0] ?? "";
   const loadExistingSource =
-    componentSource.match(/async function loadExistingGraphIntoTab\(tabId: string, graphId: string\) \{[\s\S]*?\n\}\n\nfunction openExistingGraph/)?.[0] ?? "";
+    openControllerSource.match(/async function loadExistingGraphIntoTab\(tabId: string, graphId: string\) \{[\s\S]*?\n  \}/)?.[0] ?? "";
   const openExistingSource =
-    componentSource.match(/function openExistingGraph\(graphId: string, navigation: "push" \| "replace" \| "none" = "push"\) \{[\s\S]*?\n\}\n\nfunction isGraphInteractionLocked/)?.[0] ?? "";
+    openControllerSource.match(/function openExistingGraph\(graphId: string, navigation: RouteNavigation = "push"\) \{[\s\S]*?\n  \}/)?.[0] ?? "";
 
-  assert.match(componentSource, /import \{[\s\S]*listTabsMissingDocumentDrafts,[\s\S]*resolveExistingGraphDocumentHydrationSource,[\s\S]*resolveUnsavedGraphDocumentHydrationSource,[\s\S]*shouldHydrateExistingGraphDocument[\s\S]*\} from "\.\/editorDraftPersistenceModel\.ts";/);
-  assert.match(componentSource, /readPersistedEditorDocumentDraft/);
+  assert.match(openControllerSource, /import \{[\s\S]*listTabsMissingDocumentDrafts,[\s\S]*resolveExistingGraphDocumentHydrationSource,[\s\S]*resolveUnsavedGraphDocumentHydrationSource,[\s\S]*shouldHydrateExistingGraphDocument[\s\S]*\} from "\.\/editorDraftPersistenceModel\.ts";/);
+  assert.match(openControllerSource, /readPersistedEditorDocumentDraft/);
   assert.match(documentStateSource, /writePersistedEditorDocumentDraft/);
   assert.match(componentSource, /removePersistedEditorDocumentDraft/);
   assert.match(componentSource, /prunePersistedEditorDocumentDrafts/);
-  assert.match(ensureDocumentsSource, /for \(const tab of listTabsMissingDocumentDrafts\(workspace\.value\.tabs, documentsByTabId\.value\)\)/);
+  assert.match(ensureDocumentsSource, /for \(const tab of listTabsMissingDocumentDrafts\(input\.workspace\.value\.tabs, input\.documentsByTabId\.value\)\)/);
   assert.match(ensureDocumentsSource, /const hydrationSource = resolveUnsavedGraphDocumentHydrationSource\(persistedDraft\);/);
   assert.match(ensureDocumentsSource, /hydrationSource\.type === "persisted" \? hydrationSource\.document : createDraftForTab\(tab\)/);
   assert.doesNotMatch(ensureDocumentsSource, /persistedDraft \?\? createDraftForTab\(tab\)/);
-  assert.match(loadExistingSource, /if \(!shouldHydrateExistingGraphDocument\(\{ hasDocument: Boolean\(documentsByTabId\.value\[tabId\]\), isLoading: Boolean\(loadingByTabId\.value\[tabId\]\) \}\)\)/);
+  assert.match(loadExistingSource, /!shouldHydrateExistingGraphDocument\(\{[\s\S]*hasDocument: Boolean\(input\.documentsByTabId\.value\[tabId\]\),[\s\S]*isLoading: Boolean\(input\.loadingByTabId\.value\[tabId\]\),[\s\S]*\}\)/);
   assert.match(loadExistingSource, /const hydrationSource = resolveExistingGraphDocumentHydrationSource\(\{ persistedDraft, cachedGraph: null \}\);/);
-  assert.match(openExistingSource, /if \(nextTabId && shouldHydrateExistingGraphDocument\(\{ hasDocument: Boolean\(documentsByTabId\.value\[nextTabId\]\), isLoading: Boolean\(loadingByTabId\.value\[nextTabId\]\) \}\)\)/);
+  assert.match(openExistingSource, /nextTabId &&[\s\S]*shouldHydrateExistingGraphDocument\(\{[\s\S]*hasDocument: Boolean\(input\.documentsByTabId\.value\[nextTabId\]\),[\s\S]*isLoading: Boolean\(input\.loadingByTabId\.value\[nextTabId\]\),[\s\S]*\}\)/);
   assert.match(openExistingSource, /const hydrationSource = resolveExistingGraphDocumentHydrationSource\(\{ persistedDraft, cachedGraph: graph \}\);/);
   assert.match(documentStateSource, /writePersistedEditorDocumentDraft\(tabId, syncedDocument\);/);
   assert.match(componentSource, /removeDocumentDraft: removePersistedEditorDocumentDraft,/);
@@ -472,7 +476,7 @@ test("EditorWorkspaceShell delegates tab runtime feedback and preview writes to 
     runLifecycleControllerSource.match(/function applyStreamingOutputPreviewToTab\([\s\S]*?\n  \}/)?.[0] ?? "";
 
   assert.match(
-    componentSource,
+    runLifecycleControllerSource,
     /import \{ setTabScopedRecordEntry \} from "\.\/editorTabRuntimeModel\.ts";/,
   );
   assert.match(componentSource, /import \{ useWorkspaceRunVisualState, type WorkspaceRunFeedback \} from "\.\/useWorkspaceRunVisualState\.ts";/);
@@ -525,19 +529,19 @@ test("EditorWorkspaceShell delegates run visual tab-state writes to the runtime 
 test("EditorWorkspaceShell delegates document load tab-state writes to the runtime model", () => {
   const registerDocumentSource = documentStateSource;
   const loadExistingSource =
-    componentSource.match(/async function loadExistingGraphIntoTab\(tabId: string, graphId: string\) \{[\s\S]*?\n\}\n\nfunction openExistingGraph/)?.[0] ?? "";
+    openControllerSource.match(/async function loadExistingGraphIntoTab\(tabId: string, graphId: string\) \{[\s\S]*?\n  \}/)?.[0] ?? "";
 
   assert.match(registerDocumentSource, /input\.documentsByTabId\.value = setTabScopedRecordEntry\(input\.documentsByTabId\.value, tabId, syncedDocument\);/);
   assert.match(registerDocumentSource, /input\.loadingByTabId\.value = setTabScopedRecordEntry\(input\.loadingByTabId\.value, tabId, false\);/);
   assert.match(registerDocumentSource, /input\.errorByTabId\.value = setTabScopedRecordEntry\(input\.errorByTabId\.value, tabId, null\);/);
-  assert.match(loadExistingSource, /loadingByTabId\.value = setTabScopedRecordEntry\(loadingByTabId\.value, tabId, true\);/);
-  assert.match(loadExistingSource, /errorByTabId\.value = setTabScopedRecordEntry\(errorByTabId\.value, tabId, null\);/);
+  assert.match(loadExistingSource, /input\.loadingByTabId\.value = setTabScopedRecordEntry\(input\.loadingByTabId\.value, tabId, true\);/);
+  assert.match(loadExistingSource, /input\.errorByTabId\.value = setTabScopedRecordEntry\(input\.errorByTabId\.value, tabId, null\);/);
   assert.match(
     loadExistingSource,
-    /errorByTabId\.value = setTabScopedRecordEntry\(errorByTabId\.value, tabId, error instanceof Error \? error\.message : "Failed to load graph\."\);/,
+    /input\.errorByTabId\.value = setTabScopedRecordEntry\(\s*input\.errorByTabId\.value,\s*tabId,\s*error instanceof Error \? error\.message : "Failed to load graph\.",\s*\);/,
   );
   assert.doesNotMatch(registerDocumentSource, /input\.documentsByTabId\.value = \{/);
-  assert.doesNotMatch(loadExistingSource, /loadingByTabId\.value = \{/);
+  assert.doesNotMatch(loadExistingSource, /input\.loadingByTabId\.value = \{/);
 });
 
 test("EditorWorkspaceShell delegates run invocation tab-state writes to the runtime model", () => {

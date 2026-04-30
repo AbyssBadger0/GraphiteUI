@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 61 in progress
+Phase 62 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -567,12 +567,21 @@ Phase 61 in progress
 - **Status:** completed
 
 ### Phase 61: EditorCanvas Pan Pointer Move Gate
-- [ ] Re-read the formal roadmap, Phase 60 findings, and current pan branch in `handleCanvasPointerMove` before changing code.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a pan pointer-move action model around panning/no-op routing after touch, connection, and node drag/resize handling.
-- [ ] Add focused red tests for the selected pan pointer-move boundary before production changes.
-- [ ] Keep actual scheduled `viewport.movePan`, pointer event passing, connection pointer move, node drag/resize, touch pinch handling, and graph interactions stable.
-- [ ] Run focused viewport/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 61.
+- [x] Re-read the formal roadmap, Phase 60 findings, and current pan branch in `handleCanvasPointerMove` before changing code.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is a pan pointer-move action model around panning/no-op routing after touch, connection, and node drag/resize handling.
+- [x] Add focused red tests for the selected pan pointer-move boundary before production changes.
+- [x] Keep actual scheduled `viewport.movePan`, pointer event passing, connection pointer move, node drag/resize, touch pinch handling, and graph interactions stable.
+- [x] Run focused viewport/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 61.
+- **Status:** completed
+
+### Phase 62: EditorCanvas Canvas Point Projection Gate
+- [ ] Re-read the formal roadmap, Phase 61 findings, and current `resolveCanvasPoint` flow before changing code.
+- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a canvas point projection model around missing-canvas fallback and viewport-relative world point projection.
+- [ ] Add focused red tests for the selected canvas point projection boundary before production changes.
+- [ ] Keep actual DOM canvas rect lookup, pending connection fallback point, event coordinate inputs, connection/menu/drop consumers, and graph interactions stable.
+- [ ] Run focused viewport/structure and Canvas interaction regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 62.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -726,6 +735,10 @@ Phase 61 in progress
 | P2 `EditorCanvas.vue` cleanup after Phase 60 | About 88% complete after extracting tracked touch pointer update, pinch preventDefault, and scheduled pinch update routing while preserving pointer cache mutation, connection pointer move, node drag/resize, and panning behavior in the component. |
 | Current continuation gate after Phase 60 | Total roadmap progress is below 100%, so Phase 61 is automatically opened for the next safe P2 Canvas pan pointer-move boundary. |
 | P2 `EditorCanvas.vue` cleanup target for Phase 61 | About 89% if pan pointer-move schedule/no-op routing moves into `canvasViewportInteractionModel.ts` without changing actual `viewport.movePan`, connection pointer move, node drag/resize, or touch pinch behavior. |
+| Overall roadmap cleanup after Phase 61 | About 88% complete after moving pan pointer-move schedule/no-op routing into `canvasViewportInteractionModel.ts`. |
+| P2 `EditorCanvas.vue` cleanup after Phase 61 | About 89% complete after extracting pan pointer-move schedule/no-op routing while preserving actual `viewport.movePan`, connection pointer move, node drag/resize, and touch pinch behavior in the component. |
+| Current continuation gate after Phase 61 | Total roadmap progress is below 100%, so Phase 62 is automatically opened for the next safe P2 Canvas point projection boundary. |
+| P2 `EditorCanvas.vue` cleanup target for Phase 62 | About 90% if missing-canvas fallback and viewport-relative world point projection move into `canvasViewportInteractionModel.ts` without changing DOM rect lookup, pending connection fallback, or connection/drop/menu consumers. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -782,6 +795,7 @@ Phase 61 in progress
 - Phase 58 moves pinch-zoom update action projection into `canvasPinchZoomModel.ts`; `EditorCanvas.vue` keeps active pointer cache updates, DOM canvas rect lookup, actual pinch cleanup, and viewport `zoomAt` execution.
 - Phase 59 moves pinch pointer-release action projection into `canvasPinchZoomModel.ts`; `EditorCanvas.vue` keeps active pointer deletion, actual pinch cleanup/end-pan execution, pointer capture release, connection pointer-up, and node drag/resize release.
 - Phase 60 moves touch pointer-move action projection into `canvasPinchZoomModel.ts`; `EditorCanvas.vue` keeps active pointer cache mutation, event `preventDefault`, scheduled `updatePinchZoom`, connection pointer move, node drag/resize, and panning execution.
+- Phase 61 moves pan pointer-move schedule/no-op routing into `canvasViewportInteractionModel.ts`; `EditorCanvas.vue` keeps actual `scheduleDragFrame` and `viewport.movePan(event)` execution.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

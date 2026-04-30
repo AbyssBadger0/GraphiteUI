@@ -479,6 +479,7 @@ import { buildPinchZoomStart, resolveCanvasPinchPointerReleaseAction, resolveCan
 import type { CanvasPointerDownAction } from "./canvasPinchZoomModel";
 import { buildCanvasViewportStyle, buildZoomPercentLabel } from "./canvasViewportDisplayModel";
 import {
+  resolveCanvasPanPointerMoveAction,
   resolveCanvasWheelZoomRequest,
   resolveCanvasZoomButtonAction,
   type CanvasZoomButtonControl,
@@ -1239,10 +1240,17 @@ function handleCanvasPointerMove(event: PointerEvent) {
   if (handleNodeDragResizePointerMove(event)) {
     return;
   }
-  if (viewport.isPanning.value) {
-    scheduleDragFrame(() => {
-      viewport.movePan(event);
-    });
+  const panPointerMoveAction = resolveCanvasPanPointerMoveAction({
+    isPanning: viewport.isPanning.value,
+  });
+  switch (panPointerMoveAction.type) {
+    case "continue-pointer-move":
+      return;
+    case "schedule-pan-move":
+      scheduleDragFrame(() => {
+        viewport.movePan(event);
+      });
+      return;
   }
 }
 

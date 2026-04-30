@@ -1,5 +1,58 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 122
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `1c5d9db` because the full-roadmap progress is below 100%.
+  - Re-read the formal roadmap, Phase 121 findings, and remaining high-line-count files.
+  - Chose the `EditorWorkspaceShell.vue` tab lifecycle/close cleanup slice because it avoids canvas auto-snapping and node creation context while moving another shell orchestration cluster behind focused controller tests.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceTabLifecycleController.test.ts` covering all tab-scoped runtime record cleanup plus dirty-close confirmation versus clean-tab finalization.
+  - Verified the expected red failure because `useWorkspaceTabLifecycleController.ts` did not exist yet.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Added `useWorkspaceTabLifecycleController.ts`.
+  - Updated `EditorWorkspaceShell.vue` to consume the tab lifecycle controller for activation, reorder, clean/dirty close routing, cancel/discard/save-and-close, persisted draft removal hooks, route fallback after closing the active tab, and runtime cleanup.
+  - Kept actual graph saving, graph fetch/open behavior, run polling/SSE implementation, Human Review routing, node creation execution, and graph mutation action wiring in the shell.
+  - Updated structure tests to lock the new tab lifecycle controller boundary.
+  - Reduced `EditorWorkspaceShell.vue` from 1,831 to 1,762 lines.
+
+### Phase 4: Verification and Progress Gate
+- **Status:** completed
+- Actions taken:
+  - Ran focused tab lifecycle and workspace-shell structure tests.
+  - Ran TypeScript unused-symbol verification; first pass caught an unused shell destructure, then the check passed after narrowing the destructure.
+  - Ran the full frontend test suite and production build.
+  - Confirmed the production build still has no Vite large chunk warning.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed the frontend entry returned HTTP 200 and backend `/health` returned `{"status":"ok"}`.
+  - Confirmed the previous dev session exited after the restart.
+  - Recalculated the full roadmap at about 97%, frontend-focused progress at about 89-90%, and P3 `EditorWorkspaceShell.vue` progress at about 91-92%.
+  - Opened Phase 123 automatically because the full roadmap is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Red controller test | `node --test src/editor/workspace/useWorkspaceTabLifecycleController.test.ts` before implementation | Fails because the tab lifecycle composable is missing | Failed with missing module import | Passed |
+| Focused frontend tests | `node --test src/editor/workspace/useWorkspaceTabLifecycleController.test.ts src/editor/workspace/EditorWorkspaceShell.structure.test.ts` | Focused tab lifecycle and structure tests pass | 38 passed | Passed |
+| TypeScript check | `npx vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` | No type or unused-symbol errors | Exit 0 after removing an unused shell destructure | Passed |
+| Full frontend tests | `node --test $(rg --files src -g '*.test.ts' \| sort) vite.config.structure.test.ts` | Full frontend suite passes | 898 passed | Passed |
+| Production build | `npm run build` in `frontend` | Build succeeds with no large chunk warning | Exit 0; Vite build completed | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | Controller test initially expected `graph_b` after closing the active tab, but the existing route behavior uses `resolveEditorUrl(nextGraphId)` | First green run after implementation | Corrected the test expectation to `/editor/graph_b`, matching the existing route fallback semantics. |
+| 2026-04-30 | `vue-tsc` reported unused `clearTabRuntime` destructuring in `EditorWorkspaceShell.vue` | First TypeScript verification after extraction | Removed the unused shell destructuring while keeping `clearTabRuntime` available inside and covered by the controller tests. |
+
 ## Session: 2026-04-30 Phase 121
 
 ### Phase 1: Re-orientation

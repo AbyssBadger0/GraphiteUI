@@ -231,17 +231,14 @@ import {
 } from "@/lib/graph-document";
 import {
   applyDocumentMetaToWorkspaceTab,
-  closeWorkspaceTabTransition,
   createUnsavedWorkspaceTab,
   ensureSavedGraphTab,
   prunePersistedEditorDocumentDrafts,
   prunePersistedEditorViewportDrafts,
   readPersistedEditorDocumentDraft,
   readPersistedEditorWorkspace,
-  reorderWorkspaceTab,
   removePersistedEditorDocumentDraft,
   removePersistedEditorViewportDraft,
-  resolveEditorUrl,
   resolveWorkspaceTabUrl,
   writePersistedEditorWorkspace,
   type EditorWorkspaceTab,
@@ -286,7 +283,7 @@ import {
   shouldHydrateExistingGraphDocument,
   shouldRunWorkspaceDraftHydration,
 } from "./editorDraftPersistenceModel.ts";
-import { omitTabScopedRecordEntry, setTabScopedRecordEntry } from "./editorTabRuntimeModel.ts";
+import { setTabScopedRecordEntry } from "./editorTabRuntimeModel.ts";
 import { formatValidationFeedback } from "./runFeedbackModel.ts";
 import type { WorkspaceSidePanelMode } from "./workspaceSidePanelModel.ts";
 import { buildPythonExportFileName, downloadPythonSource } from "./pythonExportModel.ts";
@@ -295,6 +292,7 @@ import { buildPresetPayloadForNode } from "./presetPersistence.ts";
 import { useWorkspaceDocumentState } from "./useWorkspaceDocumentState.ts";
 import { useWorkspaceRunVisualState, type WorkspaceRunFeedback } from "./useWorkspaceRunVisualState.ts";
 import { useWorkspaceSidePanelController } from "./useWorkspaceSidePanelController.ts";
+import { useWorkspaceTabLifecycleController } from "./useWorkspaceTabLifecycleController.ts";
 import { useWorkspaceGraphMutationActions } from "./useWorkspaceGraphMutationActions.ts";
 
 type DataEdgeStateEditorRequest = CreatedStateEdgeEditorRequest;
@@ -425,6 +423,47 @@ const {
   updateWorkspace,
   setMessageFeedbackForTab,
   guardGraphEditForTab,
+});
+const {
+  activateTab,
+  reorderTab,
+  requestCloseTab,
+  cancelPendingClose,
+  discardPendingClose,
+  saveAndClosePendingTab,
+} = useWorkspaceTabLifecycleController({
+  workspace,
+  pendingCloseTabId,
+  closeBusy,
+  closeError,
+  documentsByTabId,
+  loadingByTabId,
+  errorByTabId,
+  feedbackByTabId,
+  statePanelOpenByTabId,
+  sidePanelModeByTabId,
+  focusedNodeIdByTabId,
+  focusRequestByTabId,
+  viewportByTabId,
+  runNodeStatusByTabId,
+  currentRunNodeIdByTabId,
+  latestRunDetailByTabId,
+  restoredRunSnapshotIdByTabId,
+  humanReviewBusyByTabId,
+  humanReviewErrorByTabId,
+  runOutputPreviewByTabId,
+  runFailureMessageByTabId,
+  activeRunEdgeIdsByTabId,
+  cancelRunPolling,
+  cancelRunEventStreamForTab,
+  updateWorkspace,
+  writeWorkspace: writePersistedEditorWorkspace,
+  removeDocumentDraft: removePersistedEditorDocumentDraft,
+  removeViewportDraft: removePersistedEditorViewportDraft,
+  syncRouteToTab,
+  syncRouteToUrl,
+  saveTab,
+  closeSaveFailedMessage: () => t("closeDialog.saveFailed"),
 });
 const activeTabRouteSignature = computed(() => {
   const tab = activeTab.value;
@@ -618,29 +657,6 @@ function updateWorkspaceTab(tabId: string, updater: (tab: EditorWorkspaceTab) =>
   });
 }
 
-function clearTabRuntime(tabId: string) {
-  cancelRunPolling(tabId);
-  cancelRunEventStreamForTab(tabId);
-  documentsByTabId.value = omitTabScopedRecordEntry(documentsByTabId.value, tabId);
-  loadingByTabId.value = omitTabScopedRecordEntry(loadingByTabId.value, tabId);
-  errorByTabId.value = omitTabScopedRecordEntry(errorByTabId.value, tabId);
-  feedbackByTabId.value = omitTabScopedRecordEntry(feedbackByTabId.value, tabId);
-  statePanelOpenByTabId.value = omitTabScopedRecordEntry(statePanelOpenByTabId.value, tabId);
-  sidePanelModeByTabId.value = omitTabScopedRecordEntry(sidePanelModeByTabId.value, tabId);
-  focusedNodeIdByTabId.value = omitTabScopedRecordEntry(focusedNodeIdByTabId.value, tabId);
-  focusRequestByTabId.value = omitTabScopedRecordEntry(focusRequestByTabId.value, tabId);
-  viewportByTabId.value = omitTabScopedRecordEntry(viewportByTabId.value, tabId);
-  runNodeStatusByTabId.value = omitTabScopedRecordEntry(runNodeStatusByTabId.value, tabId);
-  currentRunNodeIdByTabId.value = omitTabScopedRecordEntry(currentRunNodeIdByTabId.value, tabId);
-  latestRunDetailByTabId.value = omitTabScopedRecordEntry(latestRunDetailByTabId.value, tabId);
-  restoredRunSnapshotIdByTabId.value = omitTabScopedRecordEntry(restoredRunSnapshotIdByTabId.value, tabId);
-  humanReviewBusyByTabId.value = omitTabScopedRecordEntry(humanReviewBusyByTabId.value, tabId);
-  humanReviewErrorByTabId.value = omitTabScopedRecordEntry(humanReviewErrorByTabId.value, tabId);
-  runOutputPreviewByTabId.value = omitTabScopedRecordEntry(runOutputPreviewByTabId.value, tabId);
-  runFailureMessageByTabId.value = omitTabScopedRecordEntry(runFailureMessageByTabId.value, tabId);
-  activeRunEdgeIdsByTabId.value = omitTabScopedRecordEntry(activeRunEdgeIdsByTabId.value, tabId);
-}
-
 function createDraftForTab(tab: EditorWorkspaceTab): GraphPayload {
   if (tab.templateId) {
     const template = templateById.value.get(tab.templateId);
@@ -810,67 +826,6 @@ function openExistingGraph(graphId: string, navigation: "push" | "replace" | "no
     );
   }
   handledRouteSignature.value = `existing:${graphId}`;
-}
-
-function activateTab(tabId: string) {
-  const tab = workspace.value.tabs.find((entry) => entry.tabId === tabId);
-  if (!tab) {
-    return;
-  }
-  updateWorkspace({
-    ...workspace.value,
-    activeTabId: tabId,
-  });
-  syncRouteToTab(tab);
-}
-
-function reorderTab(sourceTabId: string, targetTabId: string, placement: "before" | "after") {
-  updateWorkspace(reorderWorkspaceTab(workspace.value, sourceTabId, targetTabId, placement));
-}
-
-function finalizeTabClose(tabId: string) {
-  const transition = closeWorkspaceTabTransition(workspace.value, tabId);
-  updateWorkspace(transition.workspace);
-  writePersistedEditorWorkspace(transition.workspace);
-  removePersistedEditorDocumentDraft(tabId);
-  removePersistedEditorViewportDraft(tabId);
-  clearTabRuntime(tabId);
-
-  if (transition.closedActiveTab) {
-    syncRouteToUrl(resolveEditorUrl(transition.nextGraphId));
-  }
-}
-
-function requestCloseTab(tabId: string) {
-  const tab = workspace.value.tabs.find((entry) => entry.tabId === tabId);
-  if (!tab) {
-    return;
-  }
-
-  if (!tab.dirty) {
-    finalizeTabClose(tabId);
-    return;
-  }
-
-  pendingCloseTabId.value = tabId;
-  closeError.value = null;
-}
-
-function cancelPendingClose() {
-  if (closeBusy.value) {
-    return;
-  }
-  pendingCloseTabId.value = null;
-  closeError.value = null;
-}
-
-function discardPendingClose() {
-  if (!pendingCloseTabId.value || closeBusy.value) {
-    return;
-  }
-  finalizeTabClose(pendingCloseTabId.value);
-  pendingCloseTabId.value = null;
-  closeError.value = null;
 }
 
 function isGraphInteractionLocked(tabId: string) {
@@ -1273,30 +1228,6 @@ async function saveActiveGraph() {
     return;
   }
   await saveTab(activeTab.value.tabId);
-}
-
-async function saveAndClosePendingTab() {
-  if (!pendingCloseTabId.value || closeBusy.value) {
-    return;
-  }
-
-  closeBusy.value = true;
-  closeError.value = null;
-
-  try {
-    const success = await saveTab(pendingCloseTabId.value);
-    if (!success) {
-      closeError.value = t("closeDialog.saveFailed");
-      return;
-    }
-    finalizeTabClose(pendingCloseTabId.value);
-    pendingCloseTabId.value = null;
-    closeError.value = null;
-  } catch (error) {
-    closeError.value = error instanceof Error ? error.message : t("closeDialog.saveFailed");
-  } finally {
-    closeBusy.value = false;
-  }
 }
 
 async function validateActiveGraph() {

@@ -12,6 +12,20 @@ export type CanvasPinchZoomStart = {
   centerClientY: number;
 };
 
+export type CanvasPinchZoomUpdateRequest = {
+  clientX: number;
+  clientY: number;
+  canvasLeft: number;
+  canvasTop: number;
+  nextScale: number;
+};
+
+export type CanvasPinchZoomUpdateAction =
+  | { type: "ignore-missing-pinch" }
+  | { type: "clear-pinch-zoom" }
+  | { type: "ignore-non-positive-distance" }
+  | { type: "zoom-at"; request: CanvasPinchZoomUpdateRequest };
+
 type CanvasPointerDownSetupPolicy = {
   focusCanvas?: true;
   preventDefault: true;
@@ -95,5 +109,36 @@ export function buildPinchZoomStart(input: {
     startScale: input.currentScale,
     centerClientX: center.clientX,
     centerClientY: center.clientY,
+  };
+}
+
+export function resolveCanvasPinchZoomUpdateAction(input: {
+  pinch: CanvasPinchZoomStart | null;
+  leftPointer: Pick<CanvasPointerSnapshot, "clientX" | "clientY"> | null;
+  rightPointer: Pick<CanvasPointerSnapshot, "clientX" | "clientY"> | null;
+  canvasRect: { left: number; top: number } | null;
+}): CanvasPinchZoomUpdateAction {
+  if (!input.pinch) {
+    return { type: "ignore-missing-pinch" };
+  }
+  if (!input.leftPointer || !input.rightPointer || !input.canvasRect) {
+    return { type: "clear-pinch-zoom" };
+  }
+
+  const nextDistance = resolvePointerDistance(input.leftPointer, input.rightPointer);
+  if (nextDistance <= 0) {
+    return { type: "ignore-non-positive-distance" };
+  }
+
+  const center = resolvePointerCenter(input.leftPointer, input.rightPointer);
+  return {
+    type: "zoom-at",
+    request: {
+      clientX: center.clientX,
+      clientY: center.clientY,
+      canvasLeft: input.canvasRect.left,
+      canvasTop: input.canvasRect.top,
+      nextScale: input.pinch.startScale * (nextDistance / input.pinch.startDistance),
+    },
   };
 }

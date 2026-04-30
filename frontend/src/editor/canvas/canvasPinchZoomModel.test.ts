@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildPinchZoomStart,
+  resolveCanvasPinchZoomUpdateAction,
   resolveCanvasPointerDownAction,
   resolvePointerCenter,
   resolvePointerDistance,
@@ -70,4 +71,69 @@ test("canvas pinch zoom model resolves pointer-down pan and pinch setup actions"
     clearSelection: true,
     beginPan: true,
   });
+});
+
+test("canvas pinch zoom model resolves update actions", () => {
+  const pinch = {
+    pointerIds: [1, 2] as [number, number],
+    startDistance: 10,
+    startScale: 1.25,
+    centerClientX: 0,
+    centerClientY: 5,
+  };
+
+  assert.deepEqual(
+    resolveCanvasPinchZoomUpdateAction({
+      pinch: null,
+      leftPointer: { clientX: 0, clientY: 0 },
+      rightPointer: { clientX: 0, clientY: 10 },
+      canvasRect: { left: 10, top: 20 },
+    }),
+    { type: "ignore-missing-pinch" },
+  );
+  assert.deepEqual(
+    resolveCanvasPinchZoomUpdateAction({
+      pinch,
+      leftPointer: null,
+      rightPointer: { clientX: 0, clientY: 10 },
+      canvasRect: { left: 10, top: 20 },
+    }),
+    { type: "clear-pinch-zoom" },
+  );
+  assert.deepEqual(
+    resolveCanvasPinchZoomUpdateAction({
+      pinch,
+      leftPointer: { clientX: 0, clientY: 0 },
+      rightPointer: { clientX: 0, clientY: 10 },
+      canvasRect: null,
+    }),
+    { type: "clear-pinch-zoom" },
+  );
+  assert.deepEqual(
+    resolveCanvasPinchZoomUpdateAction({
+      pinch,
+      leftPointer: { clientX: 4, clientY: 4 },
+      rightPointer: { clientX: 4, clientY: 4 },
+      canvasRect: { left: 10, top: 20 },
+    }),
+    { type: "ignore-non-positive-distance" },
+  );
+  assert.deepEqual(
+    resolveCanvasPinchZoomUpdateAction({
+      pinch,
+      leftPointer: { clientX: 4, clientY: 8 },
+      rightPointer: { clientX: 4, clientY: 28 },
+      canvasRect: { left: 10, top: 20 },
+    }),
+    {
+      type: "zoom-at",
+      request: {
+        clientX: 4,
+        clientY: 18,
+        canvasLeft: 10,
+        canvasTop: 20,
+        nextScale: 2.5,
+      },
+    },
+  );
 });

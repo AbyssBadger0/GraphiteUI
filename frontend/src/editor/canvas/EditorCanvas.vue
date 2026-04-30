@@ -475,7 +475,7 @@ import {
 import { useCanvasEdgeInteractions } from "./useCanvasEdgeInteractions";
 import { useCanvasConnectionInteraction } from "./useCanvasConnectionInteraction";
 import { useCanvasNodeMeasurements } from "./useCanvasNodeMeasurements";
-import { buildPinchZoomStart, resolveCanvasPointerDownAction, resolvePointerCenter, resolvePointerDistance } from "./canvasPinchZoomModel";
+import { buildPinchZoomStart, resolveCanvasPinchZoomUpdateAction, resolveCanvasPointerDownAction } from "./canvasPinchZoomModel";
 import type { CanvasPointerDownAction } from "./canvasPinchZoomModel";
 import { buildCanvasViewportStyle, buildZoomPercentLabel } from "./canvasViewportDisplayModel";
 import {
@@ -1119,32 +1119,26 @@ function beginPinchZoomIfReady() {
 
 function updatePinchZoom() {
   const pinch = pinchZoom.value;
-  if (!pinch) {
-    return;
-  }
-
-  const leftPointer = activeCanvasPointers.get(pinch.pointerIds[0]);
-  const rightPointer = activeCanvasPointers.get(pinch.pointerIds[1]);
-  const canvas = canvasRef.value;
-  if (!leftPointer || !rightPointer || !canvas) {
-    clearPinchZoom();
-    return;
-  }
-
-  const nextDistance = resolvePointerDistance(leftPointer, rightPointer);
-  if (nextDistance <= 0) {
-    return;
-  }
-
-  const center = resolvePointerCenter(leftPointer, rightPointer);
-  const rect = canvas.getBoundingClientRect();
-  viewport.zoomAt({
-    clientX: center.clientX,
-    clientY: center.clientY,
-    canvasLeft: rect.left,
-    canvasTop: rect.top,
-    nextScale: pinch.startScale * (nextDistance / pinch.startDistance),
+  const leftPointer = pinch ? activeCanvasPointers.get(pinch.pointerIds[0]) ?? null : null;
+  const rightPointer = pinch ? activeCanvasPointers.get(pinch.pointerIds[1]) ?? null : null;
+  const canvasRect = pinch && leftPointer && rightPointer ? canvasRef.value?.getBoundingClientRect() ?? null : null;
+  const pinchZoomUpdateAction = resolveCanvasPinchZoomUpdateAction({
+    pinch,
+    leftPointer,
+    rightPointer,
+    canvasRect,
   });
+  switch (pinchZoomUpdateAction.type) {
+    case "ignore-missing-pinch":
+    case "ignore-non-positive-distance":
+      return;
+    case "clear-pinch-zoom":
+      clearPinchZoom();
+      return;
+    case "zoom-at":
+      viewport.zoomAt(pinchZoomUpdateAction.request);
+      return;
+  }
 }
 
 function handleCanvasPointerDown(event: PointerEvent) {

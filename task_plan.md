@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 59 in progress
+Phase 60 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -549,12 +549,21 @@ Phase 59 in progress
 - **Status:** completed
 
 ### Phase 59: EditorCanvas Pinch Pointer Release Gate
-- [ ] Re-read the formal roadmap, Phase 58 findings, and current `handleCanvasPointerUp` pinch release flow before changing code.
-- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a pinch pointer-up action model around released pinch-pointer cleanup/end-pan versus normal pointer-up continuation.
-- [ ] Add focused red tests for the selected pinch pointer-up boundary before production changes.
-- [ ] Keep actual active pointer deletion, DOM pointer-capture release, node drag/resize release, connection pointer-up routing, viewport pan end, and graph interactions stable.
+- [x] Re-read the formal roadmap, Phase 58 findings, and current `handleCanvasPointerUp` pinch release flow before changing code.
+- [x] Inspect whether the next safest `EditorCanvas.vue` boundary is a pinch pointer-up action model around released pinch-pointer cleanup/end-pan versus normal pointer-up continuation.
+- [x] Add focused red tests for the selected pinch pointer-up boundary before production changes.
+- [x] Keep actual active pointer deletion, DOM pointer-capture release, node drag/resize release, connection pointer-up routing, viewport pan end, and graph interactions stable.
+- [x] Run focused pinch/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 59.
+- **Status:** completed
+
+### Phase 60: EditorCanvas Touch Pointer Move Gate
+- [ ] Re-read the formal roadmap, Phase 59 findings, and current touch branch in `handleCanvasPointerMove` before changing code.
+- [ ] Inspect whether the next safest `EditorCanvas.vue` boundary is a touch pointer-move action model around tracked touch pointer update, pinch preventDefault, and scheduled pinch update routing.
+- [ ] Add focused red tests for the selected touch pointer-move boundary before production changes.
+- [ ] Keep actual active pointer cache mutation, event `preventDefault`, scheduled `updatePinchZoom`, connection pointer move, node drag/resize, panning, and graph interactions stable.
 - [ ] Run focused pinch/structure and Canvas regression tests, TypeScript checks, full frontend tests or justified targeted regression, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 59.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 60.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -700,6 +709,10 @@ Phase 59 in progress
 | P2 `EditorCanvas.vue` cleanup after Phase 58 | About 86% complete after extracting missing pinch/target cleanup, non-positive distance ignore, and zoom request calculation while preserving active pointer tracking and actual viewport mutation in the component. |
 | Current continuation gate after Phase 58 | Total roadmap progress is below 100%, so Phase 59 is automatically opened for the next safe P2 Canvas pinch pointer-release boundary. |
 | P2 `EditorCanvas.vue` cleanup target for Phase 59 | About 87% if pinch pointer-release cleanup/end-pan routing moves into `canvasPinchZoomModel.ts` without changing pointer capture release, connection pointer-up, or node drag/resize behavior. |
+| Overall roadmap cleanup after Phase 59 | About 86% complete after moving pinch pointer-release routing into `canvasPinchZoomModel.ts`. |
+| P2 `EditorCanvas.vue` cleanup after Phase 59 | About 87% complete after extracting released pinch-pointer cleanup/end-pan routing while preserving active pointer deletion, pointer capture release, connection pointer-up, node drag/resize release, and pan behavior in the component. |
+| Current continuation gate after Phase 59 | Total roadmap progress is below 100%, so Phase 60 is automatically opened for the next safe P2 Canvas touch pointer-move boundary. |
+| P2 `EditorCanvas.vue` cleanup target for Phase 60 | About 88% if touch pointer-move tracked/update-pinch routing moves into `canvasPinchZoomModel.ts` without changing pointer cache mutation, scheduled pinch updates, connection pointer move, node drag/resize, or panning behavior. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -754,6 +767,7 @@ Phase 59 in progress
 - Phase 56 moves minimap center-view action projection into `minimapModel.ts`; `EditorCanvas.vue` keeps canvas size refresh, actual viewport mutation, canvas focus execution, and minimap event binding.
 - Phase 57 moves focus-node viewport action projection into `focusNodeViewport.ts`; `EditorCanvas.vue` keeps node lookup, DOM rect/element measurement, actual node selection, and viewport mutation.
 - Phase 58 moves pinch-zoom update action projection into `canvasPinchZoomModel.ts`; `EditorCanvas.vue` keeps active pointer cache updates, DOM canvas rect lookup, actual pinch cleanup, and viewport `zoomAt` execution.
+- Phase 59 moves pinch pointer-release action projection into `canvasPinchZoomModel.ts`; `EditorCanvas.vue` keeps active pointer deletion, actual pinch cleanup/end-pan execution, pointer capture release, connection pointer-up, and node drag/resize release.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

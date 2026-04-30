@@ -26,6 +26,10 @@ export type CanvasPinchZoomUpdateAction =
   | { type: "ignore-non-positive-distance" }
   | { type: "zoom-at"; request: CanvasPinchZoomUpdateRequest };
 
+export type CanvasPinchPointerReleaseAction =
+  | { type: "end-pinch-zoom" }
+  | { type: "continue-pointer-up" };
+
 type CanvasPointerDownSetupPolicy = {
   focusCanvas?: true;
   preventDefault: true;
@@ -141,4 +145,15 @@ export function resolveCanvasPinchZoomUpdateAction(input: {
       nextScale: input.pinch.startScale * (nextDistance / input.pinch.startDistance),
     },
   };
+}
+
+export function resolveCanvasPinchPointerReleaseAction(input: {
+  pinch: Pick<CanvasPinchZoomStart, "pointerIds"> | null;
+  pointerId: number;
+}): CanvasPinchPointerReleaseAction {
+  if (input.pinch?.pointerIds.includes(input.pointerId)) {
+    return { type: "end-pinch-zoom" };
+  }
+
+  return { type: "continue-pointer-up" };
 }

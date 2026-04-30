@@ -475,7 +475,7 @@ import {
 import { useCanvasEdgeInteractions } from "./useCanvasEdgeInteractions";
 import { useCanvasConnectionInteraction } from "./useCanvasConnectionInteraction";
 import { useCanvasNodeMeasurements } from "./useCanvasNodeMeasurements";
-import { buildPinchZoomStart, resolveCanvasPinchZoomUpdateAction, resolveCanvasPointerDownAction } from "./canvasPinchZoomModel";
+import { buildPinchZoomStart, resolveCanvasPinchPointerReleaseAction, resolveCanvasPinchZoomUpdateAction, resolveCanvasPointerDownAction } from "./canvasPinchZoomModel";
 import type { CanvasPointerDownAction } from "./canvasPinchZoomModel";
 import { buildCanvasViewportStyle, buildZoomPercentLabel } from "./canvasViewportDisplayModel";
 import {
@@ -1237,10 +1237,17 @@ function handleCanvasPointerMove(event: PointerEvent) {
 function handleCanvasPointerUp(event: PointerEvent) {
   flushScheduledDragFrame();
   activeCanvasPointers.delete(event.pointerId);
-  if (pinchZoom.value?.pointerIds.includes(event.pointerId)) {
-    clearPinchZoom();
-    viewport.endPan();
-    return;
+  const pinchPointerReleaseAction = resolveCanvasPinchPointerReleaseAction({
+    pinch: pinchZoom.value,
+    pointerId: event.pointerId,
+  });
+  switch (pinchPointerReleaseAction.type) {
+    case "end-pinch-zoom":
+      clearPinchZoom();
+      viewport.endPan();
+      return;
+    case "continue-pointer-up":
+      break;
   }
   if (canvasRef.value?.hasPointerCapture(event.pointerId)) {
     canvasRef.value.releasePointerCapture(event.pointerId);

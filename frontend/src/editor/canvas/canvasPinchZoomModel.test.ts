@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildPinchZoomStart,
+  resolveCanvasPinchPointerReleaseAction,
   resolveCanvasPinchZoomUpdateAction,
   resolveCanvasPointerDownAction,
   resolvePointerCenter,
@@ -136,4 +137,24 @@ test("canvas pinch zoom model resolves update actions", () => {
       },
     },
   );
+});
+
+test("canvas pinch zoom model resolves pointer release actions", () => {
+  const pinch = {
+    pointerIds: [1, 2] as [number, number],
+    startDistance: 10,
+    startScale: 1.25,
+    centerClientX: 0,
+    centerClientY: 5,
+  };
+
+  assert.deepEqual(resolveCanvasPinchPointerReleaseAction({ pinch: null, pointerId: 1 }), {
+    type: "continue-pointer-up",
+  });
+  assert.deepEqual(resolveCanvasPinchPointerReleaseAction({ pinch, pointerId: 1 }), {
+    type: "end-pinch-zoom",
+  });
+  assert.deepEqual(resolveCanvasPinchPointerReleaseAction({ pinch, pointerId: 3 }), {
+    type: "continue-pointer-up",
+  });
 });

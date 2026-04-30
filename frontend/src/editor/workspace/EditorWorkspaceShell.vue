@@ -1002,10 +1002,7 @@ function discardPendingClose() {
 
 function setDocumentForTab(tabId: string, nextDocument: GraphPayload | GraphDocument) {
   const syncedDocument = syncKnowledgeBaseSkillsInDocument(nextDocument);
-  documentsByTabId.value = {
-    ...documentsByTabId.value,
-    [tabId]: syncedDocument,
-  };
+  documentsByTabId.value = setTabScopedRecordEntry(documentsByTabId.value, tabId, syncedDocument);
   writePersistedEditorDocumentDraft(tabId, syncedDocument);
 }
 
@@ -1046,10 +1043,7 @@ function toggleStatePanel(tabId: string) {
     showGraphLockedEditToast();
     return;
   }
-  statePanelOpenByTabId.value = {
-    ...statePanelOpenByTabId.value,
-    [tabId]: !isStatePanelOpen(tabId),
-  };
+  statePanelOpenByTabId.value = setTabScopedRecordEntry(statePanelOpenByTabId.value, tabId, !isStatePanelOpen(tabId));
 }
 
 function openHumanReviewPanelForTab(tabId: string, nodeId: string | null) {
@@ -1057,14 +1051,8 @@ function openHumanReviewPanelForTab(tabId: string, nodeId: string | null) {
     return;
   }
   closeNodeCreationMenu(tabId);
-  sidePanelModeByTabId.value = {
-    ...sidePanelModeByTabId.value,
-    [tabId]: "human-review",
-  };
-  statePanelOpenByTabId.value = {
-    ...statePanelOpenByTabId.value,
-    [tabId]: true,
-  };
+  sidePanelModeByTabId.value = setTabScopedRecordEntry(sidePanelModeByTabId.value, tabId, "human-review");
+  statePanelOpenByTabId.value = setTabScopedRecordEntry(statePanelOpenByTabId.value, tabId, true);
   focusNodeForTab(tabId, nodeId);
 }
 
@@ -1093,30 +1081,21 @@ function guardGraphEditForTab(tabId: string) {
 }
 
 function focusNodeForTab(tabId: string, nodeId: string | null) {
-  focusedNodeIdByTabId.value = {
-    ...focusedNodeIdByTabId.value,
-    [tabId]: nodeId,
-  };
+  focusedNodeIdByTabId.value = setTabScopedRecordEntry(focusedNodeIdByTabId.value, tabId, nodeId);
 }
 
 function requestNodeFocusForTab(tabId: string, nodeId: string | null) {
   focusNodeForTab(tabId, nodeId);
   if (!nodeId) {
-    focusRequestByTabId.value = {
-      ...focusRequestByTabId.value,
-      [tabId]: null,
-    };
+    focusRequestByTabId.value = setTabScopedRecordEntry(focusRequestByTabId.value, tabId, null);
     return;
   }
 
   const previousSequence = focusRequestByTabId.value[tabId]?.sequence ?? 0;
-  focusRequestByTabId.value = {
-    ...focusRequestByTabId.value,
-    [tabId]: {
-      nodeId,
-      sequence: previousSequence + 1,
-    },
-  };
+  focusRequestByTabId.value = setTabScopedRecordEntry(focusRequestByTabId.value, tabId, {
+    nodeId,
+    sequence: previousSequence + 1,
+  });
 }
 
 function toggleActiveStatePanel() {
@@ -1130,20 +1109,11 @@ function toggleActiveStatePanel() {
     return;
   }
   if (sidePanelMode(tabId) !== "state") {
-    sidePanelModeByTabId.value = {
-      ...sidePanelModeByTabId.value,
-      [tabId]: "state",
-    };
-    statePanelOpenByTabId.value = {
-      ...statePanelOpenByTabId.value,
-      [tabId]: true,
-    };
+    sidePanelModeByTabId.value = setTabScopedRecordEntry(sidePanelModeByTabId.value, tabId, "state");
+    statePanelOpenByTabId.value = setTabScopedRecordEntry(statePanelOpenByTabId.value, tabId, true);
     return;
   }
-  sidePanelModeByTabId.value = {
-    ...sidePanelModeByTabId.value,
-    [tabId]: "state",
-  };
+  sidePanelModeByTabId.value = setTabScopedRecordEntry(sidePanelModeByTabId.value, tabId, "state");
   toggleStatePanel(tabId);
 }
 

@@ -1,5 +1,63 @@
 # Progress Log
 
+## Session: 2026-04-30 Phase 91
+
+### Phase 1: Re-orientation
+- **Status:** completed
+- Actions taken:
+  - Continued automatically after commit `ae1541e` because total roadmap progress was still below 100%.
+  - Inspected remaining low-risk tab-scoped record spreads in `EditorWorkspaceShell.vue`.
+  - Chose document, side-panel, and focus state writes because they are immutable record updates and do not touch graph mutation algorithms, snapping, naming, route sync, or run streams.
+
+### Phase 2: Red Tests
+- **Status:** completed
+- Actions taken:
+  - Added structure coverage requiring `setDocumentForTab`, side-panel state, focused-node state, and focus-request state to use `setTabScopedRecordEntry`.
+  - Verified the expected red failure because the shell still used inline record spreads.
+
+### Phase 3: Implementation
+- **Status:** completed
+- Actions taken:
+  - Replaced remaining low-risk record spreads for `documentsByTabId`, `statePanelOpenByTabId`, `sidePanelModeByTabId`, `focusedNodeIdByTabId`, and `focusRequestByTabId`.
+  - Updated older structure assertions that still expected restored snapshot reset spreads to now lock the runtime helper boundary.
+  - Preserved call order, guard behavior, panel mode values, focus request sequencing, persisted document draft writes, and human-review restore checkpoint behavior.
+
+### Phase 4: Verification
+- **Status:** completed
+- Actions taken:
+  - Ran focused workspace structure and runtime helper tests.
+  - Ran related workspace/node-creation/run-state regression tests.
+  - Ran TypeScript unused-symbol verification from `frontend`.
+  - Ran the full frontend `node --test` suite.
+  - Ran the frontend production build; no large chunk warning was emitted.
+  - Restarted the local dev environment with root `npm run dev`.
+  - Confirmed backend `/health` returned `{"status":"ok"}` and the frontend entry returned HTTP 200.
+  - Captured a headless Chrome screenshot and confirmed the app rendered normally.
+
+### Phase 5: Continuation Gate
+- **Status:** completed
+- Actions taken:
+  - Recalculated overall roadmap cleanup at about 99.993%.
+  - Recalculated P3 `EditorWorkspaceShell.vue` cleanup at about 72%.
+  - Opened Phase 92 automatically because total roadmap progress is still below 100%.
+
+## Test Results
+| Test | Input | Expected | Actual | Status |
+|------|-------|----------|--------|--------|
+| Focused runtime/structure tests | `node --test frontend/src/editor/workspace/EditorWorkspaceShell.structure.test.ts frontend/src/editor/workspace/editorTabRuntimeModel.test.ts` | All focused tests pass | 37 passed | Passed |
+| Related workspace regression | `node --test` over workspace structure, tab runtime, node creation menu/execution, run state persistence, run event stream, and run detail structure tests | Related workspace tests pass | 76 passed | Passed |
+| Unused symbol check | `./node_modules/.bin/vue-tsc --noEmit --noUnusedLocals --noUnusedParameters` in `frontend` | No diagnostics | Exit 0 | Passed |
+| Full frontend tests | `node --test $(rg --files src vite.config.structure.test.ts | rg '\.test\.ts$')` in `frontend` | All frontend tests pass | 876 passed | Passed |
+| Frontend production build | `npm run build` in `frontend` | Build succeeds without a large chunk warning | Exit 0, no Vite chunk warning | Passed |
+| Dev restart | `npm run dev` at repo root | Services restart and respond | Frontend HTTP 200, backend `/health` ok | Passed |
+| Browser smoke | Headless Chrome screenshot with virtual-time wait | App renders normally | Home workspace UI rendered | Passed |
+
+## Error Log
+| Timestamp | Error | Attempt | Resolution |
+|-----------|-------|---------|------------|
+| 2026-04-30 | Older restored-snapshot structure assertion still expected record spread after the runtime helper migration | Phase 91 focused green run | Updated it to assert `setTabScopedRecordEntry` for the restored snapshot reset. |
+| 2026-04-30 | New focus-request structure regex expected a trailing comma that the implementation did not need | Phase 91 focused green run | Relaxed the regex to match the actual multiline helper call. |
+
 ## Session: 2026-04-30 Phases 87-90
 
 ### Phase 1: Re-orientation

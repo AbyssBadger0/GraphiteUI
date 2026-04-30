@@ -119,6 +119,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - `nodeCreationMenuModel.ts` 已开始承接 node creation menu 的 open/close/query state projection，以及 created-state edge editor request projection；`EditorWorkspaceShell.vue` 仍保留 edit guard、node creation execution、Date generation、state editor ref assignment、feedback、graph mutation 和 menu component wiring。
 - `editorTabRuntimeModel.ts` 已继续承接 run invocation 与 human-review resume 的 tab-state set writes；`EditorWorkspaceShell.vue` 仍保留 `runGraph`/`resumeRun` 调用、polling generation、EventSource lifecycle、restored checkpoint usage、feedback formatting 和 human-review behavior。
 - `EditorWorkspaceShell.vue` 本地已集中 dirty graph document commit：位置、尺寸、重命名和普通 dirty 写入共享 `commitDirtyDocumentForTab`；graph mutator calls、edit guards、draft writes、save behavior 和 route sync 仍保持 shell-owned。
+- `editorTabRuntimeModel.ts` 已继续承接 document、side-panel 与 focus/focus-request 的 tab-scoped set writes；`EditorWorkspaceShell.vue` 仍保留 persisted document draft writes、panel mode decisions、human-review lock/open policy 和 focus request sequencing。
 
 ## 后端重点
 
@@ -214,6 +215,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - 2026-04-30：`editorTabRuntimeModel.ts` 已承担 tab-scoped clone/delete cleanup 与 immutable set writes，覆盖 feedback、preview、run visual/polling、document load、run invocation 和 human-review resume state；workspace shell 仍保留 lifecycle/API/route/graph side effects。
 - 2026-04-30：`nodeCreationMenuModel.ts` 已承担 node creation menu state projection 与 created-state edge editor request projection；workspace shell 仍保留 node creation execution、Date generation、state editor ref assignment、feedback 和 graph mutation ownership。
 - 2026-04-30：`EditorWorkspaceShell.vue` 已集中 dirty graph document commit helper；位置、尺寸、重命名和 dirty 写入复用同一 metadata update path，graph mutation helpers 和 save/open routing 后续仍可继续拆分。
+- 2026-04-30：`editorTabRuntimeModel.ts` 已继续覆盖 document、side-panel、focused-node 和 focus-request tab-state writes；workspace shell 仍保留实际 draft persistence、panel routing、human-review lock policy 和 focus sequencing。
 
 ## 优先级路线
 

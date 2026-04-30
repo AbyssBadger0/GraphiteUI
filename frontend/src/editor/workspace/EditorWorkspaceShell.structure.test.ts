@@ -276,7 +276,10 @@ test("EditorWorkspaceShell keeps Human Review locked open while awaiting human i
 
 test("EditorWorkspaceShell resumes restored pause snapshots against their original snapshot checkpoint", () => {
   assert.match(componentSource, /resumeRun\(run\.run_id, payload, restoredRunSnapshotIdByTabId\.value\[tabId\] \?\? null\)/);
-  assert.match(componentSource, /restoredRunSnapshotIdByTabId\.value = \{[\s\S]*\[tabId\]: null,/);
+  assert.match(
+    componentSource,
+    /restoredRunSnapshotIdByTabId\.value = setTabScopedRecordEntry\(restoredRunSnapshotIdByTabId\.value, tabId, null\);/,
+  );
 });
 
 test("EditorWorkspaceShell locks graph editing while a run is awaiting human review", () => {
@@ -486,6 +489,34 @@ test("EditorWorkspaceShell delegates run invocation tab-state writes to the runt
   assert.match(resumeHumanReviewSource, /humanReviewBusyByTabId\.value = setTabScopedRecordEntry\(humanReviewBusyByTabId\.value, tabId, false\);/);
   assert.doesNotMatch(runActiveGraphSource, /\[tab\.tabId\]:/);
   assert.doesNotMatch(resumeHumanReviewSource, /\[tabId\]:/);
+});
+
+test("EditorWorkspaceShell delegates panel and focus tab-state writes to the runtime model", () => {
+  const setDocumentSource =
+    componentSource.match(/function setDocumentForTab\(tabId: string, nextDocument: GraphPayload \| GraphDocument\) \{[\s\S]*?\n\}\n\nfunction persistRunStateValuesForTab/)?.[0] ??
+    "";
+  const panelFocusSource =
+    componentSource.match(/function toggleStatePanel\(tabId: string\) \{[\s\S]*?\n\}\n\nfunction editorMainStyle/)?.[0] ?? "";
+
+  assert.match(setDocumentSource, /documentsByTabId\.value = setTabScopedRecordEntry\(documentsByTabId\.value, tabId, syncedDocument\);/);
+  assert.match(
+    panelFocusSource,
+    /statePanelOpenByTabId\.value = setTabScopedRecordEntry\(statePanelOpenByTabId\.value, tabId, !isStatePanelOpen\(tabId\)\);/,
+  );
+  assert.match(panelFocusSource, /sidePanelModeByTabId\.value = setTabScopedRecordEntry\(sidePanelModeByTabId\.value, tabId, "human-review"\);/);
+  assert.match(panelFocusSource, /statePanelOpenByTabId\.value = setTabScopedRecordEntry\(statePanelOpenByTabId\.value, tabId, true\);/);
+  assert.match(panelFocusSource, /focusedNodeIdByTabId\.value = setTabScopedRecordEntry\(focusedNodeIdByTabId\.value, tabId, nodeId\);/);
+  assert.match(panelFocusSource, /focusRequestByTabId\.value = setTabScopedRecordEntry\(focusRequestByTabId\.value, tabId, null\);/);
+  assert.match(
+    panelFocusSource,
+    /focusRequestByTabId\.value = setTabScopedRecordEntry\(\s*focusRequestByTabId\.value,\s*tabId,\s*\{\s*nodeId,\s*sequence: previousSequence \+ 1,\s*\}\s*\);/,
+  );
+  assert.match(panelFocusSource, /sidePanelModeByTabId\.value = setTabScopedRecordEntry\(sidePanelModeByTabId\.value, tabId, "state"\);/);
+  assert.doesNotMatch(setDocumentSource, /documentsByTabId\.value = \{/);
+  assert.doesNotMatch(panelFocusSource, /statePanelOpenByTabId\.value = \{/);
+  assert.doesNotMatch(panelFocusSource, /sidePanelModeByTabId\.value = \{/);
+  assert.doesNotMatch(panelFocusSource, /focusedNodeIdByTabId\.value = \{/);
+  assert.doesNotMatch(panelFocusSource, /focusRequestByTabId\.value = \{/);
 });
 
 test("EditorWorkspaceShell centralizes dirty graph document commits", () => {

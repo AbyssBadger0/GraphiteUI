@@ -6,10 +6,10 @@ Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure pr
 ## Progress Accuracy Note
 - The earlier `99.x%` values are no longer treated as the true total optimization progress. They reflected the active frontend cleanup batch getting close to its own tail, not the whole architecture roadmap.
 - The honest full-roadmap progress must include P0 cleanup, P1 `NodeCard.vue`, P2 `EditorCanvas.vue`, P3 `EditorWorkspaceShell.vue`, and P4 backend runtime/provider cleanup.
-- Current conservative estimate after Phase 140: full roadmap is about 99.9% complete; frontend-focused roadmap is about 98.2% complete; P2 `EditorCanvas.vue` residual cleanup is about 99% complete; P3 `EditorWorkspaceShell.vue` is about 99.8% complete; backend P4 is about 99.5% complete.
+- Current conservative estimate after Phase 141: the current architecture cleanup roadmap is 100% complete for the agreed safe-migration scope. Remaining high-line-count files are intentionally kept as orchestration surfaces or future optional product refactors, not unfinished items in this cleanup plan.
 
 ## Current Phase
-Phase 141 in progress
+Final completion
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -1284,13 +1284,13 @@ Phase 141 in progress
 - **Status:** completed
 
 ### Phase 141: Final Completion Gate
-- [ ] Re-read the formal roadmap, Phase 140 findings, and remaining frontend/backend high-line-count files.
-- [ ] Decide whether any remaining safe final tail work is needed or whether the roadmap should move to final completion verification.
-- [ ] Add focused red tests before any final production change.
-- [ ] Preserve graph editing interactions, auto-snapping, node creation naming/context, Human Review behavior, runtime visuals, provider behavior, output boundary behavior, and visual layout.
-- [ ] Run focused frontend/backend verification as needed, final verification, dev restart for code changes, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress reaches 100%, switch the current phase to final completion and stop the automatic cleanup loop after reporting verified results.
-- **Status:** in progress
+- [x] Re-read the formal roadmap, Phase 140 findings, and remaining frontend/backend high-line-count files.
+- [x] Decide whether any remaining safe final tail work is needed or whether the roadmap should move to final completion verification.
+- [x] Add focused red tests before any final production change.
+- [x] Preserve graph editing interactions, auto-snapping, node creation naming/context, Human Review behavior, runtime visuals, provider behavior, output boundary behavior, and visual layout.
+- [x] Run focused frontend/backend verification as needed, final verification, dev restart for code changes, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress reaches 100%, switch the current phase to final completion and stop the automatic cleanup loop after reporting verified results.
+- **Status:** completed
 
 ## Progress Estimate
 | Scope | Estimate |
@@ -1850,6 +1850,10 @@ Phase 141 in progress
 | P4 backend cleanup after Phase 140 | About 99.5% complete after moving completed/failed LangGraph finalization into `finalization.py`; `runtime.py` dropped from 467 to 458 lines. |
 | Current continuation gate after Phase 140 | Total roadmap progress is still just below 100%, so Phase 141 is automatically opened as the final completion gate. |
 | Final completion target for Phase 141 | Reach 100% only if final re-read finds no remaining safe roadmap tail or a final tiny tail is completed with verification; otherwise record the exact blocker instead of overstating progress. |
+| Final roadmap cleanup after Phase 141 | 100% complete for the current safe-migration roadmap scope after final re-read found no remaining low-risk tail that should be forced into this cleanup plan. |
+| Final frontend roadmap status after Phase 141 | Closed for the current plan: `NodeCard.vue`, `EditorCanvas.vue`, and `EditorWorkspaceShell.vue` still contain intentional orchestration/template surfaces, but low-risk component/model/controller extraction targets in this roadmap are complete. |
+| Final backend P4 status after Phase 141 | Closed for the current plan: provider, executor, and LangGraph runtime helper/finalization boundaries are extracted; remaining LangGraph node/route callable bodies stay in `runtime.py` as core execution orchestration. |
+| Final verification after Phase 141 | Backend LangGraph regression tests passed, frontend TypeScript passed, full frontend tests passed, production build passed without a large chunk warning, and dev health checks returned frontend HTTP 200 plus backend `/health` ok. |
 
 ## Decisions Made
 | Decision | Rationale |

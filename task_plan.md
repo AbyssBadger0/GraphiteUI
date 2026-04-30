@@ -4,7 +4,7 @@
 Run a ten-round conservative cleanup batch focused on `EditorCanvas.vue` pure projection and interaction-model helpers, then close the baseline interaction regressions in one larger pass while preserving graph editing behavior, runtime visuals, drag/connect workflows, deletion behavior, and dev startup health.
 
 ## Current Phase
-Phase 73 in progress
+Phase 74 in progress
 
 ## Autonomous Continuation Gate
 - After every completed cleanup phase, re-read `docs/future/2026-04-28-architecture-refactor-roadmap.md`, `task_plan.md`, `findings.md`, and `progress.md`, then recalculate the total roadmap progress and the active area progress.
@@ -675,12 +675,21 @@ Phase 73 in progress
 - **Status:** completed
 
 ### Phase 73: EditorWorkspaceShell Run Event Stream Re-orientation
-- [ ] Re-read the formal roadmap, Phase 72 findings, and current `EditorWorkspaceShell.vue` run polling/SSE code before changing code.
-- [ ] Inspect whether the next safest P3 boundary is a small run event stream or run polling projection helper shared with run detail behavior.
-- [ ] Add focused red tests for the selected workspace-shell boundary before production changes.
-- [ ] Keep route sync, draft persistence, graph mutation emits, restore behavior, human-review state, and run status feedback stable.
+- [x] Re-read the formal roadmap, Phase 72 findings, and current `EditorWorkspaceShell.vue` run polling/SSE code before changing code.
+- [x] Inspect whether the next safest P3 boundary is a small run event stream or run polling projection helper shared with run detail behavior.
+- [x] Add focused red tests for the selected workspace-shell boundary before production changes.
+- [x] Keep route sync, draft persistence, graph mutation emits, restore behavior, human-review state, and run status feedback stable.
+- [x] Run focused workspace/run tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
+- [x] If total roadmap progress is below 100%, automatically open the next phase after Phase 73.
+- **Status:** completed
+
+### Phase 74: Shared Run Polling Status Helper
+- [ ] Re-read the formal roadmap, Phase 73 findings, and duplicated run polling status checks in workspace and run detail code.
+- [ ] Inspect whether the next safest P3 boundary is moving queued/running/resuming polling semantics into the shared run-event model.
+- [ ] Add focused red tests before production changes.
+- [ ] Keep polling delays, abort behavior, EventSource close behavior, human-review opening, and terminal run persistence stable.
 - [ ] Run focused workspace/run tests, TypeScript checks, full frontend tests when needed, production build, dev restart, browser smoke, commit, push, and progress re-evaluation.
-- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 73.
+- [ ] If total roadmap progress is below 100%, automatically open the next phase after Phase 74.
 - **Status:** in progress
 
 ## Progress Estimate
@@ -882,6 +891,10 @@ Phase 73 in progress
 | P2 `EditorCanvas.vue` cleanup after Phase 72 | About 100% complete for the current low-risk canvas projection pass after extracting flow hotspot and route handle class maps while preserving overlay pointer behavior. |
 | Current continuation gate after Phase 72 | Total roadmap progress is still below 100%, so Phase 73 is automatically opened for the next P3 `EditorWorkspaceShell.vue` run-event boundary. |
 | P3 `EditorWorkspaceShell.vue` cleanup target for Phase 73 | About 10% of P3 if a small run event stream or polling projection boundary can move out without changing route sync, draft persistence, restore behavior, or graph mutation emits. |
+| Overall roadmap cleanup after Phase 73 | About 99.2% complete after extracting shared run-event URL, payload parsing, and RunDetail live-output merge helpers. |
+| P3 `EditorWorkspaceShell.vue` cleanup after Phase 73 | About 10% complete after moving the first shared run event stream helper into `run-event-stream.ts` while preserving shell/run-detail side effects. |
+| Current continuation gate after Phase 73 | Total roadmap progress is still below 100%, so Phase 74 is automatically opened for the next small shared run polling status boundary. |
+| P3 `EditorWorkspaceShell.vue` cleanup target for Phase 74 | About 15% of P3 if queued/running/resuming polling semantics become shared without changing polling timers, aborts, stream closure, or human-review behavior. |
 
 ## Decisions Made
 | Decision | Rationale |
@@ -950,6 +963,7 @@ Phase 73 in progress
 - Phase 70 moves projected edge layer grouping into `edgeProjection.ts`; `EditorCanvas.vue` keeps SVG layer ordering, selected-edge state, edge hitarea handlers, and edge class bindings.
 - Phase 71 moves projected edge class and hitarea class projection into `canvasInteractionStyleModel.ts`; `EditorCanvas.vue` keeps selected-edge state input, active-run lookup, SVG rendering, and pointer handlers.
 - Phase 72 moves flow hotspot and route handle class projection into `canvasInteractionStyleModel.ts`; `EditorCanvas.vue` keeps hotspot visibility inputs, route tone resolution, anchor overlay rendering, and pointer handlers.
+- Phase 73 starts P3 by moving shared run event stream URL construction, payload JSON parsing, and RunDetail live output merge semantics into `run-event-stream.ts`; `EditorWorkspaceShell.vue` and `RunDetailPage.vue` keep EventSource lifecycle, polling timers, restore behavior, and UI state updates.
 - Do not commit runtime artifacts such as `backend/data/settings`, `.dev_*`, `dist`, or `.worktrees`.
 - After code changes, restart using `npm run dev`.
 

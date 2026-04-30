@@ -103,6 +103,10 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 3. `useGraphMutationActions`：把 state binding、node config、edge reconnect、state delete 等图操作从 shell 中移出。
 4. `useNodeCreationFlow`：节点创建菜单、拖拽文件创建、从连接创建节点、创建后打开 state 编辑面板。
 
+当前执行进展：
+
+- `run-event-stream.ts` 已承接 workspace 与 run detail 共用的 run event stream URL 构造、SSE payload JSON 解析，以及 RunDetail live output merge 规则；`EditorWorkspaceShell.vue` 和 `RunDetailPage.vue` 仍保留 EventSource 生命周期、polling timers、abort controller、restore/human-review behavior 和实际 UI state mutation。
+
 ## 后端重点
 
 ### 1. `model_provider_client.py`
@@ -184,6 +188,7 @@ GraphiteUI 当前最大的问题不是依赖膨胀，也不是目录混乱，而
 - 2026-04-30：`edgeProjection.ts` 已继续承担 projected edge layer grouping，`EditorCanvas.vue` 仍保留 SVG layer ordering、selected-edge state、edge hitarea handlers 和 edge class bindings。
 - 2026-04-30：`canvasInteractionStyleModel.ts` 已继续承担 edge class projection，`EditorCanvas.vue` 仍保留 selected-edge state input、active-run lookup、SVG rendering 和 pointer handlers。
 - 2026-04-30：`canvasInteractionStyleModel.ts` 已继续承担 flow hotspot 和 route handle class projection，`EditorCanvas.vue` 仍保留 hotspot visibility/tone 输入、overlay rendering 和 pointer handlers。
+- 2026-04-30：`run-event-stream.ts` 已承担 run event stream URL 构造、event payload 解析和 RunDetail live output 合并；workspace/run detail 仍保留 EventSource 生命周期、polling/abort 和 UI state mutation。
 
 ## 优先级路线
 

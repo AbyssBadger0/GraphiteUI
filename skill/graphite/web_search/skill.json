@@ -65,6 +65,18 @@
       "description": "Number of normalized search results returned."
     },
     {
+      "key": "searched_at",
+      "label": "Searched At",
+      "valueType": "text",
+      "description": "Local timestamp when the search was executed."
+    },
+    {
+      "key": "searched_date",
+      "label": "Searched Date",
+      "valueType": "text",
+      "description": "Local date when the search was executed, useful for recency-sensitive answers."
+    },
+    {
       "key": "summary",
       "label": "Summary",
       "valueType": "markdown",

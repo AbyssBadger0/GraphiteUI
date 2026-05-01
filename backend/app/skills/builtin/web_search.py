@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -51,13 +52,17 @@ def web_search_skill(**skill_inputs: Any) -> dict[str, Any]:
         {"index": index, "title": result["title"], "url": result["url"]}
         for index, result in enumerate(results, start=1)
     ]
+    searched_at = _current_search_timestamp()
+    searched_date = searched_at[:10]
     return {
         "status": "succeeded",
         "provider": provider,
         "query": query,
         "result_count": len(results),
+        "searched_at": searched_at,
+        "searched_date": searched_date,
         "summary": _build_summary(str(raw_response.get("answer") or ""), results),
-        "context": _build_context(results),
+        "context": _build_context(results, searched_at=searched_at, searched_date=searched_date),
         "results": results,
         "citations": citations,
         "error": "",
@@ -163,8 +168,10 @@ def _build_summary(answer: str, results: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def _build_context(results: list[dict[str, Any]]) -> str:
-    context_blocks = []
+def _build_context(results: list[dict[str, Any]], *, searched_at: str, searched_date: str) -> str:
+    context_blocks = [
+        f"Search executed at: {searched_at}\nSearch date: {searched_date}",
+    ]
     for index, result in enumerate(results, start=1):
         content = _compact_text(result.get("content"))
         raw_content = _compact_text(result.get("raw_content"))
@@ -174,11 +181,14 @@ def _build_context(results: list[dict[str, Any]]) -> str:
 
 
 def _empty_response(*, query: str, provider: str = "none", status: str, error: str) -> dict[str, Any]:
+    searched_at = _current_search_timestamp()
     return {
         "status": status,
         "provider": provider,
         "query": query,
         "result_count": 0,
+        "searched_at": searched_at,
+        "searched_date": searched_at[:10],
         "summary": "",
         "context": "",
         "results": [],
@@ -224,6 +234,10 @@ def _compact_text(value: object) -> str:
     if value is None:
         return ""
     return " ".join(str(value).strip().split())
+
+
+def _current_search_timestamp() -> str:
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 def _resolve_duckduckgo_url(href: str) -> str:

@@ -77,8 +77,11 @@ class WebSearchSkillTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "succeeded")
         self.assertEqual(result["provider"], "duckduckgo")
+        self.assertRegex(result["searched_at"], r"^\d{4}-\d{2}-\d{2}T")
+        self.assertRegex(result["searched_date"], r"^\d{4}-\d{2}-\d{2}$")
         self.assertEqual(result["results"][0]["url"], "https://example.org/fallback")
         self.assertIn("Fallback Result", result["summary"])
+        self.assertIn("Search date:", result["context"])
 
     def test_web_search_skill_returns_structured_error_for_missing_query(self) -> None:
         result = web_search_skill(query="   ")

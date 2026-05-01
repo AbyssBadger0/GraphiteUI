@@ -41,7 +41,7 @@ class AgentStatePromptSemanticTests(unittest.TestCase):
         self.assertIn("key: state_1", prompt)
         self.assertIn("name: 最终答案", prompt)
         self.assertIn("description: 给用户看的中文总结", prompt)
-        self.assertIn('"state_1": "..."', prompt)
+        self.assertIn('"state_1": "在此填写完整内容"', prompt)
 
     def test_auto_prompt_emphasizes_output_state_value_formats(self) -> None:
         state_schema = {
@@ -108,7 +108,10 @@ class AgentStatePromptSemanticTests(unittest.TestCase):
 
         self.assertLess(prompt.index("key: context"), prompt.index("key: question"))
         self.assertLess(prompt.index("key: summary"), prompt.index("key: draft"))
-        self.assertLess(prompt.index('"summary": "..."'), prompt.index('"draft": "..."'))
+        self.assertLess(
+            prompt.index('"summary": "在此填写完整内容"'),
+            prompt.index('"draft": "在此填写完整内容"'),
+        )
 
     def test_auto_prompt_requires_fact_answers_to_stay_grounded_in_skill_results(self) -> None:
         prompt = build_auto_system_prompt(
@@ -127,6 +130,27 @@ class AgentStatePromptSemanticTests(unittest.TestCase):
         self.assertIn("涉及事实、日期、天气、新闻或外部资料时，必须以技能结果为依据", prompt)
         self.assertIn("不要编造技能结果中不存在的事实", prompt)
         self.assertIn("searched_date: 2026-05-01", prompt)
+
+    def test_auto_prompt_preserves_complete_web_search_context(self) -> None:
+        full_url = "https://www.cnbc.com/2026/04/23/openai-announces-latest-artificial-intelligence-model.html"
+        long_context = (
+            "Search executed at: 2026-05-01T21:28:44+08:00\n"
+            + "Evidence prefix. " * 40
+            + "\n[2] OpenAI announces GPT-5.5, its latest artificial intelligence model - CNBC\n"
+            + f"URL: {full_url}\n"
+            + "OpenAI on Thursday announced its latest artificial intelligence model, GPT-5.5."
+        )
+
+        prompt = build_auto_system_prompt(
+            ["answer"],
+            {"search_result": long_context},
+            {"web_search": {"context": long_context}},
+            state_schema={"answer": NodeSystemStateDefinition(type=NodeSystemStateType.MARKDOWN)},
+        )
+
+        self.assertIn(long_context, prompt)
+        self.assertIn(full_url, prompt)
+        self.assertIn("引用链接必须完整复制 URL", prompt)
 
     def test_llm_json_response_can_map_unique_state_name_alias_back_to_output_key(self) -> None:
         parsed = parse_llm_json_response(

@@ -32,27 +32,30 @@ def build_auto_system_prompt(
     if input_values:
         parts.append("\n== Graph State Inputs ==")
         for key, value in input_values.items():
-            display = str(value)
-            if len(display) > 200:
-                display = display[:200] + "..."
+            display = format_prompt_value(value)
             parts.extend(format_state_prompt_lines(key, resolved_state_schema.get(key), value=display))
 
     if skill_context:
         parts.append("\n== Skill Results ==")
         parts.append("涉及事实、日期、天气、新闻或外部资料时，必须以技能结果为依据；不要编造技能结果中不存在的事实。")
         parts.append("如果技能结果没有提供足够证据，明确说明未检索到可靠答案。")
+        parts.append("引用链接必须完整复制 URL；不要用省略号、截断链接或泛称代替标题和链接。")
         for skill_key, result in skill_context.items():
             parts.append(f"[{skill_key}]")
             if isinstance(result, dict):
                 for result_key, result_value in result.items():
-                    display = str(result_value)
-                    if len(display) > 300:
-                        display = display[:300] + "..."
+                    display = format_prompt_value(result_value)
                     parts.append(f"  {result_key}: {display}")
             else:
-                parts.append(f"  {result}")
+                parts.append(f"  {format_prompt_value(result)}")
 
-    example = json.dumps({key: "..." for key in output_keys}, ensure_ascii=False)
+    example = json.dumps(
+        {
+            key: example_output_value_for_state(resolved_state_schema.get(key))
+            for key in output_keys
+        },
+        ensure_ascii=False,
+    )
     parts.append("\n== 必须返回的 JSON 字段 ==")
     for key in output_keys:
         parts.extend(format_state_prompt_lines(key, resolved_state_schema.get(key), include_output_contract=True))
@@ -60,6 +63,26 @@ def build_auto_system_prompt(
     parts.append(example)
     parts.append("每个字段必须使用上方的 key；name 只用于理解字段语义。")
     return "\n".join(parts)
+
+
+def format_prompt_value(value: Any) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, indent=2)
+    return "" if value is None else str(value)
+
+
+def example_output_value_for_state(definition: NodeSystemStateDefinition | None) -> Any:
+    if definition is None:
+        return "在此填写完整内容"
+    if definition.type in {NodeSystemStateType.JSON, NodeSystemStateType.OBJECT}:
+        return {}
+    if definition.type in {NodeSystemStateType.ARRAY, NodeSystemStateType.FILE_LIST}:
+        return []
+    if definition.type == NodeSystemStateType.NUMBER:
+        return 0
+    if definition.type == NodeSystemStateType.BOOLEAN:
+        return False
+    return "在此填写完整内容"
 
 
 def format_state_prompt_lines(

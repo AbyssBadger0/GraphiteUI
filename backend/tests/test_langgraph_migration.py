@@ -1016,7 +1016,7 @@ class LangGraphMigrationTests(unittest.TestCase):
         self.assertIn(f"- key: {counter_key}", captured["system_prompt"])
         self.assertIn("  name: counter", captured["system_prompt"])
         self.assertIn("  value: 0", captured["system_prompt"])
-        self.assertIn(f'"{counter_key}": "..."', captured["system_prompt"])
+        self.assertIn(f'"{counter_key}": 0', captured["system_prompt"])
         self.assertNotIn("== Node System Instruction ==", captured["system_prompt"])
         self.assertNotIn("你是一个计数节点", captured["system_prompt"])
         self.assertEqual(

@@ -118,7 +118,7 @@
             }
           }
         ],
-        "taskInstruction": "读取 search_query，并使用 web_search 技能结果生成 search_result。search_result 必须包含：本轮搜索词、搜索日期、最相关证据摘要、至少 3 条引用链接；如果没有可靠结果，明确写出缺口。严格返回 JSON，字段 search_result 为 Markdown 字符串。"
+        "taskInstruction": "读取 search_query，并使用 web_search 技能结果生成 search_result。search_result 必须包含：本轮搜索词、搜索日期、最相关证据摘要、至少 3 条引用链接；引用链接必须完整复制标题和 URL，不要使用省略号、截断链接或泛称代替；如果没有可靠结果，明确写出缺口。严格返回 JSON，字段 search_result 为 Markdown 字符串。"
       }
     },
     "assess_search_sufficiency": {
@@ -144,7 +144,7 @@
       ],
       "config": {
         "skills": [],
-        "taskInstruction": "读取 request、search_query、search_result 和已有 research_notes。把本轮搜索证据合并进 research_notes，保留引用链接。判断是否已经足够回答 request：必须能覆盖发布日期和模型亮点，并优先有官方或高可信来源。如果信息不足，needs_more_search=true，并把 search_query 更新为下一轮更具体的补充搜索词，同时生成一版 exhausted_answer 作为循环达到上限时的谨慎答案；如果信息足够，needs_more_search=false，并生成 final_answer。不要编造证据中没有确认的事实。严格返回 JSON，字段为 research_notes、needs_more_search、search_query、final_answer、exhausted_answer。"
+        "taskInstruction": "读取 request、search_query、search_result 和已有 research_notes。把本轮搜索证据合并进 research_notes，保留完整引用链接，不能写成“OpenAI ...”或截断 URL。判断是否已经足够回答 request：必须能覆盖发布日期和模型亮点，并优先有官方或高可信来源。如果信息不足，needs_more_search=true，并把 search_query 更新为下一轮更具体的补充搜索词，同时生成一版 exhausted_answer 作为循环达到上限时的谨慎答案；如果信息足够，needs_more_search=false，并生成 final_answer。不要编造证据中没有确认的事实。严格返回 JSON，字段为 research_notes、needs_more_search、search_query、final_answer、exhausted_answer。"
       }
     },
     "need_more_search_check": {

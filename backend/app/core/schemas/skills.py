@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -125,3 +126,37 @@ class SkillDefinition(BaseModel):
     can_import: bool = Field(default=False, alias="canImport")
 
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
+
+
+class SkillFileNode(BaseModel):
+    name: str
+    path: str
+    type: Literal["directory", "file"]
+    size: int = 0
+    language: str = ""
+    previewable: bool = False
+    executable: bool = False
+    children: list["SkillFileNode"] = Field(default_factory=list)
+
+    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
+
+
+class SkillFileTreeResponse(BaseModel):
+    skill_key: str = Field(..., alias="skillKey")
+    root: SkillFileNode
+
+    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
+
+
+class SkillFileContentResponse(BaseModel):
+    skill_key: str = Field(..., alias="skillKey")
+    path: str
+    name: str
+    size: int
+    language: str = ""
+    previewable: bool = False
+    executable: bool = False
+    encoding: Literal["utf-8", "binary", "too_large"]
+    content: str | None = None
+
+    model_config = ConfigDict(populate_by_name=True)

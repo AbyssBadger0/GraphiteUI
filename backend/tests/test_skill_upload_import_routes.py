@@ -135,6 +135,7 @@ def _native_skill_zip_bytes() -> bytes:
         archive.writestr("video_understanding/skill.json", _native_skill_manifest())
         archive.writestr("video_understanding/SKILL.md", "# Video Understanding\n")
         archive.writestr("video_understanding/workflow.json", '{"steps":[]}\n')
+        archive.writestr("video_understanding/scripts/probe.py", "print('probe')\n")
     return payload.getvalue()
 
 
@@ -223,6 +224,51 @@ class SkillUploadImportRouteTests(unittest.TestCase):
                 catalog_items = {item["skillKey"]: item for item in catalog_response.json()}
                 self.assertIn("video_understanding", catalog_items)
                 self.assertEqual(catalog_items["video_understanding"]["targets"], ["agent_node", "companion"])
+
+    def test_skill_file_tree_lists_package_files_for_inspection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            skills_dir = temp_path / "skill"
+            state_dir = temp_path / "data" / "skills"
+            with _test_client_with_skill_storage(skills_dir, state_dir) as client:
+                client.post(
+                    "/api/skills/imports/upload",
+                    files=[("files", ("video_understanding.zip", _native_skill_zip_bytes(), "application/zip"))],
+                )
+
+                response = client.get("/api/skills/video_understanding/files")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["skillKey"], "video_understanding")
+        self.assertEqual(payload["root"]["type"], "directory")
+        root_children = {item["path"]: item for item in payload["root"]["children"]}
+        self.assertIn("skill.json", root_children)
+        self.assertIn("SKILL.md", root_children)
+        self.assertIn("workflow.json", root_children)
+        self.assertIn("scripts", root_children)
+        self.assertEqual(root_children["scripts"]["type"], "directory")
+        self.assertEqual(root_children["scripts"]["children"][0]["path"], "scripts/probe.py")
+        self.assertTrue(root_children["scripts"]["children"][0]["previewable"])
+
+    def test_skill_file_content_reads_text_and_blocks_path_traversal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            skills_dir = temp_path / "skill"
+            state_dir = temp_path / "data" / "skills"
+            with _test_client_with_skill_storage(skills_dir, state_dir) as client:
+                client.post(
+                    "/api/skills/imports/upload",
+                    files=[("files", ("video_understanding.zip", _native_skill_zip_bytes(), "application/zip"))],
+                )
+
+                content_response = client.get("/api/skills/video_understanding/files/content?path=SKILL.md")
+                traversal_response = client.get("/api/skills/video_understanding/files/content?path=../registry_states.json")
+
+        self.assertEqual(content_response.status_code, 200)
+        self.assertEqual(content_response.json()["content"], "# Video Understanding\n")
+        self.assertEqual(content_response.json()["language"], "markdown")
+        self.assertEqual(traversal_response.status_code, 400)
 
     def test_zip_archive_upload_imports_skill_into_managed_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

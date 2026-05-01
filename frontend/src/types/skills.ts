@@ -45,3 +45,31 @@ export type SkillDefinition = {
   canManage: boolean;
   canImport: boolean;
 };
+
+export type SkillFileNode = {
+  name: string;
+  path: string;
+  type: "directory" | "file";
+  size: number;
+  language: string;
+  previewable: boolean;
+  executable: boolean;
+  children: SkillFileNode[];
+};
+
+export type SkillFileTreeResponse = {
+  skillKey: string;
+  root: SkillFileNode;
+};
+
+export type SkillFileContentResponse = {
+  skillKey: string;
+  path: string;
+  name: string;
+  size: number;
+  language: string;
+  previewable: boolean;
+  executable: boolean;
+  encoding: "utf-8" | "binary" | "too_large";
+  content: string | null;
+};

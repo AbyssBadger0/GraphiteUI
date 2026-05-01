@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   deleteSkill,
   fetchSkillCatalog,
+  fetchSkillFileContent,
+  fetchSkillFiles,
   fetchSkillDefinitions,
   importSkill,
   importSkillUpload,
@@ -149,6 +151,67 @@ test("fetchSkillCatalog requests the full management catalog including disabled 
   assert.deepEqual(skillDefinitions, []);
 
   globalThis.fetch = originalFetch;
+});
+
+test("skill file helpers request tree and content endpoints", async () => {
+  const requestedUrls: string[] = [];
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    requestedUrls.push(String(input));
+    const url = String(input);
+    if (url.endsWith("/files")) {
+      return new Response(
+        JSON.stringify({
+          skillKey: "rewrite_text",
+          root: {
+            name: "rewrite_text",
+            path: "",
+            type: "directory",
+            size: 0,
+            language: "",
+            previewable: false,
+            executable: false,
+            children: [],
+          },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+    return new Response(
+      JSON.stringify({
+        skillKey: "rewrite_text",
+        path: "SKILL.md",
+        name: "SKILL.md",
+        size: 12,
+        language: "markdown",
+        previewable: true,
+        executable: false,
+        encoding: "utf-8",
+        content: "# Rewrite\n",
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }) as typeof fetch;
+
+  try {
+    const files = await fetchSkillFiles("rewrite_text");
+    const content = await fetchSkillFileContent("rewrite_text", "SKILL.md");
+
+    assert.deepEqual(requestedUrls, [
+      "/api/skills/rewrite_text/files",
+      "/api/skills/rewrite_text/files/content?path=SKILL.md",
+    ]);
+    assert.equal(files.root.type, "directory");
+    assert.equal(content.content, "# Rewrite\n");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("skill management helpers call import, status, and delete endpoints", async () => {

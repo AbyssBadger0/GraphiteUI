@@ -112,18 +112,19 @@ test("NodeCard keeps state pill geometry but hides the pill chrome visually", ()
   assert.match(portListSurfaceSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*height:\s*14px;/);
 });
 
-test("NodeCard clips long state port labels inside the pill", () => {
+test("NodeCard keeps full state port labels on one line", () => {
   const labelBlock = portListSurfaceSource.match(/\.node-card__port-pill-label \{[\s\S]*?\n\}/)?.[0] ?? "";
   const labelTextBlock = portListSurfaceSource.match(/\.node-card__port-pill-label-text \{[\s\S]*?\n\}/)?.[0] ?? "";
   assert.ok(labelBlock, "expected to find port pill label styles in extracted port surfaces");
   assert.ok(labelTextBlock, "expected to find port pill label text styles in extracted port surfaces");
-  assert.match(labelBlock, /overflow:\s*hidden;/);
-  assert.match(labelBlock, /text-overflow:\s*ellipsis;/);
+  assert.match(labelBlock, /flex:\s*0 0 auto;/);
+  assert.match(labelBlock, /white-space:\s*nowrap;/);
   assert.match(labelBlock, /line-height:\s*1\.2;/);
-  assert.match(labelTextBlock, /text-overflow:\s*ellipsis;/);
+  assert.match(labelTextBlock, /white-space:\s*nowrap;/);
   assert.match(labelTextBlock, /line-height:\s*1\.2;/);
   assert.doesNotMatch(labelBlock, /line-height:\s*1;/);
-  assert.doesNotMatch(labelBlock, /overflow:\s*visible;/);
+  assert.doesNotMatch(labelBlock, /overflow:\s*hidden;/);
+  assert.doesNotMatch(labelTextBlock, /text-overflow:\s*ellipsis;/);
 });
 
 test("NodeCard delegates input body presentation while keeping the output state slot", () => {
@@ -450,13 +451,14 @@ test("NodeCard renders plus input and plus output as virtual agent state port ro
   assert.match(visibleCreateRowStyle[0], /display:\s*flex;/);
 });
 
-test("NodeCard constrains long state port labels without pushing anchor slots outside cards", () => {
+test("NodeCard lets state port labels expand to fit their names", () => {
   assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*box-sizing:\s*border-box;/);
-  assert.match(portListSurfaceSource, /\.node-card__port-pill \{[\s\S]*max-width:\s*min\(100%,\s*var\(--node-card-port-pill-max-width,\s*240px\)\);/);
-  assert.match(conditionNodeBodySource, /\.node-card__port-pill--condition-source \{[\s\S]*--node-card-port-pill-max-width:\s*260px;/);
+  assert.doesNotMatch(portListSurfaceSource, /--node-card-port-pill-max-width/);
+  assert.doesNotMatch(portListSurfaceSource, /max-width:\s*min\(100%,\s*var\(--node-card-port-pill-max-width/);
+  assert.doesNotMatch(portListSurfaceSource, /text-overflow:\s*ellipsis;/);
   assert.match(portListSurfaceSource, /\.node-card__port-pill-label \{[\s\S]*min-width:\s*0;/);
-  assert.match(portListSurfaceSource, /\.node-card__port-pill-label \{[\s\S]*overflow:\s*hidden;/);
-  assert.match(portListSurfaceSource, /\.node-card__port-pill-label-text \{[\s\S]*overflow:\s*hidden;[\s\S]*text-overflow:\s*ellipsis;[\s\S]*white-space:\s*nowrap;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-label \{[\s\S]*white-space:\s*nowrap;/);
+  assert.match(portListSurfaceSource, /\.node-card__port-pill-label-text \{[\s\S]*white-space:\s*nowrap;/);
   assert.match(portListSurfaceSource, /\.node-card__port-pill-anchor-slot \{[\s\S]*flex:\s*none;/);
 });
 

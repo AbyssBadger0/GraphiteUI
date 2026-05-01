@@ -229,12 +229,12 @@ function handlePortClick() {
   position: relative;
   box-sizing: border-box;
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
   gap: 9px;
   min-height: 34px;
   min-width: 132px;
-  max-width: min(100%, var(--node-card-port-pill-max-width, 240px));
   border-radius: 999px;
   border: 1px solid transparent;
   background: transparent;
@@ -297,11 +297,10 @@ function handlePortClick() {
 
 .node-card__port-pill-label {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   min-width: 0;
   padding-inline: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 1.02rem;
   font-weight: 600;
@@ -312,9 +311,6 @@ function handlePortClick() {
 .node-card__port-pill-label-text {
   display: block;
   min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.2;
   transition: opacity 140ms ease;

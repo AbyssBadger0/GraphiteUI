@@ -24,5 +24,5 @@ test("FloatingStatePortPill carries floating pill geometry styles", () => {
   assert.match(componentSource, /\.node-card__port-pill--floating \{[\s\S]*z-index:\s*5000;/);
   assert.match(componentSource, /\.node-card__port-pill--removable\.node-card__port-pill--input \{[\s\S]*padding-right:\s*39px;/);
   assert.match(componentSource, /\.node-card__port-pill--removable\.node-card__port-pill--output \{[\s\S]*padding-left:\s*39px;/);
-  assert.match(componentSource, /\.node-card__port-pill-label-text \{[\s\S]*text-overflow:\s*ellipsis;/);
+  assert.doesNotMatch(componentSource, /text-overflow:\s*ellipsis;/);
 });

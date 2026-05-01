@@ -30,6 +30,8 @@ test("ConditionNodeBody carries condition scoped styles that cannot cross the ch
   assert.match(componentSource, /\.node-card__condition-controls-row \{[\s\S]*--node-card-condition-loop-column:\s*clamp\(6\.5rem,\s*22%,\s*8rem\);/);
   assert.match(componentSource, /\.node-card__condition-controls-row \{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(0,\s*1fr\) var\(--node-card-condition-loop-column\);/);
   assert.match(componentSource, /\.node-card__port-pill--condition-source \{[\s\S]*min-width:\s*260px;/);
+  assert.doesNotMatch(componentSource, /--node-card-port-pill-max-width/);
+  assert.doesNotMatch(componentSource, /text-overflow:\s*ellipsis;/);
   assert.match(componentSource, /\.node-card__condition-source-empty \{[\s\S]*border:\s*1px dashed rgba\(154,\s*52,\s*18,\s*0\.2\);/);
   assert.doesNotMatch(componentSource, /node-card__branch-editor/);
   assert.doesNotMatch(componentSource, /node-card__branch-list/);

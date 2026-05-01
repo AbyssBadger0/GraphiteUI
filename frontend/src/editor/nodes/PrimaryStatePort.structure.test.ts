@@ -28,7 +28,7 @@ test("PrimaryStatePort carries primary state-pill scoped styles", () => {
   assert.match(componentSource, /\.node-card__port-pill \{[\s\S]*display:\s*inline-flex;/);
   assert.match(componentSource, /\.node-card__port-pill--dock-start \{[\s\S]*margin-left:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
   assert.match(componentSource, /\.node-card__port-pill--dock-end \{[\s\S]*margin-right:\s*calc\(var\(--node-card-inline-padding\) \* -1 - 10px\);/);
-  assert.match(componentSource, /\.node-card__port-pill-label-text \{[\s\S]*text-overflow:\s*ellipsis;/);
+  assert.doesNotMatch(componentSource, /text-overflow:\s*ellipsis;/);
   assert.match(componentSource, /\.node-card__confirm-hint--state \{[\s\S]*background:\s*rgba\(239,\s*246,\s*255,\s*0\.98\);/);
   assert.match(componentSource, /:deep\(\.node-card__state-editor-popper\.el-popper\)/);
 });

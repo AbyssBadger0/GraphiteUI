@@ -11,9 +11,6 @@ import yaml
 from app.core.schemas.skills import (
     SkillAgentNodeEligibility,
     SkillCatalogStatus,
-    SkillCompatibilityReport,
-    SkillCompatibilityStatus,
-    SkillCompatibilityTarget,
     SkillDefinition,
     SkillHealthSpec,
     SkillIoField,
@@ -98,7 +95,6 @@ def list_skill_catalog(*, include_disabled: bool = True) -> list[SkillDefinition
                     "status": status if record.source_scope == SkillSourceScope.GRAPHITE_MANAGED else SkillCatalogStatus.ACTIVE,
                     "can_manage": record.source_scope == SkillSourceScope.GRAPHITE_MANAGED,
                     "can_import": record.source_scope == SkillSourceScope.EXTERNAL and skill_key in runtime_supported_keys,
-                    "compatibility": _build_compatibility_reports(record.source_format, record.source_scope, record.definition),
                 },
             )
         )
@@ -282,53 +278,3 @@ def _split_frontmatter(raw: str, path: Path) -> tuple[str, str]:
         raise ValueError(f"Skill file '{path}' must close YAML frontmatter with '---'.")
     frontmatter, body = rest.split(marker, 1)
     return frontmatter, body.strip()
-
-
-def _build_compatibility_reports(
-    source_format: SkillSourceFormat,
-    source_scope: SkillSourceScope,
-    definition: SkillDefinition,
-) -> list[SkillCompatibilityReport]:
-    shared_missing_capabilities = ["缺少标准 JSON Schema 输入定义"]
-    if not definition.output_schema:
-        shared_missing_capabilities.append("缺少标准化输出 schema 导出")
-
-    claude_status = SkillCompatibilityStatus.NATIVE if source_format == SkillSourceFormat.CLAUDE_CODE else SkillCompatibilityStatus.PARTIAL
-    claude_summary = (
-        "当前 skill 以 Claude Code 风格文件存在。"
-        if source_format == SkillSourceFormat.CLAUDE_CODE
-        else "当前 skill 不是 Claude Code 原生文件，但可以映射。"
-    )
-    openclaw_status = SkillCompatibilityStatus.NATIVE if source_format == SkillSourceFormat.OPENCLAW else SkillCompatibilityStatus.PARTIAL
-    openclaw_summary = (
-        "当前 skill 已是 OpenClaw 原生目录格式。"
-        if source_format == SkillSourceFormat.OPENCLAW
-        else "当前 skill 还不是 OpenClaw 的 SKILL.md 目录格式。"
-    )
-    codex_status = SkillCompatibilityStatus.NATIVE if source_format == SkillSourceFormat.CODEX else SkillCompatibilityStatus.PARTIAL
-    codex_summary = (
-        "当前 skill 已是 Codex 原生 SKILL.md 目录格式。"
-        if source_format == SkillSourceFormat.CODEX
-        else "当前 skill 还没有 Codex 原生 SKILL.md 包装。"
-    )
-
-    return [
-        SkillCompatibilityReport(
-            target=SkillCompatibilityTarget.CLAUDE_CODE,
-            status=claude_status,
-            summary=claude_summary if source_scope == SkillSourceScope.GRAPHITE_MANAGED else f"{claude_summary} 当前仅作为外部源被发现，需先导入 GraphiteUI。",
-            missingCapabilities=[] if claude_status == SkillCompatibilityStatus.NATIVE else [*shared_missing_capabilities],
-        ),
-        SkillCompatibilityReport(
-            target=SkillCompatibilityTarget.OPENCLAW,
-            status=openclaw_status,
-            summary=openclaw_summary if source_scope == SkillSourceScope.GRAPHITE_MANAGED else f"{openclaw_summary} 当前仅作为外部源被发现，需先导入 GraphiteUI。",
-            missingCapabilities=[] if openclaw_status == SkillCompatibilityStatus.NATIVE else [*shared_missing_capabilities, "缺少 OpenClaw 的技能目录包装", "缺少目录内 `SKILL.md` 主文件布局"],
-        ),
-        SkillCompatibilityReport(
-            target=SkillCompatibilityTarget.CODEX,
-            status=codex_status,
-            summary=codex_summary if source_scope == SkillSourceScope.GRAPHITE_MANAGED else f"{codex_summary} 当前仅作为外部源被发现，需先导入 GraphiteUI。",
-            missingCapabilities=[] if codex_status == SkillCompatibilityStatus.NATIVE else [*shared_missing_capabilities, "缺少 Codex 原生 SKILL.md 包装与目录约定"],
-        ),
-    ]

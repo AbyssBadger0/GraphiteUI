@@ -17,7 +17,15 @@ test("SkillsPage loads the full skill catalog into a searchable management surfa
   assert.match(componentSource, /<ElInput[\s\S]*v-model="query"[\s\S]*class="skills-page__search"/);
   assert.match(componentSource, /role="tablist"[\s\S]*class="skills-page__filter-tabs"/);
   assert.match(componentSource, /v-for="skill in filteredSkills"/);
-  assert.match(componentSource, /skill\.compatibility/);
+  assert.doesNotMatch(componentSource, /skill\.compatibility/);
+  assert.doesNotMatch(componentSource, /skills\.compatibility/);
+});
+
+test("SkillsPage renders Skills as collapsed cards with concise summaries by default", () => {
+  assert.match(componentSource, /<details[\s\S]*class="skills-page__card"/);
+  assert.match(componentSource, /<summary[\s\S]*class="skills-page__card-summary"/);
+  assert.doesNotMatch(componentSource, /<details[\s\S]*\sopen[\s\S]*>/);
+  assert.match(componentSource, /class="skills-page__card-details"/);
 });
 
 test("SkillsPage surfaces native Skill taxonomy and readiness metadata", () => {

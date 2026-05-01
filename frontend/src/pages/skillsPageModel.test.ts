@@ -35,7 +35,6 @@ const skills: SkillDefinition[] = [
     status: "active",
     canManage: true,
     canImport: false,
-    compatibility: [],
   },
   {
     skillKey: "external_search",
@@ -66,7 +65,6 @@ const skills: SkillDefinition[] = [
     status: "active",
     canManage: true,
     canImport: false,
-    compatibility: [],
   },
   {
     skillKey: "desktop_companion_profile",
@@ -97,7 +95,6 @@ const skills: SkillDefinition[] = [
     status: "active",
     canManage: true,
     canImport: false,
-    compatibility: [],
   },
 ];
 

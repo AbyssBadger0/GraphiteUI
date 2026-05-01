@@ -62,27 +62,6 @@ class SkillAgentNodeEligibility(str, Enum):
     INCOMPATIBLE = "incompatible"
 
 
-class SkillCompatibilityStatus(str, Enum):
-    NATIVE = "native"
-    PARTIAL = "partial"
-    INCOMPATIBLE = "incompatible"
-
-
-class SkillCompatibilityTarget(str, Enum):
-    CLAUDE_CODE = "claude_code"
-    OPENCLAW = "openclaw"
-    CODEX = "codex"
-
-
-class SkillCompatibilityReport(BaseModel):
-    target: SkillCompatibilityTarget
-    status: SkillCompatibilityStatus
-    summary: str
-    missing_capabilities: list[str] = Field(default_factory=list, alias="missingCapabilities")
-
-    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
-
-
 class SkillCatalogStatus(str, Enum):
     ACTIVE = "active"
     DISABLED = "disabled"
@@ -144,6 +123,5 @@ class SkillDefinition(BaseModel):
     status: SkillCatalogStatus = Field(default=SkillCatalogStatus.ACTIVE)
     can_manage: bool = Field(default=False, alias="canManage")
     can_import: bool = Field(default=False, alias="canImport")
-    compatibility: list[SkillCompatibilityReport] = Field(default_factory=list)
 
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)

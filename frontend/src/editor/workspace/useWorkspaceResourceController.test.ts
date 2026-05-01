@@ -107,7 +107,6 @@ function createSkillDefinition(): SkillDefinition {
     status: "ready",
     canManage: true,
     canImport: true,
-    compatibility: [],
   };
 }
 

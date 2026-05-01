@@ -64,7 +64,6 @@ test("fetchSkillDefinitions requests the skill definitions endpoint", async () =
           status: "active",
           canManage: true,
           canImport: false,
-          compatibility: [],
         },
       ]),
       {
@@ -125,7 +124,6 @@ test("fetchSkillDefinitions requests the skill definitions endpoint", async () =
       status: "active",
       canManage: true,
       canImport: false,
-      compatibility: [],
     },
   ]);
 

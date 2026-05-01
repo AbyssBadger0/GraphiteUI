@@ -13,6 +13,35 @@ from app.skills.definitions import _parse_native_skill_manifest
 
 
 class SkillManifestContractTests(unittest.TestCase):
+    def test_skill_definition_payload_omits_legacy_compatibility_reports(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            skill_dir = Path(temp_dir) / "summarize_text"
+            skill_dir.mkdir()
+            manifest = skill_dir / "skill.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "graphite.skill/v1",
+                        "skillKey": "summarize_text",
+                        "label": "Summarize Text",
+                        "targets": ["agent_node"],
+                        "inputSchema": [
+                            {"key": "text", "label": "Text", "valueType": "text", "required": True}
+                        ],
+                        "outputSchema": [
+                            {"key": "summary", "label": "Summary", "valueType": "text"}
+                        ],
+                        "runtime": {"type": "builtin", "entrypoint": "summarize_text"},
+                        "health": {"type": "builtin"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            definition = _parse_native_skill_manifest(manifest, SkillSourceScope.GRAPHITE_MANAGED).definition
+
+        self.assertNotIn("compatibility", definition.model_dump(by_alias=True))
+
     def test_native_manifest_exposes_runtime_health_and_ready_eligibility(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             skill_dir = Path(temp_dir) / "normalize_storyboard_shots"

@@ -94,163 +94,161 @@
         <article v-else-if="filteredSkills.length === 0" class="skills-page__empty">{{ t("skills.empty") }}</article>
         <template v-else>
           <div class="skills-page__result-count">{{ t("skills.resultCount", { count: filteredSkills.length }) }}</div>
-          <article v-for="skill in filteredSkills" :key="skill.skillKey" class="skills-page__card">
-            <div class="skills-page__card-heading">
-              <div>
-                <div class="skills-page__id">{{ skill.skillKey }}</div>
-                <h3>{{ skill.label }}</h3>
+          <details v-for="skill in filteredSkills" :key="skill.skillKey" class="skills-page__card">
+            <summary class="skills-page__card-summary">
+              <div class="skills-page__card-heading">
+                <div>
+                  <div class="skills-page__id">{{ skill.skillKey }}</div>
+                  <h3>{{ skill.label }}</h3>
+                </div>
+                <div class="skills-page__status">
+                  <span>{{ t(`skills.${skill.status}`) }}</span>
+                  <span>{{ skill.runtimeReady ? t("skills.runtimeReady") : t("skills.runtimePending") }}</span>
+                  <span>{{ skill.runtimeRegistered ? t("skills.runtimeRegistered") : t("skills.runtimeNotRegistered") }}</span>
+                  <span>{{ t("skills.agentNodeEligibility") }}: {{ skill.agentNodeEligibility }}</span>
+                  <span v-if="!skill.configured" class="skills-page__status-warning">{{ t("skills.notConfigured") }}</span>
+                  <span v-if="!skill.healthy" class="skills-page__status-warning">{{ t("skills.unhealthy") }}</span>
+                  <span v-if="skill.canManage">{{ t("skills.manageable") }}</span>
+                  <span v-if="skill.canImport">{{ t("skills.importable") }}</span>
+                </div>
               </div>
-              <div class="skills-page__status">
-                <span>{{ t(`skills.${skill.status}`) }}</span>
-                <span>{{ skill.runtimeReady ? t("skills.runtimeReady") : t("skills.runtimePending") }}</span>
-                <span>{{ skill.runtimeRegistered ? t("skills.runtimeRegistered") : t("skills.runtimeNotRegistered") }}</span>
-                <span>{{ t("skills.agentNodeEligibility") }}: {{ skill.agentNodeEligibility }}</span>
-                <span v-if="!skill.configured" class="skills-page__status-warning">{{ t("skills.notConfigured") }}</span>
-                <span v-if="!skill.healthy" class="skills-page__status-warning">{{ t("skills.unhealthy") }}</span>
-                <span v-if="skill.canManage">{{ t("skills.manageable") }}</span>
-                <span v-if="skill.canImport">{{ t("skills.importable") }}</span>
+              <p>{{ skill.description }}</p>
+              <div class="skills-page__summary-meta">
+                <span v-for="target in skill.targets" :key="target">{{ target }}</span>
+                <span>{{ skill.kind }}</span>
+                <span>{{ skill.mode }}</span>
+                <span>{{ skill.runtime.type }}:{{ skill.runtime.entrypoint || skill.skillKey }}</span>
+              </div>
+              <span class="skills-page__card-caret" aria-hidden="true"></span>
+            </summary>
+
+            <div class="skills-page__card-details">
+              <div class="skills-page__taxonomy">
+                <section>
+                  <h4>{{ t("skills.targets") }}</h4>
+                  <div class="skills-page__badges">
+                    <span v-for="target in skill.targets" :key="target">{{ target }}</span>
+                  </div>
+                </section>
+                <section>
+                  <h4>{{ t("skills.kind") }}</h4>
+                  <div class="skills-page__badges">
+                    <span>{{ skill.kind }}</span>
+                    <span>{{ skill.mode }}</span>
+                    <span>{{ skill.scope }}</span>
+                  </div>
+                </section>
+                <section>
+                  <h4>{{ t("skills.runtime") }}</h4>
+                  <div class="skills-page__badges">
+                    <span>{{ skill.runtime.type }}</span>
+                    <span>{{ skill.runtime.entrypoint || t("common.none") }}</span>
+                    <span>{{ skill.health.type }}</span>
+                  </div>
+                </section>
+                <section>
+                  <h4>{{ t("skills.version") }}</h4>
+                  <div class="skills-page__badges">
+                    <span>{{ skill.version || t("common.none") }}</span>
+                  </div>
+                </section>
+              </div>
+
+              <div class="skills-page__actions" :aria-label="t('skills.actions')">
+                <button
+                  v-if="skill.canImport"
+                  type="button"
+                  class="skills-page__action"
+                  :disabled="actionSkillKey === skill.skillKey"
+                  @click="importSkillIntoCatalog(skill)"
+                >
+                  {{ t("skills.import") }}
+                </button>
+                <button
+                  v-if="skill.canManage && skill.status === 'disabled'"
+                  type="button"
+                  class="skills-page__action"
+                  :disabled="actionSkillKey === skill.skillKey"
+                  @click="setSkillStatus(skill, 'active')"
+                >
+                  {{ t("skills.enable") }}
+                </button>
+                <button
+                  v-else-if="skill.canManage"
+                  type="button"
+                  class="skills-page__action"
+                  :disabled="actionSkillKey === skill.skillKey"
+                  @click="setSkillStatus(skill, 'disabled')"
+                >
+                  {{ t("skills.disable") }}
+                </button>
+                <button
+                  v-if="skill.canManage"
+                  type="button"
+                  class="skills-page__action"
+                  :class="{ 'skills-page__action--danger': confirmingSkillDeleteKey === skill.skillKey }"
+                  :disabled="actionSkillKey === skill.skillKey"
+                  @click="deleteSkillFromCatalog(skill)"
+                >
+                  {{ confirmingSkillDeleteKey === skill.skillKey ? t("skills.confirmDelete") : t("skills.delete") }}
+                </button>
+              </div>
+
+              <div class="skills-page__source">
+                <span>{{ t("skills.source") }}: {{ skill.sourceScope }} / {{ skill.sourceFormat }}</span>
+                <code>{{ skill.sourcePath }}</code>
+              </div>
+
+              <div class="skills-page__columns">
+                <section>
+                  <h4>{{ t("skills.inputSchema") }}</h4>
+                  <div class="skills-page__schema-list">
+                    <span v-for="field in skill.inputSchema" :key="`in-${field.key}`">
+                      {{ field.key }} · {{ field.valueType }} · {{ field.required ? t("skills.required") : t("skills.optional") }}
+                    </span>
+                    <span v-if="skill.inputSchema.length === 0">{{ t("common.none") }}</span>
+                  </div>
+                </section>
+                <section>
+                  <h4>{{ t("skills.outputSchema") }}</h4>
+                  <div class="skills-page__schema-list">
+                    <span v-for="field in skill.outputSchema" :key="`out-${field.key}`">
+                      {{ field.key }} · {{ field.valueType }} · {{ field.required ? t("skills.required") : t("skills.optional") }}
+                    </span>
+                    <span v-if="skill.outputSchema.length === 0">{{ t("common.none") }}</span>
+                  </div>
+                </section>
+                <section>
+                  <h4>{{ t("skills.supportedTypes") }}</h4>
+                  <div class="skills-page__badges">
+                    <span v-for="valueType in skill.supportedValueTypes" :key="valueType">{{ valueType }}</span>
+                    <span v-if="skill.supportedValueTypes.length === 0">{{ t("common.none") }}</span>
+                  </div>
+                </section>
+                <section>
+                  <h4>{{ t("skills.sideEffects") }}</h4>
+                  <div class="skills-page__badges">
+                    <span v-for="effect in skill.sideEffects" :key="effect">{{ effect }}</span>
+                    <span v-if="skill.sideEffects.length === 0">{{ t("skills.noSideEffects") }}</span>
+                  </div>
+                </section>
+                <section>
+                  <h4>{{ t("skills.permissions") }}</h4>
+                  <div class="skills-page__badges">
+                    <span v-for="permission in skill.permissions" :key="permission">{{ permission }}</span>
+                    <span v-if="skill.permissions.length === 0">{{ t("common.none") }}</span>
+                  </div>
+                </section>
+                <section>
+                  <h4>{{ t("skills.agentNodeBlockers") }}</h4>
+                  <div class="skills-page__schema-list">
+                    <span v-for="blocker in skill.agentNodeBlockers" :key="blocker">{{ blocker }}</span>
+                    <span v-if="skill.agentNodeBlockers.length === 0">{{ t("skills.agentNodeReady") }}</span>
+                  </div>
+                </section>
               </div>
             </div>
-
-            <p>{{ skill.description }}</p>
-
-            <div class="skills-page__taxonomy">
-              <section>
-                <h4>{{ t("skills.targets") }}</h4>
-                <div class="skills-page__badges">
-                  <span v-for="target in skill.targets" :key="target">{{ target }}</span>
-                </div>
-              </section>
-              <section>
-                <h4>{{ t("skills.kind") }}</h4>
-                <div class="skills-page__badges">
-                  <span>{{ skill.kind }}</span>
-                  <span>{{ skill.mode }}</span>
-                  <span>{{ skill.scope }}</span>
-                </div>
-              </section>
-              <section>
-                <h4>{{ t("skills.runtime") }}</h4>
-                <div class="skills-page__badges">
-                  <span>{{ skill.runtime.type }}</span>
-                  <span>{{ skill.runtime.entrypoint || t("common.none") }}</span>
-                  <span>{{ skill.health.type }}</span>
-                </div>
-              </section>
-              <section>
-                <h4>{{ t("skills.version") }}</h4>
-                <div class="skills-page__badges">
-                  <span>{{ skill.version || t("common.none") }}</span>
-                </div>
-              </section>
-            </div>
-
-            <div class="skills-page__actions" :aria-label="t('skills.actions')">
-              <button
-                v-if="skill.canImport"
-                type="button"
-                class="skills-page__action"
-                :disabled="actionSkillKey === skill.skillKey"
-                @click="importSkillIntoCatalog(skill)"
-              >
-                {{ t("skills.import") }}
-              </button>
-              <button
-                v-if="skill.canManage && skill.status === 'disabled'"
-                type="button"
-                class="skills-page__action"
-                :disabled="actionSkillKey === skill.skillKey"
-                @click="setSkillStatus(skill, 'active')"
-              >
-                {{ t("skills.enable") }}
-              </button>
-              <button
-                v-else-if="skill.canManage"
-                type="button"
-                class="skills-page__action"
-                :disabled="actionSkillKey === skill.skillKey"
-                @click="setSkillStatus(skill, 'disabled')"
-              >
-                {{ t("skills.disable") }}
-              </button>
-              <button
-                v-if="skill.canManage"
-                type="button"
-                class="skills-page__action"
-                :class="{ 'skills-page__action--danger': confirmingSkillDeleteKey === skill.skillKey }"
-                :disabled="actionSkillKey === skill.skillKey"
-                @click="deleteSkillFromCatalog(skill)"
-              >
-                {{ confirmingSkillDeleteKey === skill.skillKey ? t("skills.confirmDelete") : t("skills.delete") }}
-              </button>
-            </div>
-
-            <div class="skills-page__source">
-              <span>{{ t("skills.source") }}: {{ skill.sourceScope }} / {{ skill.sourceFormat }}</span>
-              <code>{{ skill.sourcePath }}</code>
-            </div>
-
-            <div class="skills-page__columns">
-              <section>
-                <h4>{{ t("skills.inputSchema") }}</h4>
-                <div class="skills-page__schema-list">
-                  <span v-for="field in skill.inputSchema" :key="`in-${field.key}`">
-                    {{ field.key }} · {{ field.valueType }} · {{ field.required ? t("skills.required") : t("skills.optional") }}
-                  </span>
-                  <span v-if="skill.inputSchema.length === 0">{{ t("common.none") }}</span>
-                </div>
-              </section>
-              <section>
-                <h4>{{ t("skills.outputSchema") }}</h4>
-                <div class="skills-page__schema-list">
-                  <span v-for="field in skill.outputSchema" :key="`out-${field.key}`">
-                    {{ field.key }} · {{ field.valueType }} · {{ field.required ? t("skills.required") : t("skills.optional") }}
-                  </span>
-                  <span v-if="skill.outputSchema.length === 0">{{ t("common.none") }}</span>
-                </div>
-              </section>
-              <section>
-                <h4>{{ t("skills.supportedTypes") }}</h4>
-                <div class="skills-page__badges">
-                  <span v-for="valueType in skill.supportedValueTypes" :key="valueType">{{ valueType }}</span>
-                  <span v-if="skill.supportedValueTypes.length === 0">{{ t("common.none") }}</span>
-                </div>
-              </section>
-              <section>
-                <h4>{{ t("skills.sideEffects") }}</h4>
-                <div class="skills-page__badges">
-                  <span v-for="effect in skill.sideEffects" :key="effect">{{ effect }}</span>
-                  <span v-if="skill.sideEffects.length === 0">{{ t("skills.noSideEffects") }}</span>
-                </div>
-              </section>
-              <section>
-                <h4>{{ t("skills.permissions") }}</h4>
-                <div class="skills-page__badges">
-                  <span v-for="permission in skill.permissions" :key="permission">{{ permission }}</span>
-                  <span v-if="skill.permissions.length === 0">{{ t("common.none") }}</span>
-                </div>
-              </section>
-              <section>
-                <h4>{{ t("skills.agentNodeBlockers") }}</h4>
-                <div class="skills-page__schema-list">
-                  <span v-for="blocker in skill.agentNodeBlockers" :key="blocker">{{ blocker }}</span>
-                  <span v-if="skill.agentNodeBlockers.length === 0">{{ t("skills.agentNodeReady") }}</span>
-                </div>
-              </section>
-            </div>
-
-            <section class="skills-page__compatibility">
-              <h4>{{ t("skills.compatibility") }}</h4>
-              <div v-if="skill.compatibility.length === 0" class="skills-page__compatibility-empty">{{ t("skills.noCompatibility") }}</div>
-              <div v-for="item in skill.compatibility" :key="item.target" class="skills-page__compatibility-row">
-                <strong>{{ item.target }} · {{ item.status }}</strong>
-                <span>{{ item.summary }}</span>
-                <small v-if="item.missingCapabilities.length > 0">
-                  {{ t("skills.missingCapabilities") }}: {{ item.missingCapabilities.join(", ") }}
-                </small>
-              </div>
-            </section>
-          </article>
+          </details>
         </template>
       </section>
     </section>
@@ -410,9 +408,11 @@ onMounted(loadSkills);
 .skills-page__status-filter,
 .skills-page__hero-actions,
 .skills-page__card-heading > *,
+.skills-page__card-summary,
+.skills-page__card-details,
+.skills-page__summary-meta,
 .skills-page__taxonomy section,
-.skills-page__columns section,
-.skills-page__compatibility {
+.skills-page__columns section {
   min-width: 0;
 }
 
@@ -457,8 +457,7 @@ onMounted(loadSkills);
 .skills-page__empty,
 .skills-page__notice,
 .skills-page__result-count,
-.skills-page__source,
-.skills-page__compatibility-empty {
+.skills-page__source {
   color: rgba(60, 41, 20, 0.72);
   line-height: 1.6;
 }
@@ -608,9 +607,51 @@ onMounted(loadSkills);
 
 .skills-page__card {
   display: grid;
-  gap: 16px;
-  padding: 18px;
+  padding: 0;
   background: var(--graphite-surface-card);
+  overflow: hidden;
+}
+
+.skills-page__card-summary {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 18px 48px 18px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.skills-page__card-summary::-webkit-details-marker {
+  display: none;
+}
+
+.skills-page__card-summary:focus-visible {
+  outline: 2px solid rgba(216, 166, 80, 0.5);
+  outline-offset: -4px;
+}
+
+.skills-page__card-caret {
+  position: absolute;
+  top: 24px;
+  right: 22px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid rgba(154, 52, 18, 0.62);
+  border-bottom: 2px solid rgba(154, 52, 18, 0.62);
+  transform: rotate(-45deg);
+  transition: transform 160ms ease;
+}
+
+.skills-page__card[open] .skills-page__card-caret {
+  transform: rotate(45deg);
+}
+
+.skills-page__card-details {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid rgba(154, 52, 18, 0.08);
+  padding: 16px 18px 18px;
+  background: rgba(255, 255, 255, 0.32);
 }
 
 .skills-page__card-heading {
@@ -636,7 +677,8 @@ onMounted(loadSkills);
 
 .skills-page__status,
 .skills-page__actions,
-.skills-page__badges {
+.skills-page__badges,
+.skills-page__summary-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -654,7 +696,8 @@ onMounted(loadSkills);
 
 .skills-page__status span,
 .skills-page__badges span,
-.skills-page__schema-list span {
+.skills-page__schema-list span,
+.skills-page__summary-meta span {
   border: 1px solid rgba(154, 52, 18, 0.08);
   border-radius: 999px;
   padding: 4px 10px;
@@ -689,28 +732,11 @@ onMounted(loadSkills);
 
 .skills-page__taxonomy section,
 .skills-page__columns section,
-.skills-page__schema-list,
-.skills-page__compatibility {
+.skills-page__schema-list {
   display: grid;
   align-content: start;
   gap: 8px;
   min-width: 0;
-}
-
-.skills-page__compatibility-row {
-  display: grid;
-  gap: 4px;
-  border-top: 1px solid rgba(154, 52, 18, 0.1);
-  padding-top: 10px;
-  color: rgba(60, 41, 20, 0.72);
-}
-
-.skills-page__compatibility-row strong {
-  color: var(--graphite-text-strong);
-}
-
-.skills-page__compatibility-row small {
-  color: rgba(154, 52, 18, 0.82);
 }
 
 @media (max-width: 1100px) {

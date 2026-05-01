@@ -6,13 +6,6 @@ export type SkillIoField = {
   description: string;
 };
 
-export type SkillCompatibilityReport = {
-  target: string;
-  status: string;
-  summary: string;
-  missingCapabilities: string[];
-};
-
 export type SkillRuntimeSpec = {
   type: string;
   entrypoint: string;
@@ -51,5 +44,4 @@ export type SkillDefinition = {
   status: string;
   canManage: boolean;
   canImport: boolean;
-  compatibility: SkillCompatibilityReport[];
 };

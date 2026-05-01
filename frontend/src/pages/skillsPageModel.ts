@@ -98,7 +98,6 @@ function buildSkillSearchText(skill: SkillDefinition): string {
     ...skill.sideEffects,
     ...skill.inputSchema.map((field) => `${field.key} ${field.label} ${field.valueType} ${field.description}`),
     ...skill.outputSchema.map((field) => `${field.key} ${field.label} ${field.valueType} ${field.description}`),
-    ...skill.compatibility.map((item) => `${item.target} ${item.status} ${item.summary} ${item.missingCapabilities.join(" ")}`),
   ]
     .join(" ")
     .toLowerCase();

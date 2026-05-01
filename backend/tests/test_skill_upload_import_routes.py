@@ -183,6 +183,7 @@ class SkillUploadImportRouteTests(unittest.TestCase):
                     self.assertEqual(catalog_items[skill_key]["targets"], ["agent_node"])
                     self.assertTrue(catalog_items[skill_key]["runtimeReady"])
                     self.assertTrue(catalog_items[skill_key]["runtimeRegistered"])
+                    self.assertNotIn("compatibility", catalog_items[skill_key])
 
     def test_native_skill_json_upload_imports_graphite_skill_package(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -205,6 +206,7 @@ class SkillUploadImportRouteTests(unittest.TestCase):
                 self.assertEqual(payload["mode"], "workflow")
                 self.assertEqual(payload["scope"], "graph")
                 self.assertEqual(payload["permissions"], ["model_vision", "file_read"])
+                self.assertNotIn("compatibility", payload)
                 self.assertFalse(payload["runtimeReady"])
                 self.assertFalse(payload["runtimeRegistered"])
                 self.assertEqual(payload["agentNodeEligibility"], "needs_manifest")

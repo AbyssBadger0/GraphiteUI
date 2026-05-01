@@ -39,7 +39,6 @@ const skillDefinitions: SkillDefinition[] = [
     status: "active",
     canManage: true,
     canImport: false,
-    compatibility: [],
   },
   {
     skillKey: "append_usage_introduction",
@@ -70,7 +69,6 @@ const skillDefinitions: SkillDefinition[] = [
     status: "active",
     canManage: true,
     canImport: false,
-    compatibility: [],
   },
 ];
 

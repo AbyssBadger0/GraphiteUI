@@ -178,8 +178,10 @@ class TemplateLayoutTests(unittest.TestCase):
         self.assertIn("web_search_agent", template.nodes)
         self.assertIn("assess_search_sufficiency", template.nodes)
         self.assertIn("need_more_search_check", template.nodes)
-        self.assertIn("final_answer_writer", template.nodes)
-        self.assertIn("exhausted_answer_writer", template.nodes)
+        self.assertNotIn("final_answer_writer", template.nodes)
+        self.assertNotIn("exhausted_answer_writer", template.nodes)
+        self.assertIn("output_final_answer", template.nodes)
+        self.assertIn("output_exhausted_answer", template.nodes)
 
         search_node = template.nodes["web_search_agent"]
         self.assertEqual(search_node.config.skills, ["web_search"])
@@ -195,6 +197,8 @@ class TemplateLayoutTests(unittest.TestCase):
         self.assertIn(state_by_name["research_notes"], [binding.state for binding in assessor.writes])
         self.assertIn(state_by_name["needs_more_search"], [binding.state for binding in assessor.writes])
         self.assertIn(state_by_name["search_query"], [binding.state for binding in assessor.writes])
+        self.assertIn(state_by_name["final_answer"], [binding.state for binding in assessor.writes])
+        self.assertIn(state_by_name["exhausted_answer"], [binding.state for binding in assessor.writes])
 
         condition = template.nodes["need_more_search_check"]
         self.assertEqual(condition.config.loop_limit, 3)
@@ -207,7 +211,7 @@ class TemplateLayoutTests(unittest.TestCase):
             conditional_edge.branches,
             {
                 "true": "web_search_agent",
-                "false": "final_answer_writer",
-                "exhausted": "exhausted_answer_writer",
+                "false": "output_final_answer",
+                "exhausted": "output_exhausted_answer",
             },
         )

@@ -138,11 +138,13 @@
       "writes": [
         { "state": "state_4", "mode": "replace" },
         { "state": "state_5", "mode": "replace" },
-        { "state": "state_2", "mode": "replace" }
+        { "state": "state_2", "mode": "replace" },
+        { "state": "state_6", "mode": "replace" },
+        { "state": "state_7", "mode": "replace" }
       ],
       "config": {
         "skills": [],
-        "taskInstruction": "读取 request、search_query、search_result 和已有 research_notes。把本轮搜索证据合并进 research_notes，保留引用链接。判断是否已经足够回答 request：必须能覆盖发布日期和模型亮点，并优先有官方或高可信来源。如果信息不足，needs_more_search=true，并把 search_query 更新为下一轮更具体的补充搜索词；如果信息足够，needs_more_search=false，并保持 search_query 为当前或最有代表性的查询。严格返回 JSON，字段为 research_notes、needs_more_search、search_query。"
+        "taskInstruction": "读取 request、search_query、search_result 和已有 research_notes。把本轮搜索证据合并进 research_notes，保留引用链接。判断是否已经足够回答 request：必须能覆盖发布日期和模型亮点，并优先有官方或高可信来源。如果信息不足，needs_more_search=true，并把 search_query 更新为下一轮更具体的补充搜索词，同时生成一版 exhausted_answer 作为循环达到上限时的谨慎答案；如果信息足够，needs_more_search=false，并生成 final_answer。不要编造证据中没有确认的事实。严格返回 JSON，字段为 research_notes、needs_more_search、search_query、final_answer、exhausted_answer。"
       }
     },
     "need_more_search_check": {
@@ -170,52 +172,12 @@
         }
       }
     },
-    "final_answer_writer": {
-      "kind": "agent",
-      "name": "final_answer_writer",
-      "description": "Write the final answer once evidence is sufficient.",
-      "ui": {
-        "position": { "x": 3480, "y": 120 },
-        "collapsed": false
-      },
-      "reads": [
-        { "state": "state_1", "required": true },
-        { "state": "state_4", "required": true }
-      ],
-      "writes": [
-        { "state": "state_7", "mode": "replace" }
-      ],
-      "config": {
-        "skills": [],
-        "taskInstruction": "读取 request 和 research_notes，生成最终中文答案。必须分别回答发布日期和模型亮点，并附引用链接；如果证据中没有确认某项事实，明确说明未能确认，不要编造。严格返回 JSON，字段 final_answer 为 Markdown 字符串。"
-      }
-    },
-    "exhausted_answer_writer": {
-      "kind": "agent",
-      "name": "exhausted_answer_writer",
-      "description": "Write a best-effort answer if the loop limit is reached before evidence is sufficient.",
-      "ui": {
-        "position": { "x": 3480, "y": 660 },
-        "collapsed": false
-      },
-      "reads": [
-        { "state": "state_1", "required": true },
-        { "state": "state_4", "required": true }
-      ],
-      "writes": [
-        { "state": "state_6", "mode": "replace" }
-      ],
-      "config": {
-        "skills": [],
-        "taskInstruction": "读取 request 和 research_notes。循环搜索已达上限，请基于已有证据生成一版谨慎答案。开头明确说明信息可能不足；必须区分已确认事实和未确认事项，并附已有引用链接。严格返回 JSON，字段 exhausted_answer 为 Markdown 字符串。"
-      }
-    },
     "output_final_answer": {
       "kind": "output",
       "name": "output_final_answer",
       "description": "Show the final grounded research answer.",
       "ui": {
-        "position": { "x": 4160, "y": 280 },
+        "position": { "x": 3480, "y": 120 },
         "collapsed": false
       },
       "reads": [
@@ -233,7 +195,7 @@
       "name": "output_exhausted_answer",
       "description": "Show the best-effort answer when the search loop reaches its limit.",
       "ui": {
-        "position": { "x": 4160, "y": 820 },
+        "position": { "x": 3480, "y": 660 },
         "collapsed": false
       },
       "reads": [
@@ -263,14 +225,6 @@
     {
       "source": "assess_search_sufficiency",
       "target": "need_more_search_check"
-    },
-    {
-      "source": "final_answer_writer",
-      "target": "output_final_answer"
-    },
-    {
-      "source": "exhausted_answer_writer",
-      "target": "output_exhausted_answer"
     }
   ],
   "conditional_edges": [
@@ -278,8 +232,8 @@
       "source": "need_more_search_check",
       "branches": {
         "true": "web_search_agent",
-        "false": "final_answer_writer",
-        "exhausted": "exhausted_answer_writer"
+        "false": "output_final_answer",
+        "exhausted": "output_exhausted_answer"
       }
     }
   ],

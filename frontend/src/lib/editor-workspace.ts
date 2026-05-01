@@ -64,7 +64,61 @@ function normalizeGraphDocumentDraft(value: unknown): GraphPayload | GraphDocume
     return null;
   }
 
-  return JSON.parse(JSON.stringify(value)) as GraphPayload | GraphDocument;
+  return repairLegacyWebResearchLoopOutputMapping(JSON.parse(JSON.stringify(value)) as GraphPayload | GraphDocument);
+}
+
+function repairLegacyWebResearchLoopOutputMapping<T extends GraphPayload | GraphDocument>(draft: T): T {
+  const finalState = findStateKeyByName(draft, "final_answer");
+  const exhaustedState = findStateKeyByName(draft, "exhausted_answer");
+  if (!finalState || !exhaustedState) {
+    return draft;
+  }
+
+  const finalWriter = draft.nodes.final_answer_writer;
+  const exhaustedWriter = draft.nodes.exhausted_answer_writer;
+  const finalOutput = draft.nodes.output_final_answer;
+  const exhaustedOutput = draft.nodes.output_exhausted_answer;
+  if (
+    finalWriter?.kind !== "agent" ||
+    exhaustedWriter?.kind !== "agent" ||
+    finalOutput?.kind !== "output" ||
+    exhaustedOutput?.kind !== "output"
+  ) {
+    return draft;
+  }
+  if (!nodeReadsState(finalOutput, finalState) || !nodeReadsState(exhaustedOutput, exhaustedState)) {
+    return draft;
+  }
+  if (!hasLegacyWebResearchBranches(draft)) {
+    return draft;
+  }
+  if (singleWriteState(finalWriter) !== exhaustedState || singleWriteState(exhaustedWriter) !== finalState) {
+    return draft;
+  }
+
+  finalWriter.writes[0] = { ...finalWriter.writes[0]!, state: finalState };
+  exhaustedWriter.writes[0] = { ...exhaustedWriter.writes[0]!, state: exhaustedState };
+  return draft;
+}
+
+function findStateKeyByName(draft: GraphPayload | GraphDocument, stateName: string): string | null {
+  return Object.entries(draft.state_schema).find(([, definition]) => definition.name === stateName)?.[0] ?? null;
+}
+
+function singleWriteState(node: GraphPayload["nodes"][string]): string | null {
+  return node.kind === "agent" && node.writes.length === 1 ? node.writes[0]?.state ?? null : null;
+}
+
+function nodeReadsState(node: GraphPayload["nodes"][string], stateKey: string): boolean {
+  return node.kind === "output" && node.reads.some((binding) => binding.state === stateKey);
+}
+
+function hasLegacyWebResearchBranches(draft: GraphPayload | GraphDocument): boolean {
+  return draft.conditional_edges.some(
+    (edge) =>
+      edge.branches.false === "final_answer_writer" &&
+      edge.branches.exhausted === "exhausted_answer_writer",
+  );
 }
 
 function normalizeCanvasViewportDraft(value: unknown): CanvasViewport | null {

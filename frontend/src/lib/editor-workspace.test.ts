@@ -112,6 +112,135 @@ test("persisted editor document drafts preserve agent thinking level exactly", (
   assert.match(storage.getItem(EDITOR_WORKSPACE_DOCUMENTS_STORAGE_KEY) ?? "", /"thinkingMode":"low"/);
 });
 
+test("persisted editor document drafts repair legacy web research answer writer state mapping", () => {
+  const storage = createStorageMock();
+  Object.assign(globalThis, { localStorage: storage });
+  const draft: GraphPayload = {
+    graph_id: null,
+    name: "联网研究循环",
+    state_schema: {
+      state_1: { name: "request", description: "", type: "text", value: "", color: "" },
+      state_4: { name: "research_notes", description: "", type: "markdown", value: "", color: "" },
+      state_5: { name: "needs_more_search", description: "", type: "boolean", value: false, color: "" },
+      state_6: { name: "final_answer", description: "", type: "markdown", value: "", color: "" },
+      state_7: { name: "exhausted_answer", description: "", type: "markdown", value: "", color: "" },
+    },
+    nodes: {
+      need_more_search_check: {
+        kind: "condition",
+        name: "need_more_search_check",
+        description: "",
+        ui: { position: { x: 0, y: 0 } },
+        reads: [{ state: "state_5", required: true }],
+        writes: [],
+        config: {
+          branches: ["true", "false", "exhausted"],
+          loopLimit: 3,
+          branchMapping: { true: "true", false: "false" },
+          rule: { source: "state_5", operator: "==", value: true },
+        },
+      },
+      web_search_agent: {
+        kind: "agent",
+        name: "web_search_agent",
+        description: "",
+        ui: { position: { x: 0, y: 0 } },
+        reads: [{ state: "state_1", required: true }],
+        writes: [{ state: "state_4", mode: "replace" }],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "off",
+          temperature: 0.2,
+        },
+      },
+      final_answer_writer: {
+        kind: "agent",
+        name: "final_answer_writer",
+        description: "",
+        ui: { position: { x: 0, y: 0 } },
+        reads: [{ state: "state_4", required: true }],
+        writes: [{ state: "state_7", mode: "replace" }],
+        config: {
+          skills: [],
+          taskInstruction: "严格返回 JSON，字段 final_answer 为 Markdown 字符串。",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "off",
+          temperature: 0.2,
+        },
+      },
+      exhausted_answer_writer: {
+        kind: "agent",
+        name: "exhausted_answer_writer",
+        description: "",
+        ui: { position: { x: 0, y: 0 } },
+        reads: [{ state: "state_4", required: true }],
+        writes: [{ state: "state_6", mode: "replace" }],
+        config: {
+          skills: [],
+          taskInstruction: "严格返回 JSON，字段 exhausted_answer 为 Markdown 字符串。",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "off",
+          temperature: 0.2,
+        },
+      },
+      output_final_answer: {
+        kind: "output",
+        name: "output_final_answer",
+        description: "",
+        ui: { position: { x: 0, y: 0 } },
+        reads: [{ state: "state_6", required: true }],
+        writes: [],
+        config: {
+          displayMode: "markdown",
+          persistEnabled: false,
+          persistFormat: "auto",
+          fileNameTemplate: "",
+        },
+      },
+      output_exhausted_answer: {
+        kind: "output",
+        name: "output_exhausted_answer",
+        description: "",
+        ui: { position: { x: 0, y: 0 } },
+        reads: [{ state: "state_7", required: true }],
+        writes: [],
+        config: {
+          displayMode: "markdown",
+          persistEnabled: false,
+          persistFormat: "auto",
+          fileNameTemplate: "",
+        },
+      },
+    },
+    edges: [
+      { source: "final_answer_writer", target: "output_final_answer" },
+      { source: "exhausted_answer_writer", target: "output_exhausted_answer" },
+    ],
+    conditional_edges: [
+      {
+        source: "need_more_search_check",
+        branches: {
+          true: "web_search_agent",
+          false: "final_answer_writer",
+          exhausted: "exhausted_answer_writer",
+        },
+      },
+    ],
+    metadata: {},
+  };
+  storage.setItem(EDITOR_WORKSPACE_DOCUMENTS_STORAGE_KEY, JSON.stringify({ tab_a: draft }));
+
+  const repaired = readPersistedEditorDocumentDraft("tab_a");
+
+  assert.equal(repaired?.nodes.final_answer_writer?.writes[0]?.state, "state_6");
+  assert.equal(repaired?.nodes.exhausted_answer_writer?.writes[0]?.state, "state_7");
+});
+
 test("persisted editor document drafts can be pruned and removed by tab id", () => {
   const storage = createStorageMock();
   Object.assign(globalThis, { localStorage: storage });

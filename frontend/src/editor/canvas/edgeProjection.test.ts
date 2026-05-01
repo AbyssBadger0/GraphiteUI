@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { buildSequenceFlowPath } from "./flowEdgePath.ts";
 import { groupProjectedCanvasAnchors, groupProjectedCanvasEdges, projectCanvasAnchors, projectCanvasEdges } from "./edgeProjection.ts";
@@ -161,7 +162,7 @@ test("projectCanvasEdges colors data links from the state schema", () => {
   assert.match(dataEdge?.path ?? "", /^M .* C /);
 });
 
-test("projectCanvasEdges skips ambiguous data writers", () => {
+test("projectCanvasEdges shows every reachable data writer for a state read", () => {
   const branchingGraph: GraphPayload = {
     graph_id: null,
     name: "Branching data",
@@ -231,7 +232,29 @@ test("projectCanvasEdges skips ambiguous data writers", () => {
   };
 
   const projected = projectCanvasEdges(branchingGraph);
-  assert.equal(projected.filter((edge) => edge.kind === "data" && edge.target === "sink").length, 0);
+  assert.deepEqual(
+    projected
+      .filter((edge) => edge.kind === "data" && edge.target === "sink")
+      .map((edge) => edge.id)
+      .sort(),
+    ["data:writer_left:answer->sink", "data:writer_right:answer->sink"],
+  );
+});
+
+test("projectCanvasEdges shows the web research search query flowing from the planner", () => {
+  const template = JSON.parse(
+    readFileSync(new URL("../../../../backend/app/templates/web_research_loop.json", import.meta.url), "utf8"),
+  ) as GraphPayload;
+  for (const node of Object.values(template.nodes)) {
+    node.reads ??= [];
+    node.writes ??= [];
+  }
+  const projected = projectCanvasEdges(template);
+  const queryEdge = projected.find((edge) => edge.kind === "data" && edge.state === "state_2" && edge.target === "web_search_agent");
+
+  assert.ok(queryEdge);
+  assert.equal(queryEdge.source, "plan_search_query");
+  assert.equal(queryEdge.id, "data:plan_search_query:state_2->web_search_agent");
 });
 
 test("projectCanvasEdges exposes branch metadata for condition routes", () => {
@@ -383,4 +406,28 @@ test("projectCanvasEdges routes upstream flow edges over the cards", () => {
     }),
   );
   assert.match(flowEdge.path, /^M .* Q /);
+});
+
+test("projectCanvasEdges routes upstream data edges over the cards", () => {
+  const upstreamGraph: GraphPayload = {
+    ...graph,
+    nodes: {
+      ...graph.nodes,
+      input_question: {
+        ...graph.nodes.input_question!,
+        ui: { position: { x: 520, y: 220 } },
+      },
+      answer_helper: {
+        ...graph.nodes.answer_helper!,
+        ui: { position: { x: 80, y: 220 } },
+      },
+    },
+    edges: [{ source: "input_question", target: "answer_helper" }],
+  };
+
+  const projected = projectCanvasEdges(upstreamGraph);
+  const dataEdge = projected.find((edge) => edge.id === "data:input_question:question->answer_helper");
+
+  assert.ok(dataEdge);
+  assert.match(dataEdge.path, /^M .* Q /);
 });

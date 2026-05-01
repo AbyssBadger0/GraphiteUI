@@ -769,7 +769,7 @@ test("canCompleteGraphConnection allows state connections that can create a safe
   );
 });
 
-test("canCompleteGraphConnection rejects state connections that would remain writer-ambiguous", () => {
+test("canCompleteGraphConnection allows multiple reachable writers for the same state", () => {
   const ambiguousGraph: GraphPayload = {
     ...document,
     state_schema: {
@@ -847,7 +847,7 @@ test("canCompleteGraphConnection rejects state connections that would remain wri
         stateKey: CREATE_AGENT_INPUT_STATE_KEY,
       },
     ),
-    false,
+    true,
   );
 });
 

@@ -510,7 +510,7 @@ test("connectStateInputSourceToTarget wires an empty input node upstream of a co
   assert.deepEqual(result.document.edges, [{ source: "empty_input", target: "answer_helper" }]);
 });
 
-test("connectStateInputSourceToTarget replaces the previous source edge for a concrete state input", () => {
+test("connectStateInputSourceToTarget preserves previous same-state source edges for a concrete state input", () => {
   const document: GraphPayload = {
     graph_id: null,
     name: "Replace Reverse Creation Graph",
@@ -577,7 +577,10 @@ test("connectStateInputSourceToTarget replaces the previous source edge for a co
 
   assert.deepEqual(result.document.nodes.empty_input.writes, [{ state: "question", mode: "replace" }]);
   assert.deepEqual(result.document.nodes.answer_helper.reads, [{ state: "question", required: true }]);
-  assert.deepEqual(result.document.edges, [{ source: "empty_input", target: "answer_helper" }]);
+  assert.deepEqual(result.document.edges, [
+    { source: "original_input", target: "answer_helper" },
+    { source: "empty_input", target: "answer_helper" },
+  ]);
   assert.deepEqual(document.edges, [{ source: "original_input", target: "answer_helper" }]);
 });
 

@@ -1298,7 +1298,7 @@ test("connectStateBindingInDocument replaces the previous source edge for a conc
   ]);
 });
 
-test("connectStateBindingInDocument lets a same-state writer replace the previous concrete input source", () => {
+test("connectStateBindingInDocument preserves existing same-state writer source edges", () => {
   const document: GraphPayload = {
     graph_id: null,
     name: "Replace same state input graph",
@@ -1356,7 +1356,10 @@ test("connectStateBindingInDocument lets a same-state writer replace the previou
 
   assert.notEqual(nextDocument, document);
   assert.deepEqual(nextDocument.nodes.answer_helper.reads, [{ state: "question", required: true }]);
-  assert.deepEqual(nextDocument.edges, [{ source: "replacement_input", target: "answer_helper" }]);
+  assert.deepEqual(nextDocument.edges, [
+    { source: "original_input", target: "answer_helper" },
+    { source: "replacement_input", target: "answer_helper" },
+  ]);
 });
 
 test("updateOutputNodeConfigInDocument patches output config immutably", () => {

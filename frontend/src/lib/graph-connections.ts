@@ -165,28 +165,7 @@ function canResolveStateConnectionWriter(
     return false;
   }
 
-  const successors = buildSuccessorMap(document, replacement);
-  if (includeImplicitFlowEdge) {
-    successors.set(sourceNodeId, [...(successors.get(sourceNodeId) ?? []), targetNodeId]);
-  }
-  const reachability = new Map(
-    Object.keys(document.nodes).map((nodeId) => [nodeId, collectReachableNodes(nodeId, successors)]),
-  );
-  const candidateWriters = Object.entries(document.nodes)
-    .filter(([, node]) => node.writes.some((binding) => binding.state === sourceStateKey))
-    .map(([nodeId]) => nodeId)
-    .filter((writerId) => writerId !== targetNodeId && reachability.get(writerId)?.has(targetNodeId));
-  const remainingWriters = candidateWriters.filter(
-    (writerId) =>
-      !candidateWriters.some(
-        (otherWriterId) =>
-          otherWriterId !== writerId &&
-          reachability.get(writerId)?.has(otherWriterId) &&
-          reachability.get(otherWriterId)?.has(targetNodeId),
-      ),
-  );
-
-  return remainingWriters.length === 1 && remainingWriters[0] === sourceNodeId;
+  return document.nodes[sourceNodeId]?.writes.some((binding) => binding.state === sourceStateKey) ?? false;
 }
 
 function isConcreteStateInputKey(stateKey: string) {
@@ -211,7 +190,7 @@ function shouldRemoveReplacedStateInputSourceEdge(
   }
 
   if (replacement.previousStateKey === replacement.nextStateKey) {
-    return true;
+    return false;
   }
 
   const sourceNode = document.nodes[edge.source];

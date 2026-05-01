@@ -182,6 +182,8 @@ class TemplateLayoutTests(unittest.TestCase):
         serialized_template = json.dumps(template.model_dump(mode="json"), ensure_ascii=False)
         self.assertNotIn("GPT-5.5", serialized_template)
         self.assertNotIn("模型亮点", serialized_template)
+        self.assertNotIn("只返回 JSON", serialized_template)
+        self.assertNotIn("严格返回 JSON", serialized_template)
         self.assertIn("plan_search_query", template.nodes)
         self.assertIn("web_search_agent", template.nodes)
         self.assertIn("assess_search_sufficiency", template.nodes)
@@ -195,6 +197,8 @@ class TemplateLayoutTests(unittest.TestCase):
         self.assertNotIn("Runtime Context", planner.config.task_instruction)
         self.assertNotIn("current_date", planner.config.task_instruction)
         self.assertNotIn("current_year", planner.config.task_instruction)
+        self.assertIn(state_by_name["research_notes"], [binding.state for binding in planner.reads])
+        self.assertIn(state_by_name["next_search_focus"], [binding.state for binding in planner.reads])
 
         search_node = template.nodes["web_search_agent"]
         self.assertEqual(search_node.config.skills, ["web_search"])
@@ -209,7 +213,8 @@ class TemplateLayoutTests(unittest.TestCase):
         self.assertIn(state_by_name["research_notes"], [binding.state for binding in assessor.reads])
         self.assertIn(state_by_name["research_notes"], [binding.state for binding in assessor.writes])
         self.assertIn(state_by_name["needs_more_search"], [binding.state for binding in assessor.writes])
-        self.assertIn(state_by_name["search_query"], [binding.state for binding in assessor.writes])
+        self.assertIn(state_by_name["next_search_focus"], [binding.state for binding in assessor.writes])
+        self.assertNotIn(state_by_name["search_query"], [binding.state for binding in assessor.writes])
         self.assertIn(state_by_name["final_answer"], [binding.state for binding in assessor.writes])
         self.assertIn(state_by_name["exhausted_answer"], [binding.state for binding in assessor.writes])
 
@@ -223,7 +228,7 @@ class TemplateLayoutTests(unittest.TestCase):
         self.assertEqual(
             conditional_edge.branches,
             {
-                "true": "web_search_agent",
+                "true": "plan_search_query",
                 "false": "output_final_answer",
                 "exhausted": "output_exhausted_answer",
             },

@@ -8,7 +8,7 @@
       "name": "request",
       "description": "Original research request from the user.",
       "type": "text",
-      "value": "帮我查询 GPT-5.5 的发布日期和模型亮点",
+      "value": "调研一个需要联网确认的问题，并给出带引用的中文答案",
       "color": "#d97706"
     },
     "state_2": {
@@ -67,7 +67,7 @@
         { "state": "state_1", "mode": "replace" }
       ],
       "config": {
-        "value": "帮我查询 GPT-5.5 的发布日期和模型亮点"
+        "value": "调研一个需要联网确认的问题，并给出带引用的中文答案"
       }
     },
     "plan_search_query": {
@@ -86,7 +86,7 @@
       ],
       "config": {
         "skills": [],
-        "taskInstruction": "读取 request，结合 Runtime Context 里的 current_date 和 current_year，生成一个适合联网搜索的英文或中英混合搜索 query。目标是找到权威来源，确认发布日期和模型亮点；如果 request 包含最新、当前、今天、发布日期、版本、价格或新闻等时效性意图，搜索词必须包含当前年份或明确日期锚点。只返回 JSON，字段 search_query 为搜索词，不要解释。"
+        "taskInstruction": "读取 request，生成一个适合联网搜索的英文或中英混合搜索 query。目标是找到能回答 request 的权威来源；保留 request 中的人名、产品名、地点、时间范围、指标和时效性关键词，不要自行编造日期或事实。只返回 JSON，字段 search_query 为搜索词，不要解释。"
       }
     },
     "web_search_agent": {
@@ -144,7 +144,7 @@
       ],
       "config": {
         "skills": [],
-        "taskInstruction": "读取 request、search_query、search_result 和已有 research_notes。把本轮搜索证据合并进 research_notes，保留完整引用链接，不能写成“OpenAI ...”或截断 URL。判断是否已经足够回答 request：必须能覆盖发布日期和模型亮点，并优先有官方或高可信来源。如果信息不足，needs_more_search=true，并把 search_query 更新为下一轮更具体的补充搜索词，同时生成一版 exhausted_answer 作为循环达到上限时的谨慎答案；如果信息足够，needs_more_search=false，并生成 final_answer。不要编造证据中没有确认的事实。严格返回 JSON，字段为 research_notes、needs_more_search、search_query、final_answer、exhausted_answer。"
+        "taskInstruction": "读取 request、search_query、search_result 和已有 research_notes。把本轮搜索证据合并进 research_notes，保留完整引用链接，不能写成“来源 ...”或截断 URL。判断是否已经足够回答 request：必须覆盖 request 要求的关键事实、时间、数字、结论、限制条件和引用依据，并优先使用官方或高可信来源。如果信息不足，needs_more_search=true，并把 search_query 更新为下一轮更具体的补充搜索词，同时生成一版 exhausted_answer 作为循环达到上限时的谨慎答案；如果信息足够，needs_more_search=false，并生成 final_answer。不要编造证据中没有确认的事实。严格返回 JSON，字段为 research_notes、needs_more_search、search_query、final_answer、exhausted_answer。"
       }
     },
     "need_more_search_check": {

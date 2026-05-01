@@ -218,8 +218,9 @@ def _with_default_web_search_query(
     skill_inputs: dict[str, Any],
     node: NodeSystemAgentNode,
 ) -> dict[str, Any]:
-    if _compact_text(skill_inputs.get("query")):
-        return skill_inputs
+    explicit_query = _compact_text(skill_inputs.get("query"))
+    if explicit_query:
+        return {**skill_inputs, "query": _enrich_time_sensitive_web_search_query(explicit_query)}
 
     default_query = _build_web_search_query_from_instruction(node.config.task_instruction)
     if not default_query:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -157,7 +158,7 @@ class TemplateLayoutTests(unittest.TestCase):
             "Human review feedback should be edited from the review panel after pause, not from an Input node.",
         )
 
-    def test_web_research_loop_template_models_search_retry_flow(self):
+    def test_web_research_loop_template_models_generic_search_retry_flow(self):
         template = next(
             NodeSystemTemplate.model_validate(record)
             for record in list_template_records()
@@ -172,8 +173,15 @@ class TemplateLayoutTests(unittest.TestCase):
         self.assertEqual(template.default_graph_name, "联网研究循环")
         self.assertEqual(
             template.state_schema[state_by_name["request"]].value,
-            "帮我查询 GPT-5.5 的发布日期和模型亮点",
+            "调研一个需要联网确认的问题，并给出带引用的中文答案",
         )
+        self.assertEqual(
+            template.nodes["input_request"].config.value,
+            "调研一个需要联网确认的问题，并给出带引用的中文答案",
+        )
+        serialized_template = json.dumps(template.model_dump(mode="json"), ensure_ascii=False)
+        self.assertNotIn("GPT-5.5", serialized_template)
+        self.assertNotIn("模型亮点", serialized_template)
         self.assertIn("plan_search_query", template.nodes)
         self.assertIn("web_search_agent", template.nodes)
         self.assertIn("assess_search_sufficiency", template.nodes)
@@ -184,8 +192,9 @@ class TemplateLayoutTests(unittest.TestCase):
         self.assertIn("output_exhausted_answer", template.nodes)
 
         planner = template.nodes["plan_search_query"]
-        self.assertIn("current_date", planner.config.task_instruction)
-        self.assertIn("current_year", planner.config.task_instruction)
+        self.assertNotIn("Runtime Context", planner.config.task_instruction)
+        self.assertNotIn("current_date", planner.config.task_instruction)
+        self.assertNotIn("current_year", planner.config.task_instruction)
 
         search_node = template.nodes["web_search_agent"]
         self.assertEqual(search_node.config.skills, ["web_search"])

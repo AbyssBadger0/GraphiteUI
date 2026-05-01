@@ -156,3 +156,58 @@ class TemplateLayoutTests(unittest.TestCase):
             [],
             "Human review feedback should be edited from the review panel after pause, not from an Input node.",
         )
+
+    def test_web_research_loop_template_models_search_retry_flow(self):
+        template = next(
+            NodeSystemTemplate.model_validate(record)
+            for record in list_template_records()
+            if record["template_id"] == "web_research_loop"
+        )
+
+        state_by_name = {
+            definition.name: state_key
+            for state_key, definition in template.state_schema.items()
+        }
+
+        self.assertEqual(template.default_graph_name, "联网研究循环")
+        self.assertEqual(
+            template.state_schema[state_by_name["request"]].value,
+            "帮我查询 GPT-5.5 的发布日期和模型亮点",
+        )
+        self.assertIn("plan_search_query", template.nodes)
+        self.assertIn("web_search_agent", template.nodes)
+        self.assertIn("assess_search_sufficiency", template.nodes)
+        self.assertIn("need_more_search_check", template.nodes)
+        self.assertIn("final_answer_writer", template.nodes)
+        self.assertIn("exhausted_answer_writer", template.nodes)
+
+        search_node = template.nodes["web_search_agent"]
+        self.assertEqual(search_node.config.skills, ["web_search"])
+        self.assertEqual(len(search_node.config.skill_bindings), 1)
+        self.assertEqual(search_node.config.skill_bindings[0].skill_key, "web_search")
+        self.assertEqual(
+            search_node.config.skill_bindings[0].input_mapping,
+            {"query": state_by_name["search_query"]},
+        )
+
+        assessor = template.nodes["assess_search_sufficiency"]
+        self.assertIn(state_by_name["research_notes"], [binding.state for binding in assessor.reads])
+        self.assertIn(state_by_name["research_notes"], [binding.state for binding in assessor.writes])
+        self.assertIn(state_by_name["needs_more_search"], [binding.state for binding in assessor.writes])
+        self.assertIn(state_by_name["search_query"], [binding.state for binding in assessor.writes])
+
+        condition = template.nodes["need_more_search_check"]
+        self.assertEqual(condition.config.loop_limit, 3)
+        self.assertEqual(condition.config.rule.source, state_by_name["needs_more_search"])
+        self.assertEqual(condition.config.rule.operator.value, "==")
+        self.assertEqual(condition.config.rule.value, True)
+
+        conditional_edge = next(edge for edge in template.conditional_edges if edge.source == "need_more_search_check")
+        self.assertEqual(
+            conditional_edge.branches,
+            {
+                "true": "web_search_agent",
+                "false": "final_answer_writer",
+                "exhausted": "exhausted_answer_writer",
+            },
+        )

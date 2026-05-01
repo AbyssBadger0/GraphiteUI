@@ -92,9 +92,23 @@ def _load_human_review_demo_graph() -> NodeSystemGraphPayload:
     )
 
 
+def _load_web_research_loop_graph() -> NodeSystemGraphPayload:
+    template = NodeSystemTemplate.model_validate(load_template_record("web_research_loop"))
+    return NodeSystemGraphPayload.model_validate(
+        {
+            "name": template.default_graph_name,
+            "state_schema": template.state_schema,
+            "nodes": template.nodes,
+            "edges": template.edges,
+            "conditional_edges": template.conditional_edges,
+            "metadata": template.metadata,
+        }
+    )
+
+
 def _fake_skill_registry(*, include_disabled: bool = False):
     _ = include_disabled
-    return {"search_knowledge_base": object()}
+    return {"search_knowledge_base": object(), "web_search": object()}
 
 
 def _fake_invoke_skill(skill_func, skill_inputs):
@@ -495,6 +509,11 @@ class LangGraphMigrationTests(unittest.TestCase):
 
     def test_human_review_demo_template_still_valid(self):
         graph = _load_human_review_demo_graph()
+        validation = validate_graph(graph)
+        self.assertTrue(validation.valid, validation.model_dump())
+
+    def test_web_research_loop_template_still_valid(self):
+        graph = _load_web_research_loop_graph()
         validation = validate_graph(graph)
         self.assertTrue(validation.valid, validation.model_dump())
 

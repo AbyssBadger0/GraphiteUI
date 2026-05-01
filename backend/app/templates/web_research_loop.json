@@ -1,0 +1,289 @@
+{
+  "template_id": "web_research_loop",
+  "label": "联网研究循环",
+  "description": "Split a research request into a web search query, search the web, assess whether evidence is sufficient, optionally search again, and write a grounded final answer.",
+  "default_graph_name": "联网研究循环",
+  "state_schema": {
+    "state_1": {
+      "name": "request",
+      "description": "Original research request from the user.",
+      "type": "text",
+      "value": "帮我查询 GPT-5.5 的发布日期和模型亮点",
+      "color": "#d97706"
+    },
+    "state_2": {
+      "name": "search_query",
+      "description": "Current web search query. The assessor may replace this with a refined follow-up query.",
+      "type": "text",
+      "value": "",
+      "color": "#2563eb"
+    },
+    "state_3": {
+      "name": "search_result",
+      "description": "Compact report produced from the latest web search result.",
+      "type": "markdown",
+      "value": "",
+      "color": "#0f766e"
+    },
+    "state_4": {
+      "name": "research_notes",
+      "description": "Accumulated evidence, gaps, and citations across search iterations.",
+      "type": "markdown",
+      "value": "",
+      "color": "#7c3aed"
+    },
+    "state_5": {
+      "name": "needs_more_search",
+      "description": "Whether the workflow should run another web search iteration.",
+      "type": "boolean",
+      "value": false,
+      "color": "#b91c1c"
+    },
+    "state_6": {
+      "name": "final_answer",
+      "description": "Final grounded answer generated from the accumulated research notes.",
+      "type": "markdown",
+      "value": "",
+      "color": "#4f46e5"
+    },
+    "state_7": {
+      "name": "exhausted_answer",
+      "description": "Best-effort answer generated when the search loop reaches its limit.",
+      "type": "markdown",
+      "value": "",
+      "color": "#be123c"
+    }
+  },
+  "nodes": {
+    "input_request": {
+      "kind": "input",
+      "name": "input_request",
+      "description": "Provide the research request.",
+      "ui": {
+        "position": { "x": 80, "y": 280 },
+        "collapsed": false
+      },
+      "writes": [
+        { "state": "state_1", "mode": "replace" }
+      ],
+      "config": {
+        "value": "帮我查询 GPT-5.5 的发布日期和模型亮点"
+      }
+    },
+    "plan_search_query": {
+      "kind": "agent",
+      "name": "plan_search_query",
+      "description": "Turn the user request into the first focused web search query.",
+      "ui": {
+        "position": { "x": 760, "y": 280 },
+        "collapsed": false
+      },
+      "reads": [
+        { "state": "state_1", "required": true }
+      ],
+      "writes": [
+        { "state": "state_2", "mode": "replace" }
+      ],
+      "config": {
+        "skills": [],
+        "taskInstruction": "读取 request，生成一个适合联网搜索的英文或中英混合搜索 query。目标是找到权威来源，确认发布日期和模型亮点。只返回 JSON，字段 search_query 为搜索词，不要解释。"
+      }
+    },
+    "web_search_agent": {
+      "kind": "agent",
+      "name": "web_search_agent",
+      "description": "Run the Web Search skill using the current query and convert the result into a compact evidence report.",
+      "ui": {
+        "position": { "x": 1440, "y": 280 },
+        "collapsed": false
+      },
+      "reads": [
+        { "state": "state_2", "required": true }
+      ],
+      "writes": [
+        { "state": "state_3", "mode": "replace" }
+      ],
+      "config": {
+        "skills": ["web_search"],
+        "skillBindings": [
+          {
+            "skillKey": "web_search",
+            "trigger": "before_agent",
+            "inputMapping": {
+              "query": "state_2"
+            },
+            "config": {
+              "max_results": 5,
+              "search_depth": "basic"
+            }
+          }
+        ],
+        "taskInstruction": "读取 search_query，并使用 web_search 技能结果生成 search_result。search_result 必须包含：本轮搜索词、搜索日期、最相关证据摘要、至少 3 条引用链接；如果没有可靠结果，明确写出缺口。严格返回 JSON，字段 search_result 为 Markdown 字符串。"
+      }
+    },
+    "assess_search_sufficiency": {
+      "kind": "agent",
+      "name": "assess_search_sufficiency",
+      "description": "Merge the latest search report into accumulated notes and decide whether another query is needed.",
+      "ui": {
+        "position": { "x": 2120, "y": 280 },
+        "collapsed": false
+      },
+      "reads": [
+        { "state": "state_1", "required": true },
+        { "state": "state_2", "required": true },
+        { "state": "state_3", "required": true },
+        { "state": "state_4", "required": false }
+      ],
+      "writes": [
+        { "state": "state_4", "mode": "replace" },
+        { "state": "state_5", "mode": "replace" },
+        { "state": "state_2", "mode": "replace" }
+      ],
+      "config": {
+        "skills": [],
+        "taskInstruction": "读取 request、search_query、search_result 和已有 research_notes。把本轮搜索证据合并进 research_notes，保留引用链接。判断是否已经足够回答 request：必须能覆盖发布日期和模型亮点，并优先有官方或高可信来源。如果信息不足，needs_more_search=true，并把 search_query 更新为下一轮更具体的补充搜索词；如果信息足够，needs_more_search=false，并保持 search_query 为当前或最有代表性的查询。严格返回 JSON，字段为 research_notes、needs_more_search、search_query。"
+      }
+    },
+    "need_more_search_check": {
+      "kind": "condition",
+      "name": "need_more_search_check",
+      "description": "Loop while the assessor requests another web search; otherwise continue to final answer.",
+      "ui": {
+        "position": { "x": 2800, "y": 280 },
+        "collapsed": false
+      },
+      "reads": [
+        { "state": "state_5", "required": true }
+      ],
+      "config": {
+        "branches": ["true", "false", "exhausted"],
+        "loopLimit": 3,
+        "branchMapping": {
+          "true": "true",
+          "false": "false"
+        },
+        "rule": {
+          "source": "state_5",
+          "operator": "==",
+          "value": true
+        }
+      }
+    },
+    "final_answer_writer": {
+      "kind": "agent",
+      "name": "final_answer_writer",
+      "description": "Write the final answer once evidence is sufficient.",
+      "ui": {
+        "position": { "x": 3480, "y": 120 },
+        "collapsed": false
+      },
+      "reads": [
+        { "state": "state_1", "required": true },
+        { "state": "state_4", "required": true }
+      ],
+      "writes": [
+        { "state": "state_7", "mode": "replace" }
+      ],
+      "config": {
+        "skills": [],
+        "taskInstruction": "读取 request 和 research_notes，生成最终中文答案。必须分别回答发布日期和模型亮点，并附引用链接；如果证据中没有确认某项事实，明确说明未能确认，不要编造。严格返回 JSON，字段 final_answer 为 Markdown 字符串。"
+      }
+    },
+    "exhausted_answer_writer": {
+      "kind": "agent",
+      "name": "exhausted_answer_writer",
+      "description": "Write a best-effort answer if the loop limit is reached before evidence is sufficient.",
+      "ui": {
+        "position": { "x": 3480, "y": 660 },
+        "collapsed": false
+      },
+      "reads": [
+        { "state": "state_1", "required": true },
+        { "state": "state_4", "required": true }
+      ],
+      "writes": [
+        { "state": "state_6", "mode": "replace" }
+      ],
+      "config": {
+        "skills": [],
+        "taskInstruction": "读取 request 和 research_notes。循环搜索已达上限，请基于已有证据生成一版谨慎答案。开头明确说明信息可能不足；必须区分已确认事实和未确认事项，并附已有引用链接。严格返回 JSON，字段 exhausted_answer 为 Markdown 字符串。"
+      }
+    },
+    "output_final_answer": {
+      "kind": "output",
+      "name": "output_final_answer",
+      "description": "Show the final grounded research answer.",
+      "ui": {
+        "position": { "x": 4160, "y": 280 },
+        "collapsed": false
+      },
+      "reads": [
+        { "state": "state_6", "required": true }
+      ],
+      "config": {
+        "displayMode": "markdown",
+        "persistEnabled": false,
+        "persistFormat": "auto",
+        "fileNameTemplate": ""
+      }
+    },
+    "output_exhausted_answer": {
+      "kind": "output",
+      "name": "output_exhausted_answer",
+      "description": "Show the best-effort answer when the search loop reaches its limit.",
+      "ui": {
+        "position": { "x": 4160, "y": 820 },
+        "collapsed": false
+      },
+      "reads": [
+        { "state": "state_7", "required": true }
+      ],
+      "config": {
+        "displayMode": "markdown",
+        "persistEnabled": false,
+        "persistFormat": "auto",
+        "fileNameTemplate": ""
+      }
+    }
+  },
+  "edges": [
+    {
+      "source": "input_request",
+      "target": "plan_search_query"
+    },
+    {
+      "source": "plan_search_query",
+      "target": "web_search_agent"
+    },
+    {
+      "source": "web_search_agent",
+      "target": "assess_search_sufficiency"
+    },
+    {
+      "source": "assess_search_sufficiency",
+      "target": "need_more_search_check"
+    },
+    {
+      "source": "final_answer_writer",
+      "target": "output_final_answer"
+    },
+    {
+      "source": "exhausted_answer_writer",
+      "target": "output_exhausted_answer"
+    }
+  ],
+  "conditional_edges": [
+    {
+      "source": "need_more_search_check",
+      "branches": {
+        "true": "web_search_agent",
+        "false": "final_answer_writer",
+        "exhausted": "exhausted_answer_writer"
+      }
+    }
+  ],
+  "metadata": {
+    "graphiteui_state_key_counter": 7
+  }
+}

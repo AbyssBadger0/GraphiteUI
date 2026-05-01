@@ -104,6 +104,7 @@
                 <span>{{ t(`skills.${skill.status}`) }}</span>
                 <span>{{ skill.runtimeReady ? t("skills.runtimeReady") : t("skills.runtimePending") }}</span>
                 <span>{{ skill.runtimeRegistered ? t("skills.runtimeRegistered") : t("skills.runtimeNotRegistered") }}</span>
+                <span>{{ t("skills.agentNodeEligibility") }}: {{ skill.agentNodeEligibility }}</span>
                 <span v-if="!skill.configured" class="skills-page__status-warning">{{ t("skills.notConfigured") }}</span>
                 <span v-if="!skill.healthy" class="skills-page__status-warning">{{ t("skills.unhealthy") }}</span>
                 <span v-if="skill.canManage">{{ t("skills.manageable") }}</span>
@@ -126,6 +127,14 @@
                   <span>{{ skill.kind }}</span>
                   <span>{{ skill.mode }}</span>
                   <span>{{ skill.scope }}</span>
+                </div>
+              </section>
+              <section>
+                <h4>{{ t("skills.runtime") }}</h4>
+                <div class="skills-page__badges">
+                  <span>{{ skill.runtime.type }}</span>
+                  <span>{{ skill.runtime.entrypoint || t("common.none") }}</span>
+                  <span>{{ skill.health.type }}</span>
                 </div>
               </section>
               <section>
@@ -219,6 +228,13 @@
                 <div class="skills-page__badges">
                   <span v-for="permission in skill.permissions" :key="permission">{{ permission }}</span>
                   <span v-if="skill.permissions.length === 0">{{ t("common.none") }}</span>
+                </div>
+              </section>
+              <section>
+                <h4>{{ t("skills.agentNodeBlockers") }}</h4>
+                <div class="skills-page__schema-list">
+                  <span v-for="blocker in skill.agentNodeBlockers" :key="blocker">{{ blocker }}</span>
+                  <span v-if="skill.agentNodeBlockers.length === 0">{{ t("skills.agentNodeReady") }}</span>
                 </div>
               </section>
             </div>

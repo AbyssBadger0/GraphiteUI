@@ -31,10 +31,16 @@ test("SkillsPage surfaces native Skill taxonomy and readiness metadata", () => {
   assert.match(componentSource, /skill\.scope/);
   assert.match(componentSource, /skill\.permissions/);
   assert.match(componentSource, /skill\.runtimeReady/);
+  assert.match(componentSource, /skill\.runtime\.type/);
+  assert.match(componentSource, /skill\.runtime\.entrypoint/);
   assert.match(componentSource, /skill\.configured/);
   assert.match(componentSource, /skill\.healthy/);
+  assert.match(componentSource, /skill\.agentNodeEligibility/);
+  assert.match(componentSource, /skill\.agentNodeBlockers/);
   assert.match(componentSource, /t\("skills\.targets"\)/);
   assert.match(componentSource, /t\("skills\.permissions"\)/);
+  assert.match(componentSource, /t\("skills\.agentNodeEligibility"\)/);
+  assert.match(componentSource, /t\("skills\.agentNodeBlockers"\)/);
 });
 
 test("SkillsPage exposes import, status, and delete management actions with local button styling", () => {

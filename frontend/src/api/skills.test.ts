@@ -23,6 +23,7 @@ test("fetchSkillDefinitions requests the skill definitions endpoint", async () =
           skillKey: "search_knowledge_base",
           label: "Search Knowledge Base",
           description: "Searches imported knowledge bases.",
+          schemaVersion: "graphite.skill/v1",
           inputSchema: [
             {
               key: "query",
@@ -49,6 +50,10 @@ test("fetchSkillDefinitions requests the skill definitions endpoint", async () =
           mode: "tool",
           scope: "node",
           permissions: ["knowledge_read"],
+          runtime: { type: "builtin", entrypoint: "search_knowledge_base" },
+          health: { type: "builtin" },
+          agentNodeEligibility: "ready",
+          agentNodeBlockers: [],
           sourceFormat: "graphite_definition",
           sourceScope: "graphite_managed",
           sourcePath: "/skills/search_knowledge_base",
@@ -79,6 +84,7 @@ test("fetchSkillDefinitions requests the skill definitions endpoint", async () =
       skillKey: "search_knowledge_base",
       label: "Search Knowledge Base",
       description: "Searches imported knowledge bases.",
+      schemaVersion: "graphite.skill/v1",
       inputSchema: [
         {
           key: "query",
@@ -105,6 +111,10 @@ test("fetchSkillDefinitions requests the skill definitions endpoint", async () =
       mode: "tool",
       scope: "node",
       permissions: ["knowledge_read"],
+      runtime: { type: "builtin", entrypoint: "search_knowledge_base" },
+      health: { type: "builtin" },
+      agentNodeEligibility: "ready",
+      agentNodeBlockers: [],
       sourceFormat: "graphite_definition",
       sourceScope: "graphite_managed",
       sourcePath: "/skills/search_knowledge_base",

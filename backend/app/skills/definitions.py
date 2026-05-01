@@ -9,14 +9,17 @@ from typing import TypeVar
 import yaml
 
 from app.core.schemas.skills import (
+    SkillAgentNodeEligibility,
     SkillCatalogStatus,
     SkillCompatibilityReport,
     SkillCompatibilityStatus,
     SkillCompatibilityTarget,
     SkillDefinition,
+    SkillHealthSpec,
     SkillIoField,
     SkillKind,
     SkillMode,
+    SkillRuntimeSpec,
     SkillScope,
     SkillSideEffect,
     SkillSourceFormat,
@@ -46,6 +49,7 @@ def list_skill_definitions(*, include_disabled: bool = False) -> list[SkillDefin
 def is_agent_attachable_skill(definition: SkillDefinition) -> bool:
     return (
         definition.status == SkillCatalogStatus.ACTIVE
+        and definition.agent_node_eligibility == SkillAgentNodeEligibility.READY
         and definition.runtime_ready
         and definition.runtime_registered
         and SkillTarget.AGENT_NODE in definition.targets
@@ -77,9 +81,11 @@ def list_skill_catalog(*, include_disabled: bool = True) -> list[SkillDefinition
             elif status == SkillCatalogStatus.DISABLED and not include_disabled:
                 continue
         runtime_registered = (
-            skill_key in registry_keys and record.source_scope == SkillSourceScope.GRAPHITE_MANAGED and status == SkillCatalogStatus.ACTIVE
+            _definition_runtime_entrypoint(record.definition) in registry_keys
+            and record.source_scope == SkillSourceScope.GRAPHITE_MANAGED
+            and status == SkillCatalogStatus.ACTIVE
         )
-        runtime_ready = skill_key in runtime_supported_keys
+        runtime_ready = _definition_runtime_entrypoint(record.definition) in runtime_supported_keys
         catalog.append(
             record.definition.model_copy(
                 deep=True,
@@ -138,12 +144,15 @@ def _parse_native_skill_manifest(path: Path, source_scope: SkillSourceScope) -> 
         skillKey=skill_key,
         label=label,
         description=str(payload.get("description") or "").strip(),
+        schemaVersion=str(payload.get("schemaVersion") or payload.get("schema_version") or ""),
         version=str(payload.get("version") or ""),
         targets=_parse_enum_list(payload.get("targets"), SkillTarget, [SkillTarget.AGENT_NODE]),
         kind=_parse_enum(payload.get("kind"), SkillKind, SkillKind.ATOMIC),
         mode=_parse_enum(payload.get("mode"), SkillMode, SkillMode.TOOL),
         scope=_parse_enum(payload.get("scope"), SkillScope, SkillScope.NODE),
         permissions=[str(item) for item in payload.get("permissions", [])],
+        runtime=_parse_runtime_spec(payload.get("runtime")),
+        health=_parse_health_spec(payload.get("health")),
         inputSchema=_parse_io_fields(payload.get("inputSchema") or payload.get("input_schema") or []),
         outputSchema=_parse_io_fields(payload.get("outputSchema") or payload.get("output_schema") or []),
         supportedValueTypes=[str(item) for item in payload.get("supportedValueTypes") or payload.get("supported_value_types") or []],
@@ -151,6 +160,9 @@ def _parse_native_skill_manifest(path: Path, source_scope: SkillSourceScope) -> 
         configured=bool(payload.get("configured", True)),
         healthy=bool(payload.get("healthy", True)),
     )
+    eligibility, blockers = _resolve_agent_node_eligibility(definition)
+    definition.agent_node_eligibility = eligibility
+    definition.agent_node_blockers = blockers
     return SkillDefinitionRecord(
         definition=definition,
         source_format=SkillSourceFormat.GRAPHITE,
@@ -177,17 +189,23 @@ def _parse_skill_file(path: Path, source_format: SkillSourceFormat, source_scope
         skillKey=skill_key,
         label=label,
         description=description or body.splitlines()[0].strip() if body.strip() else "",
+        schemaVersion=str(graphite.get("schema_version") or graphite.get("schemaVersion") or ""),
         version=str(graphite.get("version") or payload.get("version") or ""),
         targets=_parse_enum_list(graphite.get("targets"), SkillTarget, [SkillTarget.AGENT_NODE]),
         kind=_parse_enum(graphite.get("kind"), SkillKind, SkillKind.ATOMIC),
         mode=_parse_enum(graphite.get("mode"), SkillMode, SkillMode.TOOL),
         scope=_parse_enum(graphite.get("scope"), SkillScope, SkillScope.NODE),
         permissions=[str(item) for item in graphite.get("permissions", [])],
+        runtime=_parse_runtime_spec(graphite.get("runtime")),
+        health=_parse_health_spec(graphite.get("health")),
         inputSchema=input_schema,
         outputSchema=output_schema,
         supportedValueTypes=[str(item) for item in graphite.get("supported_value_types", [])],
         sideEffects=side_effects,
     )
+    eligibility, blockers = _resolve_agent_node_eligibility(definition)
+    definition.agent_node_eligibility = eligibility
+    definition.agent_node_blockers = blockers
     return SkillDefinitionRecord(
         definition=definition,
         source_format=source_format,
@@ -207,6 +225,40 @@ def _parse_io_fields(fields: list[dict]) -> list[SkillIoField]:
         )
         for field in fields
     ]
+
+
+def _parse_runtime_spec(payload: object) -> SkillRuntimeSpec:
+    if not isinstance(payload, dict):
+        return SkillRuntimeSpec(type="none", entrypoint="")
+    return SkillRuntimeSpec(
+        type=str(payload.get("type") or "builtin"),
+        entrypoint=str(payload.get("entrypoint") or ""),
+    )
+
+
+def _parse_health_spec(payload: object) -> SkillHealthSpec:
+    if not isinstance(payload, dict):
+        return SkillHealthSpec(type="none")
+    return SkillHealthSpec(type=str(payload.get("type") or "builtin"))
+
+
+def _definition_runtime_entrypoint(definition: SkillDefinition) -> str:
+    return definition.runtime.entrypoint or definition.skill_key
+
+
+def _resolve_agent_node_eligibility(definition: SkillDefinition) -> tuple[SkillAgentNodeEligibility, list[str]]:
+    blockers: list[str] = []
+    if SkillTarget.AGENT_NODE not in definition.targets:
+        return SkillAgentNodeEligibility.INCOMPATIBLE, ["Skill target does not include agent_node."]
+
+    if definition.runtime.type != "builtin" or not definition.runtime.entrypoint:
+        blockers.append("Skill manifest is missing a builtin runtime entrypoint.")
+    if not definition.output_schema:
+        blockers.append("Skill manifest is missing outputSchema.")
+
+    if blockers:
+        return SkillAgentNodeEligibility.NEEDS_MANIFEST, blockers
+    return SkillAgentNodeEligibility.READY, []
 
 
 def _parse_enum(value: object, enum_type: type[EnumValue], fallback: EnumValue) -> EnumValue:

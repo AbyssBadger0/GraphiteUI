@@ -4,10 +4,13 @@ from contextlib import ExitStack, contextmanager
 from io import BytesIO
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 import zipfile
 from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
 
@@ -22,42 +25,47 @@ def _native_skill_manifest(
     targets: list[str] | None = None,
     configured: bool = True,
     healthy: bool = True,
+    runtime_entrypoint: str | None = None,
 ) -> str:
+    manifest = {
+        "schemaVersion": "graphite.skill/v1",
+        "skillKey": skill_key,
+        "label": "Video Understanding" if skill_key == "video_understanding" else skill_key.replace("_", " ").title(),
+        "description": "Use frame sampling rules to understand a video with image-only model capability.",
+        "version": "0.1.0",
+        "targets": targets or ["agent_node", "companion"],
+        "kind": "workflow",
+        "mode": "workflow",
+        "scope": "graph",
+        "permissions": ["model_vision", "file_read"],
+        "inputSchema": [
+            {
+                "key": "video",
+                "label": "Video",
+                "valueType": "video",
+                "required": True,
+                "description": "Source video file.",
+            }
+        ],
+        "outputSchema": [
+            {
+                "key": "summary",
+                "label": "Summary",
+                "valueType": "text",
+                "required": True,
+                "description": "Structured video summary.",
+            }
+        ],
+        "supportedValueTypes": ["video", "image", "text"],
+        "sideEffects": ["model_call", "file_read"],
+        "configured": configured,
+        "healthy": healthy,
+    }
+    if runtime_entrypoint is not None:
+        manifest["runtime"] = {"type": "builtin", "entrypoint": runtime_entrypoint}
+        manifest["health"] = {"type": "builtin"}
     return json.dumps(
-        {
-            "schemaVersion": "graphite.skill/v1",
-            "skillKey": skill_key,
-            "label": "Video Understanding" if skill_key == "video_understanding" else skill_key.replace("_", " ").title(),
-            "description": "Use frame sampling rules to understand a video with image-only model capability.",
-            "version": "0.1.0",
-            "targets": targets or ["agent_node", "companion"],
-            "kind": "workflow",
-            "mode": "workflow",
-            "scope": "graph",
-            "permissions": ["model_vision", "file_read"],
-            "inputSchema": [
-                {
-                    "key": "video",
-                    "label": "Video",
-                    "valueType": "video",
-                    "required": True,
-                    "description": "Source video file.",
-                }
-            ],
-            "outputSchema": [
-                {
-                    "key": "summary",
-                    "label": "Summary",
-                    "valueType": "text",
-                    "required": True,
-                    "description": "Structured video summary.",
-                }
-            ],
-            "supportedValueTypes": ["video", "image", "text"],
-            "sideEffects": ["model_call", "file_read"],
-            "configured": configured,
-            "healthy": healthy,
-        },
+        manifest,
         ensure_ascii=False,
         indent=2,
     )
@@ -137,11 +145,18 @@ def _write_native_skill(
     targets: list[str],
     configured: bool = True,
     healthy: bool = True,
+    runtime: bool = True,
 ) -> None:
     skill_dir = skills_dir / "graphite" / skill_key
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "skill.json").write_text(
-        _native_skill_manifest(skill_key, targets=targets, configured=configured, healthy=healthy),
+        _native_skill_manifest(
+            skill_key,
+            targets=targets,
+            configured=configured,
+            healthy=healthy,
+            runtime_entrypoint=skill_key if runtime else None,
+        ),
         encoding="utf-8",
     )
     (skill_dir / "SKILL.md").write_text(f"# {skill_key}\n", encoding="utf-8")
@@ -192,6 +207,8 @@ class SkillUploadImportRouteTests(unittest.TestCase):
                 self.assertEqual(payload["permissions"], ["model_vision", "file_read"])
                 self.assertFalse(payload["runtimeReady"])
                 self.assertFalse(payload["runtimeRegistered"])
+                self.assertEqual(payload["agentNodeEligibility"], "needs_manifest")
+                self.assertIn("Skill manifest is missing a builtin runtime entrypoint.", payload["agentNodeBlockers"])
                 self.assertTrue(payload["configured"])
                 self.assertTrue(payload["healthy"])
 
@@ -279,6 +296,7 @@ class SkillUploadImportRouteTests(unittest.TestCase):
             skills_dir = temp_path / "skill"
             state_dir = temp_path / "data" / "skills"
             _write_native_skill(skills_dir, "search_knowledge_base", targets=["agent_node"])
+            _write_native_skill(skills_dir, "extract_json_fields", targets=["agent_node"], runtime=False)
             _write_native_skill(skills_dir, "rewrite_text", targets=["companion"])
             _write_native_skill(skills_dir, "summarize_text", targets=["agent_node"], configured=False)
             _write_native_skill(skills_dir, "translate_text", targets=["agent_node"], healthy=False)

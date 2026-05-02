@@ -4,18 +4,74 @@ import copy
 from typing import Any
 
 from app.core.runtime.state import utc_now_iso
-from app.core.schemas.node_system import NodeSystemGraphDocument
+from app.core.schemas.node_system import NodeSystemGraphDocument, NodeSystemStateType
 
 
-def initialize_graph_state(graph: NodeSystemGraphDocument, state: dict[str, Any]) -> None:
-    initialized_values = {
-        state_name: copy.deepcopy(definition.value)
-        for state_name, definition in graph.state_schema.items()
-    }
-    initialized_values.update(dict(state.get("state_values", {})))
+def input_state_keys(graph: NodeSystemGraphDocument) -> set[str]:
+    keys: set[str] = set()
+    for node in graph.nodes.values():
+        if getattr(node, "kind", None) != "input":
+            continue
+        for binding in getattr(node, "writes", []):
+            keys.add(binding.state)
+    return keys
+
+
+def default_empty_state_value(state_type: NodeSystemStateType) -> Any:
+    if state_type == NodeSystemStateType.NUMBER:
+        return 0
+    if state_type == NodeSystemStateType.BOOLEAN:
+        return False
+    if state_type in {NodeSystemStateType.OBJECT, NodeSystemStateType.JSON}:
+        return {}
+    if state_type in {NodeSystemStateType.ARRAY, NodeSystemStateType.FILE_LIST}:
+        return []
+    return ""
+
+
+def build_graph_state_values(
+    graph: NodeSystemGraphDocument,
+    supplied_values: dict[str, Any] | None = None,
+    *,
+    preserve_supplied_values: bool = False,
+    allow_input_state_overrides: bool = False,
+) -> dict[str, Any]:
+    input_keys = input_state_keys(graph)
+    initialized_values = {}
+    for state_name, definition in graph.state_schema.items():
+        if state_name in input_keys:
+            initialized_values[state_name] = copy.deepcopy(definition.value)
+        else:
+            initialized_values[state_name] = default_empty_state_value(definition.type)
+
+    if preserve_supplied_values:
+        initialized_values.update(copy.deepcopy(dict(supplied_values or {})))
+    elif allow_input_state_overrides:
+        for state_name, value in dict(supplied_values or {}).items():
+            if state_name in input_keys:
+                initialized_values[state_name] = copy.deepcopy(value)
+
+    return initialized_values
+
+
+def initialize_graph_state(
+    graph: NodeSystemGraphDocument,
+    state: dict[str, Any],
+    *,
+    preserve_existing_values: bool = False,
+) -> None:
+    initialized_values = build_graph_state_values(
+        graph,
+        state.get("state_values", {}),
+        preserve_supplied_values=preserve_existing_values,
+    )
     state["state_values"] = initialized_values
-    state["state_last_writers"] = dict(state.get("state_last_writers", {}))
-    state["state_events"] = list(state.get("state_events", []))
+    if preserve_existing_values:
+        state["state_last_writers"] = dict(state.get("state_last_writers", {}))
+        state["state_events"] = list(state.get("state_events", []))
+    else:
+        state["state_last_writers"] = {}
+        state["state_events"] = []
     state["state_snapshot"] = {
         "values": dict(initialized_values),
         "last_writers": dict(state["state_last_writers"]),

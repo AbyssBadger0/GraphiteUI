@@ -41,7 +41,7 @@ from langgraph.graph import END, START, StateGraph
 from app.core.langgraph.compiler import compile_graph_to_langgraph_plan
 from app.core.runtime.node_system_executor import _execute_node
 from app.core.runtime.state import create_initial_run_state
-from app.core.runtime.state_io import apply_state_writes, collect_node_inputs, initialize_graph_state
+from app.core.runtime.state_io import apply_state_writes, build_graph_state_values, collect_node_inputs, initialize_graph_state
 from app.core.schemas.node_system import NodeSystemGraphPayload
 
 
@@ -169,10 +169,11 @@ def build_graph():
 
 def invoke_graph(initial_state: dict[str, Any] | None = None) -> dict[str, Any]:
     compiled = build_graph()
-    state_values = dict(initial_state or {{}})
-    for state_name, definition in GRAPH.state_schema.items():
-        if state_name not in state_values:
-            state_values[state_name] = definition.value
+    state_values = build_graph_state_values(
+        GRAPH,
+        initial_state,
+        allow_input_state_overrides=True,
+    )
     if compiled is None:
         return state_values
     return compiled.invoke(state_values)

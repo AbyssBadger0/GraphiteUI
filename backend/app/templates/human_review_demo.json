@@ -22,7 +22,7 @@
       "name": "human_feedback",
       "description": "Human guidance applied while the run is paused.",
       "type": "text",
-      "value": "请让语气更适合新用户，并强调可视化编排能力。",
+      "value": "",
       "color": "#0f766e"
     },
     "state_4": {

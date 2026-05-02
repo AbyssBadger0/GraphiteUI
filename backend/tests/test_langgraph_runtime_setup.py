@@ -31,9 +31,16 @@ def _build_graph() -> NodeSystemGraphPayload:
                     "name": "answer",
                     "description": "Answer text.",
                     "type": "text",
-                    "value": "",
+                    "value": "schema answer",
                     "color": "#2563eb",
-                }
+                },
+                "summary": {
+                    "name": "summary",
+                    "description": "Generated summary.",
+                    "type": "markdown",
+                    "value": "stale schema summary",
+                    "color": "#16a34a",
+                },
             },
             "nodes": {
                 "input_answer": {
@@ -50,7 +57,7 @@ def _build_graph() -> NodeSystemGraphPayload:
                     "description": "",
                     "ui": {"position": {"x": 240, "y": 0}},
                     "reads": [{"state": "answer", "required": True}],
-                    "writes": [],
+                    "writes": [{"state": "summary"}],
                     "config": {"skills": [], "taskInstruction": ""},
                 },
             },
@@ -130,6 +137,26 @@ class LangGraphRuntimeSetupTest(unittest.TestCase):
         self.assertEqual(state["node_status_map"]["agent_answer"], "idle")
         self.assertEqual(state["metadata"]["resolved_runtime_backend"], "langgraph")
         self.assertIn("started_at", state)
+        self.assertEqual(state["state_values"]["answer"], "schema answer")
+        self.assertEqual(state["state_values"]["summary"], "")
+
+    def test_prepare_langgraph_runtime_state_clears_fresh_initial_state_values(self) -> None:
+        state = {
+            "state_values": {
+                "answer": "previous input",
+                "summary": "previous summary",
+                "obsolete": "previous extra state",
+            },
+            "state_last_writers": {"summary": {"node_id": "agent_answer"}},
+            "state_events": [{"state_key": "summary"}],
+        }
+
+        prepared = prepare_langgraph_runtime_state(_build_graph(), state, resume_from_checkpoint=False)
+
+        self.assertIs(prepared, state)
+        self.assertEqual(prepared["state_values"], {"answer": "schema answer", "summary": ""})
+        self.assertEqual(prepared["state_last_writers"], {})
+        self.assertEqual(prepared["state_events"], [])
 
     def test_prepare_langgraph_runtime_state_preserves_resume_node_statuses(self) -> None:
         state = {
@@ -138,13 +165,15 @@ class LangGraphRuntimeSetupTest(unittest.TestCase):
                 "agent_answer": "success",
                 "stale_node": "success",
             },
-            "state_values": {},
+            "state_values": {"answer": "checkpoint answer", "summary": "checkpoint summary"},
         }
 
         prepared = prepare_langgraph_runtime_state(_build_graph(), state, resume_from_checkpoint=True)
 
         self.assertIs(prepared, state)
         self.assertEqual(prepared["node_status_map"], {"input_answer": "success", "agent_answer": "success"})
+        self.assertEqual(prepared["state_values"]["answer"], "checkpoint answer")
+        self.assertEqual(prepared["state_values"]["summary"], "checkpoint summary")
         self.assertEqual(prepared["metadata"]["resolved_runtime_backend"], "langgraph")
 
 

@@ -539,7 +539,7 @@ class LangGraphMigrationTests(unittest.TestCase):
         self.assertEqual(result["metadata"]["pending_interrupt_nodes"], ["draft_writer"])
         self.assertEqual(result["state_snapshot"]["values"][request_key], "请给 GraphiteUI 写一段简短的欢迎介绍。")
         self.assertEqual(result["state_snapshot"]["values"][draft_answer_key], "draft_writer:请给 GraphiteUI 写一段简短的欢迎介绍。")
-        self.assertEqual(result["state_snapshot"]["values"][human_feedback_key], "请让语气更适合新用户，并强调可视化编排能力。")
+        self.assertEqual(result["state_snapshot"]["values"][human_feedback_key], "")
         self.assertEqual(result["output_previews"][0]["node_id"], "output_draft_answer")
         self.assertEqual(result["output_previews"][0]["source_key"], draft_answer_key)
         self.assertEqual(result["output_previews"][0]["value"], "draft_writer:请给 GraphiteUI 写一段简短的欢迎介绍。")
@@ -1045,6 +1045,40 @@ class LangGraphMigrationTests(unittest.TestCase):
         exec(source, namespace, namespace)
         result = namespace["invoke_graph"]()
         self.assertIn(greeting_key, result)
+
+    def test_exported_langgraph_invoke_clears_non_input_initial_values(self):
+        graph = NodeSystemGraphPayload.model_validate(
+            {
+                "name": "Input Only Export",
+                "state_schema": {
+                    "request": {"name": "Request", "type": "text", "value": "schema request"},
+                    "result": {"name": "Result", "type": "markdown", "value": "stale schema result"},
+                },
+                "nodes": {
+                    "input_request": {
+                        "kind": "input",
+                        "ui": {"position": {"x": 0, "y": 0}},
+                        "writes": [{"state": "request"}],
+                    }
+                },
+                "edges": [],
+                "conditional_edges": [],
+                "metadata": {},
+            }
+        )
+        source = generate_langgraph_python_source(graph)
+
+        namespace: dict[str, object] = {}
+        exec(source, namespace, namespace)
+        result = namespace["invoke_graph"](
+            {
+                "request": "runtime request",
+                "result": "previous result",
+                "obsolete": "previous extra state",
+            }
+        )
+
+        self.assertEqual(result, {"request": "runtime request", "result": ""})
 
     def test_exported_langgraph_payload_keeps_only_runtime_fields(self):
         graph = _load_hello_world_graph()

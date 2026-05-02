@@ -78,7 +78,7 @@ def prepare_langgraph_runtime_state(
     create_initial_run_state_func: Callable[..., dict[str, Any]] = create_initial_run_state,
     set_run_status_func: Callable[[dict[str, Any], str], None] = set_run_status,
     utc_now_iso_func: Callable[[], str] = utc_now_iso,
-    initialize_graph_state_func: Callable[[NodeSystemGraphDocument, dict[str, Any]], None] = initialize_graph_state,
+    initialize_graph_state_func: Callable[..., None] = initialize_graph_state,
     mark_input_boundaries_success_func: Callable[[NodeSystemGraphDocument, dict[str, Any]], None] = mark_input_boundaries_success,
 ) -> dict[str, Any]:
     state = initial_state or create_initial_run_state_func(
@@ -100,7 +100,7 @@ def prepare_langgraph_runtime_state(
         state["node_status_map"] = {node_name: "idle" for node_name in graph.nodes}
     state["metadata"] = dict(graph.metadata)
     state["metadata"]["resolved_runtime_backend"] = "langgraph"
-    initialize_graph_state_func(graph, state)
+    initialize_graph_state_func(graph, state, preserve_existing_values=resume_from_checkpoint)
     mark_input_boundaries_success_func(graph, state)
     return state
 

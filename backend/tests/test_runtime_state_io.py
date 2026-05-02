@@ -16,7 +16,78 @@ from app.core.schemas.node_system import NodeSystemGraphDocument
 
 
 class RuntimeStateIoTests(unittest.TestCase):
-    def test_initialize_graph_state_deep_copies_defaults_and_preserves_existing_values(self) -> None:
+    def test_initialize_graph_state_clears_non_input_values_for_fresh_runs(self) -> None:
+        graph = NodeSystemGraphDocument.model_validate(
+            {
+                "graph_id": "graph_1",
+                "name": "State Graph",
+                "state_schema": {
+                    "question": {"name": "Question", "type": "text", "value": "fresh question"},
+                    "answer": {"name": "Answer", "type": "markdown", "value": "stale schema answer"},
+                    "count": {"name": "Count", "type": "number", "value": 9},
+                    "ready": {"name": "Ready", "type": "boolean", "value": True},
+                    "payload": {"name": "Payload", "type": "object", "value": {"items": [1]}},
+                    "items": {"name": "Items", "type": "array", "value": [1]},
+                    "files": {"name": "Files", "type": "file_list", "value": [{"path": "old.txt"}]},
+                },
+                "nodes": {
+                    "input_question": {
+                        "kind": "input",
+                        "ui": {"position": {"x": 0, "y": 0}},
+                        "writes": [{"state": "question"}],
+                    },
+                    "agent_answer": {
+                        "kind": "agent",
+                        "ui": {"position": {"x": 240, "y": 0}},
+                        "writes": [
+                            {"state": "answer"},
+                            {"state": "count"},
+                            {"state": "ready"},
+                            {"state": "payload"},
+                            {"state": "items"},
+                            {"state": "files"},
+                        ],
+                    },
+                },
+                "edges": [],
+                "conditional_edges": [],
+            }
+        )
+        state = {
+            "state_values": {
+                "question": "previous question",
+                "answer": "previous answer",
+                "count": 99,
+                "ready": True,
+                "payload": {"previous": True},
+                "items": ["previous"],
+                "files": [{"path": "previous.txt"}],
+                "obsolete": "remove me",
+            },
+            "state_last_writers": {"question": {"node_id": "input"}},
+            "state_events": [{"state_key": "question"}],
+        }
+
+        initialize_graph_state(graph, state)
+
+        self.assertEqual(
+            state["state_values"],
+            {
+                "question": "fresh question",
+                "answer": "",
+                "count": 0,
+                "ready": False,
+                "payload": {},
+                "items": [],
+                "files": [],
+            },
+        )
+        self.assertEqual(state["state_snapshot"]["values"], state["state_values"])
+        self.assertEqual(state["state_last_writers"], {})
+        self.assertEqual(state["state_events"], [])
+        self.assertEqual(state["state_snapshot"]["last_writers"], {})
+
+    def test_initialize_graph_state_preserves_existing_values_for_resume(self) -> None:
         graph = NodeSystemGraphDocument.model_validate(
             {
                 "graph_id": "graph_1",
@@ -25,21 +96,32 @@ class RuntimeStateIoTests(unittest.TestCase):
                     "question": {"name": "Question", "type": "text", "value": "seed"},
                     "payload": {"name": "Payload", "type": "object", "value": {"items": [1]}},
                 },
-                "nodes": {},
+                "nodes": {
+                    "input_question": {
+                        "kind": "input",
+                        "ui": {"position": {"x": 0, "y": 0}},
+                        "writes": [{"state": "question"}],
+                    },
+                    "agent_payload": {
+                        "kind": "agent",
+                        "ui": {"position": {"x": 240, "y": 0}},
+                        "writes": [{"state": "payload"}],
+                    },
+                },
                 "edges": [],
                 "conditional_edges": [],
             }
         )
         state = {
-            "state_values": {"question": "existing"},
+            "state_values": {"question": "existing", "payload": {"items": [2]}},
             "state_last_writers": {"question": {"node_id": "input"}},
             "state_events": [{"state_key": "question"}],
         }
 
-        initialize_graph_state(graph, state)
+        initialize_graph_state(graph, state, preserve_existing_values=True)
 
         self.assertEqual(state["state_values"]["question"], "existing")
-        self.assertEqual(state["state_values"]["payload"], {"items": [1]})
+        self.assertEqual(state["state_values"]["payload"], {"items": [2]})
         self.assertEqual(state["state_snapshot"]["values"], state["state_values"])
         self.assertEqual(state["state_snapshot"]["last_writers"], {"question": {"node_id": "input"}})
         state["state_values"]["payload"]["items"].append(2)

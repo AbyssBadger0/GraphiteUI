@@ -11,7 +11,6 @@ import httpx
 from app.core.thinking_levels import (
     THINKING_LEVEL_HIGH,
     THINKING_LEVEL_LOW,
-    THINKING_LEVEL_MEDIUM,
     THINKING_LEVEL_OFF,
     THINKING_LEVEL_XHIGH,
     normalize_thinking_level,
@@ -57,8 +56,8 @@ LOCAL_LLM_REQUEST_TIMEOUT_SEC = _parse_float_env("LOCAL_LLM_REQUEST_TIMEOUT_SEC"
 ROOT_DIR = Path(__file__).resolve().parents[3]
 LOCAL_ONBOARDING_GUIDE_PATH = ROOT_DIR / "knowledge" / "GraphiteUI-official" / "getting-started.md"
 DEFAULT_AGENT_TEMPERATURE = 0.2
-DEFAULT_AGENT_THINKING_LEVEL = THINKING_LEVEL_OFF
-DEFAULT_AGENT_THINKING_ENABLED = False
+DEFAULT_AGENT_THINKING_LEVEL = THINKING_LEVEL_HIGH
+DEFAULT_AGENT_THINKING_ENABLED = True
 DEFAULT_LOCAL_MODEL_ALIAS = "lm-local"
 LOCAL_RUNTIME_CONFIG_CACHE_TTL_SEC = 5.0
 _LOCAL_RUNTIME_CONFIG_CACHE: tuple[float, dict[str, Any] | None] | None = None
@@ -275,7 +274,7 @@ def get_default_agent_thinking_level() -> str:
         if isinstance(saved_level, str):
             return normalize_thinking_level(saved_level, fallback=DEFAULT_AGENT_THINKING_LEVEL)
         if isinstance(runtime_defaults.get("thinking_enabled"), bool):
-            return THINKING_LEVEL_MEDIUM if bool(runtime_defaults["thinking_enabled"]) else THINKING_LEVEL_OFF
+            return THINKING_LEVEL_HIGH if bool(runtime_defaults["thinking_enabled"]) else THINKING_LEVEL_OFF
     return DEFAULT_AGENT_THINKING_LEVEL
 
 
@@ -541,7 +540,7 @@ def _chat_with_local_model_with_meta(
 
     warnings: list[str] = []
     resolved_thinking_level = normalize_thinking_level(
-        thinking_level if thinking_level is not None else (THINKING_LEVEL_MEDIUM if thinking_enabled else THINKING_LEVEL_OFF),
+        thinking_level if thinking_level is not None else (THINKING_LEVEL_HIGH if thinking_enabled else THINKING_LEVEL_OFF),
         fallback=THINKING_LEVEL_OFF,
     )
     used_thinking = bool(resolved_thinking_level != THINKING_LEVEL_OFF and provider_id == "local")

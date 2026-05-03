@@ -282,6 +282,7 @@ def _build_langgraph_node_callable(
                 duration_ms = int((time.perf_counter() - node_started_perf) * 1000)
                 node_outputs[node_name] = outputs
                 state_writes = apply_state_writes(node_name, node.writes, outputs, state)
+                graph_updates = {write["state_key"]: write["value"] for write in state_writes}
                 state["node_status_map"][node_name] = "success"
                 if body.get("selected_skills"):
                     state["selected_skills"] = [*state.get("selected_skills", []), *body["selected_skills"]]
@@ -338,7 +339,7 @@ def _build_langgraph_node_callable(
                         checkpoint_saver=checkpoint_saver,
                         checkpoint_lookup_config=checkpoint_lookup_config,
                     )
-                return outputs
+                return graph_updates
             except Exception as exc:  # pragma: no cover - defensive runtime path
                 duration_ms = int((time.perf_counter() - node_started_perf) * 1000)
                 state["node_status_map"][node_name] = "failed"

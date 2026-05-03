@@ -15,7 +15,7 @@ from app.core.model_provider_templates import (
 from app.core.storage.settings_store import load_app_settings
 from app.core.storage.model_log_store import append_model_request_log
 from app.core.thinking_levels import (
-    THINKING_LEVEL_MEDIUM,
+    THINKING_LEVEL_HIGH,
     THINKING_LEVEL_OFF,
     normalize_thinking_level,
 )
@@ -197,7 +197,7 @@ def chat_with_model_provider(
     normalized_base_url = _normalize_base_url(base_url)
     warnings: list[str] = []
     resolved_thinking_level = normalize_thinking_level(
-        thinking_level if thinking_level is not None else (THINKING_LEVEL_MEDIUM if thinking_enabled else THINKING_LEVEL_OFF),
+        thinking_level if thinking_level is not None else (THINKING_LEVEL_HIGH if thinking_enabled else THINKING_LEVEL_OFF),
         fallback=THINKING_LEVEL_OFF,
     )
 

@@ -159,6 +159,9 @@ function normalizeThinkingLevel(value: string | null | undefined): AgentThinking
   if (value === "minimal") {
     return "low";
   }
+  if (value === "on") {
+    return "high";
+  }
   return "off";
 }
 

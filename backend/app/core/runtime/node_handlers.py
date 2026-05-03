@@ -16,6 +16,7 @@ from app.core.schemas.node_system import (
     NodeSystemConditionNode,
     NodeSystemInputNode,
     NodeSystemStateDefinition,
+    StateWriteMode,
 )
 from app.core.storage.skill_artifact_store import create_skill_artifact_context
 from app.skills.registry import get_skill_registry
@@ -160,7 +161,10 @@ def execute_agent_node(
     warnings.extend(response_warnings)
 
     output_values = dict(mapped_skill_outputs)
+    write_modes = {binding.state: binding.mode for binding in node.writes}
     for state_name in output_keys:
+        if state_name in mapped_skill_outputs and write_modes.get(state_name) == StateWriteMode.APPEND:
+            continue
         if state_name in response_payload:
             output_values[state_name] = response_payload.get(state_name)
         elif state_name not in output_values:

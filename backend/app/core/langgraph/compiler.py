@@ -56,9 +56,6 @@ def compile_graph_to_langgraph_plan(graph: NodeSystemGraphPayload) -> LangGraphB
     graph_nodes: dict[str, LangGraphNodePlan] = {}
     skill_keys: set[str] = set()
     for node_name, node in graph.nodes.items():
-        if any(binding.mode.value != "replace" for binding in node.writes):
-            unsupported_reasons.append(f"node '{node_name}' uses a non-replace state write mode.")
-
         attached_skills = list(node.config.skills) if isinstance(node, NodeSystemAgentNode) else []
         skill_keys.update(attached_skills)
         graph_nodes[node_name] = LangGraphNodePlan(

@@ -17,7 +17,7 @@ from app.tools.local_llm import (
     get_default_agent_temperature,
     get_default_agent_thinking_level,
 )
-from app.core.thinking_levels import THINKING_LEVEL_MEDIUM, THINKING_LEVEL_OFF, normalize_thinking_level
+from app.core.thinking_levels import THINKING_LEVEL_HIGH, THINKING_LEVEL_OFF, normalize_thinking_level
 from app.tools.model_provider_client import discover_provider_models
 from app.tools.openai_codex_client import (
     clear_codex_auth_state,
@@ -54,7 +54,7 @@ class AgentRuntimeDefaultsPayload(BaseModel):
         if self.thinking_level is not None:
             return normalize_thinking_level(self.thinking_level)
         if self.thinking_enabled is not None:
-            return THINKING_LEVEL_MEDIUM if self.thinking_enabled else THINKING_LEVEL_OFF
+            return THINKING_LEVEL_HIGH if self.thinking_enabled else THINKING_LEVEL_OFF
         return THINKING_LEVEL_OFF
 
 

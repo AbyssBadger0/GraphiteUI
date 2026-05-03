@@ -169,6 +169,36 @@ class RuntimeStateIoTests(unittest.TestCase):
         output_values["payload"]["items"].append(2)
         self.assertEqual(state["state_values"]["payload"], {"items": [1]})
 
+    def test_apply_state_writes_appends_list_outputs_without_replacing_previous_values(self) -> None:
+        mode = SimpleNamespace(value="append")
+        write_bindings = [
+            SimpleNamespace(state="evidence_links", mode=mode),
+            SimpleNamespace(state="source_documents", mode=mode),
+        ]
+        output_values = {
+            "evidence_links": [{"title": "Second", "url": "https://example.com/2"}],
+            "source_documents": {"local_path": "run_1/doc_002.md"},
+        }
+        state = {
+            "state_values": {
+                "evidence_links": [{"title": "First", "url": "https://example.com/1"}],
+                "source_documents": [],
+            }
+        }
+
+        write_records = apply_state_writes("web_search_agent", write_bindings, output_values, state)
+
+        self.assertEqual(
+            state["state_values"]["evidence_links"],
+            [
+                {"title": "First", "url": "https://example.com/1"},
+                {"title": "Second", "url": "https://example.com/2"},
+            ],
+        )
+        self.assertEqual(state["state_values"]["source_documents"], [{"local_path": "run_1/doc_002.md"}])
+        self.assertEqual(write_records[0]["mode"], "append")
+        self.assertTrue(write_records[0]["changed"])
+
 
 if __name__ == "__main__":
     unittest.main()

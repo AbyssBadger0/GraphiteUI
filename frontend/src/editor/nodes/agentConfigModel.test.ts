@@ -31,7 +31,7 @@ test("normalizeAgentThinkingMode preserves explicit levels and maps legacy value
   assert.equal(normalizeAgentThinkingMode("high"), "high");
   assert.equal(normalizeAgentThinkingMode("xhigh"), "xhigh");
   assert.equal(normalizeAgentThinkingMode("minimal"), "low");
-  assert.equal(normalizeAgentThinkingMode("on"), "medium");
+  assert.equal(normalizeAgentThinkingMode("on"), "high");
   assert.equal(normalizeAgentThinkingMode("auto"), "off");
   assert.equal(normalizeAgentThinkingMode(null), "off");
   assert.equal(normalizeAgentThinkingMode(undefined), "off");

@@ -120,8 +120,8 @@ def build_graph():
             input_values, _state_reads = collect_node_inputs(node, runtime_state)
             body = _execute_node(GRAPH, node_name, node, input_values, runtime_state)
             outputs = dict(body.get("outputs", {{}}))
-            apply_state_writes(node_name, node.writes, outputs, runtime_state)
-            return outputs
+            state_writes = apply_state_writes(node_name, node.writes, outputs, runtime_state)
+            return {{write["state_key"]: write["value"] for write in state_writes}}
 
         return _call
 

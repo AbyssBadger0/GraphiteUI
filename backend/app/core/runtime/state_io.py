@@ -4,7 +4,7 @@ import copy
 from typing import Any
 
 from app.core.runtime.state import utc_now_iso
-from app.core.schemas.node_system import NodeSystemGraphDocument, NodeSystemStateType
+from app.core.schemas.node_system import NodeSystemGraphDocument, NodeSystemStateType, StateWriteMode
 
 
 def input_state_keys(graph: NodeSystemGraphDocument) -> set[str]:
@@ -94,6 +94,34 @@ def collect_node_inputs(node: Any, state: dict[str, Any]) -> tuple[dict[str, Any
     return resolved_inputs, read_records
 
 
+def append_state_value(previous_value: Any, next_value: Any) -> Any:
+    if next_value is None:
+        return copy.deepcopy(previous_value)
+
+    previous = copy.deepcopy(previous_value)
+    value = copy.deepcopy(next_value)
+
+    if isinstance(previous, list):
+        if isinstance(value, list):
+            return previous + value
+        return previous + [value]
+
+    if previous is None or previous == "" or previous == {}:
+        return value if isinstance(value, list) else [value]
+
+    if isinstance(previous, str) and isinstance(value, str):
+        return "\n\n".join(part for part in [previous.strip(), value.strip()] if part)
+
+    if isinstance(previous, dict) and isinstance(value, dict):
+        merged = dict(previous)
+        merged.update(value)
+        return merged
+
+    if isinstance(value, list):
+        return [previous] + value
+    return [previous, value]
+
+
 def apply_state_writes(
     node_name: str,
     write_bindings: list[Any],
@@ -106,8 +134,12 @@ def apply_state_writes(
     state_events = state.setdefault("state_events", [])
 
     for binding in write_bindings:
-        value = copy.deepcopy(output_values.get(binding.state))
         previous_value = copy.deepcopy(state_values.get(binding.state))
+        raw_value = output_values.get(binding.state)
+        if binding.mode == StateWriteMode.APPEND or getattr(binding.mode, "value", None) == StateWriteMode.APPEND.value:
+            value = append_state_value(previous_value, raw_value)
+        else:
+            value = copy.deepcopy(raw_value)
         changed = previous_value != value
         state_values[binding.state] = value
         writer_record = {

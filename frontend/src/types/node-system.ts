@@ -25,7 +25,7 @@ export type ReadBinding = {
 
 export type WriteBinding = {
   state: string;
-  mode?: "replace";
+  mode?: "replace" | "append";
 };
 
 export type AgentThinkingMode = "off" | "low" | "medium" | "high" | "xhigh" | "on";

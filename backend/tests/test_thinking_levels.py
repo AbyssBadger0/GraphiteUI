@@ -9,18 +9,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 class ThinkingLevelTests(unittest.TestCase):
-    def test_agent_config_defaults_to_off_and_normalizes_legacy_values(self) -> None:
+    def test_agent_config_defaults_to_high_and_normalizes_legacy_values(self) -> None:
         from app.core.schemas.node_system import AgentThinkingMode, NodeSystemAgentConfig
         from app.core.thinking_levels import normalize_thinking_level
 
-        self.assertEqual(NodeSystemAgentConfig().thinking_mode, AgentThinkingMode.OFF)
+        self.assertEqual(NodeSystemAgentConfig().thinking_mode, AgentThinkingMode.HIGH)
         self.assertEqual(
             NodeSystemAgentConfig.model_validate({"thinkingMode": "auto"}).thinking_mode,
             AgentThinkingMode.OFF,
         )
         self.assertEqual(
             NodeSystemAgentConfig.model_validate({"thinkingMode": "on"}).thinking_mode,
-            AgentThinkingMode.MEDIUM,
+            AgentThinkingMode.HIGH,
         )
         self.assertEqual(
             NodeSystemAgentConfig.model_validate({"thinkingMode": "minimal"}).thinking_mode,
@@ -75,19 +75,19 @@ class ThinkingLevelTests(unittest.TestCase):
         self.assertEqual(runtime_config["resolved_thinking_level"], "off")
         self.assertFalse(runtime_config["resolved_thinking"])
 
-    def test_legacy_enabled_runtime_default_migrates_to_medium(self) -> None:
+    def test_legacy_enabled_runtime_default_migrates_to_high(self) -> None:
         from app.api.routes_settings import AgentRuntimeDefaultsPayload
         from app.tools.local_llm import get_default_agent_thinking_level
 
         self.assertEqual(
             AgentRuntimeDefaultsPayload(model="local/test", thinking_enabled=True, temperature=0.2).normalized_thinking_level,
-            "medium",
+            "high",
         )
         with patch(
             "app.tools.local_llm.load_app_settings",
             return_value={"agent_runtime_defaults": {"thinking_enabled": True}},
         ):
-            self.assertEqual(get_default_agent_thinking_level(), "medium")
+            self.assertEqual(get_default_agent_thinking_level(), "high")
 
     def test_provider_payloads_map_thinking_levels_to_native_fields(self) -> None:
         from app.core.thinking_levels import build_native_thinking_payload

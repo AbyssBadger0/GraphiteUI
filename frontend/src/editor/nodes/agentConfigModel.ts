@@ -25,7 +25,7 @@ export function normalizeAgentThinkingMode(value: string | null | undefined): Ag
     return "low";
   }
   if (value === "on") {
-    return "medium";
+    return "high";
   }
   return "off";
 }

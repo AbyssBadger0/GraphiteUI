@@ -163,6 +163,15 @@ def _fake_generate_agent_response_no_change(node, input_values, skill_context, r
     return outputs, "", [], runtime_config
 
 
+def _fake_generate_agent_response_append_then_read(node, input_values, skill_context, runtime_config):
+    _ = skill_context
+    if node.name in {"append_one", "append_two"}:
+        return {binding.state: [node.name] for binding in node.writes}, "", [], runtime_config
+    if node.name == "reader":
+        return {"summary": ",".join(input_values.get("items") or [])}, "", [], runtime_config
+    return {}, "", [], runtime_config
+
+
 def _build_cycle_graph() -> NodeSystemGraphPayload:
     return NodeSystemGraphPayload.model_validate(
         {
@@ -1130,6 +1139,77 @@ class LangGraphMigrationTests(unittest.TestCase):
         execution_ids = {item["node_id"] for item in result["node_executions"]}
         self.assertNotIn("continue_check", execution_ids)
         self.assertNotIn("output_counter", execution_ids)
+
+    @patch("app.core.langgraph.runtime.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)
+    @patch("app.core.runtime.node_system_executor._generate_agent_response", _fake_generate_agent_response_append_then_read)
+    @patch("app.core.runtime.node_system_executor._invoke_skill", _fake_invoke_skill)
+    @patch("app.core.runtime.node_system_executor.get_skill_registry", _fake_skill_registry)
+    def test_langgraph_runtime_preserves_append_state_for_downstream_readers(self):
+        graph = NodeSystemGraphPayload.model_validate(
+            {
+                "name": "Append State Flow",
+                "state_schema": {
+                    "seed": {"name": "seed", "type": "text", "value": "start", "color": "#d97706"},
+                    "items": {"name": "items", "type": "array", "value": [], "color": "#2563eb"},
+                    "summary": {"name": "summary", "type": "text", "value": "", "color": "#0f766e"},
+                },
+                "nodes": {
+                    "input_seed": {
+                        "kind": "input",
+                        "name": "input_seed",
+                        "ui": {"position": {"x": 0, "y": 0}},
+                        "writes": [{"state": "seed", "mode": "replace"}],
+                        "config": {"value": "start"},
+                    },
+                    "append_one": {
+                        "kind": "agent",
+                        "name": "append_one",
+                        "ui": {"position": {"x": 240, "y": 0}},
+                        "reads": [{"state": "seed", "required": True}],
+                        "writes": [{"state": "items", "mode": "append"}],
+                    },
+                    "append_two": {
+                        "kind": "agent",
+                        "name": "append_two",
+                        "ui": {"position": {"x": 480, "y": 0}},
+                        "reads": [{"state": "items", "required": False}],
+                        "writes": [{"state": "items", "mode": "append"}],
+                    },
+                    "reader": {
+                        "kind": "agent",
+                        "name": "reader",
+                        "ui": {"position": {"x": 720, "y": 0}},
+                        "reads": [{"state": "items", "required": True}],
+                        "writes": [{"state": "summary", "mode": "replace"}],
+                    },
+                    "output_summary": {
+                        "kind": "output",
+                        "name": "output_summary",
+                        "ui": {"position": {"x": 960, "y": 0}},
+                        "reads": [{"state": "summary", "required": True}],
+                        "config": {"displayMode": "plain"},
+                    },
+                },
+                "edges": [
+                    {"source": "input_seed", "target": "append_one"},
+                    {"source": "append_one", "target": "append_two"},
+                    {"source": "append_two", "target": "reader"},
+                    {"source": "reader", "target": "output_summary"},
+                ],
+                "conditional_edges": [],
+                "metadata": {},
+            }
+        )
+
+        plan = compile_graph_to_langgraph_plan(graph)
+        self.assertEqual(plan.requirements.unsupported_reasons, [])
+
+        result = execute_node_system_graph_langgraph(graph, persist_progress=False)
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["state_snapshot"]["values"]["items"], ["append_one", "append_two"])
+        self.assertEqual(result["state_snapshot"]["values"]["summary"], "append_one,append_two")
 
     @patch("app.core.langgraph.runtime.save_run", lambda state: None)
     @patch("app.core.runtime.node_system_executor.save_run", lambda state: None)

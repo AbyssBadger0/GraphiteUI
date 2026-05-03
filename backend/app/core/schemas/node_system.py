@@ -68,6 +68,7 @@ class NodeSystemStateType(str, Enum):
 
 class StateWriteMode(str, Enum):
     REPLACE = "replace"
+    APPEND = "append"
 
 
 class AgentModelSource(str, Enum):
@@ -200,7 +201,7 @@ class NodeSystemAgentConfig(BaseModel):
     task_instruction: str = Field(default="", alias="taskInstruction")
     model_source: AgentModelSource = Field(default=AgentModelSource.GLOBAL, alias="modelSource")
     model: str = ""
-    thinking_mode: AgentThinkingMode = Field(default=AgentThinkingMode.OFF, alias="thinkingMode")
+    thinking_mode: AgentThinkingMode = Field(default=AgentThinkingMode.HIGH, alias="thinkingMode")
     temperature: float = Field(default=0.2, ge=0, le=2)
 
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)

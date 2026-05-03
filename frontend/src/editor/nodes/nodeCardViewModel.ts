@@ -341,7 +341,7 @@ function resolveAgentModelLabel(node: Extract<GraphNode, { kind: "agent" }>) {
 }
 
 function resolveThinkingLabel(node: Extract<GraphNode, { kind: "agent" }>) {
-  const mode = String(node.config.thinkingMode === "on" ? "medium" : node.config.thinkingMode || "off");
+  const mode = String(node.config.thinkingMode === "on" ? "high" : node.config.thinkingMode || "off");
   if (mode === "xhigh") {
     return "thinking Extra High";
   }

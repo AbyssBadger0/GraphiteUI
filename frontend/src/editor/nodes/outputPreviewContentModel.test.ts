@@ -64,6 +64,22 @@ test("resolveOutputPreviewContent summarizes local document references instead o
   assert.match(preview.text, /Local: run_1\/search\/doc_001\.md/);
   assert.match(preview.text, /URL: https:\/\/example\.com\/two/);
   assert.doesNotMatch(preview.text, /"local_path"/);
+  assert.deepEqual(preview.documentRefs, [
+    {
+      title: "Article One",
+      url: "https://example.com/one",
+      localPath: "run_1/search/doc_001.md",
+      contentType: "text/markdown",
+      charCount: 1200,
+    },
+    {
+      title: "Article Two",
+      url: "https://example.com/two",
+      localPath: "run_1/search/doc_002.md",
+      contentType: "text/markdown",
+      charCount: null,
+    },
+  ]);
 });
 
 test("resolveOutputPreviewContent treats string arrays as local document paths", () => {

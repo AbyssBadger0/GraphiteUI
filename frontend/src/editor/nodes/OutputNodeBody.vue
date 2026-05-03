@@ -39,8 +39,12 @@
           'node-card__preview--empty': outputPreviewContent.isEmpty,
         }"
       >
+        <OutputDocumentPager
+          v-if="outputPreviewContent.kind === 'documents' && outputPreviewContent.documentRefs.length > 0"
+          :documents="outputPreviewContent.documentRefs"
+        />
         <div
-          v-if="outputPreviewContent.kind === 'markdown'"
+          v-else-if="outputPreviewContent.kind === 'markdown'"
           class="node-card__preview-markdown"
           v-html="outputPreviewContent.html"
         />
@@ -56,6 +60,7 @@ import { DocumentChecked } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 
 import type { NodeCardViewModel } from "./nodeCardViewModel";
+import OutputDocumentPager from "./OutputDocumentPager.vue";
 import type { OutputPreviewContent } from "./outputPreviewContentModel";
 
 type OutputBodyViewModel = Extract<NodeCardViewModel["body"], { kind: "output" }>;

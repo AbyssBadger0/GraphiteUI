@@ -24,7 +24,9 @@ test("OutputNodeBody owns output presentation and forwards parent side effects",
   assert.match(componentSource, /'node-card__preview--markdown': outputPreviewContent\.kind === 'markdown'/);
   assert.match(componentSource, /'node-card__preview--json': outputPreviewContent\.kind === 'json'/);
   assert.match(componentSource, /'node-card__preview--empty': outputPreviewContent\.isEmpty/);
-  assert.match(componentSource, /v-if="outputPreviewContent\.kind === 'markdown'"[\s\S]*v-html="outputPreviewContent\.html"/);
+  assert.match(componentSource, /import OutputDocumentPager from "\.\/OutputDocumentPager\.vue";/);
+  assert.match(componentSource, /<OutputDocumentPager[\s\S]*v-if="outputPreviewContent\.kind === 'documents' && outputPreviewContent\.documentRefs\.length > 0"[\s\S]*:documents="outputPreviewContent\.documentRefs"/);
+  assert.match(componentSource, /v-else-if="outputPreviewContent\.kind === 'markdown'"[\s\S]*v-html="outputPreviewContent\.html"/);
   assert.match(componentSource, /<pre v-else class="node-card__preview-text">\{\{ outputPreviewContent\.text \}\}<\/pre>/);
   assert.match(componentSource, /\.node-card__output-body \{[\s\S]*display:\s*flex;[\s\S]*flex:\s*1 1 auto;/);
   assert.match(componentSource, /\.node-card__surface--output \{[\s\S]*flex:\s*1 1 auto;[\s\S]*min-height:\s*0;/);

@@ -1,10 +1,20 @@
 export type OutputPreviewContentKind = "plain" | "markdown" | "json" | "documents";
 
+export type OutputPreviewDocumentReference = {
+  title: string;
+  url: string;
+  localPath: string;
+  contentType: string;
+  charCount: number | null;
+  error?: string;
+};
+
 export type OutputPreviewContent = {
   kind: OutputPreviewContentKind;
   text: string;
   html: string;
   isEmpty: boolean;
+  documentRefs: OutputPreviewDocumentReference[];
 };
 
 export const OUTPUT_WAITING_TEXT = "Waiting for output...";
@@ -23,6 +33,7 @@ export function resolveOutputPreviewContent(text: string, displayMode: string): 
       text: normalizedText,
       html: renderSafeMarkdown(normalizedText),
       isEmpty: isOutputPreviewEmpty(normalizedText),
+      documentRefs: [],
     };
   }
 
@@ -32,15 +43,18 @@ export function resolveOutputPreviewContent(text: string, displayMode: string): 
       text: formatJsonPreview(normalizedText),
       html: "",
       isEmpty: isOutputPreviewEmpty(normalizedText),
+      documentRefs: [],
     };
   }
 
   if (kind === "documents") {
+    const documents = parseDocumentPreviewRecords(normalizedText);
     return {
       kind,
-      text: formatDocumentPreview(normalizedText),
+      text: formatDocumentPreview(normalizedText, documents),
       html: "",
       isEmpty: isOutputPreviewEmpty(normalizedText),
+      documentRefs: documents ?? [],
     };
   }
 
@@ -49,6 +63,7 @@ export function resolveOutputPreviewContent(text: string, displayMode: string): 
     text: normalizedText,
     html: "",
     isEmpty: isOutputPreviewEmpty(normalizedText),
+    documentRefs: [],
   };
 }
 
@@ -99,8 +114,7 @@ function formatJsonPreview(text: string) {
   }
 }
 
-function formatDocumentPreview(text: string) {
-  const documents = parseDocumentPreviewRecords(text);
+function formatDocumentPreview(text: string, documents: OutputPreviewDocumentReference[] | null) {
   if (documents === null) {
     return text;
   }
@@ -129,22 +143,14 @@ function formatDocumentPreview(text: string) {
   return lines.join("\n");
 }
 
-type DocumentPreviewRecord = {
-  title: string;
-  url: string;
-  localPath: string;
-  charCount: number | null;
-  error: string;
-};
-
-function parseDocumentPreviewRecords(text: string): DocumentPreviewRecord[] | null {
+function parseDocumentPreviewRecords(text: string): OutputPreviewDocumentReference[] | null {
   const trimmed = text.trim();
   if (!trimmed) {
     return [];
   }
   try {
     const parsed = JSON.parse(trimmed);
-    const documents: DocumentPreviewRecord[] = [];
+    const documents: OutputPreviewDocumentReference[] = [];
     collectDocumentPreviewRecords(parsed, documents, false);
     return documents;
   } catch {
@@ -152,7 +158,7 @@ function parseDocumentPreviewRecords(text: string): DocumentPreviewRecord[] | nu
   }
 }
 
-function collectDocumentPreviewRecords(value: unknown, documents: DocumentPreviewRecord[], allowStringPath: boolean) {
+function collectDocumentPreviewRecords(value: unknown, documents: OutputPreviewDocumentReference[], allowStringPath: boolean) {
   if (typeof value === "string") {
     if (allowStringPath) {
       appendDocumentPreviewRecord({ local_path: value }, documents);
@@ -182,17 +188,19 @@ function collectDocumentPreviewRecords(value: unknown, documents: DocumentPrevie
   }
 }
 
-function appendDocumentPreviewRecord(record: Record<string, unknown>, documents: DocumentPreviewRecord[]) {
+function appendDocumentPreviewRecord(record: Record<string, unknown>, documents: OutputPreviewDocumentReference[]) {
   const localPath = normalizePreviewLocalPath(record.local_path);
   if (!localPath) {
     return;
   }
+  const error = normalizePreviewText(record.error);
   documents.push({
     title: normalizePreviewText(record.title) || `Document ${documents.length + 1}`,
     url: normalizePreviewText(record.url),
     localPath,
+    contentType: normalizePreviewText(record.content_type ?? record.contentType) || "text/markdown",
     charCount: normalizePreviewNumber(record.char_count ?? record.charCount),
-    error: normalizePreviewText(record.error),
+    ...(error ? { error } : {}),
   });
 }
 

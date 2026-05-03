@@ -37,7 +37,10 @@ GraphiteUI 画布的基本单位是节点、state 和边。当前正式心智是
 ## Skills 与知识库
 
 - skill 是显式挂在 agent 上的，不是隐藏能力。
-- 当 knowledge base input 接到 agent 时，编辑器会自动把 `search_knowledge_base` 加到 agent 的 skill 列表里。
+- skill 的运行资源应放在 `skill/<skill_key>` 文件夹内，并通过 `skill.json` manifest 暴露给 agent 节点。
+- 当前默认 skill 是 `web_search`，可用于联网搜索、引用整理和本地 source document 输出。
+- knowledge base input 可以作为 state 进入图，但不会再自动挂载旧的内置检索 skill。
+- output 节点可以预览普通文本、Markdown、JSON，也可以读取 `local_path` 指向的本地 skill artifact 并分页展示。
 
 ## 条件与循环
 

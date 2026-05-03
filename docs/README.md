@@ -15,22 +15,33 @@
   - 自动编排图
   - 规划后确认与边走边画两种未来模式
 
-- [future/2026-04-22-agent-only-langgraph-runtime.md](future/2026-04-22-agent-only-langgraph-runtime.md)
-  - 只让 agent 成为 LangGraph 真实节点
-  - input / output / condition 作为 GraphiteUI 视觉边界和编排辅助
-  - 对人类在环断点、output preview 和 runtime 编译层的影响
+- [future/2026-04-27-skill-product-taxonomy.md](future/2026-04-27-skill-product-taxonomy.md)
+  - Agent Skill 与 Companion Skill 的产品边界
+  - Atomic / Workflow / Tool / Context / Profile / Adapter / Control 等能力形态
+  - 桌宠 Agent 与编排器 Agent Node 的 skill 使用边界
 
 - [future/2026-04-28-architecture-refactor-roadmap.md](future/2026-04-28-architecture-refactor-roadmap.md)
   - 仓库架构审计结论
   - 冗余代码清理记录
   - NodeCard / Canvas / WorkspaceShell / 后端 runtime 的阶段性拆分路线
 
+- [future/2026-05-01-agent-framework-capability-comparison.md](future/2026-05-01-agent-framework-capability-comparison.md)
+  - GraphiteUI 与 OpenClaw、Hermes Agent、Claude Code 的能力对标
+  - GraphiteUI 终局形态、可视化优势和能力缺口
+  - 自主 Agent 协作层、运行时适配层和 skill/tool 注册方向
+
+- [future/2026-05-01-langgraph-advanced-capability-baseline-analysis.md](future/2026-05-01-langgraph-advanced-capability-baseline-analysis.md)
+  - LangGraph 高级能力与行业场景
+  - 当前四节点系统的承接度
+  - subgraph、batch/join、动态 fan-out、人类在环、RAG 等后续能力缺口
+
 ## 已清理
 
 - 迁移闭环记录：`task_plan.md`、`findings.md`、`progress.md`
-- 已完成的节点创建方式对齐报告
-- 已完成的 node top actions / state popover 计划和规格
-- 过期或偏离当前 Vue + Element Plus + node_system 主线的文档
+- 已完成的 agent-only LangGraph runtime 规划文档
+- 已完成或偏离当前 `skill/<skill_key>` 目录主线的旧 skill 重构文档
+- `docs/superpowers/` 下阶段性实施计划、设计稿和 TDD 执行记录
+- 过期或偏离当前 Vue + Element Plus + node_system + 原生 skill 主线的文档
 
 ## 维护原则
 

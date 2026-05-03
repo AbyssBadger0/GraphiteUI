@@ -28,9 +28,10 @@
   - 智能线条显示模式
   - 右下角 minimap
   - 运行状态反馈和 active path 高亮
+  - Run Activity 面板按运行事件顺序展示活跃 state、节点流式输出和运行过程
 - 运行页：`/runs`、`/runs/:runId`
   - runs 列表、筛选、详情
-  - run detail polling
+  - run detail polling 与 SSE 运行事件更新
   - cycle iterations
   - output artifacts
 - 设置页：`/settings`
@@ -46,7 +47,9 @@
 - agent 节点支持模型选择、thinking 开关、skills、输入引用、输出引用、temperature 和保存 preset。
 - condition 节点作为条件边的可视化代理，默认包含 true / false / exhausted 分支，并限制循环上限为 1-10，默认 5。
 - output 节点支持预览、展示模式和持久化开关。
-- run feedback 会同时反映在工作区反馈条、画布节点状态、active path 线条和 output latest run preview。
+- output 节点支持读取 `local_path` 本地 skill artifact，按文档列表翻页展示正文，并保留原始网页链接。
+- run feedback 会同时反映在工作区反馈条、画布节点状态、active path 线条、Run Activity 面板和 output latest run preview。
+- 运行事件通过 SSE/EventSource 单向推送到前端；Output 节点会根据流式 payload 的 state key 只更新自己读取的 state。
 - 运行记录中的 `node_executions` 只记录真实执行的 agent；input / output / condition 只作为边界状态、输出 artifact 和条件 route 参与反馈。
 
 ### 后端主链
@@ -62,7 +65,9 @@
 - knowledge base 可以通过 input 节点进入图。
 - agent 读取 knowledge base state 不再隐式挂载内置知识库 skill；检索能力需要以 `skill/<skill_key>` 文件夹加 `skill.json` manifest 的形式显式安装和绑定。
 - skills catalog/definitions 与 knowledge base catalog 都有真实接口。
-- 当前默认 skill 只保留 `web_search`，运行逻辑位于 `skill/web_search` 文件夹内，由 manifest 驱动的通用脚本运行器执行。
+- 当前默认 skill 只保留 `web_search`，运行逻辑、manifest、说明文档和脚本都位于 `skill/web_search` 文件夹内，由 manifest 驱动的通用脚本运行器执行。
+- `web_search` 支持 Tavily 优先、DuckDuckGo HTML fallback、日期上下文注入、搜索结果引用、网页正文抓取和 source document 本地 artifact 输出。
+- 内置 `web_research_loop` 模板已经对齐 `web_search` 的三类关键产物：最终答案、证据链接、本地 source documents。
 - GraphiteUI / Python / LangGraph 三套正式知识库都能导入并检索。
 
 ## 当前技术栈
@@ -79,10 +84,10 @@
 
 ## 仍在路线图中的事项
 
-- WebSocket 实时推送
 - Memory 正式写入、召回和展示
-- 人类在环的前端断点 / 恢复 / 审计闭环
+- 人类在环的更完整审计闭环和多断点恢复体验
 - LangGraph Python 导出入口、源码预览和下载 UI
 - cycles 更高级的终止策略和可视化
 - 更强的 knowledge base 管理能力
+- Agent / Companion Skill 的更完整权限、健康检查、测试和图内配置体验
 - 桌宠 Agent 和自动编排图协作层

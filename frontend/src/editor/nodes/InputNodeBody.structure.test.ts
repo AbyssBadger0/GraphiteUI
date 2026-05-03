@@ -33,6 +33,6 @@ test("InputNodeBody owns input presentation and forwards parent side effects", (
   assert.match(componentSource, /\.node-card__input-body \{[\s\S]*display:\s*flex;[\s\S]*flex:\s*1 1 auto;/);
   assert.match(componentSource, /\.node-card__input-boundary-toggle \{/);
   assert.match(componentSource, /\.node-card__asset-dropzone \{[\s\S]*position:\s*relative;/);
-  assert.match(componentSource, /\.node-card__asset-native-input \{[\s\S]*position:\s*absolute;[\s\S]*inset:\s*0;[\s\S]*opacity:\s*0;/);
+  assert.match(componentSource, /\.node-card__asset-native-input \{[\s\S]*position:\s*absolute;[\s\S]*inset:\s*0;[\s\S]*opacity:\s*0;[\s\S]*pointer-events:\s*none;/);
   assert.match(componentSource, /\.node-card__surface-textarea \{[\s\S]*flex:\s*1 1 auto;[\s\S]*resize:\s*none;/);
 });

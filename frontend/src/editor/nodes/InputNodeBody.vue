@@ -387,6 +387,7 @@ function openInputAssetPicker() {
   height: 100%;
   opacity: 0;
   cursor: pointer;
+  pointer-events: none;
 }
 
 .node-card__asset-dropzone-title {

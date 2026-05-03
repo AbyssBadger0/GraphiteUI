@@ -39,25 +39,24 @@ def collect_input_attachments(
     schema = state_schema or {}
     for state_key, value in input_values.items():
         definition = schema.get(state_key)
-        attachment = _build_image_attachment(state_key, value, definition)
+        attachment = _build_media_attachment(state_key, value, definition)
         if attachment is not None:
             attachments.append(attachment)
     return attachments
 
 
-def _build_image_attachment(
+def _build_media_attachment(
     state_key: str,
     value: Any,
     definition: NodeSystemStateDefinition | None,
 ) -> dict[str, Any] | None:
     envelope = normalize_uploaded_file_envelope(value)
     state_type = definition.type if definition is not None else None
-    is_image_state = state_type == NodeSystemStateType.IMAGE
-    detected_type = str(envelope.get("detectedType") if envelope else "").strip().lower()
-    data_url = _extract_image_data_url(value, envelope)
-    if not data_url:
+    expected_type = _expected_media_type(state_type, envelope)
+    if expected_type not in {"image", "video"}:
         return None
-    if not is_image_state and detected_type != "image":
+    data_url = _extract_media_data_url(value, envelope, expected_type)
+    if not data_url:
         return None
 
     name = str(envelope.get("name") if envelope else "").strip()
@@ -68,7 +67,7 @@ def _build_image_attachment(
         name = definition.name.strip()
 
     return {
-        "type": "image",
+        "type": expected_type,
         "state_key": state_key,
         "name": name,
         "mime_type": mime_type,
@@ -76,8 +75,23 @@ def _build_image_attachment(
     }
 
 
-def _extract_image_data_url(value: Any, envelope: dict[str, Any] | None) -> str:
-    if isinstance(value, str) and value.startswith("data:image/"):
+def _expected_media_type(
+    state_type: NodeSystemStateType | None,
+    envelope: dict[str, Any] | None,
+) -> str:
+    if state_type == NodeSystemStateType.IMAGE:
+        return "image"
+    if state_type == NodeSystemStateType.VIDEO:
+        return "video"
+    if envelope is None:
+        return ""
+    detected_type = str(envelope.get("detectedType") if envelope else "").strip().lower()
+    return detected_type if detected_type in {"image", "video"} else ""
+
+
+def _extract_media_data_url(value: Any, envelope: dict[str, Any] | None, media_type: str) -> str:
+    prefix = f"data:{media_type}/"
+    if isinstance(value, str) and value.startswith(prefix):
         return value
     if envelope is None:
         return ""
@@ -86,7 +100,7 @@ def _extract_image_data_url(value: Any, envelope: dict[str, Any] | None) -> str:
         return ""
     if str(envelope.get("encoding") or "").strip() != "data_url":
         return ""
-    if not content.startswith("data:image/"):
+    if not content.startswith(prefix):
         return ""
     return content
 

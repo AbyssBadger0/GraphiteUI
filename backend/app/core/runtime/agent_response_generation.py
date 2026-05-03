@@ -88,5 +88,6 @@ def generate_agent_response(
         "provider_response_id": llm_meta.get("response_id"),
         "provider_usage": llm_meta.get("usage"),
         "provider_timings": llm_meta.get("timings"),
+        "provider_video_fallback": llm_meta.get("video_fallback"),
     }
     return response_payload, reasoning, llm_meta.get("warnings", []), updated_runtime_config

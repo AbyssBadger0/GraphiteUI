@@ -130,6 +130,57 @@ class AgentResponseGenerationTests(unittest.TestCase):
         self.assertEqual(attachments[0]["state_key"], "reference_image")
         self.assertEqual(attachments[0]["data_url"], image_payload["content"])
 
+    def test_routes_video_inputs_as_model_attachments_without_prompting_base64(self) -> None:
+        captured: dict[str, object] = {}
+        video_payload = {
+            "kind": "uploaded_file",
+            "name": "clip.mp4",
+            "mimeType": "video/mp4",
+            "size": 64,
+            "detectedType": "video",
+            "encoding": "data_url",
+            "content": "data:video/mp4;base64,CCCCDDDD",
+        }
+
+        def chat_with_local_model_with_meta_func(**kwargs):
+            captured.update(kwargs)
+            return ('{"answer": "ok"}', {"warnings": []})
+
+        payload, _reasoning, warnings, _updated_config = generate_agent_response(
+            _agent_node(writes=[{"state": "answer"}], task_instruction="描述视频。"),
+            {"clip": video_payload},
+            {},
+            {
+                "resolved_provider_id": "local",
+                "runtime_model_name": "vision-model",
+                "resolved_temperature": 0.2,
+                "resolved_thinking": False,
+                "resolved_thinking_level": "off",
+                "resolved_model_ref": "local/vision-model",
+            },
+            state_schema={
+                "clip": NodeSystemStateDefinition(
+                    name="参考视频",
+                    type=NodeSystemStateType.VIDEO,
+                ),
+                "answer": NodeSystemStateDefinition(type=NodeSystemStateType.TEXT),
+            },
+            chat_with_local_model_with_meta_func=chat_with_local_model_with_meta_func,
+            parse_llm_json_response_func=lambda content, output_keys, *, output_key_aliases: {"answer": "ok"},
+            build_output_key_aliases_func=lambda output_keys, state_schema: {"answer": ["answer"]},
+        )
+
+        self.assertEqual(payload["answer"], "ok")
+        self.assertEqual(warnings, [])
+        system_prompt = str(captured["system_prompt"])
+        self.assertIn("clip.mp4", system_prompt)
+        self.assertNotIn("data:video/mp4;base64", system_prompt)
+        attachments = captured["input_attachments"]
+        self.assertEqual(len(attachments), 1)
+        self.assertEqual(attachments[0]["type"], "video")
+        self.assertEqual(attachments[0]["state_key"], "clip")
+        self.assertEqual(attachments[0]["data_url"], video_payload["content"])
+
     def test_routes_configured_provider_and_captures_metadata(self) -> None:
         def chat_with_model_ref_with_meta_func(**kwargs):
             self.assertEqual(kwargs["model_ref"], "openai-codex/gpt-5.4")
@@ -148,6 +199,7 @@ class AgentResponseGenerationTests(unittest.TestCase):
                     "response_id": "resp-1",
                     "usage": {"output_tokens": 5},
                     "timings": {"total_ms": 12},
+                    "video_fallback": {"used": True, "frame_count": 1},
                 },
             )
 
@@ -180,6 +232,7 @@ class AgentResponseGenerationTests(unittest.TestCase):
         self.assertEqual(updated_config["provider_response_id"], "resp-1")
         self.assertEqual(updated_config["provider_usage"], {"output_tokens": 5})
         self.assertEqual(updated_config["provider_timings"], {"total_ms": 12})
+        self.assertEqual(updated_config["provider_video_fallback"], {"used": True, "frame_count": 1})
 
 
 if __name__ == "__main__":

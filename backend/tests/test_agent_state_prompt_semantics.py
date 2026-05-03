@@ -195,6 +195,37 @@ class AgentStatePromptSemanticTests(unittest.TestCase):
         self.assertNotIn("data:image/png;base64", prompt)
         self.assertNotIn("AAAABBBB", prompt)
 
+    def test_auto_prompt_summarizes_uploaded_video_without_data_url_payload(self) -> None:
+        video_payload = {
+            "kind": "uploaded_file",
+            "name": "clip.mp4",
+            "mimeType": "video/mp4",
+            "size": 64,
+            "detectedType": "video",
+            "encoding": "data_url",
+            "content": "data:video/mp4;base64,CCCCDDDD",
+        }
+
+        prompt = build_auto_system_prompt(
+            ["answer"],
+            {"clip": video_payload},
+            {},
+            state_schema={
+                "clip": NodeSystemStateDefinition(
+                    name="参考视频",
+                    type=NodeSystemStateType.VIDEO,
+                    value="",
+                ),
+                "answer": NodeSystemStateDefinition(type=NodeSystemStateType.TEXT),
+            },
+        )
+
+        self.assertIn("clip.mp4", prompt)
+        self.assertIn("video/mp4", prompt)
+        self.assertIn("<data-url mime=video/mp4 chars=", prompt)
+        self.assertNotIn("data:video/mp4;base64", prompt)
+        self.assertNotIn("CCCCDDDD", prompt)
+
     def test_llm_json_response_can_map_unique_state_name_alias_back_to_output_key(self) -> None:
         parsed = parse_llm_json_response(
             '{"最终答案": "这是中文语义字段返回的内容"}',

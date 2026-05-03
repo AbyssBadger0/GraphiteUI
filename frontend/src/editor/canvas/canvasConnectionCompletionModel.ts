@@ -1,9 +1,11 @@
 import type { PendingGraphConnection } from "../../lib/graph-connections.ts";
-import type { GraphPosition, StateDefinition } from "../../types/node-system.ts";
+import { VIRTUAL_ANY_OUTPUT_STATE_KEY } from "../../lib/virtual-any-input.ts";
+import type { GraphNode, GraphPosition, StateDefinition } from "../../types/node-system.ts";
 import type { ProjectedCanvasAnchor } from "./edgeProjection.ts";
 import { resolveCanvasConnectionStateValueType } from "./canvasConnectionInteractionModel.ts";
 
 type StateSchemaLike = Record<string, Pick<StateDefinition, "type"> | undefined>;
+type NodeLookupLike = Record<string, GraphNode | undefined>;
 
 export type CanvasConnectionCompletionAction =
   | {
@@ -18,6 +20,7 @@ export type CanvasConnectionCompletionAction =
         targetNodeId: string;
         targetStateKey: string;
         position: GraphPosition;
+        sourceValueType?: string | null;
       };
     }
   | {
@@ -46,6 +49,7 @@ type CanvasConnectionCompletionInput = {
   connection: PendingGraphConnection | null;
   targetAnchor: ProjectedCanvasAnchor;
   stateSchema: StateSchemaLike;
+  nodes?: NodeLookupLike;
 };
 
 export type CanvasConnectionCompletionRequest = {
@@ -105,6 +109,14 @@ export function resolveCanvasConnectionCompletionAction(
   }
 
   if (connection.sourceKind === "state-out" && connection.sourceStateKey && targetAnchor.stateKey) {
+    const sourceValueType =
+      connection.sourceStateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY
+        ? resolveCanvasConnectionStateValueType(
+            connection.sourceStateKey,
+            input.stateSchema,
+            input.nodes?.[connection.sourceNodeId],
+          )
+        : null;
     return {
       type: "connect-state",
       payload: {
@@ -113,6 +125,7 @@ export function resolveCanvasConnectionCompletionAction(
         targetNodeId: targetAnchor.nodeId,
         targetStateKey: targetAnchor.stateKey,
         position: { x: targetAnchor.x, y: targetAnchor.y },
+        ...(sourceValueType ? { sourceValueType } : {}),
       },
     };
   }
@@ -123,6 +136,10 @@ export function resolveCanvasConnectionCompletionAction(
     targetAnchor.kind === "state-out" &&
     targetAnchor.stateKey
   ) {
+    const sourceValueType =
+      targetAnchor.stateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY
+        ? resolveCanvasConnectionStateValueType(targetAnchor.stateKey, input.stateSchema, input.nodes?.[targetAnchor.nodeId])
+        : null;
     return {
       type: "connect-state",
       payload: {
@@ -131,6 +148,7 @@ export function resolveCanvasConnectionCompletionAction(
         targetNodeId: connection.sourceNodeId,
         targetStateKey: connection.sourceStateKey,
         position: { x: targetAnchor.x, y: targetAnchor.y },
+        ...(sourceValueType ? { sourceValueType } : {}),
       },
     };
   }

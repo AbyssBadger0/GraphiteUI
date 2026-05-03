@@ -976,6 +976,63 @@ test("connectStateBindingInDocument materializes a virtual output before connect
   }
 });
 
+test("connectStateBindingInDocument materializes an input virtual output with the selected boundary type", () => {
+  const document: GraphPayload = {
+    graph_id: null,
+    name: "Typed input virtual output graph",
+    state_schema: {},
+    nodes: {
+      empty_file_input: {
+        kind: "input",
+        name: "empty_file_input",
+        description: "",
+        ui: { position: { x: 0, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          value: "",
+          boundaryType: "file",
+        },
+      },
+      empty_agent: {
+        kind: "agent",
+        name: "empty_agent",
+        description: "",
+        ui: { position: { x: 240, y: 0 }, collapsed: false },
+        reads: [],
+        writes: [],
+        config: {
+          skills: [],
+          taskInstruction: "",
+          modelSource: "global",
+          model: "",
+          thinkingMode: "high",
+          temperature: 0.2,
+        },
+      },
+    },
+    edges: [],
+    conditional_edges: [],
+    metadata: {
+      graphiteui_state_key_counter: 2,
+    },
+  };
+
+  const nextDocument = graphDocument.connectStateBindingInDocument(
+    document,
+    "empty_file_input",
+    VIRTUAL_ANY_OUTPUT_STATE_KEY,
+    "empty_agent",
+    VIRTUAL_ANY_INPUT_STATE_KEY,
+    "file",
+  );
+
+  assert.deepEqual(nextDocument.nodes.empty_file_input.writes, [{ state: "state_3", mode: "replace" }]);
+  assert.deepEqual(nextDocument.nodes.empty_agent.reads, [{ state: "state_3", required: true }]);
+  assert.equal(nextDocument.state_schema.state_3?.type, "file");
+  assert.equal(nextDocument.metadata.graphiteui_state_key_counter, 3);
+});
+
 test("connectStateBindingInDocument adopts a selected concrete input binding for an empty input virtual output", () => {
   const document: GraphPayload = {
     graph_id: null,

@@ -87,7 +87,7 @@ test("createNodeFromCreationEntry builds the builtin empty agent preset and auto
   assert.deepEqual(result.document.edges, [{ source: "input_question", target: "agent_created" }]);
 });
 
-test("createNodeFromCreationEntry creates input boundary nodes with a default editable output state", () => {
+test("createNodeFromCreationEntry creates input boundary nodes with a virtual output slot", () => {
   const document = {
     ...createBaseDocument(),
     metadata: {
@@ -114,10 +114,9 @@ test("createNodeFromCreationEntry creates input boundary nodes with a default ed
     },
   });
 
-  assert.deepEqual(result.document.nodes.input_created.writes, [{ state: "state_8", mode: "replace" }]);
-  assert.equal(result.document.state_schema.state_8?.type, "text");
-  assert.equal(result.document.state_schema.state_8?.value, "");
-  assert.equal(result.document.metadata.graphiteui_state_key_counter, 8);
+  assert.deepEqual(result.document.nodes.input_created.writes, []);
+  assert.deepEqual(result.document.state_schema, document.state_schema);
+  assert.equal(result.document.metadata.graphiteui_state_key_counter, 7);
 });
 
 test("createNodeFromCreationEntry builds the builtin condition preset and auto-wires route edges", () => {

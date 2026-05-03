@@ -2,6 +2,7 @@ import { cloneGraphDocument } from "./graph-document.ts";
 import { buildNextDefaultStateField, rememberDefaultStateKeyIndex, resolveDefaultStateColor } from "../editor/workspace/statePanelFields.ts";
 import { isCreateAgentInputStateKey, isVirtualAnyInputStateKey, isVirtualAnyOutputStateKey } from "./virtual-any-input.ts";
 import { canConnectStateInputSource, filterReplacedStateInputSourceEdges } from "./graph-connections.ts";
+import { resolveInputNodeVirtualOutputType } from "./input-boundary.ts";
 
 import type {
   GraphDocument,
@@ -350,7 +351,7 @@ export function applyNodeCreationResult<T extends GraphPayload | GraphDocument>(
   }
 
   const rawSourceStateKey = input.context?.sourceStateKey?.trim();
-  const sourceValueType = input.context?.sourceValueType?.trim() || "text";
+  const sourceValueType = input.context?.sourceValueType?.trim() || null;
   const rawTargetStateKey = input.context?.targetStateKey?.trim();
   const targetValueType = input.context?.targetValueType?.trim() || "text";
   let sourceStateKey = rawSourceStateKey;
@@ -372,7 +373,12 @@ export function applyNodeCreationResult<T extends GraphPayload | GraphDocument>(
   }
 
   if (isVirtualAnyOutputStateKey(rawSourceStateKey)) {
-    const sourceStateField = buildNextVirtualStateField(nextDocument, sourceValueType);
+    const sourceStateField = buildNextVirtualStateField(
+      nextDocument,
+      input.context?.sourceNodeId
+        ? sourceValueType || resolveInputNodeVirtualOutputType(nextDocument.nodes[input.context.sourceNodeId]) || "text"
+        : sourceValueType || "text",
+    );
     nextDocument.state_schema[sourceStateField.key] = sourceStateField.definition;
     rememberDefaultStateKeyIndex(nextDocument, sourceStateField.key);
     bindCreatedStateToSourceNode(
@@ -384,7 +390,7 @@ export function applyNodeCreationResult<T extends GraphPayload | GraphDocument>(
   }
 
   if (sourceStateKey && (input.createdNode.kind === "output" || input.createdNode.kind === "agent" || input.createdNode.kind === "condition")) {
-    ensureStateDefinitionForCreation(nextDocument, sourceStateKey, sourceValueType);
+    ensureStateDefinitionForCreation(nextDocument, sourceStateKey, sourceValueType || "text");
     bindCreatedStateToNode(nextDocument.nodes[input.createdNodeId], sourceStateKey);
     applyStateNameToCreatedOutputNode(nextDocument.nodes[input.createdNodeId], sourceStateKey, nextDocument.state_schema);
   }

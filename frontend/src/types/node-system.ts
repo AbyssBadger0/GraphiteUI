@@ -36,6 +36,8 @@ export type NodeUi = {
   size?: GraphNodeSize | null;
 };
 
+export type InputBoundaryConfigType = "text" | "file" | "knowledge_base" | "image" | "audio" | "video";
+
 export type InputNode = {
   kind: "input";
   name: string;
@@ -45,6 +47,7 @@ export type InputNode = {
   writes: WriteBinding[];
   config: {
     value: unknown;
+    boundaryType?: InputBoundaryConfigType;
   };
 };
 

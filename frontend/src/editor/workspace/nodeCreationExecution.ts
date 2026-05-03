@@ -62,23 +62,12 @@ export function createNodeFromCreationEntry<T extends GraphPayload | GraphDocume
       id: createdNodeId,
       position: input.context?.position ?? { x: 0, y: 0 },
     });
-    const stateField = buildNextDefaultStateField(document, {
-      name: createdNodeId,
-      type: "text",
-    });
-    created.node.writes = [{ state: stateField.key, mode: "replace" }];
-    created.state_schema = {
-      ...created.state_schema,
-      [stateField.key]: stateField.definition,
-    };
-    const result = applyNodeCreationResult(document, {
+    return applyNodeCreationResult(document, {
       createdNodeId,
       createdNode: created.node,
       mergedStateSchema: created.state_schema,
       context: input.context ?? null,
     });
-    rememberDefaultStateKeyIndex(result.document, stateField.key);
-    return result;
   }
 
   if (input.entry.mode === "node" && input.entry.nodeKind === "output") {

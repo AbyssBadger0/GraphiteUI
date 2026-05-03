@@ -35,6 +35,17 @@ class NodeSystemSchemaLegacyFieldRejectionTests(unittest.TestCase):
                 }
             )
 
+    def test_input_config_preserves_virtual_boundary_type(self) -> None:
+        config = NodeSystemInputConfig.model_validate(
+            {
+                "value": "",
+                "boundaryType": "video",
+            }
+        )
+
+        self.assertEqual(config.boundary_type.value, "video")
+        self.assertEqual(config.model_dump(by_alias=True)["boundaryType"], "video")
+
     def test_condition_config_rejects_condition_mode(self) -> None:
         with self.assertRaises(ValidationError):
             NodeSystemConditionConfig.model_validate(

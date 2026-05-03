@@ -160,6 +160,7 @@ class NodeSystemNodeUi(BaseModel):
 
 class NodeSystemInputConfig(BaseModel):
     value: Any = Field(default="")
+    boundary_type: NodeSystemStateType = Field(default=NodeSystemStateType.TEXT, alias="boundaryType")
 
     model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
 

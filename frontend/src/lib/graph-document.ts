@@ -12,6 +12,7 @@ import {
   shouldAddImplicitFlowEdgeForStateConnection,
 } from "./graph-connections.ts";
 import { isCreateAgentInputStateKey, isVirtualAnyInputStateKey, isVirtualAnyOutputStateKey } from "./virtual-any-input.ts";
+import { resolveInputNodeVirtualOutputType } from "./input-boundary.ts";
 
 import type { AgentNode, ConditionNode, GraphDocument, GraphNode, GraphPayload, InputNode, OutputNode, StateDefinition, TemplateRecord } from "../types/node-system.ts";
 
@@ -682,6 +683,7 @@ export function connectStateBindingInDocument<T extends GraphPayload | GraphDocu
   sourceStateKey: string,
   targetNodeId: string,
   targetStateKey: string,
+  sourceValueType?: string | null,
 ): T {
   if (!canConnectStateBinding(document, sourceNodeId, sourceStateKey, targetNodeId, targetStateKey)) {
     return document;
@@ -693,7 +695,10 @@ export function connectStateBindingInDocument<T extends GraphPayload | GraphDocu
   const nextTargetNode = nextDocument.nodes[targetNodeId];
   if (isVirtualAnyOutputStateKey(sourceStateKey)) {
     if (nextSourceNode.kind === "agent" || isCreateAgentInputStateKey(targetStateKey) || isVirtualAnyInputStateKey(targetStateKey)) {
-      const materializedState = buildNextMaterializedVirtualStateField(nextDocument);
+      const materializedState = buildNextMaterializedVirtualStateField(
+        nextDocument,
+        sourceValueType?.trim() || resolveInputNodeVirtualOutputType(nextSourceNode) || "text",
+      );
       nextDocument.state_schema[materializedState.key] = materializedState.definition;
       rememberMaterializedStateKeyIndex(nextDocument, materializedState.key);
       resolvedSourceStateKey = materializedState.key;

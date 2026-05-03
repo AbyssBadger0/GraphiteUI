@@ -314,6 +314,46 @@ test("buildNodeCardViewModel exposes virtual plus outputs for empty agent and in
   assert.equal(inputModel.body.valueText, "");
 });
 
+test("buildNodeCardViewModel derives empty input editor mode from its virtual boundary config", () => {
+  const emptyFileInput: GraphNode = {
+    kind: "input",
+    name: "empty_file_input",
+    description: "Input without a materialized state output.",
+    ui: { position: { x: 80, y: 220 } },
+    reads: [],
+    writes: [],
+    config: {
+      value: "",
+      boundaryType: "file",
+    },
+  };
+  const emptyKnowledgeInput: GraphNode = {
+    kind: "input",
+    name: "empty_kb_input",
+    description: "Input without a materialized state output.",
+    ui: { position: { x: 80, y: 420 } },
+    reads: [],
+    writes: [],
+    config: {
+      value: "docs",
+      boundaryType: "knowledge_base",
+    },
+  };
+
+  const fileModel = buildNodeCardViewModel("empty_file_input", emptyFileInput, stateSchema);
+  const knowledgeModel = buildNodeCardViewModel("empty_kb_input", emptyKnowledgeInput, stateSchema);
+
+  assert.equal(fileModel.body.kind, "input");
+  assert.equal(fileModel.body.editorMode, "asset");
+  assert.equal(fileModel.body.assetType, "file");
+  assert.equal(fileModel.body.primaryOutput?.key, VIRTUAL_ANY_OUTPUT_STATE_KEY);
+  assert.equal(fileModel.body.primaryOutput?.virtual, true);
+  assert.equal(knowledgeModel.body.kind, "input");
+  assert.equal(knowledgeModel.body.editorMode, "knowledge_base");
+  assert.equal(knowledgeModel.body.valueText, "docs");
+  assert.equal(knowledgeModel.body.primaryOutput?.key, VIRTUAL_ANY_OUTPUT_STATE_KEY);
+});
+
 test("buildNodeCardViewModel derives output preview source from state schema", () => {
   const node: GraphNode = {
     kind: "output",

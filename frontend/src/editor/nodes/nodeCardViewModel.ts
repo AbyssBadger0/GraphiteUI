@@ -1,5 +1,5 @@
 import type { UploadedAssetType } from "./uploadedAssetModel.ts";
-import { isUploadedAssetStateType } from "./uploadedAssetModel.ts";
+import { isUploadedAssetStateType, tryParseUploadedAssetEnvelope } from "./uploadedAssetModel.ts";
 import { normalizeConditionLoopLimit } from "./conditionLoopLimit.ts";
 import { formatOutputDisplayModeLabel, formatOutputPersistFormatLabel } from "./outputConfigModel.ts";
 import { OUTPUT_WAITING_TEXT, resolveOutputPreviewDisplayMode } from "./outputPreviewContentModel.ts";
@@ -9,6 +9,7 @@ import {
   shouldExposeVirtualAnyInput,
   shouldExposeVirtualAnyOutput,
 } from "../../lib/virtual-any-input.ts";
+import { normalizeInputBoundaryConfigType } from "../../lib/input-boundary.ts";
 import type { GraphNode, StateDefinition } from "../../types/node-system.ts";
 
 export type NodePortViewModel = {
@@ -288,7 +289,9 @@ function isActiveRunStatus(status: string | null) {
 
 function resolveInputEditorModel(node: Extract<GraphNode, { kind: "input" }>, stateSchema: Record<string, StateDefinition>) {
   const primaryOutputStateKey = node.writes[0]?.state ?? "";
-  const primaryOutputType = stateSchema[primaryOutputStateKey]?.type?.trim() || "";
+  const uploadedAssetType = primaryOutputStateKey ? null : tryParseUploadedAssetEnvelope(node.config.value)?.detectedType ?? null;
+  const primaryOutputType =
+    stateSchema[primaryOutputStateKey]?.type?.trim() || uploadedAssetType || normalizeInputBoundaryConfigType(node.config.boundaryType);
   const primaryOutputValue = resolveInputStateValue(node, stateSchema, primaryOutputStateKey);
 
   if (primaryOutputType === "knowledge_base") {

@@ -5,6 +5,7 @@ import {
   VIRTUAL_ANY_OUTPUT_COLOR,
   VIRTUAL_ANY_OUTPUT_STATE_KEY,
 } from "../../lib/virtual-any-input.ts";
+import { resolveInputNodeVirtualOutputType } from "../../lib/input-boundary.ts";
 import type { GraphNode, GraphPosition, StateDefinition } from "../../types/node-system.ts";
 import type { PendingStateInputSource } from "./canvasPendingStatePortModel.ts";
 import type { MeasuredNodeSize } from "./canvasNodePresentationModel.ts";
@@ -30,6 +31,7 @@ export type CanvasNodeCreationMenuPayload = {
 };
 
 type StateSchemaLike = Record<string, Pick<StateDefinition, "type"> | undefined>;
+type NodeLookupLike = Record<string, GraphNode | undefined>;
 
 type CanvasNodeCreationMenuInput = {
   connection: PendingGraphConnection | null;
@@ -37,6 +39,7 @@ type CanvasNodeCreationMenuInput = {
   clientX: number;
   clientY: number;
   stateSchema: StateSchemaLike;
+  nodes?: NodeLookupLike;
 };
 
 export type CanvasPendingConnectionCreationMenuRequest = {
@@ -130,14 +133,13 @@ type CanvasAutoSnapResolverInput = {
 export function resolveCanvasConnectionStateValueType(
   stateKey: string | null | undefined,
   stateSchema: StateSchemaLike,
+  node?: GraphNode,
 ) {
-  if (
-    !stateKey ||
-    stateKey === VIRTUAL_ANY_INPUT_STATE_KEY ||
-    stateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY ||
-    stateKey === CREATE_AGENT_INPUT_STATE_KEY
-  ) {
+  if (!stateKey || stateKey === VIRTUAL_ANY_INPUT_STATE_KEY || stateKey === CREATE_AGENT_INPUT_STATE_KEY) {
     return null;
+  }
+  if (stateKey === VIRTUAL_ANY_OUTPUT_STATE_KEY) {
+    return resolveInputNodeVirtualOutputType(node);
   }
   return stateSchema[stateKey]?.type ?? null;
 }
@@ -154,7 +156,11 @@ export function buildCanvasNodeCreationMenuPayload(input: CanvasNodeCreationMenu
       targetNodeId: connection.sourceNodeId,
       targetAnchorKind: connection.sourceKind,
       ...(connection.sourceStateKey ? { targetStateKey: connection.sourceStateKey } : {}),
-      targetValueType: resolveCanvasConnectionStateValueType(connection.sourceStateKey, input.stateSchema),
+      targetValueType: resolveCanvasConnectionStateValueType(
+        connection.sourceStateKey,
+        input.stateSchema,
+        input.nodes?.[connection.sourceNodeId],
+      ),
       clientX: input.clientX,
       clientY: input.clientY,
     };
@@ -167,7 +173,11 @@ export function buildCanvasNodeCreationMenuPayload(input: CanvasNodeCreationMenu
       sourceAnchorKind: connection.sourceKind,
       ...(connection.branchKey ? { sourceBranchKey: connection.branchKey } : {}),
       ...(connection.sourceStateKey ? { sourceStateKey: connection.sourceStateKey } : {}),
-      sourceValueType: resolveCanvasConnectionStateValueType(connection.sourceStateKey, input.stateSchema),
+      sourceValueType: resolveCanvasConnectionStateValueType(
+        connection.sourceStateKey,
+        input.stateSchema,
+        input.nodes?.[connection.sourceNodeId],
+      ),
       clientX: input.clientX,
       clientY: input.clientY,
     };

@@ -197,7 +197,14 @@ export function useWorkspaceGraphMutationActions(input: WorkspaceGraphMutationAc
 
   function connectStateBindingForTab(
     tabId: string,
-    payload: { sourceNodeId: string; sourceStateKey: string; targetNodeId: string; targetStateKey: string; position: GraphPosition },
+    payload: {
+      sourceNodeId: string;
+      sourceStateKey: string;
+      targetNodeId: string;
+      targetStateKey: string;
+      position: GraphPosition;
+      sourceValueType?: string | null;
+    },
   ) {
     const document = input.documentsByTabId.value[tabId];
     if (!document) {
@@ -210,6 +217,7 @@ export function useWorkspaceGraphMutationActions(input: WorkspaceGraphMutationAc
       payload.sourceStateKey,
       payload.targetNodeId,
       payload.targetStateKey,
+      payload.sourceValueType ?? null,
     );
     if (nextDocument === document) {
       return;

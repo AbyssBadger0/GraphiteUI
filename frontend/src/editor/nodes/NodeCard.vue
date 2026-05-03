@@ -426,7 +426,13 @@ import {
   resolveConditionRuleValuePatch,
 } from "./conditionRuleEditorModel";
 import { buildInputKnowledgeBaseOptions, resolveSelectedKnowledgeBaseDescription } from "./inputKnowledgeBaseModel";
-import { isSwitchableInputBoundaryType, resolveNextInputValueForBoundaryType, resolveStateTypeForInputBoundary } from "./inputValueTypeModel";
+import {
+  isSwitchableInputBoundaryType,
+  normalizeInputBoundaryConfigType,
+  resolveInputBoundarySelection,
+  resolveNextInputValueForBoundaryType,
+  resolveStateTypeForInputBoundary,
+} from "./inputValueTypeModel";
 import { buildNodeCardViewModel, type NodePortViewModel } from "./nodeCardViewModel";
 import {
   OUTPUT_DISPLAY_MODE_OPTIONS,
@@ -738,16 +744,12 @@ const inputStateKey = computed(() =>
 );
 const inputStateType = computed(() => {
   const stateKey = inputStateKey.value;
-  return stateKey ? String(props.stateSchema[stateKey]?.type ?? "text") : "text";
+  return stateKey
+    ? normalizeInputBoundaryConfigType(props.stateSchema[stateKey]?.type)
+    : normalizeInputBoundaryConfigType(props.node.kind === "input" ? props.node.config.boundaryType : "text");
 });
 const inputBoundarySelection = computed<"text" | "file" | "knowledge_base">(() => {
-  if (showKnowledgeBaseInput.value) {
-    return "knowledge_base";
-  }
-  if (showAssetUploadInput.value) {
-    return "file";
-  }
-  return "text";
+  return resolveInputBoundarySelection(inputStateType.value);
 });
 const inputAssetLabel = computed(() => resolveUploadedAssetLabel(inputAssetType.value));
 const inputAssetSummary = computed(() => resolveUploadedAssetSummary(inputAssetEnvelope.value));
@@ -1567,7 +1569,7 @@ function updateInputBoundaryType(nextType: "text" | "file" | "knowledge_base") {
     return;
   }
   const stateKey = inputStateKey.value;
-  if (!stateKey || !isSwitchableInputBoundaryType(nextType)) {
+  if (!isSwitchableInputBoundaryType(nextType)) {
     return;
   }
   if (inputStateType.value === nextType) {
@@ -1581,15 +1583,21 @@ function updateInputBoundaryType(nextType: "text" | "file" | "knowledge_base") {
     currentValue: inputStateValue.value,
     knowledgeBaseNames: props.knowledgeBases.map((knowledgeBase) => knowledgeBase.name),
   });
-  emitInputStatePatch(stateKey, {
-    type: nextStateType,
-    value: nextValue ?? defaultValueForStateType(nextStateType),
-  });
-  emitInputConfigPatch({ value: nextValue });
+  if (stateKey) {
+    emitInputStatePatch(stateKey, {
+      type: nextStateType,
+      value: nextValue ?? defaultValueForStateType(nextStateType),
+    });
+  }
+  emitInputConfigPatch({ boundaryType: nextType, value: nextValue });
 }
 
 function clearInputAsset() {
   if (guardLockedGraphInteraction()) {
+    return;
+  }
+  if (!inputStateKey.value) {
+    emitInputConfigPatch({ boundaryType: "file", value: "" });
     return;
   }
   emitInputValuePatch("");
@@ -1600,17 +1608,25 @@ async function commitInputAssetFile(file: File | null) {
     return;
   }
   const stateKey = inputStateKey.value;
-  if (!file || !stateKey) {
+  if (!file) {
     return;
   }
 
   try {
     const envelope = await createUploadedAssetEnvelope(file);
-    emitInputStatePatch(stateKey, {
-      type: resolveStateTypeForInputBoundary(envelope.detectedType),
-      value: defaultValueForStateType(resolveStateTypeForInputBoundary(envelope.detectedType) as StateFieldType),
+    const nextStateType = resolveStateTypeForInputBoundary(envelope.detectedType) as StateFieldType;
+    if (stateKey) {
+      emitInputStatePatch(stateKey, {
+        type: nextStateType,
+        value: defaultValueForStateType(nextStateType),
+      });
+      emitInputValuePatch(JSON.stringify(envelope));
+      return;
+    }
+    emitInputConfigPatch({
+      boundaryType: envelope.detectedType,
+      value: JSON.stringify(envelope),
     });
-    emitInputValuePatch(JSON.stringify(envelope));
   } catch (error) {
     console.error("Failed to read uploaded asset", error);
   }

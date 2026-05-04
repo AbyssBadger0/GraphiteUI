@@ -1,0 +1,100 @@
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.companion import store
+
+
+router = APIRouter(prefix="/api/companion", tags=["companion"])
+
+
+class CompanionUpdatePayload(BaseModel):
+    change_reason: str = Field(default="用户在 Companion 页面更新。", alias="change_reason")
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True, str_strip_whitespace=True)
+
+    def data(self) -> dict[str, Any]:
+        payload = self.model_dump(by_alias=True)
+        payload.pop("change_reason", None)
+        return payload
+
+
+class CompanionMemoryPayload(CompanionUpdatePayload):
+    type: str = "fact"
+    title: str = Field(min_length=1)
+    content: str = Field(min_length=1)
+
+
+@router.get("/profile")
+def get_profile_endpoint() -> dict[str, Any]:
+    return store.load_profile()
+
+
+@router.put("/profile")
+def update_profile_endpoint(payload: CompanionUpdatePayload) -> dict[str, Any]:
+    return store.save_profile(payload.data(), changed_by="user", change_reason=payload.change_reason)
+
+
+@router.get("/policy")
+def get_policy_endpoint() -> dict[str, Any]:
+    return store.load_policy()
+
+
+@router.put("/policy")
+def update_policy_endpoint(payload: CompanionUpdatePayload) -> dict[str, Any]:
+    return store.save_policy(payload.data(), changed_by="user", change_reason=payload.change_reason)
+
+
+@router.get("/memories")
+def list_memories_endpoint(include_deleted: bool = Query(default=False)) -> list[dict[str, Any]]:
+    return store.list_memories(include_deleted=include_deleted)
+
+
+@router.post("/memories")
+def create_memory_endpoint(payload: CompanionMemoryPayload) -> dict[str, Any]:
+    return store.create_memory(payload.data(), changed_by="user", change_reason=payload.change_reason)
+
+
+@router.patch("/memories/{memory_id}")
+def update_memory_endpoint(memory_id: str, payload: CompanionUpdatePayload) -> dict[str, Any]:
+    try:
+        return store.update_memory(memory_id, payload.data(), changed_by="user", change_reason=payload.change_reason)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Memory not found") from exc
+
+
+@router.delete("/memories/{memory_id}")
+def delete_memory_endpoint(memory_id: str) -> dict[str, Any]:
+    try:
+        return store.delete_memory(memory_id, changed_by="user", change_reason="用户删除记忆。")
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Memory not found") from exc
+
+
+@router.get("/session-summary")
+def get_session_summary_endpoint() -> dict[str, Any]:
+    return store.load_session_summary()
+
+
+@router.put("/session-summary")
+def update_session_summary_endpoint(payload: CompanionUpdatePayload) -> dict[str, Any]:
+    return store.save_session_summary(payload.data(), changed_by="user", change_reason=payload.change_reason)
+
+
+@router.get("/revisions")
+def list_revisions_endpoint(
+    target_type: str | None = Query(default=None),
+    target_id: str | None = Query(default=None),
+) -> list[dict[str, Any]]:
+    return store.list_revisions(target_type=target_type, target_id=target_id)
+
+
+@router.post("/revisions/{revision_id}/restore")
+def restore_revision_endpoint(revision_id: str) -> dict[str, Any]:
+    try:
+        return store.restore_revision(revision_id, changed_by="user", change_reason="用户恢复历史版本。")
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Revision not found") from exc

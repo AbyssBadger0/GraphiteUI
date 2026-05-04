@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import sys
 import tempfile
 import unittest
@@ -131,7 +130,8 @@ class AgentResponseGenerationTests(unittest.TestCase):
         self.assertEqual(len(attachments), 1)
         self.assertEqual(attachments[0]["type"], "image")
         self.assertEqual(attachments[0]["state_key"], "reference_image")
-        self.assertEqual(attachments[0]["data_url"], image_payload["content"])
+        self.assertNotIn("data_url", attachments[0])
+        self.assertTrue(str(attachments[0]["file_url"]).startswith("file://"))
 
     def test_routes_video_inputs_as_model_attachments_without_prompting_base64(self) -> None:
         captured: dict[str, object] = {}
@@ -182,7 +182,8 @@ class AgentResponseGenerationTests(unittest.TestCase):
         self.assertEqual(len(attachments), 1)
         self.assertEqual(attachments[0]["type"], "video")
         self.assertEqual(attachments[0]["state_key"], "clip")
-        self.assertEqual(attachments[0]["data_url"], video_payload["content"])
+        self.assertNotIn("data_url", attachments[0])
+        self.assertTrue(str(attachments[0]["file_url"]).startswith("file://"))
 
     def test_routes_skill_artifact_media_references_as_model_attachments(self) -> None:
         captured: dict[str, object] = {}
@@ -244,11 +245,13 @@ class AgentResponseGenerationTests(unittest.TestCase):
         self.assertEqual(attachments[0]["type"], "image")
         self.assertEqual(attachments[0]["state_key"], "downloaded_files")
         self.assertEqual(attachments[0]["name"], "image.png")
-        self.assertEqual(attachments[0]["data_url"], "data:image/png;base64," + base64.b64encode(b"fake-png").decode("ascii"))
+        self.assertNotIn("data_url", attachments[0])
+        self.assertEqual(attachments[0]["file_url"], image_path.resolve().as_uri())
         self.assertEqual(attachments[1]["type"], "video")
         self.assertEqual(attachments[1]["state_key"], "downloaded_files")
         self.assertEqual(attachments[1]["name"], "clip.mp4")
-        self.assertEqual(attachments[1]["data_url"], "data:video/mp4;base64," + base64.b64encode(b"fake-mp4").decode("ascii"))
+        self.assertNotIn("data_url", attachments[1])
+        self.assertEqual(attachments[1]["file_url"], video_path.resolve().as_uri())
 
     def test_global_agent_uses_default_video_model_when_media_attachments_are_present(self) -> None:
         captured: dict[str, object] = {}
@@ -347,7 +350,8 @@ class AgentResponseGenerationTests(unittest.TestCase):
         self.assertEqual(len(attachments), 1)
         self.assertEqual(attachments[0]["type"], "video")
         self.assertEqual(attachments[0]["state_key"], "skill_results")
-        self.assertEqual(attachments[0]["data_url"], "data:video/mp4;base64," + base64.b64encode(b"fake-mp4").decode("ascii"))
+        self.assertNotIn("data_url", attachments[0])
+        self.assertEqual(attachments[0]["file_url"], video_path.resolve().as_uri())
 
     def test_routes_configured_provider_and_captures_metadata(self) -> None:
         def chat_with_model_ref_with_meta_func(**kwargs):

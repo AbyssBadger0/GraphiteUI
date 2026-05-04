@@ -42,17 +42,21 @@ class AgentMultimodalArtifactTests(unittest.TestCase):
             video_path = Path(temp_dir) / "clip.mp4"
             video_path.write_bytes(b"fake-large-video")
 
-            def extract_video_frame_attachments_func(attachment, *, frame_count):
+            def extract_video_frame_attachments_func(attachment, *, frame_count, output_dir):
                 self.assertEqual(attachment["filesystem_path"], str(video_path))
                 self.assertNotIn("data_url", attachment)
                 self.assertEqual(frame_count, 4)
+                self.assertTrue(str(output_dir))
+                frame_path = Path(output_dir) / "clip_frame_001.jpg"
+                frame_path.write_bytes(b"fake-frame")
                 return [
                     {
                         "type": "image",
                         "state_key": attachment["state_key"],
                         "name": "clip_frame_001.jpg",
                         "mime_type": "image/jpeg",
-                        "data_url": "data:image/jpeg;base64,AAAA",
+                        "filesystem_path": str(frame_path),
+                        "file_url": frame_path.resolve().as_uri(),
                         "source": {"type": "video_frame", "video_state_key": attachment["state_key"]},
                     }
                 ]
@@ -76,9 +80,14 @@ class AgentMultimodalArtifactTests(unittest.TestCase):
             )
 
         self.assertEqual(prepared[0]["type"], "image")
-        self.assertEqual(prepared[0]["data_url"], "data:image/jpeg;base64,AAAA")
-        self.assertEqual(warnings, ["Video artifact 'clip.mp4' exceeded inline size limit; analyzed extracted frames instead."])
+        self.assertNotIn("data_url", prepared[0])
+        self.assertTrue(str(prepared[0]["file_url"]).startswith("file://"))
+        self.assertEqual(
+            warnings,
+            ["Video artifact 'clip.mp4' exceeded direct media size limit; analyzed extracted frames instead."],
+        )
         self.assertEqual(meta["large_video_fallbacks"], [{"name": "clip.mp4", "frame_count": 1}])
+        self.assertEqual(len(meta["cleanup_paths"]), 1)
 
 
 if __name__ == "__main__":

@@ -230,7 +230,7 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
                                 "state_key": "reference_image",
                                 "name": "reference.png",
                                 "mime_type": "image/png",
-                                "data_url": "data:image/png;base64,AAAABBBB",
+                                "file_url": "file:///tmp/reference.png",
                             }
                         ],
                     )
@@ -240,7 +240,7 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
             sent_payloads[0]["messages"][1]["content"],
             [
                 {"type": "text", "text": "Describe the image."},
-                {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAABBBB"}},
+                {"type": "image_url", "image_url": {"url": "file:///tmp/reference.png"}},
             ],
         )
 
@@ -271,7 +271,7 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
                                 "state_key": "clip",
                                 "name": "clip.mp4",
                                 "mime_type": "video/mp4",
-                                "data_url": "data:video/mp4;base64,CCCCDDDD",
+                                "file_url": "file:///tmp/clip.mp4",
                             }
                         ],
                     )
@@ -281,7 +281,7 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
             sent_payloads[0]["messages"][1]["content"],
             [
                 {"type": "text", "text": "Describe the video."},
-                {"type": "video_url", "video_url": {"url": "data:video/mp4;base64,CCCCDDDD"}},
+                {"type": "video_url", "video_url": {"url": "file:///tmp/clip.mp4"}},
             ],
         )
 
@@ -296,7 +296,7 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
                     "state_key": "clip#frame_001",
                     "name": "clip_frame_001.jpg",
                     "mime_type": "image/jpeg",
-                    "data_url": "data:image/jpeg;base64,FRAME",
+                    "file_url": "file:///tmp/clip_frame_001.jpg",
                 }
             ]
 
@@ -328,7 +328,7 @@ class OpenAiCompatibleProviderRuntimeTests(unittest.TestCase):
                                     "state_key": "clip",
                                     "name": "clip.mp4",
                                     "mime_type": "video/mp4",
-                                    "data_url": "data:video/mp4;base64,CCCCDDDD",
+                                    "file_url": "file:///tmp/clip.mp4",
                                 }
                             ],
                         )

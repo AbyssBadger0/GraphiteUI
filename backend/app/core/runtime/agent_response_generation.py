@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from typing import Any, Callable
 
 from app.core.model_catalog import get_default_video_model_ref, resolve_runtime_model_name
@@ -63,28 +64,34 @@ def generate_agent_response(
         thinking_level = "medium" if runtime_config.get("resolved_thinking") else "off"
 
     if runtime_config.get("resolved_provider_id") == "local":
-        content, llm_meta = chat_with_local_model_with_meta_func(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            model=runtime_config["runtime_model_name"],
-            provider_id="local",
-            temperature=runtime_config["resolved_temperature"],
-            thinking_enabled=runtime_config["resolved_thinking"],
-            thinking_level=thinking_level,
-            on_delta=on_delta,
-            input_attachments=input_attachments,
-        )
+        try:
+            content, llm_meta = chat_with_local_model_with_meta_func(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                model=runtime_config["runtime_model_name"],
+                provider_id="local",
+                temperature=runtime_config["resolved_temperature"],
+                thinking_enabled=runtime_config["resolved_thinking"],
+                thinking_level=thinking_level,
+                on_delta=on_delta,
+                input_attachments=input_attachments,
+            )
+        finally:
+            _cleanup_prepared_media_paths(attachment_meta.get("cleanup_paths"))
     else:
-        content, llm_meta = chat_with_model_ref_with_meta_func(
-            model_ref=runtime_config["resolved_model_ref"],
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            temperature=runtime_config["resolved_temperature"],
-            thinking_enabled=runtime_config["resolved_thinking"],
-            thinking_level=thinking_level,
-            on_delta=on_delta,
-            input_attachments=input_attachments,
-        )
+        try:
+            content, llm_meta = chat_with_model_ref_with_meta_func(
+                model_ref=runtime_config["resolved_model_ref"],
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=runtime_config["resolved_temperature"],
+                thinking_enabled=runtime_config["resolved_thinking"],
+                thinking_level=thinking_level,
+                on_delta=on_delta,
+                input_attachments=input_attachments,
+            )
+        finally:
+            _cleanup_prepared_media_paths(attachment_meta.get("cleanup_paths"))
 
     parsed_fields = parse_llm_json_response_func(
         content,
@@ -116,6 +123,16 @@ def generate_agent_response(
         "provider_video_fallback": provider_video_fallback,
     }
     return response_payload, reasoning, [*attachment_warnings, *llm_meta.get("warnings", [])], updated_runtime_config
+
+
+def _cleanup_prepared_media_paths(paths: Any) -> None:
+    if not isinstance(paths, list):
+        return
+    for raw_path in paths:
+        path = str(raw_path or "").strip()
+        if not path:
+            continue
+        shutil.rmtree(path, ignore_errors=True)
 
 
 def _resolve_media_runtime_config(

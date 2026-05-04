@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
+import tempfile
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, unquote_to_bytes, urlparse
 
 from app.core.schemas.node_system import NodeSystemStateDefinition, NodeSystemStateType
 from app.core.storage.skill_artifact_store import read_skill_artifact_file_metadata
@@ -67,6 +70,7 @@ def prepare_model_input_attachments(
     prepared: list[dict[str, Any]] = []
     warnings: list[str] = []
     large_video_fallbacks: list[dict[str, Any]] = []
+    cleanup_paths: list[str] = []
 
     for attachment in input_attachments:
         if not isinstance(attachment, dict):
@@ -76,54 +80,165 @@ def prepare_model_input_attachments(
             continue
 
         data_url = str(attachment.get("data_url") or "").strip()
-        if data_url.startswith(f"data:{attachment_type}/"):
-            prepared.append({**attachment, "type": attachment_type, "data_url": data_url})
-            continue
-
         filesystem_path = str(attachment.get("filesystem_path") or "").strip()
-        if not filesystem_path:
-            continue
-        file_path = Path(filesystem_path)
-        attachment_name = str(attachment.get("name") or file_path.name)
-        if not file_path.is_file():
-            warnings.append(f"Media artifact '{attachment.get('name') or filesystem_path}' no longer exists.")
-            continue
+        attachment_name = str(attachment.get("name") or filesystem_path or attachment_type).strip()
 
-        size = _normalize_int(attachment.get("size"), file_path.stat().st_size)
-        if attachment_type == "video" and size > max_inline_video_bytes:
+        if not filesystem_path and data_url.startswith(f"data:{attachment_type}/"):
             try:
-                frames = extract_video_frame_attachments_func(
-                    {**attachment, "type": "video", "filesystem_path": str(file_path), "size": size},
-                    frame_count=video_frame_count,
-                )
-            except Exception as exc:
+                materialized_attachment, temp_dir = _materialize_data_url_attachment(attachment, attachment_type, data_url)
+            except ValueError as exc:
+                warnings.append(f"Media attachment '{attachment_name}' could not be prepared: {exc}")
+                continue
+            cleanup_paths.append(str(temp_dir))
+            filesystem_path = str(materialized_attachment["filesystem_path"])
+            attachment = materialized_attachment
+            attachment_name = str(attachment.get("name") or Path(filesystem_path).name)
+
+        if filesystem_path:
+            file_path = Path(filesystem_path)
+            if not file_path.is_file():
+                warnings.append(f"Media artifact '{attachment.get('name') or filesystem_path}' no longer exists.")
+                continue
+
+            size = _normalize_int(attachment.get("size"), file_path.stat().st_size)
+            mime_type = str(
+                attachment.get("mime_type") or _mime_type_for_attachment(attachment_type, file_path.name)
+            ).strip()
+            file_attachment = _without_data_url(
+                {
+                    **attachment,
+                    "type": attachment_type,
+                    "name": str(attachment.get("name") or file_path.name),
+                    "mime_type": mime_type,
+                    "size": size,
+                    "filesystem_path": str(file_path),
+                    "file_url": file_path.resolve().as_uri(),
+                }
+            )
+            if attachment_type == "video" and size > max_inline_video_bytes:
+                frame_output_dir = Path(tempfile.mkdtemp(prefix="graphite_video_frames_"))
+                cleanup_paths.append(str(frame_output_dir))
+                try:
+                    frames = extract_video_frame_attachments_func(
+                        file_attachment,
+                        frame_count=video_frame_count,
+                        output_dir=frame_output_dir,
+                    )
+                except Exception as exc:
+                    warnings.append(
+                        f"Video artifact '{attachment_name}' was too large to pass directly and frame extraction failed: {exc}"
+                    )
+                    continue
+                prepared.extend(_without_data_url(frame) for frame in frames if isinstance(frame, dict))
+                large_video_fallbacks.append({"name": attachment_name, "frame_count": len(frames)})
                 warnings.append(
-                    f"Video artifact '{attachment_name}' was too large to inline and frame extraction failed: {exc}"
+                    f"Video artifact '{attachment_name}' exceeded direct media size limit; analyzed extracted frames instead."
                 )
                 continue
-            prepared.extend(frames)
-            large_video_fallbacks.append({"name": attachment_name, "frame_count": len(frames)})
-            warnings.append(
-                f"Video artifact '{attachment_name}' exceeded inline size limit; analyzed extracted frames instead."
-            )
+
+            prepared.append(file_attachment)
             continue
 
-        try:
-            encoded = base64.b64encode(file_path.read_bytes()).decode("ascii")
-        except OSError as exc:
-            warnings.append(f"Media artifact '{attachment.get('name') or file_path.name}' could not be read: {exc}")
+        file_url = _attachment_url(attachment)
+        if file_url:
+            prepared.append(_without_data_url({**attachment, "type": attachment_type, "file_url": file_url}))
             continue
-        mime_type = str(attachment.get("mime_type") or _mime_type_for_attachment(attachment_type, file_path.name)).strip()
-        prepared.append(
+
+    return prepared, warnings, {"large_video_fallbacks": large_video_fallbacks, "cleanup_paths": cleanup_paths}
+
+
+def _materialize_data_url_attachment(
+    attachment: dict[str, Any],
+    attachment_type: str,
+    data_url: str,
+) -> tuple[dict[str, Any], Path]:
+    mime_type, payload = _split_data_url_payload(data_url)
+    if not mime_type.startswith(f"{attachment_type}/"):
+        raise ValueError("data URL media type does not match the attachment type.")
+
+    temp_dir = Path(tempfile.mkdtemp(prefix="graphite_agent_media_"))
+    name = str(attachment.get("name") or "").strip() or f"{attachment_type}{_suffix_for_mime_type(mime_type)}"
+    filename = _safe_attachment_filename(name, mime_type, attachment_type)
+    target = temp_dir / filename
+    target.write_bytes(payload)
+    return (
+        _without_data_url(
             {
                 **attachment,
                 "type": attachment_type,
-                "mime_type": mime_type,
-                "data_url": f"data:{mime_type};base64,{encoded}",
+                "name": filename,
+                "mime_type": str(attachment.get("mime_type") or mime_type).strip() or mime_type,
+                "size": len(payload),
+                "filesystem_path": str(target),
+                "file_url": target.resolve().as_uri(),
             }
-        )
+        ),
+        temp_dir,
+    )
 
-    return prepared, warnings, {"large_video_fallbacks": large_video_fallbacks}
+
+def _split_data_url_payload(data_url: str) -> tuple[str, bytes]:
+    head, separator, data = str(data_url or "").partition(",")
+    if not separator or not head.startswith("data:"):
+        raise ValueError("invalid data URL.")
+    mime_type = head[5:].split(";", 1)[0].strip()
+    if not mime_type:
+        raise ValueError("data URL is missing a media type.")
+    if ";base64" in head.lower():
+        try:
+            return mime_type, base64.b64decode(data, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("data URL base64 payload is invalid.") from exc
+    return mime_type, unquote_to_bytes(data)
+
+
+def _safe_attachment_filename(name: str, mime_type: str, attachment_type: str) -> str:
+    candidate = Path(name).name.strip() or f"{attachment_type}{_suffix_for_mime_type(mime_type)}"
+    if Path(candidate).suffix:
+        return candidate
+    return f"{candidate}{_suffix_for_mime_type(mime_type)}"
+
+
+def _suffix_for_mime_type(mime_type: str) -> str:
+    import mimetypes
+
+    guessed = mimetypes.guess_extension(mime_type.strip().lower()) or ""
+    if guessed:
+        return guessed
+    if mime_type.startswith("image/"):
+        return ".png"
+    if mime_type == "video/webm":
+        return ".webm"
+    if mime_type in {"video/quicktime", "video/mov"}:
+        return ".mov"
+    return ".mp4"
+
+
+def _attachment_url(attachment: dict[str, Any]) -> str:
+    for key in ("file_url", "url"):
+        value = str(attachment.get(key) or "").strip()
+        if not value or value.startswith("data:"):
+            continue
+        if value.startswith("file://"):
+            return _normalize_file_url(value)
+        return value
+    return ""
+
+
+def _normalize_file_url(value: str) -> str:
+    parsed = urlparse(value)
+    if parsed.scheme != "file":
+        return value
+    path = unquote(parsed.path or "")
+    if not path:
+        return value
+    return Path(path).resolve().as_uri()
+
+
+def _without_data_url(attachment: dict[str, Any]) -> dict[str, Any]:
+    cleaned = dict(attachment)
+    cleaned.pop("data_url", None)
+    return cleaned
 
 
 def _build_media_attachment(

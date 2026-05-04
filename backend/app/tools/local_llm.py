@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Callable
@@ -620,24 +621,28 @@ def _chat_with_local_model_with_meta(
                 status_code=None,
                 error=str(exc),
             )
-            fallback_attachments, fallback_meta = build_video_frame_fallback_attachments(input_attachments)
-            try:
-                content, meta = _chat_with_local_model_with_meta(
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
-                    model=model,
-                    provider_id=provider_id,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    thinking_enabled=thinking_enabled,
-                    thinking_level=thinking_level,
-                    on_delta=on_delta,
-                    input_attachments=fallback_attachments,
+            with tempfile.TemporaryDirectory(prefix="graphite_video_fallback_") as temp_dir:
+                fallback_attachments, fallback_meta = build_video_frame_fallback_attachments(
+                    input_attachments,
+                    output_dir=temp_dir,
                 )
-            except Exception as fallback_exc:
-                raise RuntimeError(
-                    f"Native video request failed, and frame fallback also failed: {fallback_exc}"
-                ) from fallback_exc
+                try:
+                    content, meta = _chat_with_local_model_with_meta(
+                        system_prompt=system_prompt,
+                        user_prompt=user_prompt,
+                        model=model,
+                        provider_id=provider_id,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        thinking_enabled=thinking_enabled,
+                        thinking_level=thinking_level,
+                        on_delta=on_delta,
+                        input_attachments=fallback_attachments,
+                    )
+                except Exception as fallback_exc:
+                    raise RuntimeError(
+                        f"Native video request failed, and frame fallback also failed: {fallback_exc}"
+                    ) from fallback_exc
             meta["video_fallback"] = fallback_meta
             meta["warnings"] = [
                 *meta.get("warnings", []),

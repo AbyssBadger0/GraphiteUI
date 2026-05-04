@@ -557,35 +557,23 @@ function isPersistedMessage(value: unknown): value is CompanionChatMessage {
   transition: transform 160ms ease;
 }
 
-.companion-pet__avatar::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  left: 18px;
-  right: 12px;
-  bottom: 7px;
-  height: 18px;
-  border-radius: 999px;
-  background: radial-gradient(ellipse at center, rgba(17, 14, 10, 0.18) 0%, rgba(17, 14, 10, 0.09) 48%, transparent 74%);
-  filter: blur(10px);
-  opacity: 0.72;
-  pointer-events: none;
-  transform: translateY(8px) scaleX(1.1);
-  transition: opacity 160ms ease, transform 160ms ease;
-}
-
 .companion-pet__avatar > .companion-mascot {
   position: relative;
   z-index: 1;
+  filter:
+    drop-shadow(0 14px 22px rgba(17, 14, 10, 0.24))
+    drop-shadow(0 3px 7px rgba(17, 14, 10, 0.18));
+  transition: filter 160ms ease;
 }
 
 .companion-pet__avatar:hover {
   transform: translateY(-2px);
 }
 
-.companion-pet__avatar:hover::before {
-  opacity: 0.8;
-  transform: translateY(10px) scaleX(1.16);
+.companion-pet__avatar:hover > .companion-mascot {
+  filter:
+    drop-shadow(0 16px 26px rgba(17, 14, 10, 0.26))
+    drop-shadow(0 4px 9px rgba(17, 14, 10, 0.2));
 }
 
 .companion-pet__avatar:active {
@@ -593,9 +581,10 @@ function isPersistedMessage(value: unknown): value is CompanionChatMessage {
   transform: translateY(0) scale(0.98);
 }
 
-.companion-pet__avatar:active::before {
-  opacity: 0.58;
-  transform: translateY(7px) scaleX(1);
+.companion-pet__avatar:active > .companion-mascot {
+  filter:
+    drop-shadow(0 10px 16px rgba(17, 14, 10, 0.22))
+    drop-shadow(0 2px 5px rgba(17, 14, 10, 0.16));
 }
 
 .companion-pet__avatar:focus-visible,

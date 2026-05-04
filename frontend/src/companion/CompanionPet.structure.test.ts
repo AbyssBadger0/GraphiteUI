@@ -22,8 +22,8 @@ test("CompanionPet renders the mascot without a circular avatar frame and keeps 
   assert.match(avatarBlock, /box-shadow:\s*none;/);
   assert.doesNotMatch(avatarBlock, /border-radius:\s*999px/);
   assert.doesNotMatch(componentSource, /\.companion-pet__avatar::before/);
-  assert.match(componentSource, /\.companion-pet__avatar > \.companion-mascot\s*\{[\s\S]*z-index:\s*1;[\s\S]*filter:\s*drop-shadow\(0 18px 30px rgba\(17,\s*14,\s*10,\s*0\.34\)\)[\s\S]*drop-shadow\(0 6px 12px rgba\(17,\s*14,\s*10,\s*0\.26\)\)[\s\S]*drop-shadow\(0 0 2px rgba\(17,\s*14,\s*10,\s*0\.22\)\);/);
-  assert.match(componentSource, /\.companion-pet__avatar:hover > \.companion-mascot\s*\{[\s\S]*drop-shadow\(0 20px 34px rgba\(17,\s*14,\s*10,\s*0\.36\)\)/);
+  assert.match(componentSource, /\.companion-pet__avatar > \.companion-mascot\s*\{[\s\S]*z-index:\s*1;[\s\S]*filter:\s*drop-shadow\(0 8px 12px rgba\(255,\s*255,\s*255,\s*0\.86\)\)[\s\S]*drop-shadow\(0 2px 5px rgba\(255,\s*255,\s*255,\s*0\.72\)\)[\s\S]*drop-shadow\(0 0 3px rgba\(255,\s*255,\s*255,\s*0\.94\)\);/);
+  assert.match(componentSource, /\.companion-pet__avatar:hover > \.companion-mascot\s*\{[\s\S]*drop-shadow\(0 9px 14px rgba\(255,\s*255,\s*255,\s*0\.9\)\)/);
 });
 
 test("CompanionPet does not render a status dot on top of the mascot", () => {

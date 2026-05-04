@@ -25,19 +25,6 @@
         <filter id="companionMascotSoftness" x="-280" y="-210" width="700" height="640" filterUnits="userSpaceOnUse">
           <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.12" />
         </filter>
-        <mask id="companionMascotHeadBodyMask" maskUnits="userSpaceOnUse" x="-260" y="-180" width="640" height="560">
-          <rect x="-260" y="-180" width="640" height="560" fill="white" />
-          <path
-            class="companion-mascot__ear-mask companion-mascot__ear-mask--left"
-            fill="black"
-            d="M-146-143 C-114-132-82-101-55-61 C-90-61-130-43-168-4 C-174-52-164-106-146-143Z"
-          />
-          <path
-            class="companion-mascot__ear-mask companion-mascot__ear-mask--right"
-            fill="black"
-            d="M146-143 C114-132 82-101 55-61 C90-61 130-43 168-4 C174-52 164-106 146-143Z"
-          />
-        </mask>
       </defs>
 
       <g class="companion-mascot__stage" filter="url(#companionMascotSoftness)">
@@ -61,20 +48,19 @@
 
         <g class="companion-mascot__body">
           <path
-            class="companion-mascot__head"
-            mask="url(#companionMascotHeadBodyMask)"
-            fill="url(#companionMascotBlack)"
-            d="M-146-143 C-116-135-82-106-55-61 C-25-66 25-66 55-61 C82-106 116-135 146-143 C164-106 174-52 168-4 C196 22 214 66 218 116 C226 208 145 264 0 264 C-145 264-226 208-218 116 C-214 66-196 22-168-4 C-174-52-164-106-146-143Z"
-          />
-          <path
             class="companion-mascot__left-ear"
             fill="url(#companionMascotBlack)"
-            d="M-146-143 C-114-132-82-101-55-61 C-90-61-130-43-168-4 C-174-52-164-106-146-143Z"
+            d="M-146-143 C-114-132-82-101-55-61 C-72-40-114-24-178 8 C-180-44-166-105-146-143Z"
           />
           <path
             class="companion-mascot__right-ear"
             fill="url(#companionMascotBlack)"
-            d="M146-143 C114-132 82-101 55-61 C90-61 130-43 168-4 C174-52 164-106 146-143Z"
+            d="M146-143 C114-132 82-101 55-61 C72-40 114-24 178 8 C180-44 166-105 146-143Z"
+          />
+          <path
+            class="companion-mascot__head"
+            fill="url(#companionMascotBlack)"
+            d="M-55-61 C-25-66 25-66 55-61 C90-61 130-43 168-4 C196 22 214 66 218 116 C226 208 145 264 0 264 C-145 264-226 208-218 116 C-214 66-196 22-168-4 C-130-43-90-61-55-61Z"
           />
           <ellipse class="companion-mascot__resting-eye companion-mascot__resting-eye--left" cx="-80" cy="82" rx="24" ry="52" fill="url(#companionMascotEyeGold)" />
           <ellipse class="companion-mascot__resting-eye companion-mascot__resting-eye--right" cx="80" cy="82" rx="24" ry="52" fill="url(#companionMascotEyeGold)" />

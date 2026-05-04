@@ -7,8 +7,6 @@ import { fileURLToPath } from "node:url";
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDirectory = dirname(currentFilePath);
 const componentSource = readFileSync(resolve(currentDirectory, "CompanionMascot.vue"), "utf8");
-const originalMascotSource = readFileSync(resolve(currentDirectory, "../../public/mascot.svg"), "utf8");
-
 function extractPathData(source: string, marker: string) {
   const markerIndex = source.indexOf(marker);
   assert.notEqual(markerIndex, -1, `Missing SVG path marker: ${marker}`);
@@ -22,6 +20,11 @@ function normalizePathData(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+const extendedLeftEarPath = "M-146-143 C-114-132-82-101-55-61 C-72-40-114-24-178 8 C-180-44-166-105-146-143Z";
+const extendedRightEarPath = "M146-143 C114-132 82-101 55-61 C72-40 114-24 178 8 C180-44 166-105 146-143Z";
+const separatedHeadPath =
+  "M-55-61 C-25-66 25-66 55-61 C90-61 130-43 168-4 C196 22 214 66 218 116 C226 208 145 264 0 264 C-145 264-226 208-218 116 C-214 66-196 22-168-4 C-130-43-90-61-55-61Z";
+
 test("CompanionMascot renders the mascot as inline SVG animation parts", () => {
   assert.match(componentSource, /<svg[\s\S]*class="companion-mascot__svg"/);
   assert.match(componentSource, /class="companion-mascot__body"/);
@@ -33,18 +36,14 @@ test("CompanionMascot renders the mascot as inline SVG animation parts", () => {
   assert.match(componentSource, /class="companion-mascot__drag-eye/);
 });
 
-test("CompanionMascot preserves the original mascot head outline", () => {
-  assert.equal(
-    extractPathData(componentSource, 'class="companion-mascot__head"'),
-    extractPathData(originalMascotSource, 'id="mascotHead"'),
-  );
-});
-
-test("CompanionMascot masks static ears out of the original head before animating ears", () => {
-  assert.match(componentSource, /<mask id="companionMascotHeadBodyMask"/);
-  assert.match(componentSource, /class="companion-mascot__ear-mask companion-mascot__ear-mask--left"/);
-  assert.match(componentSource, /class="companion-mascot__ear-mask companion-mascot__ear-mask--right"/);
-  assert.match(componentSource, /class="companion-mascot__head"[\s\S]*mask="url\(#companionMascotHeadBodyMask\)"/);
+test("CompanionMascot uses true separated head, ears, and tail layers without masks", () => {
+  assert.doesNotMatch(componentSource, /<mask\b/);
+  assert.doesNotMatch(componentSource, /mask="url/);
+  assert.doesNotMatch(componentSource, /ear-mask/);
+  assert.equal(extractPathData(componentSource, 'class="companion-mascot__left-ear"'), extendedLeftEarPath);
+  assert.equal(extractPathData(componentSource, 'class="companion-mascot__right-ear"'), extendedRightEarPath);
+  assert.equal(extractPathData(componentSource, 'class="companion-mascot__head"'), separatedHeadPath);
+  assert.match(componentSource, /class="companion-mascot__left-ear"[\s\S]*class="companion-mascot__right-ear"[\s\S]*class="companion-mascot__head"/);
 });
 
 test("CompanionMascot supports idle, thinking, speaking, dragging, and tap animations", () => {

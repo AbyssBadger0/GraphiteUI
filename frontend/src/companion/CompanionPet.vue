@@ -90,7 +90,6 @@
         @click="handleAvatarClick"
       >
         <img src="/mascot.svg" alt="" draggable="false" />
-        <span class="companion-pet__status-dot" aria-hidden="true" />
       </button>
     </div>
   </div>
@@ -492,29 +491,22 @@ function isPersistedMessage(value: unknown): value is CompanionChatMessage {
 }
 
 .companion-pet__avatar {
+  appearance: none;
   position: relative;
   width: 96px;
   height: 96px;
   padding: 0;
-  border: 1px solid rgba(154, 52, 18, 0.16);
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.9), rgba(255, 248, 240, 0.68) 58%, rgba(232, 190, 128, 0.4)),
-    var(--graphite-glass-bg-strong);
-  box-shadow: var(--graphite-glass-highlight), 0 18px 42px rgba(61, 43, 24, 0.16);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   cursor: grab;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: auto;
   touch-action: none;
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+  transition: transform 160ms ease;
 }
 
 .companion-pet__avatar:hover {
-  border-color: rgba(154, 52, 18, 0.28);
-  box-shadow: var(--graphite-glass-highlight), 0 22px 52px rgba(61, 43, 24, 0.2);
   transform: translateY(-2px);
 }
 
@@ -528,7 +520,7 @@ function isPersistedMessage(value: unknown): value is CompanionChatMessage {
 .companion-pet__send:focus-visible,
 .companion-pet__input:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(210, 162, 117, 0.3), var(--graphite-glass-highlight);
+  box-shadow: 0 0 0 3px rgba(210, 162, 117, 0.3);
 }
 
 .companion-pet__avatar img {
@@ -550,30 +542,7 @@ function isPersistedMessage(value: unknown): value is CompanionChatMessage {
 }
 
 .companion-pet__avatar--error {
-  border-color: rgba(220, 38, 38, 0.28);
-}
-
-.companion-pet__status-dot {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 13px;
-  height: 13px;
-  border: 2px solid rgba(255, 252, 247, 0.96);
-  border-radius: 999px;
-  background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
-}
-
-.companion-pet__avatar--thinking .companion-pet__status-dot,
-.companion-pet__avatar--speaking .companion-pet__status-dot {
-  background: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
-}
-
-.companion-pet__avatar--error .companion-pet__status-dot {
-  background: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.16);
+  filter: saturate(0.85);
 }
 
 .companion-pet__panel,

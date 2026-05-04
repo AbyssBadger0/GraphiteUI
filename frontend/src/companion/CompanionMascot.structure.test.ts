@@ -40,6 +40,13 @@ test("CompanionMascot preserves the original mascot head outline", () => {
   );
 });
 
+test("CompanionMascot masks static ears out of the original head before animating ears", () => {
+  assert.match(componentSource, /<mask id="companionMascotHeadBodyMask"/);
+  assert.match(componentSource, /class="companion-mascot__ear-mask companion-mascot__ear-mask--left"/);
+  assert.match(componentSource, /class="companion-mascot__ear-mask companion-mascot__ear-mask--right"/);
+  assert.match(componentSource, /class="companion-mascot__head"[\s\S]*mask="url\(#companionMascotHeadBodyMask\)"/);
+});
+
 test("CompanionMascot supports idle, thinking, speaking, dragging, and tap animations", () => {
   assert.match(componentSource, /type CompanionMascotMood = "idle" \| "thinking" \| "speaking" \| "error";/);
   assert.match(componentSource, /dragging\?: boolean;/);
@@ -64,6 +71,24 @@ test("CompanionMascot gives the star idle sway and thinking pseudo-3D spin", () 
   assert.match(componentSource, /@keyframes companion-mascot-star-flip/);
   assert.match(componentSource, /scaleX\(0\.18\)/);
   assert.match(componentSource, /filter:\s*brightness\(1\.22\)/);
+});
+
+test("CompanionMascot makes idle tail and ear motion visible without changing body scale", () => {
+  assert.match(componentSource, /\.companion-mascot--idle[\s\S]*\.companion-mascot__tail[\s\S]*animation:\s*companion-mascot-tail-sway 3\.2s ease-in-out infinite;/);
+  assert.match(componentSource, /\.companion-mascot--idle[\s\S]*\.companion-mascot__left-ear[\s\S]*animation:\s*companion-mascot-ear-idle-left 4\.2s ease-in-out infinite;/);
+  assert.match(componentSource, /\.companion-mascot--idle[\s\S]*\.companion-mascot__right-ear[\s\S]*animation:\s*companion-mascot-ear-idle-right 4\.2s ease-in-out infinite;/);
+  assert.match(componentSource, /@keyframes companion-mascot-tail-sway[\s\S]*rotate\(-7deg\)[\s\S]*rotate\(15deg\)/);
+  assert.match(componentSource, /@keyframes companion-mascot-ear-idle-left[\s\S]*rotate\(-8deg\)/);
+  assert.match(componentSource, /@keyframes companion-mascot-ear-idle-right[\s\S]*rotate\(8deg\)/);
+});
+
+test("CompanionMascot gives dragging a larger body, tail, and ear response", () => {
+  assert.match(componentSource, /\.companion-mascot--dragging[\s\S]*\.companion-mascot__body[\s\S]*animation:\s*companion-mascot-drag-body 720ms ease-in-out infinite;/);
+  assert.match(componentSource, /\.companion-mascot--dragging[\s\S]*\.companion-mascot__tail[\s\S]*animation:\s*companion-mascot-tail-drag 420ms ease-in-out infinite;/);
+  assert.match(componentSource, /\.companion-mascot--dragging[\s\S]*\.companion-mascot__left-ear[\s\S]*animation:\s*companion-mascot-ear-drag-left 360ms ease-in-out infinite;/);
+  assert.match(componentSource, /\.companion-mascot--dragging[\s\S]*\.companion-mascot__right-ear[\s\S]*animation:\s*companion-mascot-ear-drag-right 360ms ease-in-out infinite;/);
+  assert.match(componentSource, /@keyframes companion-mascot-drag-body[\s\S]*rotate\(-5deg\)[\s\S]*rotate\(5deg\)/);
+  assert.match(componentSource, /@keyframes companion-mascot-tail-drag[\s\S]*rotate\(18deg\)[\s\S]*rotate\(-18deg\)/);
 });
 
 test("CompanionMascot blinks occasionally while idle", () => {

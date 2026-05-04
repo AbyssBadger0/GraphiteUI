@@ -561,8 +561,9 @@ function isPersistedMessage(value: unknown): value is CompanionChatMessage {
   position: relative;
   z-index: 1;
   filter:
-    drop-shadow(0 14px 22px rgba(17, 14, 10, 0.24))
-    drop-shadow(0 3px 7px rgba(17, 14, 10, 0.18));
+    drop-shadow(0 18px 30px rgba(17, 14, 10, 0.34))
+    drop-shadow(0 6px 12px rgba(17, 14, 10, 0.26))
+    drop-shadow(0 0 2px rgba(17, 14, 10, 0.22));
   transition: filter 160ms ease;
 }
 
@@ -572,8 +573,9 @@ function isPersistedMessage(value: unknown): value is CompanionChatMessage {
 
 .companion-pet__avatar:hover > .companion-mascot {
   filter:
-    drop-shadow(0 16px 26px rgba(17, 14, 10, 0.26))
-    drop-shadow(0 4px 9px rgba(17, 14, 10, 0.2));
+    drop-shadow(0 20px 34px rgba(17, 14, 10, 0.36))
+    drop-shadow(0 7px 14px rgba(17, 14, 10, 0.28))
+    drop-shadow(0 0 2px rgba(17, 14, 10, 0.24));
 }
 
 .companion-pet__avatar:active {
@@ -583,8 +585,9 @@ function isPersistedMessage(value: unknown): value is CompanionChatMessage {
 
 .companion-pet__avatar:active > .companion-mascot {
   filter:
-    drop-shadow(0 10px 16px rgba(17, 14, 10, 0.22))
-    drop-shadow(0 2px 5px rgba(17, 14, 10, 0.16));
+    drop-shadow(0 14px 22px rgba(17, 14, 10, 0.3))
+    drop-shadow(0 4px 9px rgba(17, 14, 10, 0.22))
+    drop-shadow(0 0 2px rgba(17, 14, 10, 0.2));
 }
 
 .companion-pet__avatar:focus-visible,

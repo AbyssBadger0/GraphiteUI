@@ -20,8 +20,8 @@ function normalizePathData(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-const extendedLeftEarPath = "M-146-143 C-114-132-82-101-55-61 C-72-40-114-24-178 8 C-180-44-166-105-146-143Z";
-const extendedRightEarPath = "M146-143 C114-132 82-101 55-61 C72-40 114-24 178 8 C180-44 166-105 146-143Z";
+const teardropLeftEarPath = "M-146-143 C-114-132-82-101-55-61 C-60-24-84 25-124 63 C-158 95-190 53-168-4 C-174-52-164-106-146-143Z";
+const teardropRightEarPath = "M146-143 C114-132 82-101 55-61 C60-24 84 25 124 63 C158 95 190 53 168-4 C174-52 164-106 146-143Z";
 const separatedHeadPath =
   "M-55-61 C-25-66 25-66 55-61 C90-61 130-43 168-4 C196 22 214 66 218 116 C226 208 145 264 0 264 C-145 264-226 208-218 116 C-214 66-196 22-168-4 C-130-43-90-61-55-61Z";
 
@@ -40,8 +40,8 @@ test("CompanionMascot uses true separated head, ears, and tail layers without ma
   assert.doesNotMatch(componentSource, /<mask\b/);
   assert.doesNotMatch(componentSource, /mask="url/);
   assert.doesNotMatch(componentSource, /ear-mask/);
-  assert.equal(extractPathData(componentSource, 'class="companion-mascot__left-ear"'), extendedLeftEarPath);
-  assert.equal(extractPathData(componentSource, 'class="companion-mascot__right-ear"'), extendedRightEarPath);
+  assert.equal(extractPathData(componentSource, 'class="companion-mascot__left-ear"'), teardropLeftEarPath);
+  assert.equal(extractPathData(componentSource, 'class="companion-mascot__right-ear"'), teardropRightEarPath);
   assert.equal(extractPathData(componentSource, 'class="companion-mascot__head"'), separatedHeadPath);
   assert.match(componentSource, /class="companion-mascot__left-ear"[\s\S]*class="companion-mascot__right-ear"[\s\S]*class="companion-mascot__head"/);
 });

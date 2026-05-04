@@ -50,12 +50,12 @@
           <path
             class="companion-mascot__left-ear"
             fill="url(#companionMascotBlack)"
-            d="M-146-143 C-114-132-82-101-55-61 C-72-40-114-24-178 8 C-180-44-166-105-146-143Z"
+            d="M-146-143 C-114-132-82-101-55-61 C-60-24-84 25-124 63 C-158 95-190 53-168-4 C-174-52-164-106-146-143Z"
           />
           <path
             class="companion-mascot__right-ear"
             fill="url(#companionMascotBlack)"
-            d="M146-143 C114-132 82-101 55-61 C72-40 114-24 178 8 C180-44 166-105 146-143Z"
+            d="M146-143 C114-132 82-101 55-61 C60-24 84 25 124 63 C158 95 190 53 168-4 C174-52 164-106 146-143Z"
           />
           <path
             class="companion-mascot__head"

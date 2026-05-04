@@ -66,8 +66,13 @@ test("uploaded asset presentation helpers preserve NodeCard display text", () =>
   assert.match(resolveUploadedAssetInputAccept("video"), /video\/\*/);
   assert.match(resolveUploadedAssetInputAccept("video"), /\.mov/);
   assert.match(resolveUploadedAssetInputAccept("image"), /\.heic/);
-  assert.equal(resolveUploadedAssetInputAccept("file"), "");
-  assert.equal(resolveUploadedAssetInputAccept(null), "");
+  assert.match(resolveUploadedAssetInputAccept("file"), /image\/\*/);
+  assert.match(resolveUploadedAssetInputAccept("file"), /video\/\*/);
+  assert.match(resolveUploadedAssetInputAccept("file"), /application\/pdf/);
+  assert.match(resolveUploadedAssetInputAccept("file"), /\.docx/);
+  assert.match(resolveUploadedAssetInputAccept(null), /image\/\*/);
+  assert.match(resolveUploadedAssetInputAccept(null), /video\/\*/);
+  assert.match(resolveUploadedAssetInputAccept(null), /application\/pdf/);
   assert.equal(resolveUploadedAssetSummary(textAsset), "text/plain · 2 KB");
   assert.equal(resolveUploadedAssetTextPreview(textAsset), "a".repeat(3000));
   assert.equal(resolveUploadedAssetDescription(textAsset, "file"), "Stored as file upload. text/plain · 2 KB");
@@ -106,6 +111,17 @@ test("createUploadedAssetEnvelope keeps text-like files as inline text", async (
     content: "hello GraphiteUI",
     encoding: "text",
   });
+});
+
+test("createUploadedAssetEnvelope serializes binary documents as data URLs", async () => {
+  const file = new File([Uint8Array.from([0x25, 0x50, 0x44, 0x46])], "brief.pdf", { type: "application/pdf" });
+
+  const envelope = await createUploadedAssetEnvelope(file);
+
+  assert.equal(envelope.kind, "uploaded_file");
+  assert.equal(envelope.detectedType, "file");
+  assert.equal(envelope.encoding, "data_url");
+  assert.match(envelope.content, /^data:application\/pdf;base64,/);
 });
 
 test("createUploadedAssetEnvelope serializes media uploads as data URLs", async () => {

@@ -41,6 +41,7 @@ export type CanvasTouchPointerMoveAction =
 
 type CanvasPointerDownSetupPolicy = {
   focusCanvas?: true;
+  focusEmptyCanvasPrompt?: true;
   preventDefault: true;
   removeWindowSelection: true;
   setPointerCapture?: true;
@@ -54,7 +55,8 @@ type CanvasPointerDownSetupPolicy = {
 
 export type CanvasPointerDownAction =
   | ({ type: "start-pinch-zoom" } & CanvasPointerDownSetupPolicy)
-  | ({ type: "start-pan" } & CanvasPointerDownSetupPolicy);
+  | ({ type: "start-pan" } & CanvasPointerDownSetupPolicy)
+  | ({ type: "focus-empty-canvas"; focusEmptyCanvasPrompt: true } & CanvasPointerDownSetupPolicy);
 
 export function resolvePointerDistance(left: Pick<CanvasPointerSnapshot, "clientX" | "clientY">, right: Pick<CanvasPointerSnapshot, "clientX" | "clientY">) {
   return Math.hypot(right.clientX - left.clientX, right.clientY - left.clientY);
@@ -67,7 +69,7 @@ export function resolvePointerCenter(left: Pick<CanvasPointerSnapshot, "clientX"
   };
 }
 
-export function resolveCanvasPointerDownAction(input: { startedPinchZoom: boolean }): CanvasPointerDownAction {
+export function resolveCanvasPointerDownAction(input: { startedPinchZoom: boolean; isCanvasEmpty?: boolean }): CanvasPointerDownAction {
   const sharedSetup = {
     preventDefault: true,
     removeWindowSelection: true,
@@ -76,6 +78,14 @@ export function resolveCanvasPointerDownAction(input: { startedPinchZoom: boolea
     clearSelectedEdge: true,
     clearSelection: true,
   } as const;
+
+  if (input.isCanvasEmpty) {
+    return {
+      type: "focus-empty-canvas",
+      focusEmptyCanvasPrompt: true,
+      ...sharedSetup,
+    };
+  }
 
   if (input.startedPinchZoom) {
     return {

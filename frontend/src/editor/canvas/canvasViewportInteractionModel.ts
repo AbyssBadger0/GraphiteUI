@@ -62,7 +62,12 @@ export function resolveCanvasWheelZoomRequest(input: {
   clientX: number;
   clientY: number;
   canvasRect: CanvasRectSnapshot | null;
+  isCanvasEmpty?: boolean;
 }): CanvasWheelZoomRequest {
+  if (input.isCanvasEmpty) {
+    return { type: "ignore" };
+  }
+
   const wheelZoomDelta = resolveWheelZoomDelta(input.deltaY);
   if (wheelZoomDelta === 0) {
     return { type: "ignore" };
@@ -106,7 +111,11 @@ export function resolveCanvasZoomButtonAction(input: {
   }
 }
 
-export function resolveCanvasPanPointerMoveAction(input: { isPanning: boolean }): CanvasPanPointerMoveAction {
+export function resolveCanvasPanPointerMoveAction(input: { isPanning: boolean; isCanvasEmpty?: boolean }): CanvasPanPointerMoveAction {
+  if (input.isCanvasEmpty) {
+    return { type: "continue-pointer-move" };
+  }
+
   if (input.isPanning) {
     return { type: "schedule-pan-move" };
   }

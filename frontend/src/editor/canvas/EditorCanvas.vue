@@ -57,8 +57,13 @@
       {{ t("editor.lockBanner") }}
     </button>
     <div class="editor-canvas__viewport" :style="viewportStyle">
-      <div v-if="nodeEntries.length === 0" class="editor-canvas__empty-state">
-        <div class="editor-canvas__empty-card">
+      <div v-if="isCanvasEmpty" class="editor-canvas__empty-state">
+        <div
+          ref="emptyCanvasPromptRef"
+          class="editor-canvas__empty-card"
+          tabindex="-1"
+          @pointerdown.stop="focusEmptyCanvasPrompt"
+        >
           <div class="editor-canvas__empty-eyebrow">{{ t("editor.emptyCanvas") }}</div>
           <div class="editor-canvas__empty-title">{{ t("editor.createFirstNode") }}</div>
           <div class="editor-canvas__empty-copy">{{ t("editor.emptyCanvasHint") }}</div>
@@ -321,7 +326,7 @@
         />
       </svg>
     </div>
-    <div class="editor-canvas__navigation-stack">
+    <div v-if="!isCanvasEmpty" class="editor-canvas__navigation-stack">
       <div
         class="editor-canvas__zoom-toolbar"
         role="toolbar"
@@ -368,7 +373,7 @@ import { resolveEdgeRunPresentation } from "@/editor/canvas/runEdgePresentation"
 import { resolveCanvasLayout } from "@/editor/canvas/resolvedCanvasLayout";
 import { resolveCanvasSurfaceStyle } from "@/editor/canvas/canvasSurfaceStyle";
 import { isEditableKeyboardEventTarget } from "@/editor/canvas/canvasKeyboard";
-import { type CanvasViewport } from "@/editor/canvas/canvasViewport";
+import { DEFAULT_CANVAS_VIEWPORT as EMPTY_CANVAS_VIEWPORT, type CanvasViewport } from "@/editor/canvas/canvasViewport";
 import {
   NODE_RESIZE_HANDLES,
   type NodeResizeHandle,
@@ -574,6 +579,7 @@ const emit = defineEmits<{
 }>();
 
 const canvasRef = ref<HTMLElement | null>(null);
+const emptyCanvasPromptRef = ref<HTMLElement | null>(null);
 const canvasSize = ref({ width: 0, height: 0 });
 const viewport = useViewport(props.initialViewport ?? undefined);
 const {
@@ -728,6 +734,7 @@ const {
 } = edgeInteractions;
 
 const nodeEntries = computed(() => Object.entries(props.document.nodes));
+const isCanvasEmpty = computed(() => nodeEntries.value.length === 0);
 const minimapNodes = computed(() =>
   nodeEntries.value.map(([nodeId, node]) =>
     buildMinimapNodeModel({
@@ -914,6 +921,27 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => nodeEntries.value.length,
+  (nextCount) => {
+    if (nextCount !== 0) {
+      return;
+    }
+    clearCanvasTransientState();
+    selection.clearSelection();
+    selectedEdgeId.value = null;
+    viewport.setViewport(EMPTY_CANVAS_VIEWPORT);
+    void nextTick().then(() => {
+      focusEmptyCanvasPrompt();
+    });
+  },
+  { immediate: true },
+);
+
+function focusEmptyCanvasPrompt() {
+  emptyCanvasPromptRef.value?.focus({ preventScroll: true });
+}
+
 function handleEdgeVisibilityModeClick(mode: EdgeVisibilityMode) {
   const edgeVisibilityModeClickAction = resolveEdgeVisibilityModeClickAction({
     interactionLocked: isGraphEditingLocked(),
@@ -1037,6 +1065,9 @@ function startDataEdgeStateConfirm(edge: ProjectedCanvasEdge, event: PointerEven
 }
 
 function handleMinimapCenterView(point: { worldX: number; worldY: number }) {
+  if (isCanvasEmpty.value) {
+    return;
+  }
   updateCanvasSize();
   const minimapCenterViewAction = resolveMinimapCenterViewAction({
     worldX: point.worldX,
@@ -1092,7 +1123,10 @@ const anchorConnectStyle = (anchor: ProjectedCanvasAnchor) =>
 
 function handleCanvasPointerDown(event: PointerEvent) {
   const startedPinchZoom = trackTouchPointerDown(event);
-  const canvasPointerDownAction = resolveCanvasPointerDownAction({ startedPinchZoom });
+  const canvasPointerDownAction = resolveCanvasPointerDownAction({
+    startedPinchZoom,
+    isCanvasEmpty: isCanvasEmpty.value,
+  });
   applyCanvasPointerDownSetup(canvasPointerDownAction, event);
 }
 
@@ -1102,6 +1136,9 @@ function applyCanvasPointerDownSetup(
 ) {
   if (action.focusCanvas) {
     canvasRef.value?.focus();
+  }
+  if (action.focusEmptyCanvasPrompt) {
+    focusEmptyCanvasPrompt();
   }
   if (action.preventDefault) {
     event.preventDefault();
@@ -1163,6 +1200,7 @@ function handleCanvasPointerMove(event: PointerEvent) {
   }
   const panPointerMoveAction = resolveCanvasPanPointerMoveAction({
     isPanning: viewport.isPanning.value,
+    isCanvasEmpty: isCanvasEmpty.value,
   });
   switch (panPointerMoveAction.type) {
     case "continue-pointer-move":
@@ -1537,6 +1575,9 @@ function zoomViewportAroundCanvasCenter(nextScale: number) {
 }
 
 function handleZoomButton(control: CanvasZoomButtonControl) {
+  if (isCanvasEmpty.value) {
+    return;
+  }
   const zoomButtonAction = resolveCanvasZoomButtonAction({
     control,
     currentScale: viewport.viewport.scale,
@@ -1570,6 +1611,7 @@ function handleWheel(event: WheelEvent) {
     clientX: event.clientX,
     clientY: event.clientY,
     canvasRect: canvasRef.value?.getBoundingClientRect() ?? null,
+    isCanvasEmpty: isCanvasEmpty.value,
   });
   switch (wheelZoomRequest.type) {
     case "ignore":
@@ -2281,7 +2323,7 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
 }
 
 .editor-canvas__empty-state > * {
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .editor-canvas__empty-card {
@@ -2292,6 +2334,11 @@ function resolveRunEdgePresentationForEdge(edgeId: string) {
   padding: clamp(22px, 5vw, 34px);
   background: rgba(255, 250, 242, 0.72);
   box-shadow: 0 18px 44px rgba(60, 41, 20, 0.08);
+}
+
+.editor-canvas__empty-card:focus-visible {
+  outline: 3px solid rgba(201, 107, 31, 0.42);
+  outline-offset: 4px;
 }
 
 .editor-canvas__empty-eyebrow,

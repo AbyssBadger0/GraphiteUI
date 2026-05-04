@@ -17,8 +17,8 @@ import {
 } from "../../lib/editor-workspace.ts";
 import {
   cloneGraphDocument,
-  createEditorSeedDraftGraph,
-  resolveEditorSeedTemplate,
+  createDraftFromTemplate,
+  createEmptyDraftGraph,
 } from "../../lib/graph-document.ts";
 
 import {
@@ -63,12 +63,12 @@ export function useWorkspaceOpenController(input: WorkspaceOpenControllerInput) 
     if (tab.templateId) {
       const template = input.templates().find((candidate) => candidate.template_id === tab.templateId);
       if (template) {
-        const draft = createEditorSeedDraftGraph(input.templates(), template.template_id, tab.title);
+        const draft = createDraftFromTemplate(template);
         draft.name = tab.title;
         return draft;
       }
     }
-    return createEditorSeedDraftGraph(input.templates(), tab.defaultTemplateId ?? null, tab.title);
+    return createEmptyDraftGraph(tab.title);
   }
 
   function ensureUnsavedTabDocuments() {
@@ -81,11 +81,10 @@ export function useWorkspaceOpenController(input: WorkspaceOpenControllerInput) 
 
   function openNewTab(templateId: string | null, navigation: RouteNavigation = "push") {
     const template = templateId ? input.templates().find((candidate) => candidate.template_id === templateId) ?? null : null;
-    const seedTemplate = resolveEditorSeedTemplate(input.templates(), template?.template_id ?? null);
-    const draft = createEditorSeedDraftGraph(input.templates(), template?.template_id ?? null);
+    const draft = template ? createDraftFromTemplate(template) : createEmptyDraftGraph();
     const tab = createUnsavedWorkspaceTab({
       kind: template ? "template" : "new",
-      title: template?.label ?? seedTemplate?.default_graph_name ?? draft.name,
+      title: template?.label ?? draft.name,
       templateId: template?.template_id ?? null,
       defaultTemplateId: template?.template_id ?? null,
     });

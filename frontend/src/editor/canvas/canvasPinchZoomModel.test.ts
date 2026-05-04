@@ -51,7 +51,7 @@ test("canvas pinch zoom model starts only with two touch pointers and positive d
 });
 
 test("canvas pinch zoom model resolves pointer-down pan and pinch setup actions", () => {
-  assert.deepEqual(resolveCanvasPointerDownAction({ startedPinchZoom: true }), {
+  assert.deepEqual(resolveCanvasPointerDownAction({ startedPinchZoom: true, isCanvasEmpty: false }), {
     type: "start-pinch-zoom",
     preventDefault: true,
     removeWindowSelection: true,
@@ -60,7 +60,7 @@ test("canvas pinch zoom model resolves pointer-down pan and pinch setup actions"
     clearSelectedEdge: true,
     clearSelection: true,
   });
-  assert.deepEqual(resolveCanvasPointerDownAction({ startedPinchZoom: false }), {
+  assert.deepEqual(resolveCanvasPointerDownAction({ startedPinchZoom: false, isCanvasEmpty: false }), {
     type: "start-pan",
     focusCanvas: true,
     preventDefault: true,
@@ -72,6 +72,16 @@ test("canvas pinch zoom model resolves pointer-down pan and pinch setup actions"
     clearSelectedEdge: true,
     clearSelection: true,
     beginPan: true,
+  });
+  assert.deepEqual(resolveCanvasPointerDownAction({ startedPinchZoom: false, isCanvasEmpty: true }), {
+    type: "focus-empty-canvas",
+    focusEmptyCanvasPrompt: true,
+    preventDefault: true,
+    removeWindowSelection: true,
+    clearCanvasTransientState: true,
+    clearPendingConnection: true,
+    clearSelectedEdge: true,
+    clearSelection: true,
   });
 });
 

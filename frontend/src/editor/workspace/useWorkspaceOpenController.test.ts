@@ -34,6 +34,26 @@ function createTemplate(templateId = "template_a", name = "Template Graph"): Tem
   };
 }
 
+function createSeededTemplate(templateId = "hello_world", name = "Hello World"): TemplateRecord {
+  return {
+    ...createTemplate(templateId, name),
+    state_schema: {
+      question: { name: "question", description: "", type: "text", value: "Hello?", color: "#d97706" },
+    },
+    nodes: {
+      input_question: {
+        kind: "input",
+        name: "Input",
+        description: "",
+        ui: { position: { x: 0, y: 0 } },
+        reads: [],
+        writes: [{ state: "question", mode: "replace" }],
+        config: { value: "Hello?" },
+      },
+    },
+  };
+}
+
 function createRunDetail(overrides: Partial<RunDetail> = {}): RunDetail {
   return {
     run_id: "run_1",
@@ -150,6 +170,28 @@ test("useWorkspaceOpenController opens new template tabs and syncs the route", (
   assert.equal(harness.routeSyncs[0]?.mode, "push");
   assert.equal(harness.routeSyncs[0]?.tab.templateId, "template_a");
   assert.equal(harness.handledRouteSignature.value, "new:template_a");
+});
+
+test("useWorkspaceOpenController opens plain new tabs as blank graphs", () => {
+  const harness = createHarness({ templates: [createSeededTemplate()] });
+
+  harness.controller.openNewTab(null, "push");
+
+  const tab = harness.workspace.value.tabs[0];
+  assert.ok(tab);
+  assert.equal(tab.kind, "new");
+  assert.equal(tab.templateId, null);
+  assert.equal(tab.title, "Untitled Graph");
+  assert.deepEqual(harness.documentsByTabId.value[tab.tabId], {
+    graph_id: null,
+    name: "Untitled Graph",
+    state_schema: {},
+    nodes: {},
+    edges: [],
+    conditional_edges: [],
+    metadata: {},
+  });
+  assert.equal(harness.handledRouteSignature.value, "new:");
 });
 
 test("useWorkspaceOpenController opens cached existing graphs without fetching", () => {

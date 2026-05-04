@@ -1412,6 +1412,24 @@ test("EditorCanvas disables text selection while a connection drag is active", (
   assert.match(componentSource, /\.editor-canvas--connecting,\n\.editor-canvas--connecting \* \{[\s\S]*user-select:\s*none;/);
 });
 
+test("EditorCanvas focuses the empty prompt and blocks viewport movement for blank graphs", () => {
+  assert.match(componentSource, /const emptyCanvasPromptRef = ref<HTMLElement \| null>\(null\);/);
+  assert.match(componentSource, /const isCanvasEmpty = computed\(\(\) => nodeEntries\.value\.length === 0\);/);
+  assert.match(componentSource, /ref="emptyCanvasPromptRef"[\s\S]*class="editor-canvas__empty-card"[\s\S]*tabindex="-1"[\s\S]*@pointerdown\.stop="focusEmptyCanvasPrompt"/);
+  assert.match(componentSource, /watch\(\s*\(\) => nodeEntries\.value\.length,/);
+  assert.match(componentSource, /if \(nextCount !== 0\) \{\n\s+return;\n\s+\}/);
+  assert.ok(componentSource.includes("clearCanvasTransientState();"));
+  assert.ok(componentSource.includes("selection.clearSelection();"));
+  assert.ok(componentSource.includes("selectedEdgeId.value = null;"));
+  assert.ok(componentSource.includes("viewport.setViewport(EMPTY_CANVAS_VIEWPORT);"));
+  assert.match(componentSource, /void nextTick\(\)\.then\(\(\) => \{\n\s+focusEmptyCanvasPrompt\(\);/);
+  assert.match(componentSource, /const canvasPointerDownAction = resolveCanvasPointerDownAction\(\{[\s\S]*startedPinchZoom,[\s\S]*isCanvasEmpty: isCanvasEmpty\.value,[\s\S]*\}\);/);
+  assert.match(componentSource, /if \(action\.focusEmptyCanvasPrompt\) \{[\s\S]*focusEmptyCanvasPrompt\(\);/);
+  assert.match(componentSource, /isCanvasEmpty: isCanvasEmpty\.value,/);
+  assert.match(componentSource, /\.editor-canvas__empty-state > \* \{[\s\S]*pointer-events:\s*auto;/);
+  assert.match(componentSource, /\.editor-canvas__empty-card:focus-visible \{/);
+});
+
 test("EditorCanvas keeps canvas panning alive outside the viewport and disables selection while panning", () => {
   assert.doesNotMatch(componentSource, /@pointerleave="handleCanvasPointerUp"/);
   assert.match(componentSource, /@pointercancel="handleCanvasPointerUp"/);
@@ -1468,7 +1486,7 @@ test("EditorCanvas supports two-finger pinch zoom on mobile without changing sin
   assert.doesNotMatch(componentSource, /function resolvePointerCenter/);
   assert.doesNotMatch(componentSource, /nextScale: pinch\.startScale \* \(nextDistance \/ pinch\.startDistance\)/);
   assert.match(componentSource, /const startedPinchZoom = trackTouchPointerDown\(event\);/);
-  assert.match(componentSource, /const canvasPointerDownAction = resolveCanvasPointerDownAction\(\{ startedPinchZoom \}\);/);
+  assert.match(componentSource, /const canvasPointerDownAction = resolveCanvasPointerDownAction\(\{[\s\S]*startedPinchZoom,[\s\S]*isCanvasEmpty: isCanvasEmpty\.value,[\s\S]*\}\);/);
   assert.match(componentSource, /function applyCanvasPointerDownSetup\([\s\S]*action: CanvasPointerDownAction,[\s\S]*event: PointerEvent,[\s\S]*\)/);
   assert.match(componentSource, /if \(action\.focusCanvas\) \{[\s\S]*canvasRef\.value\?\.focus\(\);/);
   assert.match(componentSource, /if \(action\.setPointerCapture\) \{[\s\S]*canvasRef\.value\?\.setPointerCapture\(event\.pointerId\);/);

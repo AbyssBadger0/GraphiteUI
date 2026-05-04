@@ -19,6 +19,17 @@ test("canvas viewport interaction model resolves wheel zoom deltas", () => {
 test("canvas viewport interaction model resolves wheel zoom requests", () => {
   assert.deepEqual(
     resolveCanvasWheelZoomRequest({
+      deltaY: -120,
+      currentScale: 1,
+      clientX: 120,
+      clientY: 80,
+      canvasRect: { left: 10, top: 20 },
+      isCanvasEmpty: true,
+    }),
+    { type: "ignore" },
+  );
+  assert.deepEqual(
+    resolveCanvasWheelZoomRequest({
       deltaY: 0,
       currentScale: 1,
       clientX: 120,
@@ -83,6 +94,9 @@ test("canvas viewport interaction model resolves zoom button actions", () => {
 });
 
 test("canvas viewport interaction model resolves pan pointer-move actions", () => {
+  assert.deepEqual(resolveCanvasPanPointerMoveAction({ isPanning: true, isCanvasEmpty: true }), {
+    type: "continue-pointer-move",
+  });
   assert.deepEqual(resolveCanvasPanPointerMoveAction({ isPanning: false }), {
     type: "continue-pointer-move",
   });

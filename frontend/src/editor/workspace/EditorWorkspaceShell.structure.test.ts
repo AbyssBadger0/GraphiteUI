@@ -77,13 +77,14 @@ test("EditorWorkspaceShell loads persisted presets for the node creation menu", 
   assert.match(resourceControllerSource, /persistedPresets\.value = await input\.fetchPresets\(\)/);
 });
 
-test("EditorWorkspaceShell seeds plain new tabs from the baseline default template", () => {
+test("EditorWorkspaceShell creates blank plain new tabs while preserving explicit template tabs", () => {
   assert.match(componentSource, /import \{ useWorkspaceOpenController \} from "\.\/useWorkspaceOpenController\.ts";/);
-  assert.match(openControllerSource, /createEditorSeedDraftGraph/);
-  assert.match(openControllerSource, /resolveEditorSeedTemplate/);
-  assert.match(openControllerSource, /return createEditorSeedDraftGraph\(input\.templates\(\), tab\.defaultTemplateId \?\? null, tab\.title\);/);
-  assert.match(openControllerSource, /const seedTemplate = resolveEditorSeedTemplate\(input\.templates\(\), template\?\.template_id \?\? null\);/);
-  assert.match(openControllerSource, /const draft = createEditorSeedDraftGraph\(input\.templates\(\), template\?\.template_id \?\? null\);/);
+  assert.match(openControllerSource, /createEmptyDraftGraph/);
+  assert.match(openControllerSource, /createDraftFromTemplate/);
+  assert.match(openControllerSource, /return createEmptyDraftGraph\(tab\.title\);/);
+  assert.match(openControllerSource, /const draft = template \? createDraftFromTemplate\(template\) : createEmptyDraftGraph\(\);/);
+  assert.doesNotMatch(openControllerSource, /createEditorSeedDraftGraph/);
+  assert.doesNotMatch(openControllerSource, /resolveEditorSeedTemplate/);
   assert.doesNotMatch(componentSource, /createEditorSeedDraftGraph/);
 });
 
